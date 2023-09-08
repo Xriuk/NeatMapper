@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.33530.505
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeatMapper.Core", "src\NeatMapper.Core\NeatMapper.Core.csproj", "{85B6709D-BE31-4AE8-B3DA-3B4354B9B091}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{85B6709D-BE31-4AE8-B3DA-3B4354B9B091}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{85B6709D-BE31-4AE8-B3DA-3B4354B9B091}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{85B6709D-BE31-4AE8-B3DA-3B4354B9B091}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{85B6709D-BE31-4AE8-B3DA-3B4354B9B091}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {4CA409D6-80E0-44B8-849F-FC10D4BCE178}
+	EndGlobalSection
+EndGlobal
