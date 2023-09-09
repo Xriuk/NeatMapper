@@ -83,5 +83,16 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsNotNull(obj);
 			Assert.AreEqual("4", obj.MyString);
 		}
+
+		[TestMethod]
+		public void ShouldMapCollections() {
+			var strings = _mapper.Map<IEnumerable<int>, IList<string>>(new[] { 2, -3, 0 });
+
+			Assert.IsNotNull(strings);
+			Assert.AreEqual(3, strings.Count);
+			Assert.AreEqual("4", strings[0]);
+			Assert.AreEqual("-6", strings[1]);
+			Assert.AreEqual("0", strings[2]);
+		}
 	}
 }
