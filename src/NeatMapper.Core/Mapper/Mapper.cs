@@ -3,10 +3,11 @@ using NeatMapper.Core.Configuration;
 using System.Reflection;
 
 namespace NeatMapper.Core.Mapper {
-	internal sealed class Mapper : IMapper {
+	internal sealed class Mapper : IMapper, IAsyncMapper {
 		private readonly IMapperConfiguration _configuration;
 		private readonly IServiceProvider _serviceProvider;
 		private readonly MappingContext? _mappingContext;
+		private readonly AsyncMappingContext? _asyncMappingContext;
 
 		public Mapper(IMapperConfiguration configuration, IServiceProvider serviceProvider) {
 			_configuration = configuration;
@@ -14,6 +15,9 @@ namespace NeatMapper.Core.Mapper {
 		}
 		internal Mapper(IMapperConfiguration configuration, MappingContext mappingContext) : this(configuration, mappingContext.ServiceProvider) {
 			_mappingContext = mappingContext;
+		}
+		internal Mapper(IMapperConfiguration configuration, AsyncMappingContext asyncMappingContext) : this(configuration, asyncMappingContext.ServiceProvider) {
+			_asyncMappingContext = asyncMappingContext;
 		}
 
 
@@ -82,6 +86,71 @@ namespace NeatMapper.Core.Mapper {
 			throw new ArgumentException($"No map could be found for the given types: {typeof(TSource).Name} -> {typeof(TDestination).Name}\n{typeof(TSource).FullName} -> {typeof(TDestination).FullName}");
 		}
 
+		public Task<TDestination> MapAsync<TSource, TDestination>(TSource source, CancellationToken cancellationToken = default) {
+			var types = (From: typeof(TSource), To: typeof(TDestination));
+			if (_configuration.AsyncNewMaps.ContainsKey(types)) {
+				var (scope, mappingContext) = CreateScopeAndAsyncContext(cancellationToken);
+				using (scope) {
+					return (Task<TDestination>)_configuration.AsyncNewMaps[types].Invoke(null, new object?[] { source, mappingContext })!;
+				}
+			}
+			else if (types.From.IsGenericType || types.To.IsGenericType) {
+				var map = _configuration.AsyncGenericNewMaps.FirstOrDefault(m =>
+					MapperConfiguration.MatchOpenGenericArgumentsRecursive(m.From, types.From) &&
+					MapperConfiguration.MatchOpenGenericArgumentsRecursive(m.To, types.To));
+				if (map != null) {
+					var classArguments = InferOpenGenericArgumentsRecursive(map.From, types.From)
+						.Concat(InferOpenGenericArgumentsRecursive(map.To, types.To))
+						.ToArray();
+
+					// We may have different closed types matching for the same open type argument, in this case the map should not match
+					if (classArguments.DistinctBy(a => a.OpenGenericArgument).Count() == classArguments.Length) {
+						var (scope, mappingContext) = CreateScopeAndAsyncContext(cancellationToken);
+						using (scope) {
+							return (Task<TDestination>)MethodInfo.GetMethodFromHandle(map.Method, MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle)!
+								.Invoke(null, new object?[] { source, mappingContext })!;
+						}
+					}
+				}
+			}
+
+			var destination = (TDestination)(types.To == typeof(string) ?
+				string.Empty :
+				Activator.CreateInstance(types.To)!);
+			return MapAsync(source, destination, cancellationToken);
+		}
+
+		public Task<TDestination> MapAsync<TSource, TDestination>(TSource source, TDestination destination, CancellationToken cancellationToken = default) {
+			var types = (From: typeof(TSource), To: typeof(TDestination));
+			if (_configuration.AsyncMergeMaps.ContainsKey(types)) {
+				var (scope, mappingContext) = CreateScopeAndAsyncContext(cancellationToken);
+				using (scope) {
+					return (Task<TDestination>)_configuration.AsyncMergeMaps[types].Invoke(null, new object?[] { source, destination, mappingContext })!;
+				}
+			}
+			else if (types.From.IsGenericType || types.To.IsGenericType) {
+				var map = _configuration.AsyncGenericMergeMaps.FirstOrDefault(m =>
+					MapperConfiguration.MatchOpenGenericArgumentsRecursive(m.From, types.From) &&
+					MapperConfiguration.MatchOpenGenericArgumentsRecursive(m.To, types.To));
+				if (map != null) {
+					var classArguments = InferOpenGenericArgumentsRecursive(map.From, types.From)
+						.Concat(InferOpenGenericArgumentsRecursive(map.To, types.To))
+						.ToArray();
+
+					// We may have different closed types matching for the same open type argument, in this case the map should not match
+					if (classArguments.DistinctBy(a => a.OpenGenericArgument).Count() == classArguments.Length) {
+						var (scope, mappingContext) = CreateScopeAndAsyncContext(cancellationToken);
+						using (scope) {
+							return (Task<TDestination>)MethodInfo.GetMethodFromHandle(map.Method, MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle)!
+								.Invoke(null, new object?[] { source, destination, mappingContext })!;
+						}
+					}
+				}
+			}
+
+			throw new ArgumentException($"No map could be found for the given types: {typeof(TSource).Name} -> {typeof(TDestination).Name}\n{typeof(TSource).FullName} -> {typeof(TDestination).FullName}");
+		}
+
 		private (IServiceScope?, MappingContext) CreateScopeAndContext() {
 			if (_mappingContext == null) {
 				var scope = _serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
@@ -97,6 +166,24 @@ namespace NeatMapper.Core.Mapper {
 			}
 			else
 				return (null, _mappingContext);
+		}
+		
+		private (IServiceScope?, AsyncMappingContext) CreateScopeAndAsyncContext(CancellationToken cancellationToken) {
+			if (_asyncMappingContext == null) {
+				var scope = _serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
+				var mappingContext = new AsyncMappingContext {
+					ServiceProvider = scope.ServiceProvider,
+					CancellationToken = cancellationToken
+				};
+
+				// New mapper to avoid creating new scopes
+				var mapper = new Mapper(_configuration, mappingContext);
+				mappingContext.Mapper = mapper;
+
+				return (scope, mappingContext);
+			}
+			else
+				return (null, _asyncMappingContext);
 		}
 
 		private static IEnumerable<(Type OpenGenericArgument, Type ClosedType)> InferOpenGenericArgumentsRecursive(Type openType, Type closedType) {

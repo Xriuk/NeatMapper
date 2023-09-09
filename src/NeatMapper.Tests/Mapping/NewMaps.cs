@@ -22,10 +22,16 @@ namespace NeatMapper.Tests.Mapping {
 			};
 		}
 
+		// Nested NewMap
 		static MyClassString INewMap<int, MyClassString>.Map(int source, MappingContext context) {
 			return new MyClassString {
 				MyString = context.Mapper.Map<int, string>(source)
 			};
+		}
+
+		// Nested MergeMap
+		static MyClassString IMergeMap<float, MyClassString>.Map(bool source, MyClassString destination, MappingContext context) {
+			return context.Mapper.Map
 		}
 
 		IMapper _mapper = null!;

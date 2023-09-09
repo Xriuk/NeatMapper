@@ -8,37 +8,24 @@ using NeatMapper.Tests.Classes;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class MergeMaps :
-		IMergeMap<int, string>,
-		IMergeMap<int, MyClassInt>,
-		IMergeMap<int, MyClassString>,
-		IMergeMap<bool, MyClassString> {
+	public class AsyncMergeMaps :
+		IAsyncMergeMap<int, string>,
+		IAsyncMergeMap<int, MyClassInt>,
+		IAsyncMergeMap<int, MyClassString> {
 
-		static string IMergeMap<int, string>.Map(int source, string destination, MappingContext context) {
-			return (source * 2).ToString();
+		static Task<string> IAsyncMergeMap<int, string>.Map(int source, string destination, AsyncMappingContext context) {
+			return Task.FromResult((source * 2).ToString());
 		}
 
-		// Returns new destination
-		static MyClassInt IMergeMap<int, MyClassInt>.Map(int source, MyClassInt destination, MappingContext context) {
-			return new MyClassInt {
+		static Task<MyClassInt> IAsyncMergeMap<int, MyClassInt>.Map(int source, MyClassInt destination, AsyncMappingContext context) {
+			return Task.FromResult(new MyClassInt {
 				MyInt = source
-			};
+			});
 		}
 
-		// Returns passed destination
-		static MyClassString IMergeMap<int, MyClassString>.Map(int source, MyClassString destination, MappingContext context) {
+		static Task<MyClassString> IAsyncMergeMap<int, MyClassString>.Map(int source, MyClassString destination, AsyncMappingContext context) {
 			destination.MyString = (source * 2).ToString();
-			return destination;
-		}
-
-		// Nested NewMap
-		static MyClassString IMergeMap<bool, MyClassString>.Map(bool source, MyClassString destination, MappingContext context) {
-			return context.Mapper.Map
-		}
-
-		// Nested MergeMap
-		static MyClassString IMergeMap<float, MyClassString>.Map(bool source, MyClassString destination, MappingContext context) {
-			return context.Mapper.Map
+			return Task.FromResult(destination);
 		}
 
 		IMapper _mapper = null!;
@@ -87,13 +74,6 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldNotFindMissingMap() {
 			Assert.ThrowsException<ArgumentException>(() => _mapper.Map(false, 0));
-		}
-
-		[TestMethod]
-		public void ShouldMapNested() {
-			var obj = _mapper.Map<int, MyClassString>(2);
-			Assert.IsNotNull(obj);
-			Assert.AreEqual("4", obj.MyString);
 		}
 	}
 }

@@ -23,6 +23,16 @@ namespace NeatMapper.Core.Configuration {
 		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> MergeMaps { get; }
 
 		/// <summary>
+		/// <see cref="IAsyncNewMap{TSource, TDestination}.Map(TSource, AsyncMappingContext)"/>
+		/// </summary>
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> AsyncNewMaps { get; }
+
+		/// <summary>
+		/// <see cref="IAsyncMergeMap{TSource, TDestination}.Map(TSource, TDestination, AsyncMappingContext)"/>
+		/// </summary>
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> AsyncMergeMaps { get; }
+
+		/// <summary>
 		/// One or two open types which contain <see cref="INewMap{TSource, TDestination}.Map(TSource, MappingContext)"/> for the given open types.<br/>
 		/// (IEnumerable&lt;TSource&gt;, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TSource, TDestination&gt;<br/>
 		/// (IEnumerable&lt;TSource&gt;, MyNonGenericClass) =&gt; MyClass&lt;TSource&gt;<br/>
@@ -37,5 +47,21 @@ namespace NeatMapper.Core.Configuration {
 		/// (MyNonGenericClass, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TDestination&gt;
 		/// </summary>
 		public IEnumerable<GenericMap> GenericMergeMaps { get; }
+
+		/// <summary>
+		/// One or two open types which contain <see cref="IAsyncNewMap{TSource, TDestination}.Map(TSource, AsyncMappingContext)"/> for the given open types.<br/>
+		/// (IEnumerable&lt;TSource&gt;, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TSource, TDestination&gt;<br/>
+		/// (IEnumerable&lt;TSource&gt;, MyNonGenericClass) =&gt; MyClass&lt;TSource&gt;<br/>
+		/// (MyNonGenericClass, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TDestination&gt;
+		/// </summary>
+		public IEnumerable<GenericMap> AsyncGenericNewMaps { get; }
+
+		/// <summary>
+		/// One or two open types which contain <see cref="IAsyncMergeMap{TSource, TDestination}.Map(TSource, TDestination, AsyncMappingContext)"/> for the given open types.<br/>
+		/// (IEnumerable&lt;TSource&gt;, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TSource, TDestination&gt;<br/>
+		/// (IEnumerable&lt;TSource&gt;, MyNonGenericClass) =&gt; MyClass&lt;TSource&gt;<br/>
+		/// (MyNonGenericClass, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TDestination&gt;
+		/// </summary>
+		public IEnumerable<GenericMap> AsyncGenericMergeMaps { get; }
 	}
 }
