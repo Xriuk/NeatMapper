@@ -1,5 +1,5 @@
 ﻿namespace NeatMapper.Core.Configuration {
-	public sealed class MapsConfiguration {
-		public ICollection<Type> MapTypes { get; set; } = new List<Type>();
+	public sealed class MapperConfigurationOptions {
+		public ICollection<Type> MapTypes { get; init; } = new List<Type>();
 	}
 }
