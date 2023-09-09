@@ -107,7 +107,7 @@ namespace NeatMapper.Core.Configuration {
 				.Concat(arguments.SelectMany(GetOpenGenericArgumentsRecursive));
 		}
 
-		internal static bool MatchOpenGenericArgumentsRecursive(Type t1, Type t2) {
+		private static bool MatchOpenGenericArgumentsRecursive(Type t1, Type t2) {
 			if(!t1.IsGenericType || !t2.IsGenericType){
 				if(t1.IsGenericTypeParameter && t2.IsGenericTypeParameter) {
 					// DEV: check constraints

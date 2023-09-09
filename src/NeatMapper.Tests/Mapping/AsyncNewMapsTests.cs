@@ -7,34 +7,36 @@ using NeatMapper.Tests.Classes;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class AsyncNewMaps :
-		IAsyncNewMap<int, string>,
-		IAsyncNewMap<int, MyClassInt>,
-		IAsyncNewMap<int, MyClassString>,
-		IAsyncNewMap<bool, MyClassString> {
+	public class AsyncNewMapsTests {
+		public class Maps :
+			IAsyncNewMap<int, string>,
+			IAsyncNewMap<int, MyClassInt>,
+			IAsyncNewMap<int, MyClassString>,
+			IAsyncNewMap<bool, MyClassString> {
 
-		static Task<string> IAsyncNewMap<int, string>.Map(int source, AsyncMappingContext context) {
-			return Task.FromResult((source * 2).ToString());
-		}
+			static Task<string> IAsyncNewMap<int, string>.Map(int source, AsyncMappingContext context) {
+				return Task.FromResult((source * 2).ToString());
+			}
 
-		static Task<MyClassInt> IAsyncNewMap<int, MyClassInt>.Map(int source, AsyncMappingContext context) {
-			return Task.FromResult(new MyClassInt {
-				MyInt = source
-			});
-		}
+			static Task<MyClassInt> IAsyncNewMap<int, MyClassInt>.Map(int source, AsyncMappingContext context) {
+				return Task.FromResult(new MyClassInt {
+					MyInt = source
+				});
+			}
 
-		// Awaited nested
-		static async Task<MyClassString> IAsyncNewMap<int, MyClassString>.Map(int source, AsyncMappingContext context) {
-			return new MyClassString {
-				MyString = await context.Mapper.MapAsync<int, string>(source, context.CancellationToken)
-			};
-		}
+			// Awaited Nested NewMap
+			static async Task<MyClassString> IAsyncNewMap<int, MyClassString>.Map(int source, AsyncMappingContext context) {
+				return new MyClassString {
+					MyString = await context.Mapper.MapAsync<int, string>(source, context.CancellationToken)
+				};
+			}
 
-		// Not awaited nested
-		static Task<MyClassString> IAsyncNewMap<bool, MyClassString>.Map(bool source, AsyncMappingContext context) {
-			return Task.FromResult(new MyClassString {
-				MyString = context.Mapper.MapAsync<int, string>(source ? 1 : 0, context.CancellationToken).Result
-			});
+			// Not awaited Nested NewMap
+			static Task<MyClassString> IAsyncNewMap<bool, MyClassString>.Map(bool source, AsyncMappingContext context) {
+				return Task.FromResult(new MyClassString {
+					MyString = context.Mapper.MapAsync<int, string>(source ? 1 : 0, context.CancellationToken).Result
+				});
+			}
 		}
 
 		IAsyncMapper _mapper = null!;
@@ -42,7 +44,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions{
-				MapTypes = new List<Type> { typeof(AsyncNewMaps) }
+				MapTypes = new List<Type> { typeof(Maps) }
 			}), new ServiceCollection().BuildServiceProvider());
 		}
 
