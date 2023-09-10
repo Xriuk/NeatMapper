@@ -1,7 +1,7 @@
 ﻿namespace NeatMapper.Core {
 	public interface IMapper {
-		public TDestination Map<TSource, TDestination>(TSource source);
+		public object? Map(object? source, Type sourceType, Type destinationType);
 
-		public TDestination Map<TSource, TDestination>(TSource source, TDestination destination);
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType);
 	}
 }

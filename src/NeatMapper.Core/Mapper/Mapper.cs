@@ -1,8 +1,10 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NeatMapper.Core.Configuration;
+using NeatMapper.Core.Internal;
 using System.Collections;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace NeatMapper.Core.Mapper {
 	internal sealed class Mapper : IMapper, IAsyncMapper {
@@ -23,18 +25,24 @@ namespace NeatMapper.Core.Mapper {
 		}
 
 
-		public TDestination Map<TSource, TDestination>(TSource source) {
-			var types = (From: typeof(TSource), To: typeof(TDestination));
+		public object? Map(object? source, Type sourceType, Type destinationType) {
+			if(source?.GetType().IsAssignableTo(sourceType) == false)
+				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+
+			var types = (From: sourceType, To: destinationType);
 			var scope = CreateScope(_mappingContext);
 			try { 
-				return (TDestination)MapInternal(types, _configuration.NewMaps, _configuration.GenericNewMaps, scope)
+				return MapInternal(types, _configuration.NewMaps, _configuration.GenericNewMaps, scope)
 					.Invoke(new object?[] { source, CreateOrReturnContext(scope!) });
 			}
 			catch(ArgumentException e1) {
 				if(!IsMapMissing(e1))
 					throw;
 
-				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && !types.To.IsArray && source is IEnumerable sourceEnumerable) {
+				if(types.To.IsArray)
+					ThrowNoMapFound(types);
+
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && source is IEnumerable sourceEnumerable) {
 					var elementTypes = (From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)), To: GetInterfaceElementType(types.To, typeof(IEnumerable<>)));
 
 					Func<object?[], object> elementMapper;
@@ -63,9 +71,9 @@ namespace NeatMapper.Core.Mapper {
 					}
 
 					// The created destination will always be a non-readonly collection so the addMethod is always present
-					var destination = (TDestination)CreateDestinationFactory(types.To).Invoke();
-					var destinationType = destination.GetType();
-					var addMethod = destinationType.GetInterfaceMap(destinationType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>)))
+					var destination = CreateDestinationFactory(types.To).Invoke();
+					var destinationInstanceType = destination.GetType();
+					var addMethod = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>)))
 						.TargetMethods.First(m => m.Name == nameof(ICollection<object>.Add));
 
 					var context = CreateOrReturnContext(scope!);
@@ -80,27 +88,32 @@ namespace NeatMapper.Core.Mapper {
 
 				MergeMap:
 
-				return Map(source, (TDestination)CreateDestinationFactory(typeof(TDestination)).Invoke());
+				return Map(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType);
 			}
 		}
 
-		public TDestination Map<TSource, TDestination>(TSource source, TDestination destination) {
-			var types = (From: typeof(TSource), To: typeof(TDestination));
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType) {
+			if (source?.GetType().IsAssignableTo(sourceType) == false)
+				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destination?.GetType().IsAssignableTo(destinationType) == false)
+				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
+
+			var types = (From: sourceType, To: destinationType);
 			var scope = CreateScope(_mappingContext);
 			try { 
-				return (TDestination)MapInternal(types, _configuration.MergeMaps, _configuration.GenericMergeMaps, scope)
+				return MapInternal(types, _configuration.MergeMaps, _configuration.GenericMergeMaps, scope)
 					.Invoke(new object?[] { source, destination, CreateOrReturnContext(scope!) });
 			}
 			catch (ArgumentException e1) {
 				if (!IsMapMissing(e1))
 					throw;
 
-				var destinationType = destination?.GetType();
+				var destinationInstanceType = destination?.GetType();
 
-				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(ICollection<>)) && destinationType?.IsArray != true && source is IEnumerable sourceEnumerable &&
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(ICollection<>)) && destinationInstanceType?.IsArray != true && source is IEnumerable sourceEnumerable &&
 					destination is IEnumerable destinationEnumerable) {
 
-					var interfaceMap = destinationType!.GetInterfaceMap(destinationType!.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
+					var interfaceMap = destinationInstanceType!.GetInterfaceMap(destinationInstanceType!.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
 					
 					// If the collection is readonly we cannot map to it
 					if(!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly)))!.Invoke(destination, null)!) { 
@@ -199,21 +212,83 @@ namespace NeatMapper.Core.Mapper {
 			}
 		}
 
-		public Task<TDestination> MapAsync<TSource, TDestination>(TSource source, CancellationToken cancellationToken = default) {
+		public async Task<object?> MapAsync(object? source, Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+			if (source?.GetType().IsAssignableTo(sourceType) == false)
+				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+
+			var types = (From: sourceType, To: destinationType);
+			var scope = CreateScope(_asyncMappingContext);
 			try {
-				var scope = CreateScope(_asyncMappingContext);
-				return (Task<TDestination>)MapInternal((typeof(TSource), typeof(TDestination)), _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps, scope)
-					.Invoke(new object?[] { source, CreateOrReturnAsyncContext(scope!, cancellationToken) });
+				return await TaskUtils.AwaitTask<object?>((Task)MapInternal(types, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps, scope)
+					.Invoke(new object?[] { source, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
 			}
-			catch (ArgumentException) {
-				return MapAsync(source, (TDestination)CreateDestinationFactory(typeof(TDestination)).Invoke(), cancellationToken);
+			catch (ArgumentException e1) {
+				if (!IsMapMissing(e1))
+					throw;
+
+				if (types.To.IsArray)
+					ThrowNoMapFound(types);
+
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && source is IEnumerable sourceEnumerable) {
+					var elementTypes = (From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)), To: GetInterfaceElementType(types.To, typeof(IEnumerable<>)));
+
+					Func<object?[], object> elementMapper;
+					try {
+						// (source, context) => Task<destination>
+						elementMapper = MapInternal(elementTypes, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps, null);
+					}
+					catch (ArgumentException e2) {
+						if (!IsMapMissing(e2))
+							throw;
+
+						try {
+							// (source, destination, context) => Task<destination>
+							var destinationElementMapper = MapInternal(elementTypes, _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps, null);
+
+							var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
+
+							elementMapper = (sourceContext) => destinationElementMapper.Invoke(new object[] { sourceContext[0]!, destinationElementFactory.Invoke(), sourceContext[1]! });
+						}
+						catch (ArgumentException e3) {
+							if (!IsMapMissing(e3))
+								throw;
+
+							goto MergeMap;
+						}
+					}
+
+					// The created destination will always be a non-readonly collection so the addMethod is always present
+					var destination = CreateDestinationFactory(types.To).Invoke();
+					var destinationInstanceType = destination.GetType();
+					var addMethod = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>)))
+						.TargetMethods.First(m => m.Name == nameof(ICollection<object>.Add));
+
+					var context = CreateOrReturnAsyncContext(scope!, cancellationToken);
+					using (scope) {
+						foreach (var sourceElement in sourceEnumerable) {
+							var destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { sourceElement, context })!);
+							addMethod.Invoke(destination, new object[] { destinationElement });
+						}
+					}
+
+					return destination;
+				}
+
+				MergeMap:
+
+				return await MapAsync(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType, cancellationToken);
 			}
 		}
 
-		public Task<TDestination> MapAsync<TSource, TDestination>(TSource source, TDestination destination, CancellationToken cancellationToken = default) {
+		public Task<object?> MapAsync(object? source, Type sourceType, object? destination, Type destinationType, CancellationToken cancellationToken = default) {
+			if (source?.GetType().IsAssignableTo(sourceType) == false)
+				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destination?.GetType().IsAssignableTo(destinationType) == false)
+				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
+
 			var scope = CreateScope(_asyncMappingContext);
-			return (Task<TDestination>)MapInternal((typeof(TSource), typeof(TDestination)), _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps, scope)
-				.Invoke(new object?[] { source, destination, CreateOrReturnAsyncContext(scope!, cancellationToken) });
+			return TaskUtils.AwaitTask<object?>((Task)MapInternal((sourceType, destinationType), _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps, scope)
+				.Invoke(new object?[] { source, destination, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
 		}
 
 
@@ -257,6 +332,12 @@ namespace NeatMapper.Core.Mapper {
 				return _asyncMappingContext;
 		}
 
+		[DoesNotReturn]
+		private static void ThrowNoMapFound((Type From, Type To) types) {
+			throw new ArgumentException($"No map could be found for the given types: {types.From.Name} -> {types.To.Name}\n" +
+				$"{types.From.FullName} -> {types.To.FullName}");
+		}
+
 		private static Func<object?[], object> MapInternal(
 			(Type From, Type To) types,
 			IReadOnlyDictionary<(Type From, Type To), MethodInfo> maps,
@@ -288,8 +369,8 @@ namespace NeatMapper.Core.Mapper {
 				}
 			}
 
-			throw new ArgumentException($"No map could be found for the given types: {types.From.Name} -> {types.To.Name}\n" +
-				$"{types.From.FullName} -> {types.To.FullName}");
+			ThrowNoMapFound(types);
+			return null!;
 		}
 
 		private static Func<object?[], object> ElementComparerInternal((Type From, Type To) types,

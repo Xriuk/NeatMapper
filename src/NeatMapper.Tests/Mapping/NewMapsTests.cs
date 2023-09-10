@@ -59,6 +59,7 @@ namespace NeatMapper.Tests.Mapping {
 		[DataRow(0, "0")]
 		public void ShouldMapPrimitives(int input, string output) {
 			Assert.AreEqual(output, _mapper.Map<int, string>(input));
+			Assert.AreEqual(output, _mapper.Map<string>(input));
 		}
 
 		[TestMethod]
@@ -66,11 +67,16 @@ namespace NeatMapper.Tests.Mapping {
 			var obj = _mapper.Map<int, MyClassInt>(2);
 			Assert.IsNotNull(obj);
 			Assert.AreEqual(2, obj.MyInt);
+
+			obj = _mapper.Map<MyClassInt>(2);
+			Assert.IsNotNull(obj);
+			Assert.AreEqual(2, obj.MyInt);
 		}
 
 		[TestMethod]
 		public void ShouldNotFindMissingMap() {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<bool, int>(false));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(false));
 		}
 
 		[TestMethod]
@@ -88,13 +94,18 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollections() {
-			var strings = _mapper.Map<IEnumerable<int>, IList<string>>(new[] { 2, -3, 0 });
+			var strings = _mapper.Map<IList<string>>(new[] { 2, -3, 0 });
 
 			Assert.IsNotNull(strings);
 			Assert.AreEqual(3, strings.Count);
 			Assert.AreEqual("4", strings[0]);
 			Assert.AreEqual("-6", strings[1]);
 			Assert.AreEqual("0", strings[2]);
+		}
+
+		[TestMethod]
+		public void ShouldNotMapReadonlyCollectionDestination() {
+			TestUtils.AssertMapNotFound(() => _mapper.Map<MyClassString[]>(new[] { 2, -3, 0 }));
 		}
 
 		// DEV: test null in source and/or destination for collections

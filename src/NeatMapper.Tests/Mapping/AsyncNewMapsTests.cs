@@ -81,5 +81,21 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsNotNull(obj);
 			Assert.AreEqual("2", obj.MyString);
 		}
+
+		[TestMethod]
+		public async Task ShouldMapCollections() {
+			var strings = await _mapper.MapAsync<IList<string>>(new[] { 2, -3, 0 });
+
+			Assert.IsNotNull(strings);
+			Assert.AreEqual(3, strings.Count);
+			Assert.AreEqual("4", strings[0]);
+			Assert.AreEqual("-6", strings[1]);
+			Assert.AreEqual("0", strings[2]);
+		}
+
+		[TestMethod]
+		public async Task ShouldNotMapReadonlyCollectionDestination() {
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<MyClassString[]>(new[] { 2, -3, 0 }));
+		}
 	}
 }

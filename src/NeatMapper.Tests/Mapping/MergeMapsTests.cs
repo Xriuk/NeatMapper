@@ -116,7 +116,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldFallbackToMergeMap() {
-			Assert.AreEqual("4", _mapper.Map<float, string>(2));
+			Assert.AreEqual("4", _mapper.Map<string>(2f));
 		}
 
 		[TestMethod]
@@ -204,7 +204,11 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldFallbackToMergeMapInCollections() {
-			Assert.AreEqual("4", _mapper.Map<float, string>(2));
+			var result = _mapper.Map<IList<string>>(new[] { 2f });
+
+			Assert.IsNotNull(result);
+			Assert.AreEqual(1, result.Count);
+			Assert.AreEqual("4", result[0]);
 		}
 	}
 }
