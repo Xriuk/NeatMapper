@@ -16,7 +16,8 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMap<int, MyClassInt>,
 			IMergeMap<int, MyClassString>,
 			IMergeMap<bool, MyClassString>,
-			IMergeMap<float, MyClassString> {
+			IMergeMap<float, MyClassString>,
+			IMergeMap<MyClassInt, MyClassString> {
 
 			static string IMergeMap<int, string>.Map(int source, string destination, MappingContext context) {
 				return (source * 2).ToString();
@@ -52,6 +53,11 @@ namespace NeatMapper.Tests.Mapping {
 			// Nested MergeMap
 			static MyClassString IMergeMap<float, MyClassString>.Map(float source, MyClassString destination, MappingContext context) {
 				return context.Mapper.Map((int)source, destination);
+			}
+
+			static MyClassString IMergeMap<MyClassInt, MyClassString>.Map(MyClassInt source, MyClassString destination, MappingContext context) {
+				destination.MyString = (source.MyInt * 4).ToString();
+				return destination;
 			}
 		}
 
@@ -118,5 +124,37 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldPreferNewMap() {
 			Assert.AreEqual("6", _mapper.Map<int, string>(2));
 		}
+
+		[TestMethod]
+		public void ShouldMapCollectionsWithoutEqualityComparer() {
+			var sa = new MyClassInt {
+				MyInt = 2
+			};
+			var sb = new MyClassInt {
+				MyInt = -3
+			};
+			var sc = new MyClassInt {
+				MyInt = 0
+			};
+			var source = new List<MyClassInt> { sa, sb, sc };
+			var da = new MyClassString();
+			var db = new MyClassString();
+			var dc = new MyClassString();
+			var destination = new List<MyClassString> { da, db, dc };
+
+			// Should recreate all the elements since it cannot match them to update them
+			var result = _mapper.Map<IEnumerable<MyClassInt>, IList<MyClassString>>(source, destination);
+
+			Assert.IsNotNull(result);
+			Assert.AreSame(destination, result);
+			Assert.AreEqual(3, result.Count());
+			Assert.AreNotSame(da, result.ElementAt(0));
+			Assert.AreNotSame(db, result.ElementAt(1));
+			Assert.AreNotSame(dc, result.ElementAt(2));
+		}
+
+		// DEV: test when returning a different element from the destination, should remove destination and add the new one instead
+
+		// DEV: test readonly collections in destination, should not map
 	}
 }

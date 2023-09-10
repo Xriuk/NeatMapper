@@ -12,6 +12,7 @@ namespace NeatMapper.Core.Configuration {
 	}
 
 	public interface IMapperConfiguration {
+		#region Maps
 		/// <summary>
 		/// <see cref="INewMap{TSource, TDestination}.Map(TSource, MappingContext)"/>
 		/// </summary>
@@ -63,5 +64,19 @@ namespace NeatMapper.Core.Configuration {
 		/// (MyNonGenericClass, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TDestination&gt;
 		/// </summary>
 		public IEnumerable<GenericMap> AsyncGenericMergeMaps { get; }
+		#endregion
+
+		/// <summary>
+		/// <see cref="ICollectionElementComparer{TSource, TDestination}.Match(TSource, TDestination, MappingContext)"/>
+		/// </summary>
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> CollectionElementComparers { get; }
+
+		/// <summary>
+		/// One or two open types which contain <see cref="ICollectionElementComparer{TSource, TDestination}.Match(TSource, TDestination, MappingContext)"/> for the given open types.<br/>
+		/// (IEnumerable&lt;TSource&gt;, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TSource, TDestination&gt;<br/>
+		/// (IEnumerable&lt;TSource&gt;, MyNonGenericClass) =&gt; MyClass&lt;TSource&gt;<br/>
+		/// (MyNonGenericClass, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TDestination&gt;
+		/// </summary>
+		public IEnumerable<GenericMap> GenericCollectionElementComparers { get; }
 	}
 }

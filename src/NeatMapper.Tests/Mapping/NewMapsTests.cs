@@ -84,6 +84,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("4", obj.MyString);
 		}
 
+		// DEV: check scope (in nested?)
+
 		[TestMethod]
 		public void ShouldMapCollections() {
 			var strings = _mapper.Map<IEnumerable<int>, IList<string>>(new[] { 2, -3, 0 });
@@ -94,5 +96,11 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("-6", strings[1]);
 			Assert.AreEqual("0", strings[2]);
 		}
+
+		// DEV: test null in source and/or destination for collections
+
+		// DEV: test scope in collection
+
+		// DEV: test element mapping in collection, elements to update will use MergeMap or NewMap, elements to add will use NewMap or MergeMap, in this order
 	}
 }

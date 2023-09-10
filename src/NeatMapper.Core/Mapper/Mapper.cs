@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using NeatMapper.Core.Configuration;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace NeatMapper.Core.Mapper {
@@ -29,26 +30,42 @@ namespace NeatMapper.Core.Mapper {
 				return (TDestination)MapInternal(types, _configuration.NewMaps, _configuration.GenericNewMaps, scope)
 					.Invoke(new object?[] { source, CreateOrReturnContext(scope!) });
 			}
-			catch(ArgumentException) {
-				if (IsCollection(types.From) && IsCollection(types.To) && source is IEnumerable sourceEnumerable) {
-					var elementTypes = (From: GetCollectionElementType(types.From), To: GetCollectionElementType(types.To));
+			catch(ArgumentException e1) {
+				if(!IsMapMissing(e1))
+					throw;
+
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && source is IEnumerable sourceEnumerable) {
+					var elementTypes = (From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)), To: GetInterfaceElementType(types.To, typeof(IEnumerable<>)));
 
 					Func<object?[], object> elementMapper;
 					try {
 						// (source, context) => destination
 						elementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps, null);
 					}
-					catch (ArgumentException) {
-						// (source, destination, context) => destination
-						var destinationElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps, null);
-						
-						var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
+					catch (ArgumentException e2) {
+						if (!IsMapMissing(e2))
+							throw;
 
-						elementMapper =  (sourceContext) => destinationElementMapper.Invoke(new object[] { sourceContext[0]!, destinationElementFactory.Invoke(), sourceContext[1]! });
+						try { 
+							// (source, destination, context) => destination
+							var destinationElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps, null);
+
+							var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
+
+							elementMapper = (sourceContext) => destinationElementMapper.Invoke(new object[] { sourceContext[0]!, destinationElementFactory.Invoke(), sourceContext[1]! });
+						}
+						catch(ArgumentException e3) {
+							if (!IsMapMissing(e3))
+								throw;
+
+							goto MergeMap;
+						}
 					}
 
-					var destination = (TDestination)CreateDestinationFactory(typeof(TDestination)).Invoke();
-					var addMethod = destination.GetType().GetMethod(nameof(ICollection<object>.Add)) ?? throw new InvalidOperationException("Created type is not a valid collection");
+					// The created destination will always be a non-readonly collection so the addMethod is always present
+					var destination = (TDestination)CreateDestinationFactory(types.To).Invoke();
+					var addMethod = types.To.GetInterfaceMap(types.To.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>)))
+						.TargetMethods.First(m => m.Name == nameof(ICollection<object>.Add));
 
 					var context = CreateOrReturnContext(scope!);
 					using (scope) { 
@@ -60,14 +77,109 @@ namespace NeatMapper.Core.Mapper {
 					return destination;
 				}
 
+				MergeMap:
+
 				return Map(source, (TDestination)CreateDestinationFactory(typeof(TDestination)).Invoke());
 			}
 		}
 
 		public TDestination Map<TSource, TDestination>(TSource source, TDestination destination) {
+			var types = (From: typeof(TSource), To: typeof(TDestination));
 			var scope = CreateScope(_mappingContext);
-			return (TDestination)MapInternal((typeof(TSource), typeof(TDestination)), _configuration.MergeMaps, _configuration.GenericMergeMaps, scope)
-				.Invoke(new object?[] { source, destination, CreateOrReturnContext(scope!) });
+			try { 
+				return (TDestination)MapInternal(types, _configuration.MergeMaps, _configuration.GenericMergeMaps, scope)
+					.Invoke(new object?[] { source, destination, CreateOrReturnContext(scope!) });
+			}
+			catch (ArgumentException e1) {
+				if (!IsMapMissing(e1))
+					throw;
+
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(ICollection<>)) && source is IEnumerable sourceEnumerable &&
+					destination is IEnumerable destinationEnumerable) {
+
+					var destinationType = destination.GetType();
+					var interfaceMap = destinationType.GetInterfaceMap(destinationType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
+					
+					if(!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly)))!.Invoke(destination, null)!) { 
+						var elementTypes = (From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)), To: GetInterfaceElementType(types.To, typeof(ICollection<>)));
+
+						Func<object?[], object> newElementMapper = null!;
+						Func<object?[], object> mergeElementMapper = null!;
+						Func<object> destinationElementFactory = null!;
+						try {
+							newElementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps, null);
+						}
+						catch (ArgumentException e2) {
+							if (!IsMapMissing(e2))
+								throw;
+						}
+						try {
+							mergeElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps, null);
+
+							if(newElementMapper == null)
+								destinationElementFactory = CreateDestinationFactory(elementTypes.To);
+						}
+						catch (ArgumentException e2) {
+							if (!IsMapMissing(e2) || newElementMapper == null)
+								throw;
+						}
+
+						var addMethod = interfaceMap.First(m => m.Name == nameof(ICollection<object>.Add));
+						var removeMethod = interfaceMap.First(m => m.Name == nameof(ICollection<object>.Remove));
+						var equalityComparer = (IEqualityComparer)typeof(EqualityComparer<>).MakeGenericType(elementTypes.To)
+							.GetProperty(nameof(EqualityComparer<object>.Default))!.GetValue(null)!;
+
+						var elementsToRemove = new List<object>();
+						var elementsToAdd = new List<object>();
+
+						// Added/updated elements
+						var context = CreateOrReturnContext(scope!);
+						using (scope) {
+							foreach (var sourceElement in sourceEnumerable) {
+								object? matchingDestinationElement = null;
+								foreach(var destinationElement in destinationEnumerable) {
+									if(equalityComparer.Equals(sourceElement, destinationElement)){
+										matchingDestinationElement = destinationElement;
+										break;
+									}
+								}
+
+								if(matchingDestinationElement != null) {
+									if(mergeElementMapper != null) { 
+										var mergeResult = mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, context });
+										if(mergeResult != matchingDestinationElement) {
+											elementsToRemove.Add(matchingDestinationElement);
+											elementsToAdd.Add(mergeResult);
+										}
+									}
+									else {
+										elementsToRemove.Add(matchingDestinationElement);
+										elementsToAdd.Add(newElementMapper!.Invoke(new object[] { sourceElement, context }));
+									}
+								}
+								else {
+									if(newElementMapper != null)
+										elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, context }));
+									else
+										elementsToAdd.Add(mergeElementMapper!.Invoke(new object[] { sourceElement, destinationElementFactory.Invoke(), context }));
+								}
+							}
+
+							foreach(var element in elementsToRemove) {
+								removeMethod.Invoke(destination, new object[] { element });
+							}
+
+							foreach (var element in elementsToAdd) {
+								addMethod.Invoke(destination, new object[] { element });
+							}
+						}
+
+						return destination;
+					}
+				}
+
+				throw;
+			}
 		}
 
 		public Task<TDestination> MapAsync<TSource, TDestination>(TSource source, CancellationToken cancellationToken = default) {
@@ -215,15 +327,19 @@ namespace NeatMapper.Core.Mapper {
 			return openType.MakeGenericType(openType.GetGenericArguments().Select(oa => arguments.First(a => a.OpenGenericArgument == oa).ClosedType).ToArray());
 		}
 
-		private static bool IsCollection(Type type) {
-			return (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(IEnumerable<>)) ||
-				type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>));
+		private static bool HasInterface(Type type, Type interfaceType) {
+			return (type.IsGenericType && type.GetGenericTypeDefinition() == interfaceType) ||
+				type.GetInterfaces().Any(i => i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType);
 		}
 
-		private static Type GetCollectionElementType(Type collection) {
-			return (collection.IsGenericType && collection.GetGenericTypeDefinition() == typeof(IEnumerable<>)) ?
+		private static Type GetInterfaceElementType(Type collection, Type interfaceType) {
+			return (collection.IsGenericType && collection.GetGenericTypeDefinition() == interfaceType) ?
 				collection.GetGenericArguments()[0] :
-				collection.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEnumerable<>)).GetGenericArguments()[0];
+				collection.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType).GetGenericArguments()[0];
+		}
+
+		private static bool IsMapMissing(ArgumentException e) {
+			return e.Message.StartsWith("No map could be found for the given types");
 		}
 	}
 }

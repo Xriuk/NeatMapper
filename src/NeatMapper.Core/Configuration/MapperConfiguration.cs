@@ -28,6 +28,52 @@ namespace NeatMapper.Core.Configuration {
 			AsyncGenericNewMaps = asyncGenericNewMaps;
 			AsyncGenericMergeMaps = asyncGenericMergeMaps;
 
+			var collectionElementComparers = new Dictionary<(Type From, Type To), MethodInfo>();
+			var genericCollectionElementComparers = new List<GenericMap>();
+
+			foreach (var type in options.MapTypes
+					.Distinct()
+					.Where(t => t.IsClass && t.GetInterfaces().Any(i =>
+						i.IsGenericType &&
+						(i.GetGenericTypeDefinition() == typeof(ICollectionElementComparer<,>))))) {
+
+				var interfaces = type.GetInterfaces()
+						.Where(i => i.IsGenericType &&
+							(i.GetGenericTypeDefinition() == typeof(ICollectionElementComparer<,>)));
+
+				if (type.IsGenericTypeDefinition) {
+					var typeArguments = type.GetGenericArguments();
+
+					foreach (var interf in interfaces) {
+						var interfaceArguments = interf.GetGenericArguments();
+						var interfaceOpenGenericArguments = interfaceArguments
+							.SelectMany(GetOpenGenericArgumentsRecursive)
+							.Distinct()
+							.ToArray();
+						if (!typeArguments.All(t => interfaceOpenGenericArguments.Contains(t)))
+							throw new InvalidOperationException($"Interface {interf.FullName} in generic class {type.Name} cannot be instantiated because the generic arguments of the interface do not fully cover the generic arguments of the class so they cannot be inferred");
+						else {
+							var duplicate = genericCollectionElementComparers.FirstOrDefault(m => MatchOpenGenericArgumentsRecursive(m.From, interfaceArguments[0]) && MatchOpenGenericArgumentsRecursive(m.To, interfaceArguments[1]));
+							if (duplicate != null)
+								throw new InvalidOperationException($"Duplicate interface {interf.FullName} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class}");
+
+							genericCollectionElementComparers.Add(new GenericMap {
+								From = interfaceArguments[0],
+								To = interfaceArguments[1],
+								Class = type,
+								Method = type.GetInterfaceMap(interf).TargetMethods.First().MethodHandle
+							});
+						}
+					}
+				}
+				else {
+					foreach (var interf in interfaces) {
+						var arguments = interf.GetGenericArguments();
+						collectionElementComparers.Add((arguments[0], arguments[1]), type.GetInterfaceMap(interf).TargetMethods.First());
+					}
+				}
+			}
+
 			void PopulateTypes(Type newMapType, Type mergeMapType,
 				Dictionary<(Type From, Type To), MethodInfo> newMaps, Dictionary<(Type From, Type To), MethodInfo> mergeMaps,
 				List<GenericMap> genericNewMaps, List<GenericMap> genericMergeMaps) { 
@@ -95,6 +141,8 @@ namespace NeatMapper.Core.Configuration {
 		public IEnumerable<GenericMap> AsyncGenericNewMaps { get; }
 
 		public IEnumerable<GenericMap> AsyncGenericMergeMaps { get; }
+
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> CollectionElementComparers { get; }
 
 
 		private static IEnumerable<Type> GetOpenGenericArgumentsRecursive(Type t) {
