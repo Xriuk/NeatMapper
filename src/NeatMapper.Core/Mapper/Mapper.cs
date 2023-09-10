@@ -34,7 +34,7 @@ namespace NeatMapper.Core.Mapper {
 				if(!IsMapMissing(e1))
 					throw;
 
-				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && source is IEnumerable sourceEnumerable) {
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && !types.To.IsArray && source is IEnumerable sourceEnumerable) {
 					var elementTypes = (From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)), To: GetInterfaceElementType(types.To, typeof(IEnumerable<>)));
 
 					Func<object?[], object> elementMapper;
@@ -64,7 +64,8 @@ namespace NeatMapper.Core.Mapper {
 
 					// The created destination will always be a non-readonly collection so the addMethod is always present
 					var destination = (TDestination)CreateDestinationFactory(types.To).Invoke();
-					var addMethod = types.To.GetInterfaceMap(types.To.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>)))
+					var destinationType = destination.GetType();
+					var addMethod = destinationType.GetInterfaceMap(destinationType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>)))
 						.TargetMethods.First(m => m.Name == nameof(ICollection<object>.Add));
 
 					var context = CreateOrReturnContext(scope!);
@@ -94,15 +95,19 @@ namespace NeatMapper.Core.Mapper {
 				if (!IsMapMissing(e1))
 					throw;
 
-				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(ICollection<>)) && source is IEnumerable sourceEnumerable &&
+				var destinationType = destination?.GetType();
+
+				if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(ICollection<>)) && destinationType?.IsArray != true && source is IEnumerable sourceEnumerable &&
 					destination is IEnumerable destinationEnumerable) {
 
-					var destinationType = destination.GetType();
-					var interfaceMap = destinationType.GetInterfaceMap(destinationType.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
+					var interfaceMap = destinationType!.GetInterfaceMap(destinationType!.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
 					
+					// If the collection is readonly we cannot map to it
 					if(!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly)))!.Invoke(destination, null)!) { 
 						var elementTypes = (From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)), To: GetInterfaceElementType(types.To, typeof(ICollection<>)));
 
+						var elementComparer = ElementComparerInternal(elementTypes, _configuration.CollectionElementComparers, _configuration.GenericCollectionElementComparers);
+						
 						Func<object?[], object> newElementMapper = null!;
 						Func<object?[], object> mergeElementMapper = null!;
 						Func<object> destinationElementFactory = null!;
@@ -126,19 +131,31 @@ namespace NeatMapper.Core.Mapper {
 
 						var addMethod = interfaceMap.First(m => m.Name == nameof(ICollection<object>.Add));
 						var removeMethod = interfaceMap.First(m => m.Name == nameof(ICollection<object>.Remove));
-						var equalityComparer = (IEqualityComparer)typeof(EqualityComparer<>).MakeGenericType(elementTypes.To)
-							.GetProperty(nameof(EqualityComparer<object>.Default))!.GetValue(null)!;
 
 						var elementsToRemove = new List<object>();
 						var elementsToAdd = new List<object>();
 
-						// Added/updated elements
 						var context = CreateOrReturnContext(scope!);
 						using (scope) {
+							// Deleted elements
+							foreach (var destinationElement in destinationEnumerable) {
+								bool found = false;
+								foreach (var sourceElement in sourceEnumerable) {
+									if ((bool)elementComparer.Invoke(new object[] { sourceElement, destinationElement, context })) {
+										found = true;
+										break;
+									}
+								}
+
+								if (!found)
+									elementsToRemove.Add(destinationElement);
+							}
+
+							// Added/updated elements
 							foreach (var sourceElement in sourceEnumerable) {
 								object? matchingDestinationElement = null;
 								foreach(var destinationElement in destinationEnumerable) {
-									if(equalityComparer.Equals(sourceElement, destinationElement)){
+									if((bool)elementComparer.Invoke(new object[] { sourceElement, destinationElement, context })){
 										matchingDestinationElement = destinationElement;
 										break;
 									}
@@ -273,6 +290,21 @@ namespace NeatMapper.Core.Mapper {
 
 			throw new ArgumentException($"No map could be found for the given types: {types.From.Name} -> {types.To.Name}\n" +
 				$"{types.From.FullName} -> {types.To.FullName}");
+		}
+
+		private static Func<object?[], object> ElementComparerInternal((Type From, Type To) types,
+			IReadOnlyDictionary<(Type From, Type To), MethodInfo> comparers,
+			IEnumerable<GenericMap> genericComparers) {
+
+			try {
+				return MapInternal(types, comparers, genericComparers, null);
+			}
+			catch (ArgumentException e) {
+				if (!IsMapMissing(e))
+					throw;
+				else
+					return (_) => false;
+			}
 		}
 
 		private static Func<object> CreateDestinationFactory(Type destination) {

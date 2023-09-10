@@ -17,7 +17,7 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMap<int, MyClassString>,
 			IMergeMap<bool, MyClassString>,
 			IMergeMap<float, MyClassString>,
-			IMergeMap<MyClassInt, MyClassString> {
+			ICollectionElementComparer<float, MyClassString>{
 
 			static string IMergeMap<int, string>.Map(int source, string destination, MappingContext context) {
 				return (source * 2).ToString();
@@ -55,9 +55,8 @@ namespace NeatMapper.Tests.Mapping {
 				return context.Mapper.Map((int)source, destination);
 			}
 
-			static MyClassString IMergeMap<MyClassInt, MyClassString>.Map(MyClassInt source, MyClassString destination, MappingContext context) {
-				destination.MyString = (source.MyInt * 4).ToString();
-				return destination;
+			static bool ICollectionElementComparer<float, MyClassString>.Match(float source, MyClassString destination, MappingContext context) {
+				return source.ToString() == destination.MyString;
 			}
 		}
 
@@ -88,7 +87,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotFindMissingMap() {
-			Assert.ThrowsException<ArgumentException>(() => _mapper.Map(false, 0));
+			TestUtils.AssertMapNotFound(() => _mapper.Map(false, 0));
 		}
 
 		[TestMethod]
@@ -126,35 +125,86 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapCollectionsWithoutEqualityComparer() {
-			var sa = new MyClassInt {
-				MyInt = 2
-			};
-			var sb = new MyClassInt {
-				MyInt = -3
-			};
-			var sc = new MyClassInt {
-				MyInt = 0
-			};
-			var source = new List<MyClassInt> { sa, sb, sc };
+		public void ShouldMapCollectionsWithoutElementsComparer() {
 			var da = new MyClassString();
 			var db = new MyClassString();
 			var dc = new MyClassString();
 			var destination = new List<MyClassString> { da, db, dc };
 
 			// Should recreate all the elements since it cannot match them to update them
-			var result = _mapper.Map<IEnumerable<MyClassInt>, IList<MyClassString>>(source, destination);
+			var result = _mapper.Map(new[] { 2, -3, 0 }, destination);
 
 			Assert.IsNotNull(result);
 			Assert.AreSame(destination, result);
 			Assert.AreEqual(3, result.Count());
-			Assert.AreNotSame(da, result.ElementAt(0));
-			Assert.AreNotSame(db, result.ElementAt(1));
-			Assert.AreNotSame(dc, result.ElementAt(2));
+			Assert.AreNotSame(da, result[0]);
+			Assert.AreEqual("4", result[0].MyString);
+			Assert.AreNotSame(db, result[1]);
+			Assert.AreEqual("-6", result[1].MyString);
+			Assert.AreNotSame(dc, result[2]);
+			Assert.AreEqual("0", result[2].MyString);
 		}
 
-		// DEV: test when returning a different element from the destination, should remove destination and add the new one instead
+		[TestMethod]
+		public void ShouldMapCollectionsWithElementsComparer() {
+			var da = new MyClassString{
+				MyString = "2"
+			};
+			var db = new MyClassString {
+				MyString = "-3"
+			};
+			var dc = new MyClassString();
+			var destination = new List<MyClassString> { da, db, dc };
 
-		// DEV: test readonly collections in destination, should not map
+			var result = _mapper.Map(new[] { 2f, -3f, 0f }, destination);
+
+			Assert.IsNotNull(result);
+			Assert.AreSame(destination, result);
+			Assert.AreEqual(3, result.Count());
+			Assert.AreSame(da, result[0]);
+			Assert.AreEqual("4", result[0].MyString);
+			Assert.AreSame(db, result[1]);
+			Assert.AreEqual("-6", result[1].MyString);
+			Assert.AreNotSame(dc, result[2]);
+			Assert.AreEqual("0", result[2].MyString);
+		}
+
+		[TestMethod]
+		public void ShouldNotMapReadonlyCollectionDestination() {
+			var destination = new MyClassString[3];
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 2, -3, 0 }, destination));
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<int>, ICollection<MyClassString>>(new[] { 2, -3, 0 }, destination));
+		}
+
+		[TestMethod]
+		public void ShouldRespectReturnedValueInCollections() {
+			var da = new MyClassInt {
+				MyInt = 2
+			};
+			var db = new MyClassInt {
+				MyInt = -3
+			};
+			var dc = new MyClassInt();
+			var destination = new List<MyClassInt> { da, db, dc };
+
+			var result = _mapper.Map(new[] { 2, -3, 4 }, destination);
+
+			Assert.IsNotNull(result);
+			Assert.AreSame(destination, result);
+			Assert.AreEqual(3, result.Count());
+			Assert.AreNotSame(da, result[0]);
+			Assert.AreEqual(2, result[0].MyInt);
+			Assert.AreNotSame(db, result[1]);
+			Assert.AreEqual(-3, result[1].MyInt);
+			Assert.AreNotSame(dc, result[2]);
+			Assert.AreEqual(4, result[2].MyInt);
+		}
+
+		[TestMethod]
+		public void ShouldFallbackToMergeMapInCollections() {
+			Assert.AreEqual("4", _mapper.Map<float, string>(2));
+		}
 	}
 }

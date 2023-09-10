@@ -66,7 +66,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldNotMapNotMatchingGenerics() {
 			var stringArray = new[] { "Test" };
-			Assert.ThrowsException<ArgumentException>(() => _mapper.Map<IEnumerable<string>, IList<int>>(stringArray));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<string>, IList<int>>(stringArray));
 		}
 
 		[TestMethod]
@@ -91,7 +91,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldNotMapNotMatchingDeepGenerics() {
 			var objectToMap = new Dictionary<string, IDictionary<int, IList<bool>>>();
-			Assert.ThrowsException<ArgumentException>(() => _mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>(objectToMap));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>(objectToMap));
 		}
 
 		[TestMethod]

@@ -70,7 +70,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotFindMissingMap() {
-			Assert.ThrowsException<ArgumentException>(() => _mapper.Map<bool, int>(false));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<bool, int>(false));
 		}
 
 		[TestMethod]

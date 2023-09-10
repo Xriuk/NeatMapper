@@ -67,7 +67,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldNotFindMissingMap() {
-			await Assert.ThrowsExceptionAsync<ArgumentException>(() => _mapper.MapAsync(false, 0));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(false, 0));
 		}
 
 		[TestMethod]
