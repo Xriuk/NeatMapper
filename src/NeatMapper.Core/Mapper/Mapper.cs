@@ -4,7 +4,6 @@ using NeatMapper.Core.Internal;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace NeatMapper.Core.Mapper {
 	internal sealed class Mapper : IMapper, IAsyncMapper {
@@ -26,14 +25,19 @@ namespace NeatMapper.Core.Mapper {
 
 
 		public object? Map(object? source, Type sourceType, Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
 			if(source?.GetType().IsAssignableTo(sourceType) == false)
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
 
 			var types = (From: sourceType, To: destinationType);
-			var scope = CreateScope(_mappingContext);
-			try { 
-				return MapInternal(types, _configuration.NewMaps, _configuration.GenericNewMaps, scope)
-					.Invoke(new object?[] { source, CreateOrReturnContext(scope!) });
+			var scope = CreateScopeIfNeeded();
+			object? result;
+			try {
+				result = MapInternal(types, _configuration.NewMaps, _configuration.GenericNewMaps, scope)
+					.Invoke(new object?[] { source, CreateOrReturnContext(scope) });
 			}
 			catch(ArgumentException e1) {
 				if(!IsMapMissing(e1))
@@ -83,25 +87,39 @@ namespace NeatMapper.Core.Mapper {
 						}
 					}
 
-					return destination;
+					result = destination;
+
+					goto End;
 				}
 
 				MergeMap:
 
-				return Map(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType);
+				result = Map(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType);
 			}
+
+			End:
+
+			if (result?.GetType().IsAssignableTo(destinationType) == false)
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+
+			return result;
 		}
 
 		public object? Map(object? source, Type sourceType, object? destination, Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
 			if (source?.GetType().IsAssignableTo(sourceType) == false)
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
 			if (destination?.GetType().IsAssignableTo(destinationType) == false)
 				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
 
 			var types = (From: sourceType, To: destinationType);
-			var scope = CreateScope(_mappingContext);
-			try { 
-				return MapInternal(types, _configuration.MergeMaps, _configuration.GenericMergeMaps, scope)
+			var scope = CreateScopeIfNeeded();
+			object? result;
+			try {
+				result = MapInternal(types, _configuration.MergeMaps, _configuration.GenericMergeMaps, scope)
 					.Invoke(new object?[] { source, destination, CreateOrReturnContext(scope!) });
 			}
 			catch (ArgumentException e1) {
@@ -204,22 +222,36 @@ namespace NeatMapper.Core.Mapper {
 							}
 						}
 
-						return destination;
+						result = destination;
+
+						goto End;
 					}
 				}
 
 				throw;
 			}
+
+			End:
+
+			if (result?.GetType().IsAssignableTo(destinationType) == false)
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+
+			return result;
 		}
 
 		public async Task<object?> MapAsync(object? source, Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
 			if (source?.GetType().IsAssignableTo(sourceType) == false)
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
 
 			var types = (From: sourceType, To: destinationType);
-			var scope = CreateScope(_asyncMappingContext);
+			var scope = CreateScopeIfNeeded();
+			object? result;
 			try {
-				return await TaskUtils.AwaitTask<object?>((Task)MapInternal(types, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps, scope)
+				result = await TaskUtils.AwaitTask<object?>((Task)MapInternal(types, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps, scope)
 					.Invoke(new object?[] { source, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
 			}
 			catch (ArgumentException e1) {
@@ -271,38 +303,56 @@ namespace NeatMapper.Core.Mapper {
 						}
 					}
 
-					return destination;
+					result = destination;
+
+					goto End;
 				}
 
 				MergeMap:
 
-				return await MapAsync(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType, cancellationToken);
+				result = await MapAsync(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType, cancellationToken);
 			}
+
+			End:
+
+			if (result?.GetType().IsAssignableTo(destinationType) == false)
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+
+			return result;
 		}
 
-		public Task<object?> MapAsync(object? source, Type sourceType, object? destination, Type destinationType, CancellationToken cancellationToken = default) {
+		public async Task<object?> MapAsync(object? source, Type sourceType, object? destination, Type destinationType, CancellationToken cancellationToken = default) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
 			if (source?.GetType().IsAssignableTo(sourceType) == false)
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
 			if (destination?.GetType().IsAssignableTo(destinationType) == false)
 				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
 
-			var scope = CreateScope(_asyncMappingContext);
-			return TaskUtils.AwaitTask<object?>((Task)MapInternal((sourceType, destinationType), _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps, scope)
+			var scope = CreateScopeIfNeeded();
+			var result = await TaskUtils.AwaitTask<object?>((Task)MapInternal((sourceType, destinationType), _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps, scope)
 				.Invoke(new object?[] { source, destination, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
+
+			if (result?.GetType().IsAssignableTo(destinationType) == false)
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+
+			return result;
 		}
 
 
-		private IServiceScope? CreateScope(object? context) {
-			if (context == null)
+		private IServiceScope? CreateScopeIfNeeded() {
+			if (_mappingContext == null && _asyncMappingContext == null)
 				return _serviceProvider.GetRequiredService<IServiceScopeFactory>().CreateScope();
 			else
 				return null;
 		}
 
-		private MappingContext CreateOrReturnContext(IServiceScope scope) {
+		private MappingContext CreateOrReturnContext(IServiceScope? scope) {
 			if (_mappingContext == null) {
 				var mappingContext = new MappingContext {
-					ServiceProvider = scope.ServiceProvider
+					ServiceProvider = scope?.ServiceProvider ?? _asyncMappingContext!.ServiceProvider
 				};
 
 				// New mapper to avoid creating new scopes
@@ -315,10 +365,10 @@ namespace NeatMapper.Core.Mapper {
 				return _mappingContext;
 		}
 		
-		private AsyncMappingContext CreateOrReturnAsyncContext(IServiceScope scope, CancellationToken cancellationToken) {
+		private AsyncMappingContext CreateOrReturnAsyncContext(IServiceScope? scope, CancellationToken cancellationToken) {
 			if (_asyncMappingContext == null) {
 				var mappingContext = new AsyncMappingContext {
-					ServiceProvider = scope.ServiceProvider,
+					ServiceProvider = scope?.ServiceProvider ?? _mappingContext!.ServiceProvider,
 					CancellationToken = cancellationToken
 				};
 
