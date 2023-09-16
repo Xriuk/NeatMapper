@@ -16,25 +16,25 @@ namespace NeatMapper.Tests.Mapping {
 			IAsyncMergeMap<int, MyClassInt>,
 			IAsyncMergeMap<int, MyClassString> {
 
-			static Task<string> IAsyncMergeMap<int, string>.Map(int source, string destination, AsyncMappingContext context) {
+			static Task<string> IAsyncMergeMap<int, string>.MapAsync(int source, string destination, AsyncMappingContext context) {
 				return Task.FromResult((source * 2).ToString());
 			}
 
-			static Task<string> IAsyncNewMap<int, string>.Map(int source, AsyncMappingContext context) {
+			static Task<string> IAsyncNewMap<int, string>.MapAsync(int source, AsyncMappingContext context) {
 				return Task.FromResult((source * 3).ToString());
 			}
 
-			static Task<string> IAsyncMergeMap<float, string>.Map(float source, string destination, AsyncMappingContext context) {
+			static Task<string> IAsyncMergeMap<float, string>.MapAsync(float source, string destination, AsyncMappingContext context) {
 				return Task.FromResult((source * 2).ToString());
 			}
 
-			static Task<MyClassInt> IAsyncMergeMap<int, MyClassInt>.Map(int source, MyClassInt destination, AsyncMappingContext context) {
+			static Task<MyClassInt> IAsyncMergeMap<int, MyClassInt>.MapAsync(int source, MyClassInt destination, AsyncMappingContext context) {
 				return Task.FromResult(new MyClassInt {
 					MyInt = source
 				});
 			}
 
-			static Task<MyClassString> IAsyncMergeMap<int, MyClassString>.Map(int source, MyClassString destination, AsyncMappingContext context) {
+			static Task<MyClassString> IAsyncMergeMap<int, MyClassString>.MapAsync(int source, MyClassString destination, AsyncMappingContext context) {
 				destination.MyString = (source * 2).ToString();
 				return Task.FromResult(destination);
 			}

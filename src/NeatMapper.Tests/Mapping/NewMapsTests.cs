@@ -155,7 +155,7 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldFallbackToMergeMapInNewMapIsNotDefined() {
+		public void ShouldFallbackToMergeMapIfNewMapIsNotDefined() {
 			Assert.AreEqual("6", _mapper.Map<string>(2f));
 		}
 
@@ -279,7 +279,5 @@ namespace NeatMapper.Tests.Mapping {
 				new[]{ 1, 2, 5 }
 			}));
 		}
-
-		// DEV: test element mapping in collection, elements to update will use MergeMap or NewMap, elements to add will use NewMap or MergeMap, in this order
 	}
 }

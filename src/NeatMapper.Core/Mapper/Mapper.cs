@@ -46,15 +46,15 @@ namespace NeatMapper.Core.Mapper {
 				}
 				catch (MapNotFoundException exc) {
 					try {
-						return MapCollectionRecursiveInternal(types).Invoke(new object[] { source!, CreateOrReturnContext(scope!) });
+						result = MapCollectionRecursiveInternal(types).Invoke(new object[] { source!, CreateOrReturnContext(scope!) });
 					}
-					catch (MapNotFoundException) {}
-
-					try { 
-						result = Map(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType);
-					}
-					catch (DestinationCreationException) {
-						throw exc;
+					catch (MapNotFoundException) {
+						try {
+							result = Map(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType);
+						}
+						catch (DestinationCreationException) {
+							throw exc;
+						}
 					}
 				}
 
@@ -116,65 +116,19 @@ namespace NeatMapper.Core.Mapper {
 						.Invoke(new object?[] { source, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
 				}
 				catch (MapNotFoundException exc) {
-					// If both types are collections try mapping the element types
-					if (HasInterface(types.From, typeof(IEnumerable<>)) && HasInterface(types.To, typeof(IEnumerable<>)) && source is IEnumerable sourceEnumerable) {
-						var elementTypes = (
-							From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
-							To: GetInterfaceElementType(types.To, typeof(IEnumerable<>))
-						);
-
-						// (source, context) => Task<destination>
-						Func<object?[], object> elementMapper;
+					try {
+						return await TaskUtils.AwaitTask<object?>(MapAsyncCollectionRecursiveInternal(types)
+							.Invoke(new object?[] { source, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
+					}
+					catch (MapNotFoundException) {
 						try {
-							// (source, context) => Task<destination>
-							elementMapper = MapInternal(elementTypes, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps);
-						}
-						catch (MapNotFoundException) {
-							try {
-								// (source, destination, context) => Task<destination>
-								var destinationElementMapper = MapInternal(elementTypes, _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps);
-
-								// () => destination
-								var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
-
-								elementMapper = (sourceContext) => destinationElementMapper.Invoke(new object[] { sourceContext[0]!, destinationElementFactory.Invoke(), sourceContext[1]! });
-							}
-							catch (Exception e) when (e is MapNotFoundException || e is DestinationCreationException) {
-								goto MergeMap;
-							}
-						}
-
-						object destination;
-						try {
-							destination = CreateCollection(types.To);
+							result = await MapAsync(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType, cancellationToken);
 						}
 						catch (DestinationCreationException) {
-							goto MergeMap;
+							throw exc;
 						}
-						var addMethod = GetCollectionAddMethod(destination);
-
-						var context = CreateOrReturnAsyncContext(scope!, cancellationToken);
-						foreach (var sourceElement in sourceEnumerable) {
-							var destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { sourceElement, context })!);
-							addMethod.Invoke(destination, new object[] { destinationElement });
-						}
-
-						result = ConvertCollectionToType(destination, types.To);
-
-						goto End;
-					}
-
-					MergeMap:
-
-					try {
-						result = await MapAsync(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType, cancellationToken);
-					}
-					catch (DestinationCreationException) {
-						throw exc;
 					}
 				}
-
-				End:
 
 				if (result?.GetType().IsAssignableTo(destinationType) == false)
 					throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
@@ -411,7 +365,7 @@ namespace NeatMapper.Core.Mapper {
 		}
 
 		// (source, context) => destination
-		Func<object?[], object> MapCollectionRecursiveInternal((Type From, Type To) types) {
+		Func<object?[], object?> MapCollectionRecursiveInternal((Type From, Type To) types) {
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) && HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
 				var elementTypes = (
@@ -470,7 +424,7 @@ namespace NeatMapper.Core.Mapper {
 						return ConvertCollectionToType(destination, types.To);
 					}
 					else if (sourceAndContext[0] == null)
-						return null!;
+						return null;
 					else
 						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 				};
@@ -482,7 +436,7 @@ namespace NeatMapper.Core.Mapper {
 		}
 
 		// (source, destination, context) => destination
-		Func<object?[], object> MapCollectionDestinationRecursiveInternal(
+		Func<object?[], object?> MapCollectionDestinationRecursiveInternal(
 			(Type From, Type To) types,
 			object? destination,
 			Func<object, object, MappingContext, bool>? collectionElementComparer = null) {
@@ -624,13 +578,13 @@ namespace NeatMapper.Core.Mapper {
 									addMethod.Invoke(destination, new object[] { element });
 								}
 
-								return destination!;
+								return destination;
 							}
 							else
 								throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 						}
 						else if (sourceDestinationAndContext[0] == null)
-							return null!;
+							return null;
 						else
 							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 					};
@@ -640,7 +594,79 @@ namespace NeatMapper.Core.Mapper {
 			End:
 
 			throw new MapNotFoundException(types);
-		} 
+		}
+
+		// (source, context) => Task<destination>
+		Func<object?[], Task<object?>> MapAsyncCollectionRecursiveInternal((Type From, Type To) types) {
+			// If both types are collections try mapping the element types
+			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) && HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
+				var elementTypes = (
+					From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
+					To: GetInterfaceElementType(types.To, typeof(IEnumerable<>))
+				);
+
+				// (source, context) => Task<destination>
+				Func<object?[], object> elementMapper;
+				try {
+					// (source, context) => Task<destination>
+					elementMapper = MapInternal(elementTypes, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps);
+				}
+				catch (MapNotFoundException) {
+					try {
+						// (source, destination, context) => Task<destination>
+						var destinationElementMapper = MapInternal(elementTypes, _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps);
+
+						// () => destination
+						var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
+
+						elementMapper = (sourceContext) => destinationElementMapper.Invoke(new object[] {
+							sourceContext[0]!,
+							destinationElementFactory.Invoke(),
+							sourceContext[1]!
+						});
+					}
+					catch (Exception e) when (e is MapNotFoundException || e is DestinationCreationException) {
+						try {
+							// (source, context) => Task<destination>
+							elementMapper = MapAsyncCollectionRecursiveInternal(elementTypes);
+						}
+						catch (MapNotFoundException) {
+							goto End;
+						}
+					}
+				}
+
+				// Check if collection can be created
+				try {
+					CreateCollection(types.To);
+				}
+				catch (DestinationCreationException) {
+					goto End;
+				}
+
+				return async (sourceAndContext) => {
+					var destination = CreateCollection(types.To);
+					var addMethod = GetCollectionAddMethod(destination);
+
+					if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
+						foreach (var element in sourceEnumerable) {
+							var destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { element, sourceAndContext[1]! })!);
+							addMethod.Invoke(destination, new object[] { destinationElement });
+						}
+
+						return ConvertCollectionToType(destination, types.To);
+					}
+					else if (sourceAndContext[0] == null)
+						return null!;
+					else
+						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+				};
+			}
+
+			End:
+
+			throw new MapNotFoundException(types);
+		}
 		#endregion
 
 		private static Func<object?[], object> ElementComparerInternal((Type From, Type To) types,

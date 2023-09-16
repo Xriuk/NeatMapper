@@ -344,5 +344,19 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreNotSame(dc, result[2]);
 			Assert.AreEqual(4, result[2].MyInt);
 		}
+
+		[TestMethod]
+		public void ShouldPreferMergeMapForElementsToUpdateAndNewMapForElementsToAddInCollections() {
+			var destination = new List<string> { "2", "-4", "0" };
+			var result = _mapper.MapCollection(new[] { 2, -4, 5, 6 }, destination, (s, d, _) => s.ToString() == d);
+
+			Assert.IsNotNull(result);
+			Assert.AreSame(destination, result);
+			Assert.AreEqual(4, result.Count);
+			Assert.AreEqual("4", result.ElementAt(0));
+			Assert.AreEqual("-8", result.ElementAt(1));
+			Assert.AreEqual("15", result.ElementAt(2));
+			Assert.AreEqual("18", result.ElementAt(3));
+		}
 	}
 }
