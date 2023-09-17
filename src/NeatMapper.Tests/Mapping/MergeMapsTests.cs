@@ -242,11 +242,60 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapReadonlyCollectionDestinationWithoutExplicitMap() {
-			var destination = new MyClassString[3];
+			var a = new MyClassString {
+				MyString = "A"
+			};
+			var b = new MyClassString {
+				MyString = "B"
+			};
+			var c = new MyClassString {
+				MyString = "C"
+			};
+			var destination = new MyClassString[3]{ a, b, c };
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 2, -3, 0 }, destination));
 
+			// Should not alter destination
+			Assert.AreSame(a, destination[0]);
+			Assert.AreSame(b, destination[1]);
+			Assert.AreSame(c, destination[2]);
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<int>, ICollection<MyClassString>>(new[] { 2, -3, 0 }, destination));
+
+			// Should not alter destination
+			Assert.AreSame(a, destination[0]);
+			Assert.AreSame(b, destination[1]);
+			Assert.AreSame(c, destination[2]);
+		}
+
+		[TestMethod]
+		public void ShouldNotMapReadonlyCollectionDestinationNestedWithoutExplicitMap() {
+			throw new NotImplementedException("AAAA");
+
+			var a = new MyClassString {
+				MyString = "A"
+			};
+			var b = new MyClassString {
+				MyString = "B"
+			};
+			var c = new MyClassString {
+				MyString = "C"
+			};
+			var destination = new MyClassString[3] { a, b, c };
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 2, -3, 0 }, destination));
+
+			// Should not alter destination
+			Assert.AreSame(a, destination[0]);
+			Assert.AreSame(b, destination[1]);
+			Assert.AreSame(c, destination[2]);
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<int>, ICollection<MyClassString>>(new[] { 2, -3, 0 }, destination));
+
+			// Should not alter destination
+			Assert.AreSame(a, destination[0]);
+			Assert.AreSame(b, destination[1]);
+			Assert.AreSame(c, destination[2]);
 		}
 
 		[TestMethod]
