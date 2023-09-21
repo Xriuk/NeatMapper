@@ -11,19 +11,80 @@ namespace NeatMapper.Tests.Mapping {
 	public class NewMapsTests {
 		public class Maps :
 			INewMap<int, string>,
-			INewMap<int, MyClassInt>,
-			INewMap<int, MyClassString>,
-			IMergeMap<int, MyClassString>,
-			INewMap<float, MyClassString>,
-			INewMap<string, KeyValuePair<string, int>>,
-			IMergeMap<float, string>,
-			IMergeMap<int, string>,
-			INewMap<MyClassString, float>,
-			INewMap<MyClassString, int> {
+			INewMap<Price, decimal>,
+			INewMap<Price, PriceFloat>,
+			INewMap<Product, ProductDto>,
+			INewMap<Category, int>,
+			INewMap<LimitedProduct, LimitedProductDto>,
+			INewMap<Product, string>,
+			INewMap<Category, CategoryProducts>{
 
 			static string INewMap<int, string>.Map(int source, MappingContext context) {
 				return (source * 2).ToString();
 			}
+
+			static decimal INewMap<Price, decimal>.Map(Price? source, MappingContext context) {
+				return source?.Amount ?? 0m;
+			}
+
+			static PriceFloat? INewMap<Price, PriceFloat>.Map(Price? source, MappingContext context) {
+				if(source == null)
+					return null;
+				else
+					return new PriceFloat {
+						Amount = (float)source.Amount,
+						Currency = source.Currency
+					};
+			}
+
+			// Nested NewMap
+			static ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context) {
+				if(source == null)
+					return null;
+				else {
+					return new ProductDto {
+						Code = source.Code,
+						Categories = context.Mapper.Map<IEnumerable<int>>(source.Categories)
+					};
+				}
+			}
+
+			static int INewMap<Category, int>.Map(Category? source, MappingContext context) {
+				return source?.Id ?? 0;
+			}
+
+			static LimitedProductDto? INewMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, MappingContext context) {
+				if(source == null)
+					return null;
+				else {
+					return new LimitedProductDto {
+						Code = source.Code,
+						Categories = context.Mapper.Map<IEnumerable<int>>(source.Categories),
+						Copies = source.Copies
+					};
+				}
+			}
+
+			// Scope test
+			public static IServiceProvider _sp1 = null!;
+			static string? INewMap<Product, string>.Map(Product? source, MappingContext context) {
+				_sp1 = context.ServiceProvider;
+				return source?.Code;
+			}
+
+			public static IServiceProvider _sp2 = null!;
+			static CategoryProducts? INewMap<Category, CategoryProducts>.Map(Category? source, MappingContext context) {
+				_sp2 = context.ServiceProvider;
+				if (source == null)
+					return null;
+				else {
+					return new CategoryProducts {
+						Id = source.Id,
+						Products = context.Mapper.Map<IEnumerable<string>>(source.Products)
+					};
+				}
+			}
+
 
 			static MyClassInt INewMap<int, MyClassInt>.Map(int source, MappingContext context) {
 				return new MyClassInt {
@@ -61,8 +122,7 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			// Scope test
-			public static IServiceProvider _sp1 = null!;
-			public static IServiceProvider _sp2 = null!;
+			
 			static float INewMap<MyClassString, float>.Map(MyClassString source, MappingContext context) {
 				_sp1 = context.ServiceProvider;
 				return context.Mapper.Map<int>(source);
@@ -71,6 +131,8 @@ namespace NeatMapper.Tests.Mapping {
 				_sp2 = context.ServiceProvider;
 				return source.MyString.Length;
 			}
+
+			
 		}
 
 		IMapper _mapper = null!;
@@ -88,55 +150,79 @@ namespace NeatMapper.Tests.Mapping {
 		[DataRow(-3, "-6")]
 		[DataRow(0, "0")]
 		public void ShouldMapPrimitives(int input, string output) {
-			Assert.AreEqual(output, _mapper.Map<int, string>(input));
 			Assert.AreEqual(output, _mapper.Map<string>(input));
 		}
 
 		[TestMethod]
 		public void ShouldMapClasses() {
-			var obj = _mapper.Map<int, MyClassInt>(2);
-			Assert.IsNotNull(obj);
-			Assert.AreEqual(2, obj.MyInt);
+			Assert.AreEqual(20.00m, _mapper.Map<decimal>(new Price {
+				Amount = 20.00m,
+				Currency = "EUR"
+			}));
 
-			obj = _mapper.Map<MyClassInt>(2);
-			Assert.IsNotNull(obj);
-			Assert.AreEqual(2, obj.MyInt);
+			var result = _mapper.Map<PriceFloat>(new Price {
+				Amount = 40.00m,
+				Currency = "EUR"
+			});
+			Assert.IsNotNull(result);
+			Assert.AreEqual(40f, result.Amount);
+			Assert.AreEqual("EUR", result.Currency);
+		}
+
+		[TestMethod]
+		public void ShouldMapChildClassAsParent() {
+			var result = _mapper.Map<Product, ProductDto>(new LimitedProduct {
+				Code = "Test",
+				Categories = new List<Category> {
+					new Category {
+						Id = 2
+					}
+				},
+				Copies = 3
+			});
+			Assert.IsNotNull(result);
+			Assert.IsTrue(result.GetType() == typeof(ProductDto));
 		}
 
 		[TestMethod]
 		public void ShouldNotFindMissingMap() {
-			TestUtils.AssertMapNotFound(() => _mapper.Map<bool, int>(false));
-			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(false));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<Category>(2));
 		}
 
 		[TestMethod]
 		public void ShouldCreateNewScopeForEachMap() {
-			Maps._sp2 = null!;
+			Maps._sp1 = null!;
 
-			_mapper.Map<int>(new MyClassString {
-				MyString = "Testo"
+			_mapper.Map<string>(new Product {
+				Code = "Test1"
 			});
 
-			Assert.IsNotNull(Maps._sp2);
-			var service = Maps._sp2;
+			Assert.IsNotNull(Maps._sp1);
+			var service = Maps._sp1;
 
-			_mapper.Map<int>(new MyClassString {
-				MyString = "Testo2"
+			_mapper.Map<string>(new Product {
+				Code = "Test2"
 			});
 
-			Assert.IsNotNull(Maps._sp2);
-			Assert.AreNotSame(service, Maps._sp2);
+			Assert.IsNotNull(Maps._sp1);
+			Assert.AreNotSame(service, Maps._sp1);
 		}
 
 		[TestMethod]
 		public void ShouldMapNested() {
-			var obj = _mapper.Map<int, MyClassString>(2);
-			Assert.IsNotNull(obj);
-			Assert.AreEqual("4", obj.MyString);
-
-			obj = _mapper.Map<float, MyClassString>(2f);
-			Assert.IsNotNull(obj);
-			Assert.AreEqual("4", obj.MyString);
+			var result = _mapper.Map<Product, ProductDto>(new Product {
+				Code = "Test",
+				Categories = new List<Category> {
+					new Category {
+						Id = 2
+					}
+				}
+			});
+			Assert.IsNotNull(result);
+			Assert.AreEqual("Test", result.Code);
+			Assert.IsNotNull(result.Categories);
+			Assert.AreEqual(1, result.Categories.Count());
+			Assert.AreEqual(2, result.Categories.Single());
 		}
 
 		[TestMethod]
@@ -144,11 +230,14 @@ namespace NeatMapper.Tests.Mapping {
 			Maps._sp1 = null!;
 			Maps._sp2 = null!;
 
-			var result = _mapper.Map<float>(new MyClassString {
-				MyString = "Testo"
+			var result = _mapper.Map<CategoryProducts>(new Category {
+				Id = 2,
+				Products = new[] {
+					new Product {
+						Code = "Test"
+					}
+				}
 			});
-
-			Assert.AreEqual(5, result);
 			Assert.IsNotNull(Maps._sp1);
 			Assert.IsNotNull(Maps._sp2);
 			Assert.AreSame(Maps._sp1, Maps._sp2);
@@ -244,6 +333,8 @@ namespace NeatMapper.Tests.Mapping {
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int[]?, float[]?>(null));
 		}
+
+		// DEV: test mapping collections with null elements
 
 		[TestMethod]
 		public void ShouldFallbackToMergeMapInCollections() {

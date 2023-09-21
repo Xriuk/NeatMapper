@@ -19,7 +19,9 @@ namespace NeatMapper.Tests.Mapping {
 			ICollectionElementComparer<float, MyClassString>,
 			IMergeMap<MyClassString, float>,
 			IMergeMap<MyClassString, int>,
-			IMergeMap<IEnumerable<int>, MyClassInt[]> {
+			IMergeMap<IEnumerable<int>, MyClassInt[]>,
+			ICollectionElementComparer<MyClassIntWithKey, MyClassStringWithKey>,
+			IMergeMap<MyClassIntWithKey, MyClassStringWithKey> {
 
 			static string IMergeMap<int, string>.Map(int source, string destination, MappingContext context) {
 				return (source * 2).ToString();
@@ -79,6 +81,15 @@ namespace NeatMapper.Tests.Mapping {
 						MyInt = source.ElementAt(i) * 4
 					};
 				}
+				return destination;
+			}
+
+			static bool ICollectionElementComparer<MyClassIntWithKey, MyClassStringWithKey>.Match(MyClassIntWithKey source, MyClassStringWithKey destination, MappingContext context) {
+				return source.Id == destination.Id;
+			}
+
+			static MyClassStringWithKey IMergeMap<MyClassIntWithKey, MyClassStringWithKey>.Map(MyClassIntWithKey source, MyClassStringWithKey destination, MappingContext context) {
+				destination.MyString = context.Mapper.Map<string>(source.MyInt);
 				return destination;
 			}
 		}
@@ -240,6 +251,10 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("0", result.ElementAt(2).MyString);
 		}
 
+		// DEV: test mapping null collections and collections with null elements (by matching them too)
+
+		// DEV: test mapping collections with the same elements added multiple times
+
 		[TestMethod]
 		public void ShouldNotMapReadonlyCollectionDestinationWithoutExplicitMap() {
 			var a = new MyClassString {
@@ -270,32 +285,109 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapReadonlyCollectionDestinationNestedWithoutExplicitMap() {
-			throw new NotImplementedException("AAAA");
+			var a = new MyClassStringWithKey {
+				Id = 1,
+				MyString = "AA"
+			};
+			var b = new MyClassStringWithKey {
+				Id = 2,
+				MyString = "BBB"
+			};
+			var c = new MyClassStringWithKey {
+				Id = 3,
+				MyString = ""
+			};
+			var innerDestinationA = new MyClassStringWithKey[3] { a, b, c };
+			var a2 = new MyClassStringWithKey {
+				Id = 4,
+				MyString = "AA"
+			};
+			var b2 = new MyClassStringWithKey {
+				Id = 5,
+				MyString = "BBB"
+			};
+			var c2 = new MyClassStringWithKey {
+				Id = 6,
+				MyString = ""
+			};
+			var innerDestinationB = new List<MyClassStringWithKey> { a2, b2, c2 };
+			var destination = new List<IList<MyClassStringWithKey>> { innerDestinationB, innerDestinationA };
 
-			var a = new MyClassString {
-				MyString = "A"
+			// Custom element comparer just to merge the collections
+			// We'll start with the list since it is actually mappable, but in this case it shouldn't be because it is inside a collection with an array
+			var source1 = new[] { 
+				new MyClassIntWithKey {
+					Id = 1,
+					MyInt = 2
+				},
+				new MyClassIntWithKey {
+					Id = 2,
+					MyInt = 3
+				},
+				new MyClassIntWithKey {
+					Id = 3,
+					MyInt = 0
+				},
+				new MyClassIntWithKey {
+					Id = 7,
+					MyInt = 1
+				}
 			};
-			var b = new MyClassString {
-				MyString = "B"
+			var source2 = new[] {
+				new MyClassIntWithKey {
+					Id = 4,
+					MyInt = 2
+				},
+				new MyClassIntWithKey {
+					Id = 5,
+					MyInt = 3
+				},
+				new MyClassIntWithKey {
+					Id = 6,
+					MyInt = 0
+				},
+				new MyClassIntWithKey {
+					Id = 8,
+					MyInt = 1
+				}
 			};
-			var c = new MyClassString {
-				MyString = "C"
+			var source3 = new[] {
+				new MyClassIntWithKey {
+					Id = 9,
+					MyInt = 8
+				},
+				new MyClassIntWithKey {
+					Id = 10,
+					MyInt = 7
+				},
+				new MyClassIntWithKey {
+					Id = 11,
+					MyInt = 2
+				},
+				new MyClassIntWithKey {
+					Id = 12,
+					MyInt = 1
+				}
 			};
-			var destination = new MyClassString[3] { a, b, c };
-
-			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 2, -3, 0 }, destination));
+			TestUtils.AssertMapNotFound(() => _mapper.MapCollection(new[] { source2, source3, source1 }, destination, (s, d, _) => (s == source1 && d == innerDestinationA) ||
+				(s == source2 && d == innerDestinationB)));
 
 			// Should not alter destination
-			Assert.AreSame(a, destination[0]);
-			Assert.AreSame(b, destination[1]);
-			Assert.AreSame(c, destination[2]);
-
-			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<int>, ICollection<MyClassString>>(new[] { 2, -3, 0 }, destination));
-
-			// Should not alter destination
-			Assert.AreSame(a, destination[0]);
-			Assert.AreSame(b, destination[1]);
-			Assert.AreSame(c, destination[2]);
+			Assert.AreEqual(2, destination.Count);
+			Assert.AreSame(innerDestinationB, destination[0]);
+			Assert.AreSame(a2, innerDestinationB[0]);
+			Assert.AreEqual("AA", a2.MyString);
+			Assert.AreSame(b2, innerDestinationB[1]);
+			Assert.AreEqual("BBB", b2.MyString);
+			Assert.AreSame(c2, innerDestinationB[2]);
+			Assert.AreEqual("", c2.MyString);
+			Assert.AreSame(innerDestinationA, destination[1]);
+			Assert.AreSame(a, innerDestinationA[0]);
+			Assert.AreEqual("AA", a.MyString);
+			Assert.AreSame(b, innerDestinationA[1]);
+			Assert.AreEqual("BBB", b.MyString);
+			Assert.AreSame(c, innerDestinationA[2]);
+			Assert.AreEqual("", c.MyString);
 		}
 
 		[TestMethod]

@@ -24,6 +24,6 @@
 		/// the resulting object of the mapping of <paramref name="destinationType"/>, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, Func<object, object, MappingContext, bool>? collectionElementComparer = null);
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, Func<object?, object?, MappingContext, bool>? collectionElementComparer = null);
 	}
 }

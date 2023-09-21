@@ -68,7 +68,9 @@
 				typeof(IEnumerable<TSourceElement>),
 				destination,
 				typeof(ICollection<TDestinationElement>),
-				(s, d, c) => s is TSourceElement _s && d is TDestinationElement _d && collectionElementComparer(_s, _d, c))!;
+				(s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
+					(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
+					collectionElementComparer((TSourceElement)s!, (TDestinationElement)d!, c))!;
 		}
 	}
 }
