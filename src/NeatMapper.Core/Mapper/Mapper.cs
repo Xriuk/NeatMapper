@@ -49,15 +49,18 @@ namespace NeatMapper.Core.Mapper {
 						result = MapCollectionRecursiveInternal(types).Invoke(new object[] { source!, CreateOrReturnContext(scope!) });
 					}
 					catch (MapNotFoundException) {
+						object destination;
 						try {
-							result = Map(source, sourceType, CreateDestinationFactory(destinationType).Invoke(), destinationType);
+							destination = CreateDestinationFactory(destinationType).Invoke();
 						}
 						catch (DestinationCreationException) {
 							throw exc;
 						}
+						result = Map(source, sourceType, destination, destinationType);
 					}
 				}
 
+				// Should not happen
 				if (result?.GetType().IsAssignableTo(destinationType) == false)
 					throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
 
@@ -65,7 +68,7 @@ namespace NeatMapper.Core.Mapper {
 			}
 		}
 
-		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, Func<object?, object?, MappingContext, bool>? collectionElementComparer = null) {
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (source?.GetType().IsAssignableTo(sourceType) == false)
@@ -74,8 +77,6 @@ namespace NeatMapper.Core.Mapper {
 				throw new ArgumentNullException(nameof(destinationType));
 			if (destination?.GetType().IsAssignableTo(destinationType) == false)
 				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
-			if (collectionElementComparer != null && (!HasInterface(sourceType, typeof(IEnumerable<>)) || !HasInterface(destinationType, typeof(IEnumerable<>))))
-				throw new ArgumentException($"Collection element comparer passed but the given types {sourceType.Name} and {destinationType.Name} are not both collections", nameof(collectionElementComparer));
 
 			var types = (From: sourceType, To: destinationType);
 			using(var scope = CreateScopeIfNeeded()){
@@ -86,13 +87,14 @@ namespace NeatMapper.Core.Mapper {
 				}
 				catch (MapNotFoundException exc) {
 					try {
-						result = MapCollectionDestinationRecursiveInternal(types, destination, collectionElementComparer).Invoke(new object[] { source!, destination!, CreateOrReturnContext(scope!) });
+						result = MapCollectionDestinationRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source!, destination!, CreateOrReturnContext(scope!) });
 					}
 					catch (MapNotFoundException) { 
 						throw exc;
 					}
 				}
 
+				// Should not happen
 				if (result?.GetType().IsAssignableTo(destinationType) == false)
 					throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
 
@@ -172,11 +174,7 @@ namespace NeatMapper.Core.Mapper {
 								To: GetInterfaceElementType(types.To, typeof(ICollection<>))
 							);
 
-							var elementComparer = ElementComparerInternal(
-								elementTypes,
-								_configuration.CollectionElementComparers,
-								_configuration.GenericCollectionElementComparers
-							);
+							var elementComparer = ElementComparerInternal(elementTypes);
 
 							// At least one of New or Merge mapper is required to map elements
 							// If both are found they will be used in the following order:
@@ -216,7 +214,7 @@ namespace NeatMapper.Core.Mapper {
 							foreach (var destinationElement in destinationEnumerable) {
 								bool found = false;
 								foreach (var sourceElement in sourceEnumerable) {
-									if ((bool)elementComparer.Invoke(new object[] { sourceElement, destinationElement, comparerContext })) {
+									if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, comparerContext })) {
 										found = true;
 										break;
 									}
@@ -288,6 +286,22 @@ namespace NeatMapper.Core.Mapper {
 			}
 		}
 
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (source?.GetType().IsAssignableTo(sourceType) == false)
+				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+			if (destination?.GetType().IsAssignableTo(destinationType) == false)
+				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
+
+			var types = (From: sourceType, To: destinationType);
+			using (var scope = CreateScopeIfNeeded()) {
+				return ElementComparerInternal(types, false).Invoke(new object?[] { source, destination, CreateOrReturnContext(scope) })!;
+			}
+		}
+
 		#region Scope & Context methods
 		private IServiceScope? CreateScopeIfNeeded() {
 			if (_mappingContext == null && _asyncMappingContext == null)
@@ -342,7 +356,14 @@ namespace NeatMapper.Core.Mapper {
 
 			// Try retrieving a regular map or matching to a generic one
 			if (maps.ContainsKey(types))
-				return (parameters) => maps[types].Invoke(null, parameters)!;
+				return (parameters) => {
+					try {
+						return maps[types].Invoke(null, parameters)!;
+					}
+					catch(Exception e) {
+						throw new MappingException(e, types);
+					}
+				};
 			else if (types.From.IsGenericType || types.To.IsGenericType) {
 				var map = genericMaps.FirstOrDefault(m =>
 					MatchOpenGenericArgumentsRecursive(m.From, types.From) &&
@@ -355,8 +376,22 @@ namespace NeatMapper.Core.Mapper {
 					// We may have different closed types matching for the same open type argument, in this case the map should not match
 					var genericArguments = map.Class.GetGenericArguments().Length;
 					if (classArguments.DistinctBy(a => a.OpenGenericArgument).Count() == genericArguments && classArguments.Distinct().Count() == genericArguments) {
-						return (parameters) => MethodInfo.GetMethodFromHandle(map.Method, MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle)!
-							.Invoke(null, parameters)!;
+						RuntimeTypeHandle concreteType;
+						try {
+							concreteType = MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle;
+						}
+						catch {
+							throw new MapNotFoundException(types);
+						}
+						return (parameters) => {
+							try {
+								return MethodBase.GetMethodFromHandle(map.Method, MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle)!
+									.Invoke(null, parameters)!;
+							}
+							catch (Exception e) {
+								throw new MappingException(e, types);
+							}
+						};
 					}
 				}
 			}
@@ -415,20 +450,25 @@ namespace NeatMapper.Core.Mapper {
 				}
 
 				return (sourceAndContext) => {
-					var destination = CreateCollection(types.To);
-					var addMethod = GetCollectionAddMethod(destination);
+					try {
+						var destination = CreateCollection(types.To);
+						var addMethod = GetCollectionAddMethod(destination);
 
-					if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
-						foreach (var element in sourceEnumerable) {
-							addMethod.Invoke(destination, new object?[] { elementMapper.Invoke(new object[] { element, sourceAndContext[1]! }) });
+						if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
+							foreach (var element in sourceEnumerable) {
+								addMethod.Invoke(destination, new object?[] { elementMapper.Invoke(new object[] { element, sourceAndContext[1]! }) });
+							}
+
+							return ConvertCollectionToType(destination, types.To);
 						}
-
-						return ConvertCollectionToType(destination, types.To);
+						else if (sourceAndContext[0] == null)
+							return null;
+						else
+							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 					}
-					else if (sourceAndContext[0] == null)
-						return null;
-					else
-						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+					catch (Exception e) {
+						throw new CollectionMappingException(e, types);
+					}
 				};
 			}
 
@@ -441,88 +481,105 @@ namespace NeatMapper.Core.Mapper {
 		Func<object?[], object?> MapCollectionDestinationRecursiveInternal(
 			(Type From, Type To) types,
 			object? destination,
-			Func<object?, object?, MappingContext, bool>? collectionElementComparer = null) {
+			MappingOptions? mappingOptions = null) {
 
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
 				HasInterface(types.To, typeof(ICollection<>))) {
+
+				if (destination == null) {
+					// Check if collection can be created
+					try {
+						destination = CreateCollection(types.To);
+					}
+					catch (DestinationCreationException) {
+						goto End;
+					}
+				}
 
 				var elementTypes = (
 					From: GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
 					To: GetInterfaceElementType(types.To, typeof(ICollection<>))
 				);
 
-				if (destination == null) {
-					var newMapper = MapCollectionRecursiveInternal(elementTypes);
+				var destinationInstanceType = destination.GetType();
+				if (!destinationInstanceType.IsArray) {
+					var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
+						.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
 
-					return (sourceDestinationAndContext) => {
-						return newMapper.Invoke(new[] { sourceDestinationAndContext[0], sourceDestinationAndContext[2] });
-					};
-				}
-				else {
-					var destinationInstanceType = destination.GetType();
-					if (!destinationInstanceType.IsArray) {
-						var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
-							.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
+					// If the collection is readonly we cannot map to it
+					if (!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly)))!.Invoke(destination, null)!) {
+						// At least one of New or Merge mapper is required to map elements
+						// If both are found they will be used in the following order:
+						// - elements to update will use MergeMap first (on the existing element),
+						//   then NewMap (by removing the existing element and adding the new one)
+						// - elements to add will use NewMap first,
+						//   then MergeMap (by creating a new element and merging to it)
 
-						// If the collection is readonly we cannot map to it
-						if (!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly)))!.Invoke(destination, null)!) {
-							// At least one of New or Merge mapper is required to map elements
-							// If both are found they will be used in the following order:
-							// - elements to update will use MergeMap first, then NewMap
-							// - elements to add will use NewMap first, then MergeMap
+						// (source, context) => destination
+						Func<object?[], object?> newElementMapper = null!;
+						// (source, destination, context) => destination
+						Func<object?[], object?> mergeElementMapper = null!;
+						// () => destination
+						Func<object> destinationElementFactory = null!;
+						try {
+							newElementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps);
+						}
+						catch (MapNotFoundException) {
+							// Here we could recreate any nested collection in case the corresponding merge map would fail,
+							// but we are not doing it for consistency: if a merge map on a readonly collection fails,
+							// then a nested one should too
+							/*try {
+								newElementMapper = MapCollectionRecursiveInternal(elementTypes);
+							}
+							catch (MapNotFoundException) { }*/
+						}
+						try {
+							mergeElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps);
+						}
+						catch (MapNotFoundException) {
+							// If the types are not collections and we don't have a newElementMapper we already know that we can't map them,
+							// Otherwise we will try to retrieve the collection map inside the mapping function for each element
+							// (because we need to know if the passed runtime types are arrays or not)
+							if ((!HasInterface(elementTypes.From, typeof(IEnumerable<>)) || elementTypes.From == typeof(string) ||
+								!HasInterface(elementTypes.To, typeof(ICollection<>))) &&
+								newElementMapper == null) {
 
-							// (source, context) => destination
-							Func<object?[], object?> newElementMapper = null!;
-							// (source, destination, context) => destination
-							Func<object?[], object?> mergeElementMapper = null!;
-							// () => destination
-							Func<object> destinationElementFactory = null!;
+								goto End;
+							}
+						}
+						if (newElementMapper == null) {
 							try {
-								newElementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps);
+								destinationElementFactory = CreateDestinationFactory(elementTypes.To);
 							}
-							catch (MapNotFoundException) {
-								/*try {
-									newElementMapper = MapCollectionRecursiveInternal(elementTypes);
-								}
-								catch (MapNotFoundException) { }*/
+							catch (DestinationCreationException) {
+								goto End;
 							}
-							try {
-								mergeElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps);
-							}
-							catch (MapNotFoundException) {
-								// If the types are not collections and we don't have a newElementMapper we already know that we can't map them,
-								// Otherwise we will try to retrieve the collection map inside the mapping function (because we need to know
-								// if the passed runtime types are arrays or not)
-								if ((!HasInterface(elementTypes.From, typeof(IEnumerable<>)) || elementTypes.From == typeof(string) ||
-									!HasInterface(elementTypes.To, typeof(ICollection<>))) &&
-									newElementMapper == null) {
+						}
 
-									goto End;
+						Func<object?[], bool> elementComparer;
+						if(mappingOptions?.CollectionElementComparer != null) {
+							elementComparer = (parameters) => {
+								try { 
+									return mappingOptions.CollectionElementComparer.Invoke(parameters[0]!, parameters[1]!, (MappingContext)parameters[2]!);
 								}
-							}
-							if (newElementMapper == null) {
-								try {
-									destinationElementFactory = CreateDestinationFactory(elementTypes.To);
+								catch (Exception e) {
+									throw new CollectionElementComparerException(e, types);
 								}
-								catch (DestinationCreationException) {
-									goto End;
-								}
-							}
+							};
+						}
+						else
+							elementComparer = ElementComparerInternal(elementTypes);
 
-							var elementComparer = collectionElementComparer != null ?
-								(parameters) => collectionElementComparer.Invoke(parameters[0]!, parameters[1]!, (MappingContext)parameters[2]!) :
-								ElementComparerInternal(
-									elementTypes,
-									_configuration.CollectionElementComparers,
-									_configuration.GenericCollectionElementComparers
-								);
+						var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
+						var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
 
-							var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
-							var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
+						return (sourceDestinationAndContext) => {
+							if (sourceDestinationAndContext[0] is IEnumerable sourceEnumerable) {
+								try { 
+									if (sourceDestinationAndContext[1] == null)
+										sourceDestinationAndContext[1] = CreateCollection(types.To);
 
-							return (sourceDestinationAndContext) => {
-								if (sourceDestinationAndContext[0] is IEnumerable sourceEnumerable) {
 									if (sourceDestinationAndContext[1] is IEnumerable destinationEnumerable) {
 										var elementsToRemove = new List<object?>();
 										var elementsToAdd = new List<object?>();
@@ -533,7 +590,7 @@ namespace NeatMapper.Core.Mapper {
 										foreach (var destinationElement in destinationEnumerable) {
 											bool found = false;
 											foreach (var sourceElement in sourceEnumerable) {
-												if ((bool)elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2]! })) {
+												if (elementComparer.Invoke(new object?[] { sourceElement, destinationElement, sourceDestinationAndContext[2] })) {
 													found = true;
 													break;
 												}
@@ -542,12 +599,17 @@ namespace NeatMapper.Core.Mapper {
 											// If not found we remove it
 											// Otherwise if we don't have a merge map we try retrieving it, so that we may fail
 											// before mapping elements if needed
-											if (!found)
-												elementsToRemove.Add(destinationElement);
+											if (!found) {
+												if(mappingOptions?.CollectionRemoveNotMatchedDestinationElements
+													?? _configuration.MergeMapsCollectionsOptions.RemoveNotMatchedDestinationElements) { 
+
+													elementsToRemove.Add(destinationElement);
+												}
+											}
 											else if (mergeElementMapper == null &&
-												destinationElement == null ?
+												(destinationElement == null ?
 													nullMergeCollectionMapping == null :
-													!mergeCollectionMappings.ContainsKey(destinationElement)) {
+													!mergeCollectionMappings.ContainsKey(destinationElement))) {
 
 												try {
 													var mapper = MapCollectionDestinationRecursiveInternal(elementTypes, destinationElement);
@@ -568,7 +630,7 @@ namespace NeatMapper.Core.Mapper {
 											bool found = false;
 											object? matchingDestinationElement = null;
 											foreach (var destinationElement in destinationEnumerable) {
-												if ((bool)elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2]! }) &&
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2]! }) &&
 													!elementsToRemove.Contains(destinationElement)) {
 
 													matchingDestinationElement = destinationElement;
@@ -582,10 +644,14 @@ namespace NeatMapper.Core.Mapper {
 												// If we don't have an element mapper try retrieving it now
 												// We don't pass along any collectionElementComparer as they are only for the current collection (if present at all)
 												if (mergeElementMapper == null) {
-													mergeElementMapper = matchingDestinationElement == null ?
-														nullMergeCollectionMapping :
-														mergeCollectionMappings[matchingDestinationElement];
-													tempMergeMapper = true;
+													if(matchingDestinationElement == null) { 
+														mergeElementMapper = nullMergeCollectionMapping;
+														tempMergeMapper = true;
+													}
+													else if (mergeCollectionMappings.ContainsKey(matchingDestinationElement)) { 
+														mergeElementMapper = mergeCollectionMappings[matchingDestinationElement];
+														tempMergeMapper = true;
+													}
 												}
 
 												if (mergeElementMapper != null) {
@@ -608,12 +674,8 @@ namespace NeatMapper.Core.Mapper {
 
 													// If we don't have an element mapper try retrieving it now
 													// We don't pass along any collectionElementComparer as they are only for the current collection (if present at all)
-													// Here the merge map is guaranteed to exist since we are actually mapping to a new non-readonly collection,
-													// And if it is not a collection it would have thrown earlier, before entering the method
 													if (mergeElementMapper == null) {
-														mergeElementMapper = matchingDestinationElement == null ?
-															nullMergeCollectionMapping :
-															mergeCollectionMappings[matchingDestinationElement];
+														mergeElementMapper = MapCollectionDestinationRecursiveInternal(elementTypes, destinationInstance);
 														tempMergeMapper = true;
 													}
 
@@ -633,17 +695,23 @@ namespace NeatMapper.Core.Mapper {
 											addMethod.Invoke(sourceDestinationAndContext[1], new object?[] { element });
 										}
 
-										return sourceDestinationAndContext[1];
+										return ConvertCollectionToType(sourceDestinationAndContext[1]!, types.To);
 									}
 									else
 										throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 								}
-								else if (sourceDestinationAndContext[0] == null)
-									return null;
-								else
-									throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-							};
-						}
+								catch (MapNotFoundException) {
+									throw;
+								}
+								catch (Exception e) {
+									throw new CollectionMappingException(e, types);
+								}
+							}
+							else if (sourceDestinationAndContext[0] == null)
+								return null;
+							else
+								throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+						};
 					}
 				}
 			}
@@ -726,15 +794,26 @@ namespace NeatMapper.Core.Mapper {
 		}
 		#endregion
 
-		private static Func<object?[], object> ElementComparerInternal((Type From, Type To) types,
-			IReadOnlyDictionary<(Type From, Type To), MethodInfo> comparers,
-			IEnumerable<GenericMap> genericComparers) {
-
+		// (source, destination, context) => bool
+		private Func<object?[], bool> ElementComparerInternal((Type From, Type To) types, bool returnDefault = true) {
 			try {
-				return MapInternal(types, comparers, genericComparers)!;
+				var comparer = MapInternal(types,
+					_configuration.CollectionElementComparers,
+					_configuration.GenericCollectionElementComparers)!;
+				return (parameters) => {
+					try {
+						return (bool)comparer.Invoke(parameters)!;
+					}
+					catch (MappingException e) {
+						throw new CollectionElementComparerException(e.InnerException!, types);
+					}
+				};
 			}
 			catch (MapNotFoundException) {
-				return (_) => false;
+				if(returnDefault)
+					return (_) => false;
+				else
+					throw new CollectionElementComparerNotFound(types);
 			}
 		}
 
@@ -840,22 +919,74 @@ namespace NeatMapper.Core.Mapper {
 		#endregion
 
 		#region Types methods
+		private static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference =
+			typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!
+				?? throw new InvalidOperationException("Could not find RuntimeHelpers.IsReferenceOrContainsReferences");
+		private static bool IsUnmanaged(Type type) {
+			return !(bool)RuntimeHelpers_IsReferenceOrContainsReference.MakeGenericMethod(type).Invoke(null, null)!;
+		}
 		private static bool MatchOpenGenericArgumentsRecursive(Type openType, Type closedType) {
 			if (!openType.IsGenericType) {
 				if (closedType.IsGenericType)
 					return false;
+				else if (openType.IsGenericTypeParameter) {
+					// Check if the type meets all the requirements
+					var attrs = openType.GenericParameterAttributes;
+					// new(), struct, unmanaged
+					if (attrs.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint)) {
+						if (closedType.IsValueType) {
+							try {
+								Activator.CreateInstance(closedType);
+							}
+							catch {
+								return false;
+							}
+						}
+						else if(closedType.GetConstructor(Type.EmptyTypes) == null)
+							return false;
+					}
+					// struct, unmanaged
+					if (attrs.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint) &&
+						(!closedType.IsValueType || Nullable.GetUnderlyingType(closedType) != null)) { 
+
+						return false;
+					}
+					// unmanaged
+					if ((attrs.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) ||
+						attrs.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint)) &&
+						openType.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") && !IsUnmanaged(closedType)) {
+
+						return false;
+					}
+					// class
+					if (attrs.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint) && closedType.IsValueType)
+						return false;
+
+					// Check if the type extends all the required classes
+					if (!openType.GetGenericParameterConstraints().All(c => c.IsGenericTypeParameter ? 
+						MatchOpenGenericArgumentsRecursive(c, closedType) :
+						closedType.IsAssignableTo(c))) { 
+
+						return false;
+					}
+
+					return true;
+				}
 				else
-					return openType.IsGenericTypeParameter || openType == closedType;
+					return openType == closedType;
 			}
 			else if (!closedType.IsGenericType)
 				return false;
-
-			var arguments1 = openType.GetGenericArguments();
-			var arguments2 = closedType.GetGenericArguments();
-			if (arguments1.Length != arguments2.Length)
+			else if(openType.GetGenericTypeDefinition() != closedType.GetGenericTypeDefinition())
+				return false;
+			
+			var openTypeArguments = openType.GetGenericArguments();
+			var closedTypeArguments = closedType.GetGenericArguments();
+			if (openTypeArguments.Length != closedTypeArguments.Length)
 				return false;
 
-			return arguments1.Zip(arguments2).All((a) => MatchOpenGenericArgumentsRecursive(a.First, a.Second));
+			IEnumerable<(Type OpenTypeArgument, Type ClosedTypeArgument)> arguments = openTypeArguments.Zip(closedTypeArguments);
+			return arguments.All((a) => MatchOpenGenericArgumentsRecursive(a.OpenTypeArgument, a.ClosedTypeArgument));
 		}
 
 		private static IEnumerable<(Type OpenGenericArgument, Type ClosedType)> InferOpenGenericArgumentsRecursive(Type openType, Type closedType) {
@@ -884,7 +1015,7 @@ namespace NeatMapper.Core.Mapper {
 			return (collection.IsGenericType && collection.GetGenericTypeDefinition() == interfaceType) ?
 				collection.GetGenericArguments()[0] :
 				collection.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType).GetGenericArguments()[0];
-		} 
+		}
 		#endregion
 	}
 }

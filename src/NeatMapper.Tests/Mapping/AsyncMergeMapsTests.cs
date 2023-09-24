@@ -45,7 +45,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions{
-				MapTypes = new List<Type> { typeof(Maps) }
+				ScanTypes = new List<Type> { typeof(Maps) }
 			}), new ServiceCollection().BuildServiceProvider());
 		}
 

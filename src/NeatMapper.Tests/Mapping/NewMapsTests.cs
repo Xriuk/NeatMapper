@@ -11,16 +11,40 @@ namespace NeatMapper.Tests.Mapping {
 	public class NewMapsTests {
 		public class Maps :
 			INewMap<int, string>,
+			INewMap<string, int>,
+			INewMap<bool, string>,
+			IMergeMap<bool, string>,
+			IMergeMap<float, string>,
 			INewMap<Price, decimal>,
 			INewMap<Price, PriceFloat>,
-			INewMap<Product, ProductDto>,
 			INewMap<Category, int>,
+			INewMap<Product, ProductDto>,
 			INewMap<LimitedProduct, LimitedProductDto>,
 			INewMap<Product, string>,
-			INewMap<Category, CategoryProducts>{
+			INewMap<Category, CategoryProducts>,
+			INewMap<LimitedProduct, string>,
+			INewMap<string, KeyValuePair<string, int>>,
+			INewMap<float, int>,
+			IMergeMap<string, ClassWithoutParameterlessConstructor>{
 
-			static string INewMap<int, string>.Map(int source, MappingContext context) {
+			static string? INewMap<int, string>.Map(int source, MappingContext context) {
 				return (source * 2).ToString();
+			}
+
+			static int INewMap<string, int>.Map(string? source, MappingContext context) {
+				return source?.Length ?? -1;
+			}
+
+			static string? INewMap<bool, string>.Map(bool source, MappingContext context) {
+				return "NewMap";
+			}
+
+			static string? IMergeMap<bool, string>.Map(bool source, string? destination, MappingContext context) {
+				return "MergeMap";
+			}
+
+			static string? IMergeMap<float, string>.Map(float source, string? destination, MappingContext context) {
+				return (source * 3).ToString();
 			}
 
 			static decimal INewMap<Price, decimal>.Map(Price? source, MappingContext context) {
@@ -37,6 +61,10 @@ namespace NeatMapper.Tests.Mapping {
 					};
 			}
 
+			static int INewMap<Category, int>.Map(Category? source, MappingContext context) {
+				return source?.Id ?? 0;
+			}
+
 			// Nested NewMap
 			static ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context) {
 				if(source == null)
@@ -44,22 +72,20 @@ namespace NeatMapper.Tests.Mapping {
 				else {
 					return new ProductDto {
 						Code = source.Code,
-						Categories = context.Mapper.Map<IEnumerable<int>>(source.Categories)
+						Categories = context.Mapper.Map<ICollection<int>>(source.Categories) ?? new List<int>()
 					};
 				}
 			}
 
-			static int INewMap<Category, int>.Map(Category? source, MappingContext context) {
-				return source?.Id ?? 0;
-			}
-
+			// Nested MergeMap
 			static LimitedProductDto? INewMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, MappingContext context) {
 				if(source == null)
 					return null;
 				else {
+					var categories = new List<int>();
 					return new LimitedProductDto {
 						Code = source.Code,
-						Categories = context.Mapper.Map<IEnumerable<int>>(source.Categories),
+						Categories = context.Mapper.Map(source.Categories, categories) ?? new List<int>(),
 						Copies = source.Copies
 					};
 				}
@@ -80,59 +106,29 @@ namespace NeatMapper.Tests.Mapping {
 				else {
 					return new CategoryProducts {
 						Id = source.Id,
-						Products = context.Mapper.Map<IEnumerable<string>>(source.Products)
+						Products = context.Mapper.Map<ICollection<string>>(source.Products) ?? new List<string>()
 					};
 				}
 			}
 
-
-			static MyClassInt INewMap<int, MyClassInt>.Map(int source, MappingContext context) {
-				return new MyClassInt {
-					MyInt = source
-				};
+			public static List<IServiceProvider> _sp3 = new List<IServiceProvider>();
+			static string? INewMap<LimitedProduct, string>.Map(LimitedProduct? source, MappingContext context) {
+				_sp3.Add(context.ServiceProvider);
+				return context.Mapper.Map<Product, string>(source);
 			}
 
-			// Nested NewMap
-			static MyClassString INewMap<int, MyClassString>.Map(int source, MappingContext context) {
-				return new MyClassString {
-					MyString = context.Mapper.Map<int, string>(source)
-				};
+			static KeyValuePair<string, int> INewMap<string, KeyValuePair<string, int>>.Map(string? source, MappingContext context) {
+				return new KeyValuePair<string, int>(source ?? "", context.Mapper.Map<string, int>(source));
 			}
 
-			static MyClassString IMergeMap<int, MyClassString>.Map(int source, MyClassString destination, MappingContext context) {
-				destination.MyString = (source * 2).ToString();
+			// Throws exception
+			static int INewMap<float, int>.Map(float source, MappingContext context) {
+				throw new NotImplementedException();
+			}
+
+			static ClassWithoutParameterlessConstructor? IMergeMap<string, ClassWithoutParameterlessConstructor>.Map(string? source, ClassWithoutParameterlessConstructor? destination, MappingContext context) {
 				return destination;
 			}
-
-			// Nested MergeMap
-			static MyClassString INewMap<float, MyClassString>.Map(float source, MappingContext context) {
-				return context.Mapper.Map((int)source, new MyClassString());
-			}
-
-			static KeyValuePair<string, int> INewMap<string, KeyValuePair<string, int>>.Map(string source, MappingContext context) {
-				return new KeyValuePair<string, int>(source, source.Length);
-			}
-
-			static string IMergeMap<float, string>.Map(float source, string destination, MappingContext context) {
-				return (source * 3).ToString();
-			}
-
-			static string IMergeMap<int, string>.Map(int source, string destination, MappingContext context) {
-				return (source * 10).ToString();
-			}
-
-			// Scope test
-			
-			static float INewMap<MyClassString, float>.Map(MyClassString source, MappingContext context) {
-				_sp1 = context.ServiceProvider;
-				return context.Mapper.Map<int>(source);
-			}
-			static int INewMap<MyClassString, int>.Map(MyClassString source, MappingContext context) {
-				_sp2 = context.ServiceProvider;
-				return source.MyString.Length;
-			}
-
-			
 		}
 
 		IMapper _mapper = null!;
@@ -140,7 +136,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions{
-				MapTypes = new List<Type> { typeof(Maps) }
+				ScanTypes = new List<Type> { typeof(Maps) }
 			}), new ServiceCollection().BuildServiceProvider());
 		}
 
@@ -185,7 +181,7 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldNotFindMissingMap() {
+		public void ShouldNotMapWithoutMap() {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<Category>(2));
 		}
 
@@ -210,19 +206,39 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapNested() {
-			var result = _mapper.Map<Product, ProductDto>(new Product {
-				Code = "Test",
-				Categories = new List<Category> {
-					new Category {
-						Id = 2
+			{ 
+				var result = _mapper.Map<Product, ProductDto>(new Product {
+					Code = "Test",
+					Categories = new List<Category> {
+						new Category {
+							Id = 2
+						}
 					}
-				}
-			});
-			Assert.IsNotNull(result);
-			Assert.AreEqual("Test", result.Code);
-			Assert.IsNotNull(result.Categories);
-			Assert.AreEqual(1, result.Categories.Count());
-			Assert.AreEqual(2, result.Categories.Single());
+				});
+				Assert.IsNotNull(result);
+				Assert.AreEqual("Test", result.Code);
+				Assert.IsNotNull(result.Categories);
+				Assert.AreEqual(1, result.Categories.Count());
+				Assert.AreEqual(2, result.Categories.Single());
+			}
+
+			{ 
+				var result = _mapper.Map<LimitedProduct, LimitedProductDto>(new LimitedProduct {
+					Code = "Test",
+					Categories = new List<Category> {
+						new Category {
+							Id = 2
+						}
+					},
+					Copies = 3
+				});
+				Assert.IsNotNull(result);
+				Assert.AreEqual("Test", result.Code);
+				Assert.IsNotNull(result.Categories);
+				Assert.AreEqual(1, result.Categories.Count());
+				Assert.AreEqual(2, result.Categories.Single());
+				Assert.AreEqual(3, result.Copies);
+			}
 		}
 
 		[TestMethod]
@@ -230,7 +246,7 @@ namespace NeatMapper.Tests.Mapping {
 			Maps._sp1 = null!;
 			Maps._sp2 = null!;
 
-			var result = _mapper.Map<CategoryProducts>(new Category {
+			_mapper.Map<CategoryProducts>(new Category {
 				Id = 2,
 				Products = new[] {
 					new Product {
@@ -249,8 +265,19 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
+		public void ShouldNotFallbackToMergeMapIfCannotCreateDestination() {
+			TestUtils.AssertMapNotFound(() => _mapper.Map<ClassWithoutParameterlessConstructor>(""));
+		}
+
+		[TestMethod]
 		public void ShouldPreferNewMapIfBothAreDefined() {
-			Assert.AreEqual("4", _mapper.Map<int, string>(2));
+			Assert.AreEqual("NewMap", _mapper.Map<string>(true));
+		}
+
+		[TestMethod]
+		public void ShouldCatchExceptionsInMaps() {
+			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(2f));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}
 
 		[TestMethod]
@@ -325,6 +352,45 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(2, strings["BB"]);
 				Assert.AreEqual(3, strings["CCC"]);
 			}
+
+			{
+				var strings = _mapper.Map<CustomCollection<string>>(new[] { 2, -3, 0 });
+
+				Assert.IsNotNull(strings);
+				Assert.AreEqual(3, strings.Count);
+				Assert.AreEqual("4", strings[0]);
+				Assert.AreEqual("-6", strings[1]);
+				Assert.AreEqual("0", strings[2]);
+			}
+		}
+
+		[TestMethod]
+		public void ShouldNotMapCollectionsIfCannotCreateDestination() {
+			TestUtils.AssertMapNotFound(() => _mapper.Map<CustomCollectionWithoutParameterlessConstructor<string>>(new[] { 2, -3, 0 }));
+		}
+
+		[TestMethod]
+		public void ShouldUseSameScopeInCollectionsMaps() {
+			Maps._sp3.Clear();
+
+			_mapper.Map<IEnumerable<string>>(new[] {
+				new LimitedProduct {
+					Code = "Test1",
+					Categories = new List<Category> {
+						new Category {
+							Id = 2
+						}
+					},
+					Copies = 3
+				},
+				new LimitedProduct {
+					Code = "Test2",
+					Categories = new List<Category>(),
+					Copies = 1
+				}
+			});
+			Assert.AreEqual(2, Maps._sp3.Count);
+			Assert.AreSame(Maps._sp3[0], Maps._sp3[1]);
 		}
 
 		[TestMethod]
@@ -334,7 +400,18 @@ namespace NeatMapper.Tests.Mapping {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int[]?, float[]?>(null));
 		}
 
-		// DEV: test mapping collections with null elements
+		[TestMethod]
+		public void ShouldMapNullElementsInCollections() {
+			var ints = _mapper.Map<int[]>(new[] { "A", "BBB", "C", "", null });
+
+			Assert.IsNotNull(ints);
+			Assert.AreEqual(5, ints.Length);
+			Assert.AreEqual(1, ints[0]);
+			Assert.AreEqual(3, ints[1]);
+			Assert.AreEqual(1, ints[2]);
+			Assert.AreEqual(0, ints[3]);
+			Assert.AreEqual(-1, ints[4]);
+		}
 
 		[TestMethod]
 		public void ShouldFallbackToMergeMapInCollections() {
@@ -343,6 +420,11 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsNotNull(result);
 			Assert.AreEqual(1, result.Count);
 			Assert.AreEqual("6", result[0]);
+		}
+
+		[TestMethod]
+		public void ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<ClassWithoutParameterlessConstructor>>(new[] { "" }));
 		}
 
 		[TestMethod]
@@ -369,6 +451,20 @@ namespace NeatMapper.Tests.Mapping {
 				new[]{ 2, -3, 0 },
 				new[]{ 1, 2, 5 }
 			}));
+		}
+
+		[TestMethod]
+		public void ShouldCatchExceptionsInCollectionMaps() {
+			// Normal collections
+			var exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+
+			// Nested collections
+			exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[]{ new[] { 2f } }));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
+			Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 		}
 	}
 }

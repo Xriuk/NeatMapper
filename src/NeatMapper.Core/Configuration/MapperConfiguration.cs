@@ -42,12 +42,15 @@ namespace NeatMapper.Core.Configuration {
 			GenericCollectionElementComparers = genericCollectionElementComparers;
 
 
+			MergeMapsCollectionsOptions = new MergeMapsCollectionsOptions(options.MergeMapsCollectionsOptions);
+
+
 			void PopulateTypes(Func<Type, bool> interfaceFilter, // GetGenericTypeDefinition
 				Func<Type, List<GenericMap>> genericMapsSelector, // GetGenericTypeDefinition
 				Func<Type, Dictionary<(Type From, Type To), MethodInfo>> mapsSelector // GetGenericTypeDefinition
 				) { 
 
-				foreach (var type in options.MapTypes
+				foreach (var type in options.ScanTypes
 					.Distinct()
 					.Where(t => t.IsClass && t.GetInterfaces().Any(i =>
 						i.IsGenericType && interfaceFilter.Invoke(i.GetGenericTypeDefinition())))) {
@@ -70,7 +73,7 @@ namespace NeatMapper.Core.Configuration {
 								var map = genericMapsSelector.Invoke(interf.GetGenericTypeDefinition());
 								var duplicate = map.FirstOrDefault(m => MatchOpenGenericArgumentsRecursive(m.From, interfaceArguments[0]) && MatchOpenGenericArgumentsRecursive(m.To, interfaceArguments[1]));
 								if (duplicate != null)
-									throw new InvalidOperationException($"Duplicate interface {interf.FullName} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class}");
+									throw new InvalidOperationException($"Duplicate interface {interf.FullName} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}");
 
 								map.Add(new GenericMap {
 									From = interfaceArguments[0],
@@ -113,6 +116,8 @@ namespace NeatMapper.Core.Configuration {
 
 		public IEnumerable<GenericMap> GenericCollectionElementComparers { get; }
 
+		public MergeMapsCollectionsOptions MergeMapsCollectionsOptions { get; }
+
 
 		private static IEnumerable<Type> GetOpenGenericArgumentsRecursive(Type t) {
 			if(!t.IsGenericType)
@@ -127,13 +132,29 @@ namespace NeatMapper.Core.Configuration {
 		private static bool MatchOpenGenericArgumentsRecursive(Type t1, Type t2) {
 			if(!t1.IsGenericType || !t2.IsGenericType){
 				if(t1.IsGenericTypeParameter && t2.IsGenericTypeParameter) {
-					// DEV: check constraints
+					// Check if generic constraints overlap
+					if(t1.GenericParameterAttributes != t2.GenericParameterAttributes)
+						return false;
 
-					return true;
+					if ((t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) ||
+						t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint)) &&
+						t1.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") != t2.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute")) {
+
+						return false;
+					}
+
+					var t1Constraints = t1.GetGenericParameterConstraints();
+					var t2Constraints = t2.GetGenericParameterConstraints();
+					if(t1Constraints.Length != t2Constraints.Length)
+						return false;
+
+					return !t1Constraints.Except(t2Constraints).Any() && !t2Constraints.Except(t1Constraints).Any();
 				}
 				else
 					return t1 == t2;
 			}
+			else if (t1.GetGenericTypeDefinition() != t2.GetGenericTypeDefinition())
+				return false;
 
 			var arguments1 = t1.GetGenericArguments();
 			var arguments2 = t2.GetGenericArguments();

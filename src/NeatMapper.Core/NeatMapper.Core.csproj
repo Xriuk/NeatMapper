@@ -4,6 +4,10 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>NeatMapper</PackageId>
+    <Authors>Xriuk</Authors>
+    <Title>.NE(a)T Mapper</Title>
+    <Description>Object mapper, with configurable and reusable mappings. Supports async mappings and services via Dependency Injection (DI).</Description>
   </PropertyGroup>
 
   <ItemGroup>

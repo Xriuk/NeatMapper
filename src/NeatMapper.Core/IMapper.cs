@@ -1,7 +1,11 @@
 ﻿namespace NeatMapper.Core {
+	/// <summary>
+	/// Interface which allows mapping an object to a new one or an existing one
+	/// </summary>
 	public interface IMapper {
 		/// <summary>
-		/// Maps an object to a new one
+		/// Maps an object to a new one.<br/>
+		/// Can also map to collections automatically, will create the destination collection and map each element individually
 		/// </summary>
 		/// <param name="source">object to map, may be null</param>
 		/// <param name="sourceType">type of the object to map, used to retrieve the available maps</param>
@@ -10,20 +14,29 @@
 		public object? Map(object? source, Type sourceType, Type destinationType);
 
 		/// <summary>
-		/// Maps an object to an existing one and returns the result
+		/// Maps an object to an existing one and returns the result.<br/>
+		/// Can also map to collections automatically, will try to match elements with <see cref="ICollectionElementComparer{TSource, TDestination}"/>
+		/// (or the passed <paramref name="collectionElementComparer"/>), will create the destination collection if it is null and map each element individually
 		/// </summary>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>
 		/// <param name="destination">object to map to, may be null</param>
 		/// <param name="destinationType">type of the destination object, used to retrieve the available maps</param>
-		/// <param name="collectionElementComparer">
-		/// if <paramref name="sourceType"/> and <paramref name="destinationType"/> are both collections
-		/// you can optionally pass a method to provide (or override) the <see cref="ICollectionElementComparer{,}"/> used for mapping
-		/// </param>
+		/// <param name="mappingOptions">additional options for the current map</param>
 		/// <returns>
 		/// the resulting object of the mapping of <paramref name="destinationType"/>, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, Func<object?, object?, MappingContext, bool>? collectionElementComparer = null);
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null);
+
+		/// <summary>
+		/// Checks if two objects are the same by invoking the corresponding <see cref="ICollectionElementComparer{TSource, TDestination}.Match"/>
+		/// </summary>
+		/// <param name="source">source object, may be null</param>
+		/// <param name="sourceType">type of the source object, used to retrieve the available comparers</param>
+		/// <param name="destination">destination object, may be null</param>
+		/// <param name="destinationType">type of the destination object, used to retrieve the available comparers</param>
+		/// <returns>true if the two objects are the same</returns>
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType);
 	}
 }
