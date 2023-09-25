@@ -68,12 +68,12 @@ namespace NeatMapper.Core.Configuration {
 								.Distinct()
 								.ToArray();
 							if (!typeArguments.All(t => interfaceOpenGenericArguments.Contains(t)))
-								throw new InvalidOperationException($"Interface {interf.FullName} in generic class {type.Name} cannot be instantiated because the generic arguments of the interface do not fully cover the generic arguments of the class so they cannot be inferred");
+								throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the generic arguments of the interface do not fully cover the generic arguments of the class so they cannot be inferred");
 							else {
 								var map = genericMapsSelector.Invoke(interf.GetGenericTypeDefinition());
 								var duplicate = map.FirstOrDefault(m => MatchOpenGenericArgumentsRecursive(m.From, interfaceArguments[0]) && MatchOpenGenericArgumentsRecursive(m.To, interfaceArguments[1]));
 								if (duplicate != null)
-									throw new InvalidOperationException($"Duplicate interface {interf.FullName} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}");
+									throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}");
 
 								map.Add(new GenericMap {
 									From = interfaceArguments[0],
@@ -120,6 +120,8 @@ namespace NeatMapper.Core.Configuration {
 
 
 		private static IEnumerable<Type> GetOpenGenericArgumentsRecursive(Type t) {
+			if(t.IsGenericTypeParameter)
+				return new[] { t };
 			if(!t.IsGenericType)
 				return Enumerable.Empty<Type>();
 
@@ -150,6 +152,8 @@ namespace NeatMapper.Core.Configuration {
 
 					return !t1Constraints.Except(t2Constraints).Any() && !t2Constraints.Except(t1Constraints).Any();
 				}
+				else if(t1.IsArray && t2.IsArray)
+					return MatchOpenGenericArgumentsRecursive(t1.GetElementType()!, t2.GetElementType()!);
 				else
 					return t1 == t2;
 			}

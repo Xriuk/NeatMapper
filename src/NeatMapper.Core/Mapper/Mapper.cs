@@ -17,6 +17,8 @@ namespace NeatMapper.Core.Mapper {
 		private readonly MappingContext? _mappingContext;
 		private readonly AsyncMappingContext? _asyncMappingContext;
 
+		private Dictionary<(Type From, Type To), Func<object?[], object?>> genericCache = new Dictionary<(Type From, Type To), Func<object?[], object?>>();
+
 		public Mapper(IMapperConfiguration configuration, IServiceProvider serviceProvider) {
 			_configuration = configuration;
 			_serviceProvider = serviceProvider;
@@ -56,6 +58,7 @@ namespace NeatMapper.Core.Mapper {
 						catch (DestinationCreationException) {
 							throw exc;
 						}
+
 						result = Map(source, sourceType, destination, destinationType);
 					}
 				}
@@ -349,12 +352,13 @@ namespace NeatMapper.Core.Mapper {
 		// (source, destination, context) => destination
 		// (source, context) => Task<destination>
 		// (source, destination, context) => Task<destination>
-		private static Func<object?[], object?> MapInternal(
+		private Func<object?[], object?> MapInternal(
 			(Type From, Type To) types,
 			IReadOnlyDictionary<(Type From, Type To), MethodInfo> maps,
 			IEnumerable<GenericMap> genericMaps) {
 
-			// Try retrieving a regular map or matching to a generic one
+			// Try retrieving a regular map
+			// or try matching to a generic one
 			if (maps.ContainsKey(types))
 				return (parameters) => {
 					try {
@@ -364,35 +368,65 @@ namespace NeatMapper.Core.Mapper {
 						throw new MappingException(e, types);
 					}
 				};
-			else if (types.From.IsGenericType || types.To.IsGenericType) {
-				var map = genericMaps.FirstOrDefault(m =>
-					MatchOpenGenericArgumentsRecursive(m.From, types.From) &&
-					MatchOpenGenericArgumentsRecursive(m.To, types.To));
-				if (map != null) {
+			else {
+				// Try retrieving from cache
+				if(genericCache.TryGetValue(types, out var method)) 
+					return method;
+
+				foreach(var map in genericMaps) {
+					// Check if the two types are compatible (we'll check constraints when instantiating)
+					if (!MatchOpenGenericArgumentsRecursive(map.From, types.From) ||
+						!MatchOpenGenericArgumentsRecursive(map.To, types.To)) {
+
+						continue;
+					}
+
+					// Try inferring the types
 					var classArguments = InferOpenGenericArgumentsRecursive(map.From, types.From)
 						.Concat(InferOpenGenericArgumentsRecursive(map.To, types.To))
 						.ToArray();
 
 					// We may have different closed types matching for the same open type argument, in this case the map should not match
 					var genericArguments = map.Class.GetGenericArguments().Length;
-					if (classArguments.DistinctBy(a => a.OpenGenericArgument).Count() == genericArguments && classArguments.Distinct().Count() == genericArguments) {
-						RuntimeTypeHandle concreteType;
-						try {
-							concreteType = MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle;
-						}
-						catch {
-							throw new MapNotFoundException(types);
-						}
-						return (parameters) => {
-							try {
-								return MethodBase.GetMethodFromHandle(map.Method, MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle)!
-									.Invoke(null, parameters)!;
-							}
-							catch (Exception e) {
-								throw new MappingException(e, types);
-							}
-						};
+					if (classArguments.DistinctBy(a => a.OpenGenericArgument).Count() != genericArguments ||
+						classArguments.Distinct().Count() != genericArguments) {
+
+						continue;
 					}
+
+					// Check unmanaged constraints because the CLR seems to not enforce it
+					if(classArguments.Any(a => a.OpenGenericArgument.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") &&
+						!IsUnmanaged(a.ClosedType))) {
+
+						continue;
+					}
+
+					// Try creating the type, this will verify any constraints too
+					RuntimeTypeHandle concreteType;
+					try {
+						concreteType = MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle;
+					}
+					catch {
+						continue;
+					}
+
+					var mapMethod = MethodBase.GetMethodFromHandle(map.Method, concreteType);
+					if(mapMethod == null)
+						continue;
+
+					Func<object?[], object?> func = (parameters) => {
+						try {
+							return mapMethod.Invoke(null, parameters);
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+					};
+
+					// Cache the method
+					genericCache.Add(types, func);
+
+					return func;
 				}
 			}
 
@@ -925,55 +959,14 @@ namespace NeatMapper.Core.Mapper {
 		private static bool IsUnmanaged(Type type) {
 			return !(bool)RuntimeHelpers_IsReferenceOrContainsReference.MakeGenericMethod(type).Invoke(null, null)!;
 		}
+
+		// Checks if two types are compatible, does not test any constraints
 		private static bool MatchOpenGenericArgumentsRecursive(Type openType, Type closedType) {
 			if (!openType.IsGenericType) {
-				if (closedType.IsGenericType)
-					return false;
-				else if (openType.IsGenericTypeParameter) {
-					// Check if the type meets all the requirements
-					var attrs = openType.GenericParameterAttributes;
-					// new(), struct, unmanaged
-					if (attrs.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint)) {
-						if (closedType.IsValueType) {
-							try {
-								Activator.CreateInstance(closedType);
-							}
-							catch {
-								return false;
-							}
-						}
-						else if(closedType.GetConstructor(Type.EmptyTypes) == null)
-							return false;
-					}
-					// struct, unmanaged
-					if (attrs.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint) &&
-						(!closedType.IsValueType || Nullable.GetUnderlyingType(closedType) != null)) { 
-
-						return false;
-					}
-					// unmanaged
-					if ((attrs.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) ||
-						attrs.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint)) &&
-						openType.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") && !IsUnmanaged(closedType)) {
-
-						return false;
-					}
-					// class
-					if (attrs.HasFlag(GenericParameterAttributes.ReferenceTypeConstraint) && closedType.IsValueType)
-						return false;
-
-					// Check if the type extends all the required classes
-					if (!openType.GetGenericParameterConstraints().All(c => c.IsGenericTypeParameter ? 
-						MatchOpenGenericArgumentsRecursive(c, closedType) :
-						closedType.IsAssignableTo(c))) { 
-
-						return false;
-					}
-
-					return true;
-				}
+				if(openType.IsArray)
+					return closedType.IsArray && MatchOpenGenericArgumentsRecursive(openType.GetElementType()!, closedType.GetElementType()!);
 				else
-					return openType == closedType;
+					return openType.IsGenericTypeParameter || openType == closedType;
 			}
 			else if (!closedType.IsGenericType)
 				return false;
@@ -993,6 +986,8 @@ namespace NeatMapper.Core.Mapper {
 			if (!openType.IsGenericType) {
 				if (openType.IsGenericTypeParameter)
 					return new[] { (openType, closedType) };
+				else if(openType.IsArray)
+					return InferOpenGenericArgumentsRecursive(openType.GetElementType()!, closedType.GetElementType()!);
 				else
 					return Enumerable.Empty<(Type, Type)>();
 			}
@@ -1000,6 +995,7 @@ namespace NeatMapper.Core.Mapper {
 				return openType.GetGenericArguments().Zip(closedType.GetGenericArguments()).SelectMany((a) => InferOpenGenericArgumentsRecursive(a.First, a.Second));
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static Type MakeGenericTypeWithInferredArguments(Type openType, IEnumerable<(Type OpenGenericArgument, Type ClosedType)> arguments) {
 			return openType.MakeGenericType(openType.GetGenericArguments().Select(oa => arguments.First(a => a.OpenGenericArgument == oa).ClosedType).ToArray());
 		}

@@ -206,6 +206,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapNested() {
+			// NewMap
 			{ 
 				var result = _mapper.Map<Product, ProductDto>(new Product {
 					Code = "Test",
@@ -222,6 +223,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(2, result.Categories.Single());
 			}
 
+			// MergeMap
 			{ 
 				var result = _mapper.Map<LimitedProduct, LimitedProductDto>(new LimitedProduct {
 					Code = "Test",
