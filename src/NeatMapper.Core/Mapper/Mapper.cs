@@ -8,6 +8,14 @@ using System.Runtime.CompilerServices;
 
 namespace NeatMapper.Core.Mapper {
 	internal sealed class Mapper : IMapper, IAsyncMapper {
+		internal sealed class MapData {
+			public IReadOnlyDictionary<(Type From, Type To), MethodInfo> Maps { get; init; } = null!;
+
+			public IEnumerable<GenericMap> GenericMaps { get; init; } = null!;
+
+			public Dictionary<(Type From, Type To), Func<object?[], object?>> GenericCache { get; init; } = new Dictionary<(Type From, Type To), Func<object?[], object?>>();
+		}
+
 		// T[] Enumerable.ToArray(this IEnumerable<T> source);
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
@@ -17,11 +25,36 @@ namespace NeatMapper.Core.Mapper {
 		private readonly MappingContext? _mappingContext;
 		private readonly AsyncMappingContext? _asyncMappingContext;
 
-		private Dictionary<(Type From, Type To), Func<object?[], object?>> genericCache = new Dictionary<(Type From, Type To), Func<object?[], object?>>();
+		private MapData newMaps;
+		private MapData mergeMaps;
+		private MapData asyncNewMaps;
+		private MapData asyncMergeMaps;
+		private MapData collectionElementComparers;
 
 		public Mapper(IMapperConfiguration configuration, IServiceProvider serviceProvider) {
 			_configuration = configuration;
 			_serviceProvider = serviceProvider;
+
+			newMaps = new MapData {
+				Maps = _configuration.NewMaps,
+				GenericMaps = _configuration.GenericNewMaps
+			};
+			mergeMaps = new MapData {
+				Maps = _configuration.MergeMaps,
+				GenericMaps = _configuration.GenericMergeMaps
+			};
+			asyncNewMaps = new MapData {
+				Maps = _configuration.AsyncNewMaps,
+				GenericMaps = _configuration.AsyncGenericNewMaps
+			};
+			asyncMergeMaps = new MapData {
+				Maps = _configuration.AsyncMergeMaps,
+				GenericMaps = _configuration.AsyncGenericMergeMaps
+			};
+			collectionElementComparers = new MapData {
+				Maps = _configuration.CollectionElementComparers,
+				GenericMaps = _configuration.GenericCollectionElementComparers
+			};
 		}
 		internal Mapper(IMapperConfiguration configuration, MappingContext mappingContext) : this(configuration, mappingContext.ServiceProvider) {
 			_mappingContext = mappingContext;
@@ -43,12 +76,12 @@ namespace NeatMapper.Core.Mapper {
 			using(var scope = CreateScopeIfNeeded()) { 
 				object? result;
 				try {
-					result = MapInternal(types, _configuration.NewMaps, _configuration.GenericNewMaps)
+					result = MapInternal(types, newMaps)
 						.Invoke(new object?[] { source, CreateOrReturnContext(scope) });
 				}
 				catch (MapNotFoundException exc) {
 					try {
-						result = MapCollectionRecursiveInternal(types).Invoke(new object[] { source!, CreateOrReturnContext(scope!) });
+						result = MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source!, CreateOrReturnContext(scope!) });
 					}
 					catch (MapNotFoundException) {
 						object destination;
@@ -85,12 +118,12 @@ namespace NeatMapper.Core.Mapper {
 			using(var scope = CreateScopeIfNeeded()){
 				object? result;
 				try {
-					result = MapInternal(types, _configuration.MergeMaps, _configuration.GenericMergeMaps)
+					result = MapInternal(types, mergeMaps)
 						.Invoke(new object?[] { source, destination, CreateOrReturnContext(scope!) });
 				}
 				catch (MapNotFoundException exc) {
 					try {
-						result = MapCollectionDestinationRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source!, destination!, CreateOrReturnContext(scope!) });
+						result = MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source!, destination!, CreateOrReturnContext(scope!) });
 					}
 					catch (MapNotFoundException) { 
 						throw exc;
@@ -117,7 +150,7 @@ namespace NeatMapper.Core.Mapper {
 			using(var scope = CreateScopeIfNeeded()) { 
 				object? result;
 				try {
-					result = await TaskUtils.AwaitTask<object?>((Task)MapInternal(types, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps)
+					result = await TaskUtils.AwaitTask<object?>((Task)MapInternal(types, asyncNewMaps)
 						.Invoke(new object?[] { source, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
 				}
 				catch (MapNotFoundException exc) {
@@ -156,7 +189,7 @@ namespace NeatMapper.Core.Mapper {
 			using (var scope = CreateScopeIfNeeded()) {
 				object? result;
 				try { 
-					result = await TaskUtils.AwaitTask<object?>((Task)MapInternal((sourceType, destinationType), _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps)
+					result = await TaskUtils.AwaitTask<object?>((Task)MapInternal((sourceType, destinationType), asyncMergeMaps)
 						.Invoke(new object?[] { source, destination, CreateOrReturnAsyncContext(scope!, cancellationToken) }));
 				}
 				catch (MapNotFoundException exc) {
@@ -185,17 +218,17 @@ namespace NeatMapper.Core.Mapper {
 							// - elements to add will use NewMap first, then MergeMap
 
 							// (source, context) => Task<destination>
-							Func<object?[], object> newElementMapper = null!;
+							Func<object?[], object?> newElementMapper = null!;
 							// (source, destination, context) => Task<destination>
-							Func<object?[], object> mergeElementMapper = null!;
+							Func<object?[], object?> mergeElementMapper = null!;
 							// () => destination
 							Func<object> destinationElementFactory = null!;
 							try {
-								newElementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps);
+								newElementMapper = MapInternal(elementTypes, newMaps);
 							}
 							catch (MapNotFoundException) { }
 							try {
-								mergeElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps);
+								mergeElementMapper = MapInternal(elementTypes, mergeMaps);
 
 								if (newElementMapper == null)
 									destinationElementFactory = CreateDestinationFactory(elementTypes.To);
@@ -352,17 +385,13 @@ namespace NeatMapper.Core.Mapper {
 		// (source, destination, context) => destination
 		// (source, context) => Task<destination>
 		// (source, destination, context) => Task<destination>
-		private Func<object?[], object?> MapInternal(
-			(Type From, Type To) types,
-			IReadOnlyDictionary<(Type From, Type To), MethodInfo> maps,
-			IEnumerable<GenericMap> genericMaps) {
-
+		private static Func<object?[], object?> MapInternal((Type From, Type To) types, MapData mapData) {
 			// Try retrieving a regular map
 			// or try matching to a generic one
-			if (maps.ContainsKey(types))
+			if (mapData.Maps.ContainsKey(types))
 				return (parameters) => {
 					try {
-						return maps[types].Invoke(null, parameters)!;
+						return mapData.Maps[types].Invoke(null, parameters)!;
 					}
 					catch(Exception e) {
 						throw new MappingException(e, types);
@@ -370,10 +399,10 @@ namespace NeatMapper.Core.Mapper {
 				};
 			else {
 				// Try retrieving from cache
-				if(genericCache.TryGetValue(types, out var method)) 
+				if(mapData.GenericCache.TryGetValue(types, out var method)) 
 					return method;
 
-				foreach(var map in genericMaps) {
+				foreach(var map in mapData.GenericMaps) {
 					// Check if the two types are compatible (we'll check constraints when instantiating)
 					if (!MatchOpenGenericArgumentsRecursive(map.From, types.From) ||
 						!MatchOpenGenericArgumentsRecursive(map.To, types.To)) {
@@ -401,7 +430,7 @@ namespace NeatMapper.Core.Mapper {
 						continue;
 					}
 
-					// Try creating the type, this will verify any constraints too
+					// Try creating the type, this will verify any other constraints too
 					RuntimeTypeHandle concreteType;
 					try {
 						concreteType = MakeGenericTypeWithInferredArguments(map.Class, classArguments).TypeHandle;
@@ -424,7 +453,7 @@ namespace NeatMapper.Core.Mapper {
 					};
 
 					// Cache the method
-					genericCache.Add(types, func);
+					mapData.GenericCache.Add(types, func);
 
 					return func;
 				}
@@ -434,7 +463,7 @@ namespace NeatMapper.Core.Mapper {
 		}
 
 		// (source, context) => destination
-		Func<object?[], object?> MapCollectionRecursiveInternal((Type From, Type To) types) {
+		Func<object?[], object?> MapCollectionNewRecursiveInternal((Type From, Type To) types) {
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
 				HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
@@ -448,12 +477,12 @@ namespace NeatMapper.Core.Mapper {
 				Func<object?[], object?> elementMapper;
 				try {
 					// (source, context) => destination
-					elementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps);
+					elementMapper = MapInternal(elementTypes, newMaps);
 				}
 				catch (MapNotFoundException) {
 					try {
 						// (source, destination, context) => destination
-						var destinationElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps);
+						var destinationElementMapper = MapInternal(elementTypes, mergeMaps);
 
 						// () => destination
 						var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
@@ -467,7 +496,7 @@ namespace NeatMapper.Core.Mapper {
 					catch (Exception e) when (e is MapNotFoundException || e is DestinationCreationException) {
 						try {
 							// (source, context) => destination
-							elementMapper = MapCollectionRecursiveInternal(elementTypes);
+							elementMapper = MapCollectionNewRecursiveInternal(elementTypes);
 						}
 						catch (MapNotFoundException) {
 							goto End;
@@ -512,7 +541,7 @@ namespace NeatMapper.Core.Mapper {
 		}
 
 		// (source, destination, context) => destination
-		Func<object?[], object?> MapCollectionDestinationRecursiveInternal(
+		Func<object?[], object?> MapCollectionMergeRecursiveInternal(
 			(Type From, Type To) types,
 			object? destination,
 			MappingOptions? mappingOptions = null) {
@@ -557,7 +586,7 @@ namespace NeatMapper.Core.Mapper {
 						// () => destination
 						Func<object> destinationElementFactory = null!;
 						try {
-							newElementMapper = MapInternal(elementTypes, _configuration.NewMaps, _configuration.GenericNewMaps);
+							newElementMapper = MapInternal(elementTypes, newMaps);
 						}
 						catch (MapNotFoundException) {
 							// Here we could recreate any nested collection in case the corresponding merge map would fail,
@@ -569,7 +598,7 @@ namespace NeatMapper.Core.Mapper {
 							catch (MapNotFoundException) { }*/
 						}
 						try {
-							mergeElementMapper = MapInternal(elementTypes, _configuration.MergeMaps, _configuration.GenericMergeMaps);
+							mergeElementMapper = MapInternal(elementTypes, mergeMaps);
 						}
 						catch (MapNotFoundException) {
 							// If the types are not collections and we don't have a newElementMapper we already know that we can't map them,
@@ -646,7 +675,7 @@ namespace NeatMapper.Core.Mapper {
 													!mergeCollectionMappings.ContainsKey(destinationElement))) {
 
 												try {
-													var mapper = MapCollectionDestinationRecursiveInternal(elementTypes, destinationElement);
+													var mapper = MapCollectionMergeRecursiveInternal(elementTypes, destinationElement);
 													if(destinationElement == null)
 														nullMergeCollectionMapping = mapper;
 													else
@@ -709,7 +738,7 @@ namespace NeatMapper.Core.Mapper {
 													// If we don't have an element mapper try retrieving it now
 													// We don't pass along any collectionElementComparer as they are only for the current collection (if present at all)
 													if (mergeElementMapper == null) {
-														mergeElementMapper = MapCollectionDestinationRecursiveInternal(elementTypes, destinationInstance);
+														mergeElementMapper = MapCollectionMergeRecursiveInternal(elementTypes, destinationInstance);
 														tempMergeMapper = true;
 													}
 
@@ -768,12 +797,12 @@ namespace NeatMapper.Core.Mapper {
 				Func<object?[], object?> elementMapper;
 				try {
 					// (source, context) => Task<destination>
-					elementMapper = MapInternal(elementTypes, _configuration.AsyncNewMaps, _configuration.AsyncGenericNewMaps);
+					elementMapper = MapInternal(elementTypes, asyncNewMaps);
 				}
 				catch (MapNotFoundException) {
 					try {
 						// (source, destination, context) => Task<destination>
-						var destinationElementMapper = MapInternal(elementTypes, _configuration.AsyncMergeMaps, _configuration.AsyncGenericMergeMaps);
+						var destinationElementMapper = MapInternal(elementTypes, asyncMergeMaps);
 
 						// () => destination
 						var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
@@ -831,9 +860,7 @@ namespace NeatMapper.Core.Mapper {
 		// (source, destination, context) => bool
 		private Func<object?[], bool> ElementComparerInternal((Type From, Type To) types, bool returnDefault = true) {
 			try {
-				var comparer = MapInternal(types,
-					_configuration.CollectionElementComparers,
-					_configuration.GenericCollectionElementComparers)!;
+				var comparer = MapInternal(types, collectionElementComparers)!;
 				return (parameters) => {
 					try {
 						return (bool)comparer.Invoke(parameters)!;

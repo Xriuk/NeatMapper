@@ -431,6 +431,7 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}
 
+
 		[TestMethod]
 		public void ShouldMapCollectionsWithoutElementsComparer() {
 			var a = new Price();
@@ -520,6 +521,12 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
+		public void ShouldNotMapCollectionsWithoutMap() {
+			var destination = new List<int>();
+			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { false }, destination));
+		}
+
+		[TestMethod]
 		public void ShouldUseSameScopeInCollectionsMaps() {
 			Maps._sp3.Clear();
 
@@ -544,7 +551,7 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapNullCollectionsOnlyForDefinedMaps() {
+		public void ShouldMapNullCollections() {
 			// Null source
 			Assert.IsNull(_mapper.Map<int[], List<string>>(null, null));
 			Assert.IsNull(_mapper.Map<int[], List<string>>(null, new List<string>()));

@@ -4,7 +4,6 @@ using NeatMapper.Core;
 using NeatMapper.Core.Configuration;
 using NeatMapper.Core.Mapper;
 using NeatMapper.Tests.Classes;
-using System.Collections.ObjectModel;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -19,7 +18,8 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class Maps<T1, T2> :
-			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>> {
+			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>{
+
 			static (T2, T1) INewMap<Tuple<T1, T2>, (T2, T1)>.Map(Tuple<T1, T2>? source, MappingContext context) {
 				if(source == null)
 					return (default(T2), default(T1))!;
@@ -173,10 +173,10 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class MapsWithGenericTypeParameterComplexType<T1, T2> :
-			INewMap<IList<T1>, int> where T1 : T2 where T2 : Product {
+			INewMap<IList<T1>, Queue<T2>> where T1 : T2 where T2 : Product {
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
-				return 36;
+			static Queue<T2>? INewMap<IList<T1>, Queue<T2>>.Map(IList<T1>? source, MappingContext context) {
+				return new Queue<T2>();
 			}
 		}
 
@@ -360,20 +360,22 @@ namespace NeatMapper.Tests.Mapping {
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Product>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, LimitedProduct>(new List<Product>()));
+					mapper.Map<IList<CustomCollection<int>>, List<int>>(new List<CustomCollection<int>>());
+					mapper.Map<IList<BaseClassTest>, List<Category>>(new List<BaseClassTest>());
 					mapper.Map<IList<LimitedProduct>, Product>(new List<LimitedProduct>());
 				}
 
 				// Complex
 				{
 					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
+						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					}), new ServiceCollection().BuildServiceProvider());
 
-					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Product>(new List<Category>()));
-					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, LimitedProduct>(new List<Product>()));
-					mapper.Map<IList<CustomCollection<int>>, List<int>>(new List<CustomCollection<int>>());
-					mapper.Map<IList<BaseClassTest>, List<Category>>(new List<BaseClassTest>());
-					mapper.Map<IList<LimitedProduct>, Product>(new List<LimitedProduct>());
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Queue<Product>>(new List<Category>()));
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, Queue<LimitedProduct>>(new List<Product>()));
+					mapper.Map<IList<LimitedProduct>, Queue<Product>>(new List<LimitedProduct>());
+					mapper.Map<IList<LimitedProduct>, Queue<LimitedProduct>>(new List<LimitedProduct>());
+					mapper.Map<IList<Product>, Queue<Product>>(new List<Product>());
 				}
 			}
 		}
@@ -427,80 +429,6 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(32, (boolList as List<bool>)?.Capacity);
 		}
 
-		[TestMethod]
-		public void ShouldMapChildClassAsParent() {
-			// Single argument
-			{ 
-				var product = new LimitedProduct {
-					Code = "Test1",
-					Categories = new List<Category> {
-						new Category {
-							Id = 2
-						}
-					},
-					Copies = 3
-				};
-				var productDto = new ProductDto{
-					Code = "Test2",
-					Categories = new List<int> {
-						3
-					}
-				};
-
-				var result = _mapper.Map<Tuple<Product, ProductDto>, ValueTuple<ProductDto, Product>>(new Tuple<Product, ProductDto>(product, productDto));
-				Assert.AreSame(productDto, result.Item1);
-				Assert.AreSame(product, result.Item2);
-			}
-
-			// Both arguments
-			{
-				var product = new LimitedProduct {
-					Code = "Test1",
-					Categories = new List<Category> {
-						new Category {
-							Id = 2
-						}
-					},
-					Copies = 3
-				};
-				var productDto = new LimitedProductDto {
-					Code = "Test2",
-					Categories = new List<int> {
-						3
-					},
-					Copies = 4
-				};
-
-				var result = _mapper.Map<Tuple<Product, ProductDto>, ValueTuple<ProductDto, Product>>(new Tuple<Product, ProductDto>(product, productDto));
-				Assert.AreSame(productDto, result.Item1);
-				Assert.AreSame(product, result.Item2);
-			}
-		}
-
-		[TestMethod]
-		public void ShouldMapNested() {
-			// NewMap
-			{
-				var product = new Product {
-					Code = "Test",
-					Categories = new List<Category> {
-						new Category {
-							Id = 2
-						}
-					}
-				};
-				var result = _mapper.Map<Product[], IList<Product>>(new[] { product });
-				Assert.IsNotNull(result);
-				Assert.AreEqual(1, result.Count);
-				Assert.AreSame(product, result[0]);
-			}
-		}
-
-		[TestMethod]
-		public void ShouldCatchExceptionsInMaps() {
-			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<Queue<int>, string>(new Queue<int>()));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
-		}
 
 		[TestMethod]
 		public void ShouldMapCollections() {

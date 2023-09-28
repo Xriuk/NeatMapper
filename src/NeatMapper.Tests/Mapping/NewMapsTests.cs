@@ -25,7 +25,8 @@ namespace NeatMapper.Tests.Mapping {
 			INewMap<LimitedProduct, string>,
 			INewMap<string, KeyValuePair<string, int>>,
 			INewMap<float, int>,
-			IMergeMap<string, ClassWithoutParameterlessConstructor>{
+			IMergeMap<string, ClassWithoutParameterlessConstructor>,
+			INewMap<IEnumerable<decimal>, IList<string>>{
 
 			static string? INewMap<int, string>.Map(int source, MappingContext context) {
 				return (source * 2).ToString();
@@ -128,6 +129,10 @@ namespace NeatMapper.Tests.Mapping {
 
 			static ClassWithoutParameterlessConstructor? IMergeMap<string, ClassWithoutParameterlessConstructor>.Map(string? source, ClassWithoutParameterlessConstructor? destination, MappingContext context) {
 				return destination;
+			}
+
+			static IList<string>? INewMap<IEnumerable<decimal>, IList<string>>.Map(IEnumerable<decimal>? source, MappingContext context) {
+				return source?.Select(s => (s * 10m).ToString()).ToList();
 			}
 		}
 
@@ -282,6 +287,7 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}
 
+
 		[TestMethod]
 		public void ShouldMapCollections() {
 			{
@@ -372,6 +378,11 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
+		public void ShouldNotMapCollectionsWithoutMap() {
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<Category>>(new[] { 2 }));
+		}
+
+		[TestMethod]
 		public void ShouldUseSameScopeInCollectionsMaps() {
 			Maps._sp3.Clear();
 
@@ -396,10 +407,8 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapNullCollectionsOnlyForDefinedMaps() {
+		public void ShouldMapNullCollections() {
 			Assert.IsNull(_mapper.Map<int[]?, string[]?>(null));
-
-			TestUtils.AssertMapNotFound(() => _mapper.Map<int[]?, float[]?>(null));
 		}
 
 		[TestMethod]
@@ -453,6 +462,14 @@ namespace NeatMapper.Tests.Mapping {
 				new[]{ 2, -3, 0 },
 				new[]{ 1, 2, 5 }
 			}));
+		}
+
+		[TestMethod]
+		public void ShouldPreferExplicitCollectionMaps() {
+			var result = _mapper.Map<IEnumerable<decimal>, IList<string>>(new[] { 4m });
+			Assert.IsNotNull(result);
+			Assert.AreEqual(1, result.Count);
+			Assert.AreEqual("40", result[0]);
 		}
 
 		[TestMethod]
