@@ -1,4 +1,6 @@
-﻿namespace NeatMapper.Core.Mapper {
+﻿using NeatMapper.Common.Mapper;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Exception thrown when an exception was thrown while mapping two collections without an explicit map but only a map for their elements
 	/// </summary>

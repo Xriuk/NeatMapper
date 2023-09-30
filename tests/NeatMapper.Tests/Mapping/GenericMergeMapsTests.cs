@@ -1,7 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Configuration;
-using NeatMapper.Core;
-using NeatMapper.Core.Mapper;
 using NeatMapper.Tests.Classes;
 
 namespace NeatMapper.Tests.Mapping {
@@ -598,6 +596,8 @@ namespace NeatMapper.Tests.Mapping {
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>(), 0));
 				mapper.Map<IList<Guid>, int>(new List<Guid>(), 0);
+				mapper.Map<IList<ManagedTest>, int>(new List<ManagedTest>(), 0);
+				mapper.Map<IList<UnmanagedTest>, int>(new List<UnmanagedTest>(), 0);
 			}
 
 			// class

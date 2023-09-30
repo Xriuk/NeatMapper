@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Core.Mapper {
+﻿namespace NeatMapper {
 	/// <summary>
 	/// Exception thrown when no suitable collection element comparer was found for the given types
 	/// </summary>

@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 		<PackageId>NeatMapper.Common</PackageId>
 		<Authors>Xriuk</Authors>
-		<Title>.NE(a)T Mapper - Common</Title>
+		<Title>.NEaT Mapper - Common</Title>
 		<Description>Common classes and interfaces for NeatMapper and NeatMapper.Async</Description>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper</RepositoryUrl>
   </PropertyGroup>

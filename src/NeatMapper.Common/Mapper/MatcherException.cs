@@ -1,6 +1,8 @@
-﻿namespace NeatMapper.Core.Mapper {
+﻿using NeatMapper.Common.Mapper;
+
+namespace NeatMapper {
 	/// <summary>
-	/// Exception thrown when an exception was thrown inside a <see cref="IMatchMapStatic{TSource, TDestination}"/>
+	/// Exception thrown when an exception was thrown inside a IMatchMap or IMatchMapStatic
 	/// </summary>
 	public class MatcherException : TypesException {
 		public MatcherException(Exception exception, (Type From, Type To) types) :

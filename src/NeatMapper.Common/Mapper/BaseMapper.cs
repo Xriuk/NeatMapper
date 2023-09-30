@@ -4,7 +4,7 @@ using System.Collections.ObjectModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace NeatMapper.Core.Mapper {
+namespace NeatMapper.Common.Mapper {
 	public abstract class BaseMapper : IMatcher {
 		internal sealed class MapData {
 			public IReadOnlyDictionary<(Type From, Type To), Map> Maps { get; init; } = null!;

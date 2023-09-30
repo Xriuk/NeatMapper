@@ -1,5 +1,4 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Core.Mapper;
 
 namespace NeatMapper.Tests {
 	public static class TestUtils {

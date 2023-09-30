@@ -1,6 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Configuration;
-using NeatMapper.Core.Mapper;
 using NeatMapper.Tests.Classes;
 using System.Collections.ObjectModel;
 

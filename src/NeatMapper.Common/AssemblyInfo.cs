@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("NeatMapper.Core")]
-[assembly: InternalsVisibleTo("NeatMapper.Core.Tests")]
+[assembly: InternalsVisibleTo("NeatMapper.Common.Tests")]
+[assembly: InternalsVisibleTo("NeatMapper")]
+[assembly: InternalsVisibleTo("NeatMapper.Tests")]

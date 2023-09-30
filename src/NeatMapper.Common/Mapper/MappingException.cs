@@ -1,4 +1,6 @@
-﻿namespace NeatMapper.Core.Mapper {
+﻿using NeatMapper.Common.Mapper;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Exception thrown when an exception was thrown inside a map
 	/// </summary>

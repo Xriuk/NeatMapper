@@ -69,7 +69,7 @@ namespace NeatMapper.Configuration {
 								var map = genericMapsSelector.Invoke(interf.GetGenericTypeDefinition());
 								var duplicate = map.FirstOrDefault(m => MatchOpenGenericArgumentsRecursive(m.From, interfaceArguments[0]) && MatchOpenGenericArgumentsRecursive(m.To, interfaceArguments[1]));
 								if (duplicate != null)
-									throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}");
+									throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}. If the class has generic constraints check that they do not overlap eachother");
 								var method = type.GetInterfaceMap(interf).TargetMethods.First();
 								if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null)
 									throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static interface (available in .NET 7)");
@@ -90,11 +90,14 @@ namespace NeatMapper.Configuration {
 							if(!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null)
 								throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static interface (available in .NET 7)");
 							
-							mapsSelector.Invoke(interf.GetGenericTypeDefinition())
-								.Add((arguments[0], arguments[1]), new Map {
+							if(!mapsSelector.Invoke(interf.GetGenericTypeDefinition())
+								.TryAdd((arguments[0], arguments[1]), new Map {
 									Class = type,
 									Method = method
-								});
+								})) {
+
+								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, an interface with matching parameters is already defined in class {mapsSelector.Invoke(interf.GetGenericTypeDefinition())[(arguments[0], arguments[1])].Class.Name}");
+							}
 						}
 					}
 				}
@@ -132,20 +135,33 @@ namespace NeatMapper.Configuration {
 		private static bool MatchOpenGenericArgumentsRecursive(Type t1, Type t2) {
 			if(!t1.IsGenericType || !t2.IsGenericType){
 				if(t1.IsGenericTypeParameter && t2.IsGenericTypeParameter) {
-					// Check if generic constraints overlap
-					if(t1.GenericParameterAttributes != t2.GenericParameterAttributes)
-						return false;
-
-					if ((t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) ||
-						t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint)) &&
-						t1.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") != t2.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute")) {
+					// Check if generic constraints overlap, if one class has no attributes it can match the other
+					if (t1.GenericParameterAttributes != t2.GenericParameterAttributes &&
+						// If one of them has no constrains
+						t1.GenericParameterAttributes != GenericParameterAttributes.None &&
+						t2.GenericParameterAttributes != GenericParameterAttributes.None &&
+						// If one of them is new()
+						!t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) &&
+						!t2.GenericParameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) &&
+						// If both of them are structs/unmanaged
+						(!t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint) ||
+						!t2.GenericParameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))
+						) { 
 
 						return false;
 					}
 
-					var t1Constraints = t1.GetGenericParameterConstraints();
-					var t2Constraints = t2.GetGenericParameterConstraints();
-					if(t1Constraints.Length != t2Constraints.Length)
+					// Unmanaged does not count for two types to overlap
+					/*if ((t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.DefaultConstructorConstraint) ||
+						t1.GenericParameterAttributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint)) &&
+						t1.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") != t2.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute")) {
+
+						return false;
+					}*/
+
+					var t1Constraints = t1.GetGenericParameterConstraints().Where(c => c != typeof(ValueType));
+					var t2Constraints = t2.GetGenericParameterConstraints().Where(c => c != typeof(ValueType));
+					if(t1Constraints.Count() != t2Constraints.Count())
 						return false;
 
 					return !t1Constraints.Except(t2Constraints).Any() && !t2Constraints.Except(t1Constraints).Any();
