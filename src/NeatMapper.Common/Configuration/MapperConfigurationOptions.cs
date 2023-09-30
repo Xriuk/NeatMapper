@@ -1,6 +1,6 @@
-﻿namespace NeatMapper.Core.Configuration {
+﻿namespace NeatMapper.Configuration {
 	/// <summary>
-	/// Options applied to automatic collections mapping via <see cref="IMergeMap{TSource, TDestination}"/>
+	/// Options applied to automatic collections mapping via <see cref="IMapperConfiguration.MergeMaps"/> or <see cref="IMapperConfiguration.GenericMergeMaps"/>
 	/// </summary>
 	public sealed class MergeMapsCollectionsOptions {
 		public MergeMapsCollectionsOptions() { }
@@ -18,7 +18,7 @@
 	}
 
 	/// <summary>
-	/// Global mapping options for an <see cref="IMapper"/>
+	/// Global mapping options for a mapper
 	/// </summary>
 	public sealed class MapperConfigurationOptions {
 		public MapperConfigurationOptions() { }
@@ -30,16 +30,14 @@
 
 		/// <summary>
 		/// Types which to scan for:<br/>
-		/// <see cref="INewMap{TSource, TDestination}"/><br/>
-		/// <see cref="IMergeMap{TSource, TDestination}"/><br/>
-		/// <see cref="IAsyncNewMap{TSource, TDestination}"/><br/>
-		/// <see cref="IAsyncMergeMap{TSource, TDestination}"/><br/>
+		/// NewMap<br/>
+		/// MergeMap<br/>
 		/// <see cref="ICollectionElementComparer{TSource, TDestination}"/>
 		/// </summary>
 		public ICollection<Type> ScanTypes { get; set; } = new List<Type>();
 
 		/// <summary>
-		/// Options applied to automatic collections mapping via <see cref="IMergeMap{TSource, TDestination}"/> and <see cref="IAsyncMergeMap{TSource, TDestination}"/>
+		/// Options applied to automatic collections mapping via <see cref="IMapperConfiguration.MergeMaps"/> or <see cref="IMapperConfiguration.GenericMergeMaps"/>
 		/// </summary>
 		public MergeMapsCollectionsOptions MergeMapsCollectionsOptions { get; set; } = new MergeMapsCollectionsOptions();
 	}

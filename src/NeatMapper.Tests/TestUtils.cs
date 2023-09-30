@@ -2,7 +2,7 @@
 using NeatMapper.Core.Mapper;
 
 namespace NeatMapper.Tests {
-	internal static class TestUtils {
+	public static class TestUtils {
 		public static void AssertMapNotFound(Func<object?> action) {
 			Assert.ThrowsException<MapNotFoundException>(action);
 		}

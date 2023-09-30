@@ -1,10 +1,11 @@
-﻿namespace NeatMapper {
+﻿#if NET7_0_OR_GREATER
+namespace NeatMapper {
 	/// <summary>
 	/// Map which allows mapping an object to an existing one
 	/// </summary>
 	/// <typeparam name="TSource">Source type</typeparam>
 	/// <typeparam name="TDestination">Destination type</typeparam>
-	public interface IMergeMap<TSource, TDestination> {
+	public interface IMergeMapStatic<TSource, TDestination> {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result
 		/// </summary>
@@ -15,6 +16,7 @@
 		/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public TDestination? Map(TSource? source, TDestination? destination, MappingContext context);
+		public static abstract TDestination? Map(TSource? source, TDestination? destination, MappingContext context);
 	}
 }
+#endif

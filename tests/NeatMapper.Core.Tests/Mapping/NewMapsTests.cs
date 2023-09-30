@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Core;
-using NeatMapper.Core.Configuration;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Configuration;
 using NeatMapper.Core.Mapper;
 using NeatMapper.Tests.Classes;
 using System.Collections.ObjectModel;
@@ -10,6 +8,22 @@ namespace NeatMapper.Tests.Mapping {
 	[TestClass]
 	public class NewMapsTests {
 		public class Maps :
+#if NET7_0_OR_GREATER
+			INewMapStatic<int, string>,
+			INewMapStatic<string, int>,
+			INewMapStatic<bool, string>,
+			IMergeMapStatic<bool, string>,
+			IMergeMapStatic<float, string>,
+			INewMapStatic<Price, decimal>,
+			INewMapStatic<Price, PriceFloat>,
+			INewMapStatic<Category, int>,
+			INewMapStatic<Product, ProductDto>,
+			INewMapStatic<LimitedProduct, LimitedProductDto>,
+			INewMapStatic<string, KeyValuePair<string, int>>,
+			INewMapStatic<float, int>,
+			IMergeMapStatic<string, ClassWithoutParameterlessConstructor>,
+			INewMapStatic<IEnumerable<decimal>, IList<string>>
+#else
 			INewMap<int, string>,
 			INewMap<string, int>,
 			INewMap<bool, string>,
@@ -20,39 +34,101 @@ namespace NeatMapper.Tests.Mapping {
 			INewMap<Category, int>,
 			INewMap<Product, ProductDto>,
 			INewMap<LimitedProduct, LimitedProductDto>,
-			INewMap<Product, string>,
-			INewMap<Category, CategoryProducts>,
-			INewMap<LimitedProduct, string>,
 			INewMap<string, KeyValuePair<string, int>>,
 			INewMap<float, int>,
 			IMergeMap<string, ClassWithoutParameterlessConstructor>,
-			INewMap<IEnumerable<decimal>, IList<string>>{
+			INewMap<IEnumerable<decimal>, IList<string>>
+#endif
+			{
 
-			static string? INewMap<int, string>.Map(int source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			string?
+#if NET7_0_OR_GREATER
+				INewMapStatic<int, string>
+#else
+				INewMap<int, string>
+#endif
+				.Map(int source, MappingContext context) {
 				return (source * 2).ToString();
 			}
 
-			static int INewMap<string, int>.Map(string? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<string, int>
+#else
+				INewMap<string, int>
+#endif
+				.Map(string? source, MappingContext context) {
 				return source?.Length ?? -1;
 			}
 
-			static string? INewMap<bool, string>.Map(bool source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			string?
+#if NET7_0_OR_GREATER
+				INewMapStatic<bool, string>
+#else
+				INewMap<bool, string>
+#endif
+				.Map(bool source, MappingContext context) {
 				return "NewMap";
 			}
 
-			static string? IMergeMap<bool, string>.Map(bool source, string? destination, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			string?
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<bool, string>
+#else
+				IMergeMap<bool, string>
+#endif
+				.Map(bool source, string? destination, MappingContext context) {
 				return "MergeMap";
 			}
 
-			static string? IMergeMap<float, string>.Map(float source, string? destination, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			string?
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<float, string>
+#else
+				IMergeMap<float, string>
+#endif
+				.Map(float source, string? destination, MappingContext context) {
 				return (source * 3).ToString();
 			}
 
-			static decimal INewMap<Price, decimal>.Map(Price? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			decimal
+#if NET7_0_OR_GREATER
+				INewMapStatic<Price, decimal>
+#else
+				INewMap<Price, decimal>
+#endif
+				.Map(Price? source, MappingContext context) {
 				return source?.Amount ?? 0m;
 			}
 
-			static PriceFloat? INewMap<Price, PriceFloat>.Map(Price? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			PriceFloat?
+#if NET7_0_OR_GREATER
+				INewMapStatic<Price, PriceFloat>
+#else
+				INewMap<Price, PriceFloat>
+#endif
+				.Map(Price? source, MappingContext context) {
 				if(source == null)
 					return null;
 				else
@@ -62,12 +138,30 @@ namespace NeatMapper.Tests.Mapping {
 					};
 			}
 
-			static int INewMap<Category, int>.Map(Category? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+				static
+#endif
+		int
+#if NET7_0_OR_GREATER
+				INewMapStatic<Category, int>
+#else
+				INewMap<Category, int>
+#endif
+				.Map(Category? source, MappingContext context) {
 				return source?.Id ?? 0;
 			}
 
 			// Nested NewMap
-			static ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			ProductDto?
+#if NET7_0_OR_GREATER
+				INewMapStatic<Product, ProductDto>
+#else
+				INewMap<Product, ProductDto>
+#endif
+				.Map(Product? source, MappingContext context) {
 				if(source == null)
 					return null;
 				else {
@@ -79,7 +173,16 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			// Nested MergeMap
-			static LimitedProductDto? INewMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			LimitedProductDto?
+#if NET7_0_OR_GREATER
+				INewMapStatic<LimitedProduct, LimitedProductDto>
+#else
+				INewMap<LimitedProduct, LimitedProductDto>
+#endif
+				.Map(LimitedProduct? source, MappingContext context) {
 				if(source == null)
 					return null;
 				else {
@@ -92,46 +195,56 @@ namespace NeatMapper.Tests.Mapping {
 				}
 			}
 
-			// Scope test
-			public static IServiceProvider _sp1 = null!;
-			static string? INewMap<Product, string>.Map(Product? source, MappingContext context) {
-				_sp1 = context.ServiceProvider;
-				return source?.Code;
-			}
-
-			public static IServiceProvider _sp2 = null!;
-			static CategoryProducts? INewMap<Category, CategoryProducts>.Map(Category? source, MappingContext context) {
-				_sp2 = context.ServiceProvider;
-				if (source == null)
-					return null;
-				else {
-					return new CategoryProducts {
-						Id = source.Id,
-						Products = context.Mapper.Map<ICollection<string>>(source.Products) ?? new List<string>()
-					};
-				}
-			}
-
-			public static List<IServiceProvider> _sp3 = new List<IServiceProvider>();
-			static string? INewMap<LimitedProduct, string>.Map(LimitedProduct? source, MappingContext context) {
-				_sp3.Add(context.ServiceProvider);
-				return context.Mapper.Map<Product, string>(source);
-			}
-
-			static KeyValuePair<string, int> INewMap<string, KeyValuePair<string, int>>.Map(string? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			KeyValuePair<string, int>
+#if NET7_0_OR_GREATER
+				INewMapStatic<string, KeyValuePair<string, int>>
+#else
+				INewMap<string, KeyValuePair<string, int>>
+#endif
+				.Map(string? source, MappingContext context) {
 				return new KeyValuePair<string, int>(source ?? "", context.Mapper.Map<string, int>(source));
 			}
 
 			// Throws exception
-			static int INewMap<float, int>.Map(float source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<float, int>
+#else
+				INewMap<float, int>
+#endif
+				.Map(float source, MappingContext context) {
 				throw new NotImplementedException();
 			}
 
-			static ClassWithoutParameterlessConstructor? IMergeMap<string, ClassWithoutParameterlessConstructor>.Map(string? source, ClassWithoutParameterlessConstructor? destination, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			ClassWithoutParameterlessConstructor?
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<string, ClassWithoutParameterlessConstructor>
+#else
+				IMergeMap<string, ClassWithoutParameterlessConstructor>
+#endif
+				.Map(string? source, ClassWithoutParameterlessConstructor? destination, MappingContext context) {
 				return destination;
 			}
 
-			static IList<string>? INewMap<IEnumerable<decimal>, IList<string>>.Map(IEnumerable<decimal>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			IList<string>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<IEnumerable<decimal>, IList<string>>
+#else
+				INewMap<IEnumerable<decimal>, IList<string>>
+#endif
+				.Map(IEnumerable<decimal>? source, MappingContext context) {
 				return source?.Select(s => (s * 10m).ToString()).ToList();
 			}
 		}
@@ -140,9 +253,9 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions{
+			_mapper = new Mapper( new MapperConfigurationOptions {
 				ScanTypes = new List<Type> { typeof(Maps) }
-			}), new ServiceCollection().BuildServiceProvider());
+			}, new ServiceProvider());
 		}
 
 
@@ -191,25 +304,6 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldCreateNewScopeForEachMap() {
-			Maps._sp1 = null!;
-
-			_mapper.Map<string>(new Product {
-				Code = "Test1"
-			});
-
-			Assert.IsNotNull(Maps._sp1);
-			var service = Maps._sp1;
-
-			_mapper.Map<string>(new Product {
-				Code = "Test2"
-			});
-
-			Assert.IsNotNull(Maps._sp1);
-			Assert.AreNotSame(service, Maps._sp1);
-		}
-
-		[TestMethod]
 		public void ShouldMapNested() {
 			// NewMap
 			{ 
@@ -246,24 +340,6 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(2, result.Categories.Single());
 				Assert.AreEqual(3, result.Copies);
 			}
-		}
-
-		[TestMethod]
-		public void ShouldUseSameScopeInNestedMaps() {
-			Maps._sp1 = null!;
-			Maps._sp2 = null!;
-
-			_mapper.Map<CategoryProducts>(new Category {
-				Id = 2,
-				Products = new[] {
-					new Product {
-						Code = "Test"
-					}
-				}
-			});
-			Assert.IsNotNull(Maps._sp1);
-			Assert.IsNotNull(Maps._sp2);
-			Assert.AreSame(Maps._sp1, Maps._sp2);
 		}
 
 		[TestMethod]
@@ -380,30 +456,6 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldNotMapCollectionsWithoutMap() {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<Category>>(new[] { 2 }));
-		}
-
-		[TestMethod]
-		public void ShouldUseSameScopeInCollectionsMaps() {
-			Maps._sp3.Clear();
-
-			_mapper.Map<IEnumerable<string>>(new[] {
-				new LimitedProduct {
-					Code = "Test1",
-					Categories = new List<Category> {
-						new Category {
-							Id = 2
-						}
-					},
-					Copies = 3
-				},
-				new LimitedProduct {
-					Code = "Test2",
-					Categories = new List<Category>(),
-					Copies = 1
-				}
-			});
-			Assert.AreEqual(2, Maps._sp3.Count);
-			Assert.AreSame(Maps._sp3[0], Maps._sp3[1]);
 		}
 
 		[TestMethod]

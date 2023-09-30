@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Core {
+﻿namespace NeatMapper.Async {
 	public sealed class AsyncMappingContext {
 		internal AsyncMappingContext() { }
 

@@ -1,6 +1,9 @@
-﻿namespace NeatMapper.Core.Internal {
+﻿namespace NeatMapper.Async.Internal {
+	/// <summary>
+	/// Helper class to await Tasks and return the result vie reflection
+	/// </summary>
 	internal static class TaskUtils {
-		public static async Task<TResult> AwaitTask<TResult>(Task task) {
+		public static async Task<TResult?> AwaitTask<TResult>(Task task) {
 			await task;
 			if (task.IsFaulted) {
 				if(task.Exception != null){

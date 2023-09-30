@@ -1,0 +1,14 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+		<PackageId>NeatMapper.Common</PackageId>
+		<Authors>Xriuk</Authors>
+		<Title>.NE(a)T Mapper - Common</Title>
+		<Description>Common classes and interfaces for NeatMapper and NeatMapper.Async</Description>
+		<RepositoryUrl>https://github.com/Xriuk/NeatMapper</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>

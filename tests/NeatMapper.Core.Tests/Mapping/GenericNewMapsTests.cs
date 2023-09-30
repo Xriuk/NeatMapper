@@ -1,7 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Core;
-using NeatMapper.Core.Configuration;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Configuration;
 using NeatMapper.Core.Mapper;
 using NeatMapper.Tests.Classes;
 
@@ -9,8 +7,22 @@ namespace NeatMapper.Tests.Mapping {
 	[TestClass]
 	public class GenericNewMapsTests {
 		public class Maps<T1, T2, T3> :
-			INewMap<Tuple<T1, T2>, ValueTuple<T1, T2, T3>> {
-			static (T1, T2, T3) INewMap<Tuple<T1, T2>, (T1, T2, T3)>.Map(Tuple<T1, T2>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			INewMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>>
+#else
+			INewMap<Tuple<T1, T2>, ValueTuple<T1, T2, T3>>
+#endif
+			{
+#if NET7_0_OR_GREATER
+			static
+#endif
+			(T1, T2, T3)
+#if NET7_0_OR_GREATER
+				INewMapStatic<Tuple<T1, T2>, (T1, T2, T3)>
+#else
+				INewMap<Tuple<T1, T2>, (T1, T2, T3)>
+#endif
+				.Map(Tuple<T1, T2>? source, MappingContext context) {
 				if (source == null)
 					return (default(T1), default(T2), default(T3))!;
 				return (source.Item1, source.Item2, default(T3))!;
@@ -18,9 +30,23 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class Maps<T1, T2> :
-			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>{
+#if NET7_0_OR_GREATER
+			INewMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>
+#else
+			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>
+#endif
+			{
 
-			static (T2, T1) INewMap<Tuple<T1, T2>, (T2, T1)>.Map(Tuple<T1, T2>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			(T2, T1)
+#if NET7_0_OR_GREATER
+				INewMapStatic<Tuple<T1, T2>, (T2, T1)>
+#else
+				INewMap<Tuple<T1, T2>, (T2, T1)>
+#endif
+				.Map(Tuple<T1, T2>? source, MappingContext context) {
 				if(source == null)
 					return (default(T2), default(T1))!;
 				return (source.Item2, source.Item1)!;
@@ -28,76 +54,206 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class Maps<T1> :
+#if NET7_0_OR_GREATER
+			INewMapStatic<IEnumerable<T1>, IList<T1>>,
+			INewMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>,
+			INewMapStatic<IEnumerable<T1>, string>,
+			INewMapStatic<int, IList<T1>>,
+			INewMapStatic<Queue<T1>, string>,
+			INewMapStatic<T1[], IList<T1>>
+#else
 			INewMap<IEnumerable<T1>, IList<T1>>,
 			INewMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>,
 			INewMap<IEnumerable<T1>, string>,
 			INewMap<int, IList<T1>>,
 			INewMap<Queue<T1>, string>,
-			INewMap<T1[], IList<T1>>{
+			INewMap<T1[], IList<T1>>
+#endif
+			{
 
-			static IList<T1>? INewMap<IEnumerable<T1>, IList<T1>>.Map(IEnumerable<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			IList<T1>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<IEnumerable<T1>, IList<T1>>
+#else
+				INewMap<IEnumerable<T1>, IList<T1>>
+#endif
+				.Map(IEnumerable<T1>? source, MappingContext context) {
 				return source?.ToList();
 			}
 
-			static IEnumerable<T1>? INewMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>.Map(IDictionary<string, IDictionary<int, IList<T1>>>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			IEnumerable<T1>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
+#else
+				INewMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
+#endif
+				.Map(IDictionary<string, IDictionary<int, IList<T1>>>? source, MappingContext context) {
 				return Enumerable.Empty<T1>();
 			}
 
-			static string? INewMap<IEnumerable<T1>, string>.Map(IEnumerable<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			string?
+#if NET7_0_OR_GREATER
+				INewMapStatic<IEnumerable<T1>, string>
+#else
+				INewMap<IEnumerable<T1>, string>
+#endif
+				.Map(IEnumerable<T1>? source, MappingContext context) {
 				return "Elements: " + source?.Count();
 			}
 
-			static IList<T1>? INewMap<int, IList<T1>>.Map(int source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			IList<T1>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<int, IList<T1>>
+#else
+				INewMap<int, IList<T1>>
+#endif
+				.Map(int source, MappingContext context) {
 				return new T1[source];
 			}
 
 			// Throws exception
-			static string? INewMap<Queue<T1>, string>.Map(Queue<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			string?
+#if NET7_0_OR_GREATER
+				INewMapStatic<Queue<T1>, string>
+#else
+				INewMap<Queue<T1>, string>
+#endif
+				.Map(Queue<T1>? source, MappingContext context) {
 				throw new NotImplementedException();
 			}
 
 			// Nested NewMap
-			static IList<T1>? INewMap<T1[], IList<T1>>.Map(T1[]? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			IList<T1>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<T1[], IList<T1>>
+#else
+				INewMap<T1[], IList<T1>>
+#endif
+				.Map(T1[]? source, MappingContext context) {
 				return context.Mapper.Map<IEnumerable<T1>, IList<T1>>(source);
 			}
 		}
 
 		// Avoid error CS0695
 		public class Maps :
-			INewMap<IEnumerable<bool>, IList<bool>> {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IEnumerable<bool>, IList<bool>>
+#else
+			INewMap<IEnumerable<bool>, IList<bool>>
+#endif
+			{
 
 			// Specific map
-			static IList<bool>? INewMap<IEnumerable<bool>, IList<bool>>.Map(IEnumerable<bool>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			IList<bool>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<IEnumerable<bool>, IList<bool>>
+#else
+				INewMap<IEnumerable<bool>, IList<bool>>
+#endif
+				.Map(IEnumerable<bool>? source, MappingContext context) {
 				return new List<bool>(32);
 			}
 		}
 
 
 		public class MapsWithClassType<T1> :
+#if NET7_0_OR_GREATER
+			INewMapStatic<IEnumerable<T1>, int>,
+			INewMapStatic<IList<T1>, int>
+#else
 			INewMap<IEnumerable<T1>, int>,
-			INewMap<IList<T1>, int> where T1 : class {
+			INewMap<IList<T1>, int>
+#endif
+			where T1 : class {
 
-			static int INewMap<IEnumerable<T1>, int>.Map(IEnumerable<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IEnumerable<T1>, int>
+#else
+				INewMap<IEnumerable<T1>, int>
+#endif
+				.Map(IEnumerable<T1>? source, MappingContext context) {
 				return source?.Count() ?? 0;
 			}
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, int>
+#else
+				INewMap<IList<T1>, int>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return 42;
 			}
 		}
 
 		public class MapsWithStructType<T1> :
-			INewMap<IList<T1>, int> where T1 : struct {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, int>
+#else
+			INewMap<IList<T1>, int>
+#endif
+			where T1 : struct {
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, int>
+#else
+				INewMap<IList<T1>, int>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return 36;
 			}
 		}
 		
 		public class MapsWithUnmanagedType<T1> :
-			INewMap<IList<T1>, int> where T1 : unmanaged {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, int>
+#else
+			INewMap<IList<T1>, int>
+#endif
+			where T1 : unmanaged {
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, int>
+#else
+				INewMap<IList<T1>, int>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -114,24 +270,61 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class MapsWithNewType<T1> :
-			INewMap<IList<T1>, int> where T1 : new() {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, int>
+#else
+			INewMap<IList<T1>, int>
+#endif
+			where T1 : new() {
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, int>
+#else
+				INewMap<IList<T1>, int>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return 36;
 			}
 		}
 
 		public class MapsWithBaseClassType<T1> :
-			INewMap<IList<T1>, int> where T1 : Product {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, int>
+#else
+			INewMap<IList<T1>, int>
+#endif
+			where T1 : Product {
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, int>
+#else
+				INewMap<IList<T1>, int>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return 36;
 			}
 		}
 
 		public class MapsWithBaseClassType<T1, T2> :
-			INewMap<T1, T2> where T1 : List<T2> {
-			public static T2? Map(T1? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			INewMapStatic<T1, T2>
+#else
+			INewMap<T1, T2>
+#endif
+			where T1 : List<T2> {
+			public 
+#if NET7_0_OR_GREATER
+				static 
+#endif
+				T2? Map(T1? source, MappingContext context) {
 				return default(T2);
 			}
 		}
@@ -139,9 +332,23 @@ namespace NeatMapper.Tests.Mapping {
 		public class BaseClassTest : CustomCollection<Category>{}
 
 		public class MapsWithInterfaceType<T1> :
-			INewMap<IList<T1>, int> where T1 : IDisposable {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, int>
+#else
+			INewMap<IList<T1>, int>
+#endif
+			where T1 : IDisposable {
 
-			static int INewMap<IList<T1>, int>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			int
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, int>
+#else
+				INewMap<IList<T1>, int>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -153,8 +360,17 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class MapsWithInterfaceType<T1, T2> :
-			INewMap<IList<T1>, T2> where T1 : IEquatable<T2> {
-			public static T2? Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, T2>
+#else
+			INewMap<IList<T1>, T2>
+#endif
+			where T1 : IEquatable<T2> {
+			public 
+#if NET7_0_OR_GREATER
+				static 
+#endif
+				T2? Map(IList<T1>? source, MappingContext context) {
 				return default(T2);
 			}
 		}
@@ -166,16 +382,39 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		public class MapsWithGenericTypeParameterType<T1, T2> :
-			INewMap<IList<T1>, T2> where T1 : T2 {
-			public static T2? Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, T2>
+#else
+			INewMap<IList<T1>, T2>
+#endif
+			where T1 : T2 {
+			public 
+#if NET7_0_OR_GREATER
+				static 
+#endif
+				T2? Map(IList<T1>? source, MappingContext context) {
 				return default(T2);
 			}
 		}
 
 		public class MapsWithGenericTypeParameterComplexType<T1, T2> :
-			INewMap<IList<T1>, Queue<T2>> where T1 : T2 where T2 : Product {
+#if NET7_0_OR_GREATER
+			INewMapStatic<IList<T1>, Queue<T2>>
+#else
+			INewMap<IList<T1>, Queue<T2>>
+#endif
+			where T1 : T2 where T2 : Product {
 
-			static Queue<T2>? INewMap<IList<T1>, Queue<T2>>.Map(IList<T1>? source, MappingContext context) {
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Queue<T2>?
+#if NET7_0_OR_GREATER
+				INewMapStatic<IList<T1>, Queue<T2>>
+#else
+				INewMap<IList<T1>, Queue<T2>>
+#endif
+				.Map(IList<T1>? source, MappingContext context) {
 				return new Queue<T2>();
 			}
 		}
@@ -185,9 +424,9 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+			_mapper = new Mapper(new MapperConfigurationOptions {
 				ScanTypes = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
-			}), new ServiceCollection().BuildServiceProvider());
+			}, new ServiceProvider());
 		}
 
 
@@ -208,9 +447,9 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Class constraint
 				{
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithClassType<>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 					Assert.AreEqual(1, mapper.Map<IEnumerable<Product>, int>(new[] { new Product() }));
 				}
 			}
@@ -254,9 +493,9 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldNotMapNotMatchingGenericConstraints() {
 			// struct
 			{
-				var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithStructType<>) }
-				}), new ServiceCollection().BuildServiceProvider());
+				}, new ServiceProvider());
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
 				mapper.Map<IList<Guid>, int>(new List<Guid>());
@@ -264,9 +503,9 @@ namespace NeatMapper.Tests.Mapping {
 
 			// class
 			{
-				var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithClassType<>) }
-				}), new ServiceCollection().BuildServiceProvider());
+				}, new ServiceProvider());
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Guid>, int>(new List<Guid>()));
 				mapper.Map<IList<Product>, int>(new List<Product>());
@@ -278,9 +517,9 @@ namespace NeatMapper.Tests.Mapping {
 
 			// unmanaged
 			{
-				var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithUnmanagedType<>) }
-				}), new ServiceCollection().BuildServiceProvider());
+				}, new ServiceProvider());
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<int?>, int>(new List<int?>()));
@@ -292,9 +531,9 @@ namespace NeatMapper.Tests.Mapping {
 
 			// new()
 			{
-				var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithNewType<>) }
-				}), new ServiceCollection().BuildServiceProvider());
+				}, new ServiceProvider());
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>()));
 				mapper.Map<IList<Product>, int>(new List<Product>());
@@ -304,9 +543,9 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Not generic
 				{ 
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithBaseClassType<>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<List<Product>, int>(new List<Product>()));
@@ -316,9 +555,9 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Generic
 				{
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithBaseClassType<,>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<Queue<Category>, Category>(new Queue<Category>()));
 					mapper.Map<CustomCollection<Category>, Category>(new CustomCollection<Category>());
@@ -330,9 +569,9 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Not generic
 				{ 
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithInterfaceType<>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>()));
 					mapper.Map<IList<DisposableTest>, int>(new List<DisposableTest>());
@@ -340,9 +579,9 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Generic
 				{
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithInterfaceType<,>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Queue<Category>>, Category>(new List<Queue<Category>>()));
@@ -354,9 +593,9 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Simple
 				{
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Product>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, LimitedProduct>(new List<Product>()));
@@ -367,9 +606,9 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Complex
 				{
-					var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
-					}), new ServiceCollection().BuildServiceProvider());
+					}, new ServiceProvider());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Queue<Product>>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, Queue<LimitedProduct>>(new List<Product>()));
@@ -409,9 +648,9 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldRespectConstraints() {
-			var mapper = new Mapper(new MapperConfiguration(new MapperConfigurationOptions {
+			var mapper = new Mapper(new MapperConfigurationOptions {
 				ScanTypes = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
-			}), new ServiceCollection().BuildServiceProvider());
+			}, new ServiceProvider());
 
 			Assert.AreEqual(42, mapper.Map<IList<Product>, int>(new List<Product>()));
 

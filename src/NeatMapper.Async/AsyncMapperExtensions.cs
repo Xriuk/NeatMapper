@@ -1,6 +1,6 @@
-﻿using NeatMapper.Core.Internal;
+﻿using NeatMapper.Async.Internal;
 
-namespace NeatMapper.Core {
+namespace NeatMapper.Async {
 	public static class AsyncMapperExtensions {
 		public static Task<TDestination> MapAsync<TDestination>(this IAsyncMapper mapper, object source, CancellationToken cancellationToken = default) {
 			if (mapper == null)
