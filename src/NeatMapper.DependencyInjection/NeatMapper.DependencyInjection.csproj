@@ -6,10 +6,20 @@
 		<Nullable>enable</Nullable>
 		<PackageId>NeatMapper.DependencyInjection</PackageId>
 		<Authors>Xriuk</Authors>
-		<Title>.NEaT Mapper - DependencyInjection</Title>
+		<Title>.NEaT Mapper - Dependency Injection</Title>
 		<Description>Allows registering IMapper and IMatcher for Dependency Injection (DI)</Description>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/src/NeatMapper.DependencyInjection</RepositoryUrl>
+		<Copyright>Xriuk</Copyright>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<IncludeSymbols>True</IncludeSymbols>
   </PropertyGroup>
+
+	<ItemGroup>
+		<None Remove="LICENSE.md" />
+		<None Remove="README.md" />
+	</ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
@@ -19,5 +29,26 @@
   <ItemGroup>
     <ProjectReference Include="..\NeatMapper\NeatMapper.csproj" />
   </ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<EmbeddedResource Include="LICENSE.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="..\..\icon.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 
 </Project>

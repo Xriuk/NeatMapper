@@ -9,6 +9,37 @@
 		<Title>.NEaT Mapper - Common</Title>
 		<Description>Common classes and interfaces for NeatMapper and NeatMapper.Async</Description>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper</RepositoryUrl>
+		<Copyright>Xriuk</Copyright>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageIcon>icon.png</PackageIcon>
+		<IncludeSymbols>True</IncludeSymbols>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="LICENSE.md" />
+    <None Remove="README.md" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\icon.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
 </Project>

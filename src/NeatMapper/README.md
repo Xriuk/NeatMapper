@@ -69,7 +69,7 @@ IMapper mapper = new Mapper(new MapperConfigurationOptions {
     ScanTypes = new List<Type> { typeof(Maps), ... }
 });
 
-// Or scan all them
+// Or scan all the assembly
 IMapper mapper = new Mapper();
 ```
 
