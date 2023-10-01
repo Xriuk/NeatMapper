@@ -23,7 +23,7 @@ You can install this package directly from Nuget https://www.nuget.org/packages/
 You have to create one or more classes implementing one of the 2 mapping interfaces:
 - `INewMap<TSource, TDestination>` to map existing objects to new ones
 - `IMergeMap<TSource, TDestination>` to map and merge an object with another one,
-but it can also be used to map an object to a new one (see [One map to rule them all](#one-map-to-rule-them-all) below)
+but it can also be used to map an object to a new one (see [One map to rule them all](#one-map-to-rule-them-all-use-one-map-for-multiple-mappings) below)
 
 If you are on .NET 7 or greater you can use the `static` versions of these interfaces:
 `INewMapStatic<TSource, TDestination>` and `IMergeMapStatic<TSource, TDestination>`.
@@ -91,7 +91,7 @@ mapper.Map<Category, CategoryDto>(myCategory, myCategoryDto);
 
 ## Advanced options
 
-### One map to rule them all (use one map for multiple mappings) {#one-map-to-rule-them-all}
+### One map to rule them all (use one map for multiple mappings)
 
 If you only define an `IMergeMap<TSource, TDestination>` for two given types
 it can also be used when creating a new object instead of defining a separate
@@ -146,7 +146,7 @@ public class MyMaps :
 }
 ```
 
-### Gotta collect them all (map collections) {#gotta-collect-them-all}
+### Gotta collect them all (map collections)
 
 When you create a map you can also map collections of the types, even nested, automatically.
 
@@ -201,7 +201,7 @@ public class MyMaps :
 
 Read the section below too for more informations about collections.
 
-### Guess who (match elements in collections) {#guess-who}
+### Guess who (match elements in collections)
 
 When merging to an existing collection, by default all the object present are removed
 and new ones are mapped and added (by using `INewMap<TSource, TDestination>` or
@@ -386,7 +386,7 @@ var myGenericClassDto1 = mapper.Map<MyGenericClass<int>, MyGenericClassDto<int>>
 var myGenericClassDto3 = mapper.Map<MyGenericClass<Product>, MyGenericClassDto<Product>>(myGenericClass3);
 ```
 
-Generic types also supports [automatic collection maps](#gotta-collect-them-all) and [matchers](#guess-who) (which can be generic or explicit too).
+Generic types also supports [automatic collection maps](#gotta-collect-them-all-map-collections) and [matchers](#guess-who-match-elements-in-collections) (which can be generic or explicit too).
 
 If you specify an explicit map for two generic types this map will be used instead,
 this allows to define specific mapping for specific types.
