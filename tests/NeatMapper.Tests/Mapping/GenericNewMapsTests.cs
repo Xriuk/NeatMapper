@@ -425,7 +425,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void Initialize() {
 			_mapper = new Mapper(new MapperConfigurationOptions {
 				ScanTypes = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
-			}, new ServiceProvider());
+			});
 		}
 
 
@@ -448,7 +448,7 @@ namespace NeatMapper.Tests.Mapping {
 				{
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithClassType<>) }
-					}, new ServiceProvider());
+					});
 					Assert.AreEqual(1, mapper.Map<IEnumerable<Product>, int>(new[] { new Product() }));
 				}
 			}
@@ -494,7 +494,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithStructType<>) }
-				}, new ServiceProvider());
+				});
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
 				mapper.Map<IList<Guid>, int>(new List<Guid>());
@@ -506,7 +506,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithClassType<>) }
-				}, new ServiceProvider());
+				});
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Guid>, int>(new List<Guid>()));
 				mapper.Map<IList<Product>, int>(new List<Product>());
@@ -520,7 +520,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithUnmanagedType<>) }
-				}, new ServiceProvider());
+				});
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<int?>, int>(new List<int?>()));
@@ -534,7 +534,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				var mapper = new Mapper(new MapperConfigurationOptions {
 					ScanTypes = new List<Type> { typeof(MapsWithNewType<>) }
-				}, new ServiceProvider());
+				});
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>()));
 				mapper.Map<IList<Product>, int>(new List<Product>());
@@ -546,7 +546,7 @@ namespace NeatMapper.Tests.Mapping {
 				{ 
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithBaseClassType<>) }
-					}, new ServiceProvider());
+					});
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<List<Product>, int>(new List<Product>()));
@@ -558,7 +558,7 @@ namespace NeatMapper.Tests.Mapping {
 				{
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithBaseClassType<,>) }
-					}, new ServiceProvider());
+					});
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<Queue<Category>, Category>(new Queue<Category>()));
 					mapper.Map<CustomCollection<Category>, Category>(new CustomCollection<Category>());
@@ -572,7 +572,7 @@ namespace NeatMapper.Tests.Mapping {
 				{ 
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithInterfaceType<>) }
-					}, new ServiceProvider());
+					});
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>()));
 					mapper.Map<IList<DisposableTest>, int>(new List<DisposableTest>());
@@ -582,7 +582,7 @@ namespace NeatMapper.Tests.Mapping {
 				{
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithInterfaceType<,>) }
-					}, new ServiceProvider());
+					});
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Queue<Category>>, Category>(new List<Queue<Category>>()));
@@ -596,7 +596,7 @@ namespace NeatMapper.Tests.Mapping {
 				{
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
-					}, new ServiceProvider());
+					});
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Product>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, LimitedProduct>(new List<Product>()));
@@ -609,7 +609,7 @@ namespace NeatMapper.Tests.Mapping {
 				{
 					var mapper = new Mapper(new MapperConfigurationOptions {
 						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
-					}, new ServiceProvider());
+					});
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Queue<Product>>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, Queue<LimitedProduct>>(new List<Product>()));
@@ -651,7 +651,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldRespectConstraints() {
 			var mapper = new Mapper(new MapperConfigurationOptions {
 				ScanTypes = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
-			}, new ServiceProvider());
+			});
 
 			Assert.AreEqual(42, mapper.Map<IList<Product>, int>(new List<Product>()));
 

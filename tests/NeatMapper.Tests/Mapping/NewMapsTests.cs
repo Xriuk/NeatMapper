@@ -254,7 +254,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void Initialize() {
 			_mapper = new Mapper( new MapperConfigurationOptions {
 				ScanTypes = new List<Type> { typeof(Maps) }
-			}, new ServiceProvider());
+			});
 		}
 
 

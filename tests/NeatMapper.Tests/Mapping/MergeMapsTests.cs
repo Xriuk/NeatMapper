@@ -308,7 +308,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void Initialize() {
 			_mapper = new Mapper(new MapperConfigurationOptions{
 				ScanTypes = new List<Type> { typeof(Maps) }
-			}, new ServiceProvider());
+			});
 		}
 
 
@@ -1025,7 +1025,7 @@ namespace NeatMapper.Tests.Mapping {
 					MergeMapsCollectionsOptions = new MergeMapsCollectionsOptions {
 						RemoveNotMatchedDestinationElements = false
 					}
-				}, new ServiceProvider());
+				});
 
 				var a = new CategoryDto {
 					Id = 2,

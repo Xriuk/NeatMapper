@@ -8,11 +8,27 @@
     <Authors>Xriuk</Authors>
     <Title>.NEaT Mapper</Title>
     <Description>Object mapper, with configurable and reusable mappings. Supports services via Dependency Injection (DI).</Description>
-    <RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.Core</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
+    <PackAsTool>False</PackAsTool>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+    <IncludeSymbols>True</IncludeSymbols>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>mapper;</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Update="README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
   </ItemGroup>
 
 </Project>

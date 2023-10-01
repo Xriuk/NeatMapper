@@ -14,7 +14,7 @@
 				throw new ArgumentNullException(nameof(mapper));
 			if (source == null)
 				throw new ArgumentNullException(nameof(source));
-			return (TDestination)mapper.Map(source, source.GetType(), typeof(TDestination))!;
+			return (TDestination?)mapper.Map(source, source.GetType(), typeof(TDestination))!;
 		}
 
 		/// <summary>
@@ -27,7 +27,7 @@
 		public static TDestination? Map<TSource, TDestination>(this IMapper mapper, TSource? source) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return (TDestination)mapper.Map(source, typeof(TSource), typeof(TDestination))!;
+			return (TDestination?)mapper.Map(source, typeof(TSource), typeof(TDestination))!;
 		}
 
 		/// <summary>
@@ -45,7 +45,7 @@
 		public static TDestination? Map<TSource, TDestination>(this IMapper mapper, TSource? source, TDestination? destination, MappingOptions? mappingOptions = null) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return (TDestination)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions)!;
+			return (TDestination?)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions)!;
 		}
 
 		/// <summary>
@@ -55,11 +55,13 @@
 		/// <typeparam name="TDestinationElement">type of the destination elements, used to retrieve the available maps</typeparam>
 		/// <param name="source">collection to be mapped, may be null</param>
 		/// <param name="destination">collection to map to, may be null</param>
+		/// <param name="matcher">matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
+		/// <param name="removeNotMatchedDestinationElements">if true will remove all the elements from <paramref name="destination"/> which do not have a corresponding element in <paramref name="source"/></param>
 		/// <returns>
 		/// the resulting collection of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public static ICollection<TDestinationElement>? Map<TSourceElement, TDestinationElement>(this IMapper mapper, IEnumerable<TSourceElement>? source, ICollection<TDestinationElement>? destination, Func<TSourceElement?, TDestinationElement?, MatchingContext, bool> matcher) {
+		public static ICollection<TDestinationElement>? Map<TSourceElement, TDestinationElement>(this IMapper mapper, IEnumerable<TSourceElement>? source, ICollection<TDestinationElement>? destination, Func<TSourceElement?, TDestinationElement?, MatchingContext, bool> matcher, bool? removeNotMatchedDestinationElements = null) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			if (matcher == null)
@@ -72,7 +74,8 @@
 				new MappingOptions {
 					Matcher = (s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
 						(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
-						matcher((TSourceElement)s!, (TDestinationElement)d!, c)
+						matcher((TSourceElement)s!, (TDestinationElement)d!, c),
+					CollectionRemoveNotMatchedDestinationElements = removeNotMatchedDestinationElements
 				}) as ICollection<TDestinationElement>;
 		}
 	}
