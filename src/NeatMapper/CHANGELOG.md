@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.1.0] - 2023-10-02
+
+### Added
+
+- Added support for:
+  - .NET Framework 4.7, 4.8,
+  - .NET Core 3.1
+  - .NET 5.0
+
+### Deprecated
+
+- Mapper empty constructor
+
 ## [1.0.2] - 2023-10-02
 
 ### Fixed
