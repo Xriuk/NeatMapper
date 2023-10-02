@@ -1,4 +1,6 @@
-﻿namespace NeatMapper {
+﻿using System;
+
+namespace NeatMapper {
 	public static class MatcherExtensions {
 		/// <summary>
 		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMapStatic{TSource, TDestination}.Match"/>
@@ -8,7 +10,19 @@
 		/// <param name="source">source object, may be null</param>
 		/// <param name="destination">destination object, may be null</param>
 		/// <returns>true if the two objects are the same</returns>
-		public static bool Match<TSource, TDestination>(this IMatcher mapper, TSource? source, TDestination? destination) {
+		public static bool Match<TSource, TDestination>(this IMatcher mapper,
+#if NET5_0_OR_GREATER
+			TSource? 
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination? 
+#else
+			TDestination
+#endif
+			destination) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			return mapper.Match(source, typeof(TSource), destination, typeof(TDestination));

@@ -7,6 +7,9 @@ namespace NeatMapper {
 		/// <summary>
 		/// Matcher which can be used for nested matches
 		/// </summary>
-		public IMatcher Matcher { get; internal set; } = null!;
+		public IMatcher Matcher { get; internal set; }
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			= null!;
+#endif
 	}
 }

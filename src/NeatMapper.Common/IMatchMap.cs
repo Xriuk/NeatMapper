@@ -11,7 +11,20 @@
 		/// <param name="source">source object, may be null</param>
 		/// <param name="destination">destination object, may be null</param>
 		/// <param name="context">matching context, which allows nested matches, services retrieval via DI, ...</param>
-		/// <returns>true if the two objects are the same</returns>
-		public bool Match(TSource? source, TDestination? destination, MatchingContext context);
+		/// <returns>true if the two objects match</returns>
+		bool Match(
+#if NET5_0_OR_GREATER
+			TSource? 
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination? 
+#else
+			TDestination
+#endif
+			destination,
+			MatchingContext context);
 	}
 }

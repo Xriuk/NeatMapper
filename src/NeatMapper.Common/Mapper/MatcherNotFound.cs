@@ -1,4 +1,6 @@
-﻿namespace NeatMapper {
+﻿using System;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Exception thrown when no suitable collection element comparer was found for the given types
 	/// </summary>

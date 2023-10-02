@@ -1,4 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Tests {
 	public static class TestUtils {
@@ -8,7 +10,7 @@ namespace NeatMapper.Tests {
 			Assert.IsTrue(exc.Message.StartsWith("Duplicate interface"));
 		}
 
-		public static void AssertMapNotFound(Func<object?> action) {
+		public static void AssertMapNotFound(Func<object> action) {
 			Assert.ThrowsException<MapNotFoundException>(action);
 		}
 

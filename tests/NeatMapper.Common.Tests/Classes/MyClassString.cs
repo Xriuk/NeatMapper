@@ -1,6 +1,6 @@
 ﻿namespace NeatMapper.Tests.Classes {
 	public class MyClassString {
-		public string MyString { get; set; } = null!;
+		public string MyString { get; set; }
 	}
 
 	public class MyClassStringWithKey : MyClassString {

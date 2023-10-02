@@ -1,31 +1,39 @@
-﻿using NeatMapper.Configuration;
+﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+using NeatMapper.Configuration;
+using System;
 using System.Collections;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
 namespace NeatMapper.Common.Mapper {
 	public abstract class BaseMapper : IMatcher {
 		internal sealed class EmptyServiceProvider : IServiceProvider {
-			public object? GetService(Type serviceType) {
+			public object GetService(Type serviceType) {
 				throw new NotImplementedException();
 			}
 		}
 		internal static readonly EmptyServiceProvider EmptyServiceProviderInstance = new EmptyServiceProvider();
 		internal sealed class MapData {
-			public IReadOnlyDictionary<(Type From, Type To), Map> Maps { get; init; } = null!;
+			public IReadOnlyDictionary<(Type From, Type To), Map> Maps { get; set; }
 
-			public IEnumerable<GenericMap> GenericMaps { get; init; } = null!;
+			public IEnumerable<GenericMap> GenericMaps { get; set; }
 
-			public Dictionary<(Type From, Type To), Func<object?[], object?>> GenericCache { get; init; } = new Dictionary<(Type From, Type To), Func<object?[], object?>>();
+			public Dictionary<(Type From, Type To), Func<object[], object>> GenericCache { get; set; } = new Dictionary<(Type From, Type To), Func<object[], object>>();
 		}
 
 		// T[] Enumerable.ToArray(this IEnumerable<T> source);
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
 
-		protected static Dictionary<Type, object> nonStaticMapsInstances = new Dictionary<Type, object>();
-		protected static Dictionary<Type, string?> typeCreationErrors = new Dictionary<Type, string?>();
+		protected static IDictionary<Type, object> nonStaticMapsInstances = new ConcurrentDictionary<Type, object>();
+		protected static IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
 
 		internal readonly IMapperConfiguration _configuration;
 		protected readonly IServiceProvider _serviceProvider;
@@ -35,7 +43,7 @@ namespace NeatMapper.Common.Mapper {
 		internal MapData mergeMaps;
 		internal MapData collectionElementComparers;
 
-		internal BaseMapper(IMapperConfiguration configuration, IServiceProvider? serviceProvider = null) {
+		internal BaseMapper(IMapperConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration;
 			_serviceProvider = serviceProvider ?? EmptyServiceProviderInstance;
 
@@ -54,32 +62,31 @@ namespace NeatMapper.Common.Mapper {
 		}
 
 
-		public bool Match(object? source, Type sourceType, object? destination, Type destinationType) {
+		public bool Match(object source, Type sourceType, object destination, Type destinationType) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
-			if (source?.GetType().IsAssignableTo(sourceType) == false)
+			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
-			if (destination?.GetType().IsAssignableTo(destinationType) == false)
+			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
 				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
 
 			var types = (From: sourceType, To: destinationType);
-			return ElementComparerInternal(types, false).Invoke(new object?[] { source, destination, MatchingContext })!;
+			return ElementComparerInternal(types, false).Invoke(new object[] { source, destination, MatchingContext });
 		}
 
 
-		#region Mapping methods
 		// (source, context) => destination
 		// (source, destination, context) => destination
-		internal static Func<object?[], object?> MapInternal((Type From, Type To) types, MapData mapData) {
+		internal static Func<object[], object> MapInternal((Type From, Type To) types, MapData mapData) {
 			// Try retrieving a regular map
 			// or try matching to a generic one
 			if (mapData.Maps.ContainsKey(types)) {
 				var map = mapData.Maps[types];
 				return (parameters) => {
 					try {
-						return map.Method.Invoke(map.Method.IsStatic ? null : CreateOrReturnInstance(map.Class), parameters)!;
+						return map.Method.Invoke(map.Method.IsStatic ? null : CreateOrReturnInstance(map.Class), parameters);
 					}
 					catch(Exception e) {
 						throw new MappingException(e, types);
@@ -106,14 +113,21 @@ namespace NeatMapper.Common.Mapper {
 
 					// We may have different closed types matching for the same open type argument, in this case the map should not match
 					var genericArguments = map.Class.GetGenericArguments().Length;
-					if (classArguments.DistinctBy(a => a.OpenGenericArgument).Count() != genericArguments ||
+					if (classArguments
+#if NET6_0_OR_GREATER
+						.DistinctBy(a => a.OpenGenericArgument)
+#else
+						.GroupBy(a => a.OpenGenericArgument)
+						.Select(a => a.First())
+#endif
+						.Count() != genericArguments ||
 						classArguments.Distinct().Count() != genericArguments) {
 
 						continue;
 					}
 
 					// Check unmanaged constraints because the CLR seems to not enforce it
-					if(classArguments.Any(a => a.OpenGenericArgument.GetCustomAttributes().Any(a => a.GetType().Name == "IsUnmanagedAttribute") &&
+					if(classArguments.Any(a => a.OpenGenericArgument.GetCustomAttributes().Any(ca => ca.GetType().Name == "IsUnmanagedAttribute") &&
 						!IsUnmanaged(a.ClosedType))) {
 
 						continue;
@@ -133,7 +147,7 @@ namespace NeatMapper.Common.Mapper {
 						continue;
 
 
-					Func<object?[], object?> func = (parameters) => {
+					Func<object[], object> func = (parameters) => {
 						try {
 							return mapMethod.Invoke(mapMethod.IsStatic ? null : CreateOrReturnInstance(concreteType), parameters);
 						}
@@ -151,18 +165,17 @@ namespace NeatMapper.Common.Mapper {
 
 			throw new MapNotFoundException(types);
 		}
-		#endregion
-
+		
 		// (source, destination, context) => bool
-		protected Func<object?[], bool> ElementComparerInternal((Type From, Type To) types, bool returnDefault = true) {
+		protected Func<object[], bool> ElementComparerInternal((Type From, Type To) types, bool returnDefault = true) {
 			try {
-				var comparer = MapInternal(types, collectionElementComparers)!;
+				var comparer = MapInternal(types, collectionElementComparers);
 				return (parameters) => {
 					try {
-						return (bool)comparer.Invoke(parameters)!;
+						return (bool)comparer.Invoke(parameters);
 					}
 					catch (MappingException e) {
-						throw new MatcherException(e.InnerException!, types);
+						throw new MatcherException(e.InnerException, types);
 					}
 				};
 			}
@@ -186,50 +199,52 @@ namespace NeatMapper.Common.Mapper {
 				if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
 					interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>)) {
 
-					return () => Activator.CreateInstance(typeof(List<>).MakeGenericType(destination.GetGenericArguments().Single()))!;
+					return () => Activator.CreateInstance(typeof(List<>).MakeGenericType(destination.GetGenericArguments().Single()));
 				}
 				else if (interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>))
-					return () => Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(destination.GetGenericArguments()))!;
-				else if (interfaceDefinition == typeof(ISet<>) || interfaceDefinition == typeof(IReadOnlySet<>))
-					return () => Activator.CreateInstance(typeof(HashSet<>).MakeGenericType(destination.GetGenericArguments().Single()))!;
+					return () => Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(destination.GetGenericArguments()));
+				else if (interfaceDefinition == typeof(ISet<>)
+#if NET5_0_OR_GREATER
+					|| interfaceDefinition == typeof(IReadOnlySet<>)
+#endif
+					) { 
+
+					return () => Activator.CreateInstance(typeof(HashSet<>).MakeGenericType(destination.GetGenericArguments().Single()));
+				}
 			}
 
-			lock (typeCreationErrors) {
-				if (typeCreationErrors.TryGetValue(destination, out var error)) {
-					if (error == null)
-						return () => Activator.CreateInstance(destination)!;
-					else
-						throw new DestinationCreationException(destination, new Exception(error));
+			if (typeCreationErrorsCache.TryGetValue(destination, out var error)) {
+				if (error == null)
+					return () => Activator.CreateInstance(destination);
+				else
+					throw new DestinationCreationException(destination, new Exception(error));
+			}
+			else {
+				// Try creating an instance
+				try {
+					Activator.CreateInstance(destination);
+					typeCreationErrorsCache.Add(destination, null);
+					return () => Activator.CreateInstance(destination);
 				}
-				else {
-					// Try creating an instance
-					try {
-						Activator.CreateInstance(destination);
-						typeCreationErrors.Add(destination, null);
-						return () => Activator.CreateInstance(destination)!;
-					}
-					catch (Exception e) {
-						typeCreationErrors.Add(destination, e.Message);
-						throw new DestinationCreationException(destination, e);
-					}
+				catch (Exception e) {
+					typeCreationErrorsCache.Add(destination, e.Message);
+					throw new DestinationCreationException(destination, e);
 				}
 			}
 		}
 
 		internal static object CreateOrReturnInstance(Type classType) {
-			lock (nonStaticMapsInstances) { 
-				if(!nonStaticMapsInstances.TryGetValue(classType, out var instance)){
-					try {
-						instance = CreateDestinationFactory(classType).Invoke();
-						nonStaticMapsInstances.Add(classType, instance);
-					}
-					catch (Exception e) {
-						throw new InvalidOperationException($"Could not create instance of type {classType.FullName ?? classType.Name} for non static interface", e);
-					}
+			if(!nonStaticMapsInstances.TryGetValue(classType, out var instance)){
+				try {
+					instance = CreateDestinationFactory(classType).Invoke();
+					nonStaticMapsInstances.Add(classType, instance);
 				}
-
-				return instance;
+				catch (Exception e) {
+					throw new InvalidOperationException($"Could not create instance of type {classType.FullName ?? classType.Name} for non static interface", e);
+				}
 			}
+
+			return instance;
 		}
 
 		#region Collection methods
@@ -253,26 +268,28 @@ namespace NeatMapper.Common.Mapper {
 				if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
 					interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>) ||
 					interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>) ||
-					interfaceDefinition == typeof(ISet<>) || interfaceDefinition == typeof(IReadOnlySet<>)) {
+					interfaceDefinition == typeof(ISet<>)
+#if NET5_0_OR_GREATER
+					|| interfaceDefinition == typeof(IReadOnlySet<>)
+#endif
+					) {
 
 					return true;
 				}
 			}
 
-			lock (typeCreationErrors) {
-				if (typeCreationErrors.TryGetValue(destination, out var error))
-					return error == null;
-				else {
-					// Try creating an instance
-					try {
-						Activator.CreateInstance(destination);
-						typeCreationErrors.Add(destination, null);
-						return true;
-					}
-					catch (Exception e) {
-						typeCreationErrors.Add(destination, e.Message);
-						return false;
-					}
+			if (typeCreationErrorsCache.TryGetValue(destination, out var error))
+				return error == null;
+			else {
+				// Try creating an instance
+				try {
+					Activator.CreateInstance(destination);
+					typeCreationErrorsCache.Add(destination, null);
+					return true;
+				}
+				catch (Exception e) {
+					typeCreationErrorsCache.Add(destination, e.Message);
+					return false;
 				}
 			}
 		}
@@ -280,13 +297,13 @@ namespace NeatMapper.Common.Mapper {
 		// Create a non-readonly collection which could be later converted to the given type
 		protected static object CreateCollection(Type destination) {
 			if (destination.IsArray)
-				return Activator.CreateInstance(typeof(List<>).MakeGenericType(destination.GetElementType()!))!;
+				return Activator.CreateInstance(typeof(List<>).MakeGenericType(destination.GetElementType()));
 			else if (destination.IsGenericType) {
 				var collectionDefinition = destination.GetGenericTypeDefinition();
 				if (collectionDefinition == typeof(ReadOnlyCollection<>))
-					return Activator.CreateInstance(typeof(List<>).MakeGenericType(destination.GetGenericArguments()))!;
+					return Activator.CreateInstance(typeof(List<>).MakeGenericType(destination.GetGenericArguments()));
 				else if (collectionDefinition == typeof(ReadOnlyDictionary<,>))
-					return Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(destination.GetGenericArguments()))!;
+					return Activator.CreateInstance(typeof(Dictionary<,>).MakeGenericType(destination.GetGenericArguments()));
 				else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>))
 					destination = typeof(ObservableCollection<>).MakeGenericType(destination.GetGenericArguments());
 			}
@@ -317,7 +334,7 @@ namespace NeatMapper.Common.Mapper {
 
 		protected static object ConvertCollectionToType(object collection, Type destination) {
 			if (destination.IsArray)
-				return Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()!).Invoke(null, new object[] { collection })!;
+				return Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()).Invoke(null, new object[] { collection });
 			else if (destination.IsGenericType) {
 				var collectionDefinition = destination.GetGenericTypeDefinition();
 				if (collectionDefinition == typeof(ReadOnlyCollection<>)) {
@@ -348,20 +365,53 @@ namespace NeatMapper.Common.Mapper {
 		#endregion
 
 		#region Types methods
+#if NET47 || NET48
+		protected static IDictionary<Type, bool> isUnmanagedCache = new ConcurrentDictionary<Type, bool>();
+#else
 		protected static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference =
 			typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!
 				?? throw new InvalidOperationException("Could not find RuntimeHelpers.IsReferenceOrContainsReferences");
+#endif
 		protected static bool IsUnmanaged(Type type) {
-			return !(bool)RuntimeHelpers_IsReferenceOrContainsReference.MakeGenericMethod(type).Invoke(null, null)!;
+#if NET47 || NET48
+			// https://stackoverflow.com/a/53969223/2672235
+
+			bool answer;
+
+			// check if we already know the answer
+			if (!isUnmanagedCache.TryGetValue(type, out answer)) {
+
+				if (!type.IsValueType) {
+					// not a struct -> false
+					answer = false;
+				}
+				else if (type.IsPrimitive || type.IsPointer || type.IsEnum) {
+					// primitive, pointer or enum -> true
+					answer = true;
+				}
+				else {
+					// otherwise check recursively
+					answer = type
+						.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public)
+						.All(f => IsUnmanaged(f.FieldType));
+				}
+
+				isUnmanagedCache[type] = answer;
+			}
+
+			return answer;
+#else
+			return !(bool)RuntimeHelpers_IsReferenceOrContainsReference.MakeGenericMethod(type).Invoke(null, null);
+#endif
 		}
 
 		// Checks if two types are compatible, does not test any constraints
 		protected static bool MatchOpenGenericArgumentsRecursive(Type openType, Type closedType) {
 			if (!openType.IsGenericType) {
 				if(openType.IsArray)
-					return closedType.IsArray && MatchOpenGenericArgumentsRecursive(openType.GetElementType()!, closedType.GetElementType()!);
+					return closedType.IsArray && MatchOpenGenericArgumentsRecursive(openType.GetElementType(), closedType.GetElementType());
 				else
-					return openType.IsGenericTypeParameter || openType == closedType;
+					return IsGenericTypeParameter(openType) || openType == closedType;
 			}
 			else if (!closedType.IsGenericType)
 				return false;
@@ -373,21 +423,27 @@ namespace NeatMapper.Common.Mapper {
 			if (openTypeArguments.Length != closedTypeArguments.Length)
 				return false;
 
-			IEnumerable<(Type OpenTypeArgument, Type ClosedTypeArgument)> arguments = openTypeArguments.Zip(closedTypeArguments);
+			var arguments = openTypeArguments.Zip(closedTypeArguments, (o, c) => (OpenTypeArgument: o, ClosedTypeArgument: c));
 			return arguments.All((a) => MatchOpenGenericArgumentsRecursive(a.OpenTypeArgument, a.ClosedTypeArgument));
 		}
 
 		protected static IEnumerable<(Type OpenGenericArgument, Type ClosedType)> InferOpenGenericArgumentsRecursive(Type openType, Type closedType) {
 			if (!openType.IsGenericType) {
-				if (openType.IsGenericTypeParameter)
+				if (IsGenericTypeParameter(openType))
 					return new[] { (openType, closedType) };
 				else if(openType.IsArray)
-					return InferOpenGenericArgumentsRecursive(openType.GetElementType()!, closedType.GetElementType()!);
+					return InferOpenGenericArgumentsRecursive(openType.GetElementType(), closedType.GetElementType());
 				else
 					return Enumerable.Empty<(Type, Type)>();
 			}
 			else
-				return openType.GetGenericArguments().Zip(closedType.GetGenericArguments()).SelectMany((a) => InferOpenGenericArgumentsRecursive(a.First, a.Second));
+				return openType.GetGenericArguments()
+					.Zip(closedType.GetGenericArguments(), (o, c) => (First: o, Second: c))
+					.SelectMany((a) => InferOpenGenericArgumentsRecursive(a.First, a.Second));
+		}
+
+		private static bool IsGenericTypeParameter(Type t) {
+			return t.IsGenericParameter && t.DeclaringMethod != null;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -407,6 +463,6 @@ namespace NeatMapper.Common.Mapper {
 				collection.GetGenericArguments()[0] :
 				collection.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType).GetGenericArguments()[0];
 		}
-		#endregion
+#endregion
 	}
 }

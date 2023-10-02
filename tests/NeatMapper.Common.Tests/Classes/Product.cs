@@ -1,13 +1,15 @@
-﻿namespace NeatMapper.Tests.Classes {
-	public class Product {
-		public string Code { get; set; } = null!;
+﻿using System.Collections.Generic;
 
-		public ICollection<Category> Categories { get; set; } = null!;
+namespace NeatMapper.Tests.Classes {
+	public class Product {
+		public string Code { get; set; }
+
+		public ICollection<Category> Categories { get; set; }
 	}
 
 	public class ProductDto {
-		public string Code { get; set; } = null!;
+		public string Code { get; set; }
 
-		public ICollection<int> Categories { get; set; } = null!;
+		public ICollection<int> Categories { get; set; }
 	}
 }

@@ -1,4 +1,8 @@
-﻿namespace NeatMapper.Configuration {
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NeatMapper.Configuration {
 	/// <summary>
 	/// Options applied to automatic collections mapping via <see cref="IMapperConfiguration.MergeMaps"/> or <see cref="IMapperConfiguration.GenericMergeMaps"/>
 	/// </summary>

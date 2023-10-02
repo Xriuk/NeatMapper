@@ -1,4 +1,6 @@
-﻿namespace NeatMapper {
+﻿using System;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Mapping options to use for the mapping operations, this will override any configuration options defined in <see cref="Configuration.MapperConfigurationOptions"/>
 	/// </summary>
@@ -14,6 +16,12 @@
 		/// Provides (or overrides) <see cref="IMatchMapStatic{TSource, TDestination}"/> for the outermost collection types
 		/// </summary>
 		/// <remarks>null to ignore and use the defined <see cref="IMatchMapStatic{TSource, TDestination}"/> (if any)</remarks>
-		public Func<object?, object?, MatchingContext, bool>? Matcher { get; set; }
+		public
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			Func<object?, object?, MatchingContext, bool>?
+#else
+			Func<object, object, MatchingContext, bool>
+#endif
+			Matcher { get; set; }
 	}
 }

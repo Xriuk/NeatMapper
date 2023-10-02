@@ -1,18 +1,20 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Configuration;
 using NeatMapper.Tests.Classes;
+using System;
+using System.Collections.Generic;
 
 namespace NeatMapper.Tests.Configuration {
 	[TestClass]
 	public class ConfigurationsTests {
 		public class Map1 : IMatchMap<string, int> {
-			bool IMatchMap<string, int>.Match(string? source, int destination, MatchingContext context) {
+			bool IMatchMap<string, int>.Match(string source, int destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
 
 		public class Map2 : IMatchMap<string, int> {
-			bool IMatchMap<string, int>.Match(string? source, int destination, MatchingContext context) {
+			bool IMatchMap<string, int>.Match(string source, int destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -20,7 +22,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class NotParameterlessClass : IMatchMap<string, int> {
 			public NotParameterlessClass(string test) { }
 
-			bool IMatchMap<string, int>.Match(string? source, int destination, MatchingContext context) {
+			bool IMatchMap<string, int>.Match(string source, int destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -28,7 +30,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class GenericMap1<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -36,7 +38,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class GenericMap2<T1, T2> :
 			IMatchMap<IList<T1>, IEnumerable<T2>> {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1>? source, IEnumerable<T2>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1> source, IEnumerable<T2> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -44,7 +46,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class GenericMap3<T1> :
 			IMatchMap<IList<T1>, IEnumerable<int>> {
 
-			bool IMatchMap<IList<T1>, IEnumerable<int>>.Match(IList<T1>? source, IEnumerable<int>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<int>>.Match(IList<T1> source, IEnumerable<int> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -52,7 +54,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class GenericMap4<T1, T2> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 
@@ -63,7 +65,7 @@ namespace NeatMapper.Tests.Configuration {
 
 			public NotParameterlessGenericMap(string test) { }
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 
@@ -72,7 +74,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class ClassConstraintGenericMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : class {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -80,7 +82,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class StructConstraintGenericMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : struct {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -88,7 +90,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class NewConstraintGenericMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : new() {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -96,7 +98,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class UnmanagedConstraintGenericMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : unmanaged {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -104,7 +106,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class BaseClassConstraintGenericMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : Product {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -112,7 +114,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class DerivedClassMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : LimitedProduct {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -120,7 +122,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class NotDerivedClassMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : Category {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -128,7 +130,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class InterfaceConstraintGenericMap<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : IDisposable {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -142,7 +144,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class InterfaceImplementingClass<T1> :
 			IMatchMap<IList<T1>, IEnumerable<T1>> where T1 : DisposableTest {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1>? source, IEnumerable<T1>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -150,7 +152,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class GenericTypeParameterConstraintGenericMap1<T1, T2> :
 			IMatchMap<IList<T1>, IEnumerable<T2>> where T1 : T2 {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1>? source, IEnumerable<T2>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1> source, IEnumerable<T2> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}
@@ -158,7 +160,7 @@ namespace NeatMapper.Tests.Configuration {
 		public class GenericTypeParameterConstraintGenericMap2<T1, T2> :
 			IMatchMap<IList<T1>, IEnumerable<T2>> where T1 : List<T2> {
 
-			bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1>? source, IEnumerable<T2>? destination, MatchingContext context) {
+			bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1> source, IEnumerable<T2> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
 		}

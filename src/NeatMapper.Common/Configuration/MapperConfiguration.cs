@@ -1,4 +1,11 @@
-﻿using System.Reflection;
+﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace NeatMapper.Configuration {
 	internal sealed class MapperConfiguration : IMapperConfiguration {
@@ -85,13 +92,14 @@ namespace NeatMapper.Configuration {
 							if(!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null)
 								throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static interface (available in .NET 7)");
 							
-							if(!mapsSelector.Invoke(interf.GetGenericTypeDefinition())
-								.TryAdd((arguments[0], arguments[1]), new Map {
+							var dictionary = mapsSelector.Invoke(interf.GetGenericTypeDefinition());
+							if (dictionary.ContainsKey((arguments[0], arguments[1])))
+								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, an interface with matching parameters is already defined in class {mapsSelector.Invoke(interf.GetGenericTypeDefinition())[(arguments[0], arguments[1])].Class.Name}");
+							else { 
+								dictionary.Add((arguments[0], arguments[1]), new Map {
 									Class = type,
 									Method = method
-								})) {
-
-								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, an interface with matching parameters is already defined in class {mapsSelector.Invoke(interf.GetGenericTypeDefinition())[(arguments[0], arguments[1])].Class.Name}");
+								});
 							}
 						}
 					}
@@ -116,20 +124,20 @@ namespace NeatMapper.Configuration {
 
 
 		private static IEnumerable<Type> GetOpenGenericArgumentsRecursive(Type t) {
-			if(t.IsGenericTypeParameter)
+			if(IsGenericTypeParameter(t))
 				return new[] { t };
 			if(!t.IsGenericType)
 				return Enumerable.Empty<Type>();
 
 			var arguments = t.GetGenericArguments();
 			return arguments
-				.Where(a => a.IsGenericTypeParameter)
+				.Where(a => IsGenericTypeParameter(a))
 				.Concat(arguments.SelectMany(GetOpenGenericArgumentsRecursive));
 		}
 
 		private static bool MatchOpenGenericArgumentsRecursive(Type t1, Type t2) {
 			if(!t1.IsGenericType || !t2.IsGenericType){
-				if(t1.IsGenericTypeParameter && t2.IsGenericTypeParameter) {
+				if(IsGenericTypeParameter(t1) && IsGenericTypeParameter(t2)) {
 					// new() and unmanaged are ignored
 					var t1Attributes = t1.GenericParameterAttributes & ~GenericParameterAttributes.DefaultConstructorConstraint;
 					var t2Attributes = t2.GenericParameterAttributes & ~GenericParameterAttributes.DefaultConstructorConstraint;
@@ -151,18 +159,18 @@ namespace NeatMapper.Configuration {
 					var t2Constraints = t2.GetGenericParameterConstraints();
 					if ((!t1Constraints.Any() && t1Attributes == GenericParameterAttributes.None) ||
 						(!t2Constraints.Any() && t2Attributes == GenericParameterAttributes.None) ||
-						t1Constraints.Any(t => t.IsGenericTypeParameter) || t2Constraints.Any(t => t.IsGenericTypeParameter)){ 
+						t1Constraints.Any(t => IsGenericTypeParameter(t)) || t2Constraints.Any(t => IsGenericTypeParameter(t))){ 
 
 						return true;
 					}
 					if(t1Constraints.Length != t2Constraints.Length)
 						return false;
 
-					return !t1Constraints.Where(t1c => !t2Constraints.Any(t2c => t1c.IsAssignableTo(t2c))).Any() ||
-						!t2Constraints.Where(t2c => !t1Constraints.Any(t1c => t2c.IsAssignableTo(t1c))).Any();
+					return !t1Constraints.Where(t1c => !t2Constraints.Any(t2c => t2c.IsAssignableFrom(t1c))).Any() ||
+						!t2Constraints.Where(t2c => !t1Constraints.Any(t1c => t1c.IsAssignableFrom(t2c))).Any();
 				}
 				else if(t1.IsArray && t2.IsArray)
-					return MatchOpenGenericArgumentsRecursive(t1.GetElementType()!, t2.GetElementType()!);
+					return MatchOpenGenericArgumentsRecursive(t1.GetElementType(), t2.GetElementType());
 				else
 					return t1 == t2;
 			}
@@ -174,7 +182,11 @@ namespace NeatMapper.Configuration {
 			if(arguments1.Length != arguments2.Length)
 				return false;
 
-			return arguments1.Zip(arguments2).All((a) => MatchOpenGenericArgumentsRecursive(a.First, a.Second));
+			return arguments1.Zip(arguments2, (a1, a2) => (First: a1, Second: a2)).All((a) => MatchOpenGenericArgumentsRecursive(a.First, a.Second));
+		}
+
+		private static bool IsGenericTypeParameter(Type t) {
+			return t.IsGenericParameter && t.DeclaringMethod == null;
 		}
 	}
 }
