@@ -20,4 +20,4 @@ services.AddNeatMapper();
 
 ## License
 
-[Read the license here](https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper/LICENSE.md)
+[Read the license here](https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.DependencyInjection/LICENSE.md)
