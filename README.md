@@ -1,5 +1,11 @@
 # .NEaT Mapper
 
+## Nuget
+
+[![NeatMapper](https://img.shields.io/nuget/vpre/NeatMapper.svg?label=NeatMapper)](https://www.nuget.org/packages/NeatMapper)
+
+[![NeatMapper.DependencyInjection](https://img.shields.io/nuget/vpre/NeatMapper.DependencyInjection.svg?label=NeatMapper.DependencyInjection)](https://www.nuget.org/packages/NeatMapper.DependencyInjection)
+
 ## What is this project
 
 .NEaT Mapper is an object mapper, with configurable and reusable mappings.
@@ -32,3 +38,11 @@ They both include the relative package above
 Find specific instructions in the README of every package
 
 - [NeatMapper](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md)
+- [NeatMapper.DependencyInjection](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.DependencyInjection/README.md)
+
+## License
+
+Find all the licenses in the LICENSE of every package
+
+- [NeatMapper](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/LICENSE.md)
+- [NeatMapper.DependencyInjection](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.DependencyInjection/LICENSE.md)

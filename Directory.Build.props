@@ -1,3 +1,4 @@
+<!-- https://stackoverflow.com/a/73098203 -->
 <Project>
  <Target Name="UseExplicitPackageVersions" BeforeTargets="GenerateNuspec">
     <ItemGroup>

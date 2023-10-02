@@ -1,5 +1,7 @@
 # .NEaT Mapper
 
+[![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper)
+
 ## What is this package
 
 .NEaT Mapper is an object mapper, with configurable and reusable mappings.
@@ -481,4 +483,4 @@ If you are using `Microsoft.Extensions.DependencyInjection` you may want to inst
 
 ## License
 
-[Read the license here](https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper/LICENSE.md)
+[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/LICENSE.md)

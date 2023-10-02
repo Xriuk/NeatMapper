@@ -1,5 +1,7 @@
 # .NEaT Mapper
 
+[![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.DependencyInjection.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper.DependencyInjection)
+
 ## What is this package
 
 Dependency Injection extensions for [NeatMapper](https://www.nuget.org/packages/NeatMapper)
@@ -19,6 +21,8 @@ services.Configure<MapperConfigurationOptions>(o => o.ScanTypes = Assembly.GetEx
 services.AddNeatMapper();
 ```
 
+For information on how to use the Mapper, check [the main package README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md).
+
 ## License
 
-[Read the license here](https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.DependencyInjection/LICENSE.md)
+[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.DependencyInjection/LICENSE.md)
