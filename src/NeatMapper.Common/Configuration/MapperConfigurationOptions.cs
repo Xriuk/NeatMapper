@@ -23,7 +23,7 @@
 	public sealed class MapperConfigurationOptions {
 		public MapperConfigurationOptions() { }
 		public MapperConfigurationOptions(MapperConfigurationOptions options) {
-			ScanTypes = options.ScanTypes?.ToList();
+			ScanTypes = options.ScanTypes.ToList();
 			MergeMapsCollectionsOptions = new MergeMapsCollectionsOptions(options.MergeMapsCollectionsOptions);
 		}
 
@@ -35,7 +35,7 @@
 		/// <see cref="ICollectionElementComparer{TSource, TDestination}"/><br/>
 		/// If null will scan for all the assembly
 		/// </summary>
-		public ICollection<Type>? ScanTypes { get; set; }
+		public ICollection<Type> ScanTypes { get; set; } = new List<Type>();
 
 		/// <summary>
 		/// Options applied to automatic collections mapping via <see cref="IMapperConfiguration.MergeMaps"/> or <see cref="IMapperConfiguration.GenericMergeMaps"/>

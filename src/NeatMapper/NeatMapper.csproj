@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>NeatMapper</PackageId>
-	<Version>1.0.1</Version>
+	<Version>1.0.2</Version>
     <Authors>Xriuk</Authors>
     <Title>.NEaT Mapper</Title>
     <Description>Object mapper, with configurable and reusable mappings. Supports collections and generic types.</Description>
@@ -17,6 +17,7 @@
     <PackageTags>mapper;mapping</PackageTags>
     <Copyright>Xriuk</Copyright>
     <PackageIcon>icon.png</PackageIcon>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -43,7 +44,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[1, 2)" />
+    <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[1.0.1, 2)" />
   </ItemGroup>
 
 </Project>

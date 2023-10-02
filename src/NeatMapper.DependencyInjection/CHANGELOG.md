@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.2] - 2023-10-02
+
+### Fixed
+
+- Updated documentation
+
+### Changed
+
+- Previous versions deprecated
+
 ## [1.0.1] - 2023-10-02
 
 ### Fixed

@@ -15,6 +15,7 @@ You can install this package directly from Nuget https://www.nuget.org/packages/
 While configuring your services simply add
 
 ```csharp
+services.Configure<MapperConfigurationOptions>(o => o.ScanTypes = Assembly.GetExecutingAssembly().GetTypes().ToList());
 services.AddNeatMapper();
 ```
 

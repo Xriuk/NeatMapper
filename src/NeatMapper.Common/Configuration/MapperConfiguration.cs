@@ -41,7 +41,7 @@ namespace NeatMapper.Configuration {
 				Func<Type, Dictionary<(Type From, Type To), Map>> mapsSelector // GetGenericTypeDefinition
 				) { 
 
-				foreach (var type in options.ScanTypes ?? Assembly.GetExecutingAssembly().GetTypes()
+				foreach (var type in options.ScanTypes
 					.Distinct()
 					.Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Any(i =>
 						i.IsGenericType && interfaceFilter.Invoke(i.GetGenericTypeDefinition())))) {
