@@ -1,4 +1,7 @@
-﻿namespace NeatMapper {
+﻿using System;
+using System.Collections.Generic;
+
+namespace NeatMapper {
 	public static class MapperExtensions {
 		/// <summary>
 		/// Maps an object to a new one
@@ -9,12 +12,27 @@
 		/// which will be used to retrieve the available maps
 		/// </param>
 		/// <returns>the newly created object, may be null</returns>
-		public static TDestination? Map<TDestination>(this IMapper mapper, object source) {
+		public static
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map<TDestination>(this IMapper mapper, object source) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			if (source == null)
 				throw new ArgumentNullException(nameof(source));
-			return (TDestination?)mapper.Map(source, source.GetType(), typeof(TDestination))!;
+			return(TDestination)mapper.Map(source, source.GetType(), typeof(TDestination));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>
@@ -24,10 +42,31 @@
 		/// <typeparam name="TDestination">type of the destination object to create, used to retrieve the available maps</typeparam>
 		/// <param name="source">object to map, may be null</param>
 		/// <returns>the newly created object, may be null</returns>
-		public static TDestination? Map<TSource, TDestination>(this IMapper mapper, TSource? source) {
+		public static
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map<TSource, TDestination>(this IMapper mapper,
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			source) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return (TDestination?)mapper.Map(source, typeof(TSource), typeof(TDestination))!;
+			return(TDestination)mapper.Map(source, typeof(TSource), typeof(TDestination));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>
@@ -42,10 +81,43 @@
 		/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public static TDestination? Map<TSource, TDestination>(this IMapper mapper, TSource? source, TDestination? destination, MappingOptions? mappingOptions = null) {
+		public static
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map<TSource, TDestination>(this IMapper mapper,
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return (TDestination?)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions)!;
+			return (TDestination)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>
@@ -61,7 +133,37 @@
 		/// the resulting collection of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public static ICollection<TDestinationElement>? Map<TSourceElement, TDestinationElement>(this IMapper mapper, IEnumerable<TSourceElement>? source, ICollection<TDestinationElement>? destination, Func<TSourceElement?, TDestinationElement?, MatchingContext, bool> matcher, bool? removeNotMatchedDestinationElements = null) {
+		public static
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+		ICollection<TDestinationElement>?
+#else
+		ICollection<TDestinationElement>
+#endif
+			Map<TSourceElement, TDestinationElement>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable<TSourceElement>?
+#else
+			IEnumerable<TSourceElement>
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TDestinationElement>?
+#else
+			ICollection<TDestinationElement>
+#endif
+			destination,
+#if NET5_0_OR_GREATER
+			Func<TSourceElement?, TDestinationElement?, MatchingContext, bool>
+#else
+			Func<TSourceElement, TDestinationElement, MatchingContext, bool>
+#endif
+			matcher,
+			bool? removeNotMatchedDestinationElements = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			if (matcher == null)
@@ -74,9 +176,13 @@
 				new MappingOptions {
 					Matcher = (s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
 						(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
-						matcher((TSourceElement)s!, (TDestinationElement)d!, c),
+						matcher((TSourceElement)s, (TDestinationElement)d, c),
 					CollectionRemoveNotMatchedDestinationElements = removeNotMatchedDestinationElements
 				}) as ICollection<TDestinationElement>;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 	}
 }

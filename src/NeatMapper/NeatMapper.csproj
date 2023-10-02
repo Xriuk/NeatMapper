@@ -1,11 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0</TargetFrameworks>
+		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">enable</Nullable>
     <PackageId>NeatMapper</PackageId>
-	<Version>1.0.2</Version>
+	  <Version>1.1.0</Version>
     <Authors>Xriuk</Authors>
     <Title>.NEaT Mapper</Title>
     <Description>Object mapper, with configurable and reusable mappings. Supports collections and generic types.</Description>
@@ -44,7 +43,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[1.0.1, 2)" />
+    <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[1.1.0, 2)" />
   </ItemGroup>
 
 </Project>

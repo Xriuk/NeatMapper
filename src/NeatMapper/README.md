@@ -66,13 +66,9 @@ Once you have all your map classes you can create instances of the mapper and yo
 even load different maps into different mappers.
 
 ```csharp
-// Specify classes
 IMapper mapper = new Mapper(new MapperConfigurationOptions {
     ScanTypes = new List<Type> { typeof(Maps), ... }
 });
-
-// Or scan all the assembly
-IMapper mapper = new Mapper();
 ```
 
 ### 3. Map your types
@@ -163,7 +159,7 @@ var myProductDtoList = mapper.Map<IEnumerable<IEnumerable<Product>>, List<List<P
 mapper.Map<IList<Category>, ICollection<CategoryDto>>(myCategories, myCategoryDtos);
 ```
 
-This works with (mostly) all collections, interfaces, even read-only and custom ones.
+This works with (mostly) all collections, interfaces, even read-only and custom ones (provided that they have a parameterless constructor).
 
 The only limitation is that you cannot map to an existing read-only collection.
 
@@ -215,7 +211,7 @@ if you're on .NET 7 or greater) or specify a matching method when mapping.
 
 This way each element is matched with a corresponding element of the destination collection,
 if found and a `IMergeMap<TSource, TDestination>` is defined it is merged together,
-otherwise it is removed and a new element is added to the collection using
+otherwise a new element is added to the collection using
 `INewMap<TSource, TDestination>`.
 
 ```csharp

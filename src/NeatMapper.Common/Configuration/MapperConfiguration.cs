@@ -50,7 +50,7 @@ namespace NeatMapper.Configuration {
 
 				foreach (var type in options.ScanTypes
 					.Distinct()
-					.Where(t => t.IsClass && !t.IsAbstract && t.GetInterfaces().Any(i =>
+					.Where(t => t.IsClass && !t.IsAbstract && (t.DeclaringType == null || !t.DeclaringType.IsGenericType) && t.GetInterfaces().Any(i =>
 						i.IsGenericType && interfaceFilter.Invoke(i.GetGenericTypeDefinition())))) {
 
 					var interfaces = type.GetInterfaces()

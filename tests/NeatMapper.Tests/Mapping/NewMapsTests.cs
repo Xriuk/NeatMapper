@@ -1,7 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Configuration;
 using NeatMapper.Tests.Classes;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -43,7 +46,7 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				INewMapStatic<int, string>
 #else
@@ -62,14 +65,14 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<string, int>
 #endif
-				.Map(string? source, MappingContext context) {
+				.Map(string source, MappingContext context) {
 				return source?.Length ?? -1;
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				INewMapStatic<bool, string>
 #else
@@ -82,26 +85,26 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<bool, string>
 #else
 				IMergeMap<bool, string>
 #endif
-				.Map(bool source, string? destination, MappingContext context) {
+				.Map(bool source, string destination, MappingContext context) {
 				return "MergeMap";
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<float, string>
 #else
 				IMergeMap<float, string>
 #endif
-				.Map(float source, string? destination, MappingContext context) {
+				.Map(float source, string destination, MappingContext context) {
 				return (source * 3).ToString();
 			}
 
@@ -114,20 +117,20 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<Price, decimal>
 #endif
-				.Map(Price? source, MappingContext context) {
+				.Map(Price source, MappingContext context) {
 				return source?.Amount ?? 0m;
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			PriceFloat?
+			PriceFloat
 #if NET7_0_OR_GREATER
 				INewMapStatic<Price, PriceFloat>
 #else
 				INewMap<Price, PriceFloat>
 #endif
-				.Map(Price? source, MappingContext context) {
+				.Map(Price source, MappingContext context) {
 				if(source == null)
 					return null;
 				else
@@ -146,7 +149,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<Category, int>
 #endif
-				.Map(Category? source, MappingContext context) {
+				.Map(Category source, MappingContext context) {
 				return source?.Id ?? 0;
 			}
 
@@ -154,13 +157,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			ProductDto?
+			ProductDto
 #if NET7_0_OR_GREATER
 				INewMapStatic<Product, ProductDto>
 #else
 				INewMap<Product, ProductDto>
 #endif
-				.Map(Product? source, MappingContext context) {
+				.Map(Product source, MappingContext context) {
 				if(source == null)
 					return null;
 				else {
@@ -175,13 +178,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			LimitedProductDto?
+			LimitedProductDto
 #if NET7_0_OR_GREATER
 				INewMapStatic<LimitedProduct, LimitedProductDto>
 #else
 				INewMap<LimitedProduct, LimitedProductDto>
 #endif
-				.Map(LimitedProduct? source, MappingContext context) {
+				.Map(LimitedProduct source, MappingContext context) {
 				if(source == null)
 					return null;
 				else {
@@ -203,7 +206,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<string, KeyValuePair<string, int>>
 #endif
-				.Map(string? source, MappingContext context) {
+				.Map(string source, MappingContext context) {
 				return new KeyValuePair<string, int>(source ?? "", context.Mapper.Map<string, int>(source));
 			}
 
@@ -224,31 +227,31 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			ClassWithoutParameterlessConstructor?
+			ClassWithoutParameterlessConstructor
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<string, ClassWithoutParameterlessConstructor>
 #else
 				IMergeMap<string, ClassWithoutParameterlessConstructor>
 #endif
-				.Map(string? source, ClassWithoutParameterlessConstructor? destination, MappingContext context) {
+				.Map(string source, ClassWithoutParameterlessConstructor destination, MappingContext context) {
 				return destination;
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<string>?
+			IList<string>
 #if NET7_0_OR_GREATER
 				INewMapStatic<IEnumerable<decimal>, IList<string>>
 #else
 				INewMap<IEnumerable<decimal>, IList<string>>
 #endif
-				.Map(IEnumerable<decimal>? source, MappingContext context) {
+				.Map(IEnumerable<decimal> source, MappingContext context) {
 				return source?.Select(s => (s * 10m).ToString()).ToList();
 			}
 		}
 
-		IMapper _mapper = null!;
+		IMapper _mapper = null;
 
 		[TestInitialize]
 		public void Initialize() {
@@ -459,7 +462,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapNullCollections() {
-			Assert.IsNull(_mapper.Map<int[]?, string[]?>(null));
+			Assert.IsNull(_mapper.Map<int[], string[]>(null));
 		}
 
 		[TestMethod]

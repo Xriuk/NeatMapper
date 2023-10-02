@@ -15,6 +15,24 @@
 		/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public TDestination? Map(TSource? source, TDestination? destination, MappingContext context);
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map(
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination,
+			MappingContext context);
 	}
 }

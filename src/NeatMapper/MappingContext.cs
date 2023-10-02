@@ -6,6 +6,9 @@
 		/// <summary>
 		/// Mapper which can be used for nested mappings
 		/// </summary>
-		public IMapper Mapper { get; internal set; } = null!;
+		public IMapper Mapper { get; internal set; }
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			= null!;
+#endif
 	}
 }

@@ -1,6 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Configuration;
 using NeatMapper.Tests.Classes;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -21,10 +24,10 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<Tuple<T1, T2>, (T1, T2, T3)>
 #endif
-				.Map(Tuple<T1, T2>? source, MappingContext context) {
+				.Map(Tuple<T1, T2> source, MappingContext context) {
 				if (source == null)
-					return (default(T1), default(T2), default(T3))!;
-				return (source.Item1, source.Item2, default(T3))!;
+					return (default(T1), default(T2), default(T3));
+				return (source.Item1, source.Item2, default(T3));
 			}
 		}
 
@@ -45,10 +48,10 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<Tuple<T1, T2>, (T2, T1)>
 #endif
-				.Map(Tuple<T1, T2>? source, MappingContext context) {
+				.Map(Tuple<T1, T2> source, MappingContext context) {
 				if(source == null)
-					return (default(T2), default(T1))!;
-				return (source.Item2, source.Item1)!;
+					return (default(T2), default(T1));
+				return (source.Item2, source.Item1);
 			}
 		}
 
@@ -73,46 +76,46 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<T1>?
+			IList<T1>
 #if NET7_0_OR_GREATER
 				INewMapStatic<IEnumerable<T1>, IList<T1>>
 #else
 				INewMap<IEnumerable<T1>, IList<T1>>
 #endif
-				.Map(IEnumerable<T1>? source, MappingContext context) {
+				.Map(IEnumerable<T1> source, MappingContext context) {
 				return source?.ToList();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IEnumerable<T1>?
+			IEnumerable<T1>
 #if NET7_0_OR_GREATER
 				INewMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
 #else
 				INewMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
 #endif
-				.Map(IDictionary<string, IDictionary<int, IList<T1>>>? source, MappingContext context) {
+				.Map(IDictionary<string, IDictionary<int, IList<T1>>> source, MappingContext context) {
 				return Enumerable.Empty<T1>();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				INewMapStatic<IEnumerable<T1>, string>
 #else
 				INewMap<IEnumerable<T1>, string>
 #endif
-				.Map(IEnumerable<T1>? source, MappingContext context) {
+				.Map(IEnumerable<T1> source, MappingContext context) {
 				return "Elements: " + source?.Count();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<T1>?
+			IList<T1>
 #if NET7_0_OR_GREATER
 				INewMapStatic<int, IList<T1>>
 #else
@@ -126,13 +129,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				INewMapStatic<Queue<T1>, string>
 #else
 				INewMap<Queue<T1>, string>
 #endif
-				.Map(Queue<T1>? source, MappingContext context) {
+				.Map(Queue<T1> source, MappingContext context) {
 				throw new NotImplementedException();
 			}
 
@@ -140,13 +143,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<T1>?
+			IList<T1>
 #if NET7_0_OR_GREATER
 				INewMapStatic<T1[], IList<T1>>
 #else
 				INewMap<T1[], IList<T1>>
 #endif
-				.Map(T1[]? source, MappingContext context) {
+				.Map(T1[] source, MappingContext context) {
 				return context.Mapper.Map<IEnumerable<T1>, IList<T1>>(source);
 			}
 		}
@@ -164,13 +167,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<bool>?
+			IList<bool>
 #if NET7_0_OR_GREATER
 				INewMapStatic<IEnumerable<bool>, IList<bool>>
 #else
 				INewMap<IEnumerable<bool>, IList<bool>>
 #endif
-				.Map(IEnumerable<bool>? source, MappingContext context) {
+				.Map(IEnumerable<bool> source, MappingContext context) {
 				return new List<bool>(32);
 			}
 		}
@@ -195,7 +198,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IEnumerable<T1>, int>
 #endif
-				.Map(IEnumerable<T1>? source, MappingContext context) {
+				.Map(IEnumerable<T1> source, MappingContext context) {
 				return source?.Count() ?? 0;
 			}
 
@@ -208,7 +211,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return 42;
 			}
 		}
@@ -230,7 +233,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -252,7 +255,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -285,7 +288,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -307,7 +310,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -323,7 +326,7 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 				static 
 #endif
-				T2? Map(T1? source, MappingContext context) {
+				T2 Map(T1 source, MappingContext context) {
 				return default(T2);
 			}
 		}
@@ -347,7 +350,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				INewMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return 36;
 			}
 		}
@@ -369,13 +372,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 				static 
 #endif
-				T2? Map(IList<T1>? source, MappingContext context) {
+				T2 Map(IList<T1> source, MappingContext context) {
 				return default(T2);
 			}
 		}
 
 		public class EquatableTest : IEquatable<Product> {
-			public bool Equals(Product? other) {
+			public bool Equals(Product other) {
 				return false;
 			}
 		}
@@ -391,7 +394,7 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 				static 
 #endif
-				T2? Map(IList<T1>? source, MappingContext context) {
+				T2 Map(IList<T1> source, MappingContext context) {
 				return default(T2);
 			}
 		}
@@ -407,19 +410,19 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Queue<T2>?
+			Queue<T2>
 #if NET7_0_OR_GREATER
 				INewMapStatic<IList<T1>, Queue<T2>>
 #else
 				INewMap<IList<T1>, Queue<T2>>
 #endif
-				.Map(IList<T1>? source, MappingContext context) {
+				.Map(IList<T1> source, MappingContext context) {
 				return new Queue<T2>();
 			}
 		}
 
 
-		IMapper _mapper = null!;
+		IMapper _mapper = null;
 
 		[TestInitialize]
 		public void Initialize() {
@@ -523,7 +526,6 @@ namespace NeatMapper.Tests.Mapping {
 				});
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
-				TestUtils.AssertMapNotFound(() => mapper.Map<IList<int?>, int>(new List<int?>()));
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ManagedTest>, int>(new List<ManagedTest>()));
 				mapper.Map<IList<UnmanagedTest>, int>(new List<UnmanagedTest>());
 				mapper.Map<IList<Guid>, int>(new List<Guid>());

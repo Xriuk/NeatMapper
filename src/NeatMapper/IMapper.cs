@@ -1,4 +1,6 @@
-﻿namespace NeatMapper {
+﻿using System;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Interface which allows mapping an object to a new one or an existing one
 	/// </summary>
@@ -11,7 +13,20 @@
 		/// <param name="sourceType">type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">type of the destination object to create, used to retrieve the available maps</param>
 		/// <returns>the newly created object of <paramref name="destinationType"/>, may be null</returns>
-		public object? Map(object? source, Type sourceType, Type destinationType);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+		object?
+#else
+			object
+#endif
+			Map(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+			Type destinationType);
 
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.<br/>
@@ -27,6 +42,31 @@
 		/// the resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
-		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+		object?
+#else
+		object
+#endif
+		Map(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null);
 	}
 }

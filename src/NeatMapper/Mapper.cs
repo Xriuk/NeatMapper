@@ -1,6 +1,9 @@
 ﻿using NeatMapper.Common.Mapper;
 using NeatMapper.Configuration;
+using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper {
 	public class Mapper : BaseMapper, IMapper {
@@ -8,7 +11,15 @@ namespace NeatMapper {
 
 		protected override MatchingContext MatchingContext => _mappingContext;
 
-		public Mapper(MapperConfigurationOptions? configuration = null, IServiceProvider? serviceProvider = null) :
+		[Obsolete("Use the constructor with the options")]
+		public Mapper() : this(new MapperConfigurationOptions(), null) {}
+		public Mapper(MapperConfigurationOptions configuration,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) :
 			base(new MapperConfiguration(i => i == typeof(INewMap<,>)
 #if NET7_0_OR_GREATER
                 || i == typeof(INewMapStatic<,>)
@@ -28,23 +39,43 @@ namespace NeatMapper {
 		}
 
 
-		public object? Map(object? source, Type sourceType, Type destinationType) {
+		public
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			Map(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+			Type destinationType) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
-			if (source?.GetType().IsAssignableTo(sourceType) == false)
+			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var types = (From: sourceType, To: destinationType);
-			object? result;
+			object 
+				result;
 			try {
 				result = MapInternal(types, newMaps)
-					.Invoke(new object?[] { source, _mappingContext });
+					.Invoke(new object[] { source, _mappingContext });
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source!, _mappingContext });
+					result = MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, _mappingContext });
 				}
 				catch (MapNotFoundException) {
 					object destination;
@@ -60,31 +91,66 @@ namespace NeatMapper {
 			}
 
 			// Should not happen
-			if (result?.GetType().IsAssignableTo(destinationType) == false)
+			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
 				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
 
 			return result;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
-		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
+		public
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+		object
+#endif
+		Map(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+		object
+#endif
+		source,
+		Type sourceType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+		object
+#endif
+		destination,
+		Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+		MappingOptions
+#endif
+		mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
-			if (source?.GetType().IsAssignableTo(sourceType) == false)
+			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
 				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
-			if (destination?.GetType().IsAssignableTo(destinationType) == false)
+			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
 				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
 
 			var types = (From: sourceType, To: destinationType);
-			object? result;
+			object result;
 			try {
 				result = MapInternal(types, mergeMaps)
-					.Invoke(new object?[] { source, destination, _mappingContext });
+					.Invoke(new object[] { source, destination, _mappingContext });
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source!, destination!, _mappingContext });
+					result = MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source, destination, _mappingContext });
 				}
 				catch (MapNotFoundException) {
 					throw exc;
@@ -92,15 +158,22 @@ namespace NeatMapper {
 			}
 
 			// Should not happen
-			if (result?.GetType().IsAssignableTo(destinationType) == false)
+			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
 				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
 
 			return result;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
 
 		// (source, context) => destination
-		protected Func<object?[], object?> MapCollectionNewRecursiveInternal((Type From, Type To) types) {
+		protected Func<object[], object> MapCollectionNewRecursiveInternal((Type From, Type To) types) {
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
 				HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
@@ -111,7 +184,7 @@ namespace NeatMapper {
 				);
 
 				// (source, context) => destination
-				Func<object?[], object?> elementMapper;
+				Func<object[], object> elementMapper;
 				try {
 					// (source, context) => destination
 					elementMapper = MapInternal(elementTypes, newMaps);
@@ -125,9 +198,9 @@ namespace NeatMapper {
 						var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
 
 						elementMapper = (sourceContext) => destinationElementMapper.Invoke(new object[] {
-							sourceContext[0]!,
+							sourceContext[0],
 							destinationElementFactory.Invoke(),
-							sourceContext[1]!
+							sourceContext[1]
 						});
 					}
 					catch (Exception e) when (e is MapNotFoundException || e is DestinationCreationException) {
@@ -152,7 +225,7 @@ namespace NeatMapper {
 
 						if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
 							foreach (var element in sourceEnumerable) {
-								addMethod.Invoke(destination, new object?[] { elementMapper.Invoke(new object[] { element, sourceAndContext[1]! }) });
+								addMethod.Invoke(destination, new object[] { elementMapper.Invoke(new object[] { element, sourceAndContext[1] }) });
 							}
 
 							return ConvertCollectionToType(destination, types.To);
@@ -174,10 +247,10 @@ namespace NeatMapper {
 		}
 
 		// (source, destination, context) => destination
-		protected Func<object?[], object?> MapCollectionMergeRecursiveInternal(
+		protected Func<object[], object> MapCollectionMergeRecursiveInternal(
 			(Type From, Type To) types,
-			object? destination,
-			MappingOptions? mappingOptions = null) {
+			object destination,
+			MappingOptions mappingOptions = null) {
 
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
@@ -204,7 +277,7 @@ namespace NeatMapper {
 						.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
 
 					// If the collection is readonly we cannot map to it
-					if (!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly)))!.Invoke(destination, null)!) {
+					if (!(bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null)) {
 						// At least one of New or Merge mapper is required to map elements
 						// If both are found they will be used in the following order:
 						// - elements to update will use MergeMap first (on the existing element),
@@ -213,11 +286,11 @@ namespace NeatMapper {
 						//   then MergeMap (by creating a new element and merging to it)
 
 						// (source, context) => destination
-						Func<object?[], object?> newElementMapper = null!;
+						Func<object[], object> newElementMapper = null;
 						// (source, destination, context) => destination
-						Func<object?[], object?> mergeElementMapper = null!;
+						Func<object[], object> mergeElementMapper = null;
 						// () => destination
-						Func<object> destinationElementFactory = null!;
+						Func<object> destinationElementFactory = null;
 						try {
 							newElementMapper = MapInternal(elementTypes, newMaps);
 						}
@@ -253,11 +326,11 @@ namespace NeatMapper {
 							}
 						}
 
-						Func<object?[], bool> elementComparer;
+						Func<object[], bool> elementComparer;
 						if (mappingOptions?.Matcher != null) {
 							elementComparer = (parameters) => {
 								try {
-									return mappingOptions.Matcher.Invoke(parameters[0]!, parameters[1]!, (MatchingContext)parameters[2]!);
+									return mappingOptions.Matcher.Invoke(parameters[0], parameters[1], (MatchingContext)parameters[2]);
 								}
 								catch (Exception e) {
 									throw new MatcherException(e, types);
@@ -277,16 +350,16 @@ namespace NeatMapper {
 										sourceDestinationAndContext[1] = CreateCollection(types.To);
 
 									if (sourceDestinationAndContext[1] is IEnumerable destinationEnumerable) {
-										var elementsToRemove = new List<object?>();
-										var elementsToAdd = new List<object?>();
-										Func<object?[], object?> nullMergeCollectionMapping = null!;
-										var mergeCollectionMappings = new Dictionary<object, Func<object?[], object?>>();
+										var elementsToRemove = new List<object>();
+										var elementsToAdd = new List<object>();
+										Func<object[], object> nullMergeCollectionMapping = null;
+										var mergeCollectionMappings = new Dictionary<object, Func<object[], object>>();
 
 										// Deleted elements (+ missing merge mappings)
 										foreach (var destinationElement in destinationEnumerable) {
 											bool found = false;
 											foreach (var sourceElement in sourceEnumerable) {
-												if (elementComparer.Invoke(new object?[] { sourceElement, destinationElement, sourceDestinationAndContext[2] })) {
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2] })) {
 													found = true;
 													break;
 												}
@@ -324,9 +397,9 @@ namespace NeatMapper {
 										// Added/updated elements
 										foreach (var sourceElement in sourceEnumerable) {
 											bool found = false;
-											object? matchingDestinationElement = null;
+											object matchingDestinationElement = null;
 											foreach (var destinationElement in destinationEnumerable) {
-												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2]! }) &&
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2] }) &&
 													!elementsToRemove.Contains(destinationElement)) {
 
 													matchingDestinationElement = destinationElement;
@@ -351,7 +424,7 @@ namespace NeatMapper {
 												}
 
 												if (mergeElementMapper != null) {
-													var mergeResult = mergeElementMapper.Invoke(new object?[] { sourceElement, matchingDestinationElement, sourceDestinationAndContext[2] });
+													var mergeResult = mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, sourceDestinationAndContext[2] });
 													if (mergeResult != matchingDestinationElement) {
 														elementsToRemove.Add(matchingDestinationElement);
 														elementsToAdd.Add(mergeResult);
@@ -359,12 +432,12 @@ namespace NeatMapper {
 												}
 												else {
 													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(newElementMapper!.Invoke(new object?[] { sourceElement, sourceDestinationAndContext[2] }));
+													elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
 												}
 											}
 											else {
 												if (newElementMapper != null)
-													elementsToAdd.Add(newElementMapper.Invoke(new object?[] { sourceElement, sourceDestinationAndContext[2] }));
+													elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
 												else {
 													var destinationInstance = destinationElementFactory.Invoke();
 
@@ -375,23 +448,23 @@ namespace NeatMapper {
 														tempMergeMapper = true;
 													}
 
-													elementsToAdd.Add(mergeElementMapper!.Invoke(new object?[] { sourceElement, destinationInstance, sourceDestinationAndContext[2] }));
+													elementsToAdd.Add(mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, sourceDestinationAndContext[2] }));
 												}
 											}
 
 											if (tempMergeMapper)
-												mergeElementMapper = null!;
+												mergeElementMapper = null;
 										}
 
 										foreach (var element in elementsToRemove) {
-											if (!(bool)removeMethod.Invoke(sourceDestinationAndContext[1], new object?[] { element })!)
+											if (!(bool)removeMethod.Invoke(sourceDestinationAndContext[1], new object[] { element }))
 												throw new InvalidOperationException($"Could not remove element {element} from the destination collection {sourceDestinationAndContext[1]}");
 										}
 										foreach (var element in elementsToAdd) {
-											addMethod.Invoke(sourceDestinationAndContext[1], new object?[] { element });
+											addMethod.Invoke(sourceDestinationAndContext[1], new object[] { element });
 										}
 
-										return ConvertCollectionToType(sourceDestinationAndContext[1]!, types.To);
+										return ConvertCollectionToType(sourceDestinationAndContext[1], types.To);
 									}
 									else
 										throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
@@ -416,5 +489,9 @@ namespace NeatMapper {
 
 			throw new MapNotFoundException(types);
 		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

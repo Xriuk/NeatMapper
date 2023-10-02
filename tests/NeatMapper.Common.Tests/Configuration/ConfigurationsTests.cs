@@ -3,6 +3,8 @@ using NeatMapper.Configuration;
 using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using static NeatMapper.Tests.Configuration.ConfigurationsTests;
 
 namespace NeatMapper.Tests.Configuration {
 	[TestClass]
@@ -165,9 +167,33 @@ namespace NeatMapper.Tests.Configuration {
 			}
 		}
 
-		protected static void Configure(MapperConfigurationOptions options) {
+		public class GenericNestedMap<T1, T2> {
+			public class Map1 : IMatchMap<string, int> {
+				bool IMatchMap<string, int>.Match(string source, int destination, MatchingContext context) {
+					throw new NotImplementedException();
+				}
+			}
+
+			public class GenericMap2 :
+			IMatchMap<IList<T1>, IEnumerable<T2>> {
+
+				bool IMatchMap<IList<T1>, IEnumerable<T2>>.Match(IList<T1> source, IEnumerable<T2> destination, MatchingContext context) {
+					throw new NotImplementedException();
+				}
+			}
+
+			public class GenericMap1<T3> :
+			IMatchMap<IList<T3>, IEnumerable<T3>> {
+
+				bool IMatchMap<IList<T3>, IEnumerable<T3>>.Match(IList<T3> source, IEnumerable<T3> destination, MatchingContext context) {
+					throw new NotImplementedException();
+				}
+			}
+		}
+
+		internal static MapperConfiguration Configure(MapperConfigurationOptions options) {
 			// MatchMap is always configured
-			new MapperConfiguration(i => false, i => false, options);
+			return new MapperConfiguration(i => false, i => false, options);
 		}
 
 
@@ -434,6 +460,16 @@ namespace NeatMapper.Tests.Configuration {
 					ScanTypes = new List<Type> { typeof(InterfaceConstraintGenericMap<>), typeof(NotDerivedClassMap<>) }
 				});
 			}
+		}
+
+		[TestMethod]
+		public void ShouldNotScanNestedClassesInGenericTypes() {
+			var config = Configure(new MapperConfigurationOptions {
+				ScanTypes = new List<Type> { typeof(GenericNestedMap<,>) }
+			});
+
+			Assert.AreEqual(0, config.Matchers.Count);
+			Assert.AreEqual(0, config.GenericMatchers.Count());
 		}
 	}
 }

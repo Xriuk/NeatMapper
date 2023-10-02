@@ -443,7 +443,7 @@ namespace NeatMapper.Common.Mapper {
 		}
 
 		private static bool IsGenericTypeParameter(Type t) {
-			return t.IsGenericParameter && t.DeclaringMethod != null;
+			return t.IsGenericParameter && t.DeclaringMethod == null;
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

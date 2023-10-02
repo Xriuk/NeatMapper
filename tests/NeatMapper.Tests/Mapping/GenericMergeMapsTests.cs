@@ -1,6 +1,9 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Configuration;
 using NeatMapper.Tests.Classes;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -22,10 +25,10 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<Tuple<T1, T2>, (T1, T2, T3)>
 #endif
-				.Map(Tuple<T1, T2>? source, (T1, T2, T3) destination, MappingContext context) {
+				.Map(Tuple<T1, T2> source, (T1, T2, T3) destination, MappingContext context) {
 				if (source == null)
-					return (default(T1), default(T2), default(T3))!;
-				return (source.Item1, source.Item2, default(T3))!;
+					return (default(T1), default(T2), default(T3));
+				return (source.Item1, source.Item2, default(T3));
 			}
 		}
 
@@ -50,26 +53,27 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<Tuple<T1, T2>, (T2, T1)>
 #endif
-				.Map(Tuple<T1, T2>? source, (T2, T1) destination, MappingContext context) {
+				.Map(Tuple<T1, T2> source, (T2, T1) destination, MappingContext context) {
 				if (source == null)
-					return (default(T2), default(T1))!;
-				return (source.Item2, source.Item1)!;
+					return (default(T2), default(T1));
+				return (source.Item2, source.Item1);
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			GenericClassDto<T2>?
+			GenericClassDto<T2>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>
 #else
 				IMergeMap<GenericClass<T1>, GenericClassDto<T2>>
 #endif
-				.Map(GenericClass<T1>? source, GenericClassDto<T2>? destination, MappingContext context) {
+				.Map(GenericClass<T1> source, GenericClassDto<T2> destination, MappingContext context) {
 				if (source != null) {
-					destination ??= new GenericClassDto<T2>();
+					if(destination == null)
+						destination = new GenericClassDto<T2>();
 					destination.Id = source.Id;
-					destination.Value = context.Mapper.Map(source.Value, destination.Value) ?? default(T2)!;
+					destination.Value = context.Mapper.Map(source.Value, destination.Value);
 				}
 				return destination;
 			}
@@ -83,7 +87,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMatchMap<GenericClass<T1>, GenericClassDto<T2>>
 #endif
-				.Match(GenericClass<T1>? source, GenericClassDto<T2>? destination, MatchingContext context) {
+				.Match(GenericClass<T1> source, GenericClassDto<T2> destination, MatchingContext context) {
 				return source?.Id == destination?.Id;
 			}
 		}
@@ -109,14 +113,15 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<T1>?
+			IList<T1>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<IEnumerable<T1>, IList<T1>>
 #else
 				IMergeMap<IEnumerable<T1>, IList<T1>>
 #endif
-				.Map(IEnumerable<T1>? source, IList<T1>? destination, MappingContext context) {
-				destination ??= new List<T1>();
+				.Map(IEnumerable<T1> source, IList<T1> destination, MappingContext context) {
+				if (destination == null)
+					destination = new List<T1>();
 				destination.Clear();
 				if (source != null) { 
 					foreach(var el in source) {
@@ -129,39 +134,39 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IEnumerable<T1>?
+			IEnumerable<T1>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
 #else
 				IMergeMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
 #endif
-				.Map(IDictionary<string, IDictionary<int, IList<T1>>>? source, IEnumerable<T1>? destination, MappingContext context) {
+				.Map(IDictionary<string, IDictionary<int, IList<T1>>> source, IEnumerable<T1> destination, MappingContext context) {
 				return Enumerable.Empty<T1>();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<IEnumerable<T1>, string>
 #else
 				IMergeMap<IEnumerable<T1>, string>
 #endif
-				.Map(IEnumerable<T1>? source, string? destination, MappingContext context) {
+				.Map(IEnumerable<T1> source, string destination, MappingContext context) {
 				return "Elements: " + source?.Count();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<T1>?
+			IList<T1>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<int, IList<T1>>
 #else
 				IMergeMap<int, IList<T1>>
 #endif
-				.Map(int source, IList<T1>? destination, MappingContext context) {
+				.Map(int source, IList<T1> destination, MappingContext context) {
 				return new T1[source];
 			}
 
@@ -169,13 +174,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			string?
+			string
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<Queue<T1>, string>
 #else
 				IMergeMap<Queue<T1>, string>
 #endif
-				.Map(Queue<T1>? source, string? destination, MappingContext context) {
+				.Map(Queue<T1> source, string destination, MappingContext context) {
 				throw new NotImplementedException();
 			}
 
@@ -183,13 +188,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<T1>?
+			IList<T1>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<T1[], IList<T1>>
 #else
 				IMergeMap<T1[], IList<T1>>
 #endif
-				.Map(T1[]? source, IList<T1>? destination, MappingContext context) {
+				.Map(T1[] source, IList<T1> destination, MappingContext context) {
 				return context.Mapper.Map<IEnumerable<T1>, IList<T1>>(source);
 			}
 		}
@@ -213,28 +218,29 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			IList<bool>?
+			IList<bool>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<IEnumerable<bool>, IList<bool>>
 #else
 				IMergeMap<IEnumerable<bool>, IList<bool>>
 #endif
-				.Map(IEnumerable<bool>? source, IList<bool>? destination, MappingContext context) {
+				.Map(IEnumerable<bool> source, IList<bool> destination, MappingContext context) {
 				return new List<bool>(32);
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			CategoryDto?
+			CategoryDto
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<Category, CategoryDto>
 #else
 				IMergeMap<Category, CategoryDto>
 #endif
-				.Map(Category? source, CategoryDto? destination, MappingContext context) {
+				.Map(Category source, CategoryDto destination, MappingContext context) {
 				if (source != null) {
-					destination ??= new CategoryDto();
+					if (destination == null)
+						destination = new CategoryDto();
 					destination.Id = source.Id;
 					destination.Parent = source.Parent?.Id;
 				}
@@ -244,15 +250,16 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			ProductDto?
+			ProductDto
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<Product, ProductDto>
 #else
 				IMergeMap<Product, ProductDto>
 #endif
-				.Map(Product? source, ProductDto? destination, MappingContext context) {
+				.Map(Product source, ProductDto destination, MappingContext context) {
 				if (source != null) {
-					destination ??= new ProductDto();
+					if (destination == null)
+						destination = new ProductDto();
 					destination.Code = source.Code;
 				}
 				return destination;
@@ -267,7 +274,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMatchMap<GenericClass<Product>, GenericClassDto<ProductDto>>
 #endif
-				.Match(GenericClass<Product>? source, GenericClassDto<ProductDto>? destination, MatchingContext context) {
+				.Match(GenericClass<Product> source, GenericClassDto<ProductDto> destination, MatchingContext context) {
 				return source?.Value.Code == destination?.Value.Code;
 			}
 		}
@@ -292,7 +299,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IEnumerable<T1>, int>
 #endif
-				.Map(IEnumerable<T1>? source, int destination, MappingContext context) {
+				.Map(IEnumerable<T1> source, int destination, MappingContext context) {
 				return source?.Count() ?? 0;
 			}
 
@@ -305,7 +312,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, int destination, MappingContext context) {
+				.Map(IList<T1> source, int destination, MappingContext context) {
 				return 42;
 			}
 		}
@@ -327,7 +334,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, int destination, MappingContext context) {
+				.Map(IList<T1> source, int destination, MappingContext context) {
 				return 36;
 			}
 		}
@@ -349,7 +356,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, int destination, MappingContext context) {
+				.Map(IList<T1> source, int destination, MappingContext context) {
 				return 36;
 			}
 		}
@@ -382,7 +389,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, int destination, MappingContext context) {
+				.Map(IList<T1> source, int destination, MappingContext context) {
 				return 36;
 			}
 		}
@@ -404,7 +411,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, int destination, MappingContext context) {
+				.Map(IList<T1> source, int destination, MappingContext context) {
 				return 36;
 			}
 		}
@@ -420,7 +427,7 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 				static
 #endif
-				T2? Map(T1? source, T2? destination, MappingContext context) {
+				T2 Map(T1 source, T2 destination, MappingContext context) {
 				return default(T2);
 			}
 		}
@@ -444,7 +451,7 @@ namespace NeatMapper.Tests.Mapping {
 #else
 				IMergeMap<IList<T1>, int>
 #endif
-				.Map(IList<T1>? source, int destination, MappingContext context) {
+				.Map(IList<T1> source, int destination, MappingContext context) {
 				return 36;
 			}
 		}
@@ -466,13 +473,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 				static
 #endif
-				T2? Map(IList<T1>? source, T2? destination, MappingContext context) {
+				T2 Map(IList<T1> source, T2 destination, MappingContext context) {
 				return default(T2);
 			}
 		}
 
 		public class EquatableTest : IEquatable<Product> {
-			public bool Equals(Product? other) {
+			public bool Equals(Product other) {
 				return false;
 			}
 		}
@@ -488,7 +495,7 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 				static
 #endif
-				T2? Map(IList<T1>? source, T2? destination, MappingContext context) {
+				T2 Map(IList<T1> source, T2 destination, MappingContext context) {
 				return default(T2);
 			}
 		}
@@ -504,19 +511,19 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Queue<T2>?
+			Queue<T2>
 #if NET7_0_OR_GREATER
 				IMergeMapStatic<IList<T1>, Queue<T2>>
 #else
 				IMergeMap<IList<T1>, Queue<T2>>
 #endif
-				.Map(IList<T1>? source, Queue<T2>? destination, MappingContext context) {
+				.Map(IList<T1> source, Queue<T2> destination, MappingContext context) {
 				return new Queue<T2>();
 			}
 		}
 
 
-		IMapper _mapper = null!;
+		IMapper _mapper = null;
 
 		[TestInitialize]
 		public void Initialize() {
@@ -621,7 +628,6 @@ namespace NeatMapper.Tests.Mapping {
 				});
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>(), 2));
-				TestUtils.AssertMapNotFound(() => mapper.Map<IList<int?>, int>(new List<int?>(), 2));
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ManagedTest>, int>(new List<ManagedTest>(), 2));
 				mapper.Map<IList<UnmanagedTest>, int>(new List<UnmanagedTest>(), 2);
 				mapper.Map<IList<Guid>, int>(new List<Guid>(), 2);
