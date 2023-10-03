@@ -135,9 +135,9 @@ namespace NeatMapper {
 		/// </returns>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		ICollection<TDestinationElement>?
+			ICollection<TDestinationElement>?
 #else
-		ICollection<TDestinationElement>
+			ICollection<TDestinationElement>
 #endif
 			Map<TSourceElement, TDestinationElement>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

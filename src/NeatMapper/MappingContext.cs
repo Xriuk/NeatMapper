@@ -1,4 +1,7 @@
 ﻿namespace NeatMapper {
+	/// <summary>
+	/// Contains informations and services for the current mapping operation
+	/// </summary>
 	public sealed class MappingContext : MatchingContext {
 		internal MappingContext() { }
 

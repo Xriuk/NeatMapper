@@ -10,7 +10,7 @@
 		/// </summary>
 		/// <param name="source">object to map, may be null</param>
 		/// <param name="context">mapping context, which allows nested mappings, services retrieval via DI, ...</param>
-		/// <returns>the newly created objec, may be null</returns>
+		/// <returns>the newly created object, may be null</returns>
 #if NET5_0_OR_GREATER
 			TDestination?
 #else

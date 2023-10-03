@@ -16,7 +16,7 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 		object?
 #else
-			object
+		object
 #endif
 			Map(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -30,8 +30,8 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.<br/>
-		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMapStatic{TSource, TDestination}"/>
-		/// (or the passed <paramref name="collectionElementComparer"/>), will create the destination collection if it is null and map each element individually
+		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
+		/// (or the passed <see cref="MappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
 		/// </summary>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>

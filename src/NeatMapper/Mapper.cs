@@ -20,16 +20,16 @@ namespace NeatMapper {
 			IServiceProvider
 #endif
 			serviceProvider = null) :
-			base(new MapperConfiguration(i => i == typeof(INewMap<,>)
+				base(new MapperConfiguration(i => i == typeof(INewMap<,>)
 #if NET7_0_OR_GREATER
-                || i == typeof(INewMapStatic<,>)
+					|| i == typeof(INewMapStatic<,>)
 #endif
-				,
-				i => i == typeof(IMergeMap<,>)
+					,
+					i => i == typeof(IMergeMap<,>)
 #if NET7_0_OR_GREATER
-                || i == typeof(IMergeMapStatic<,>)
+					|| i == typeof(IMergeMapStatic<,>)
 #endif
-				, configuration ?? new MapperConfigurationOptions()), serviceProvider) {
+					, configuration ?? new MapperConfigurationOptions()), serviceProvider) {
 
 			_mappingContext = new MappingContext {
 				ServiceProvider = _serviceProvider,
