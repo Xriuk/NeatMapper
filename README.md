@@ -42,7 +42,4 @@ Find specific instructions in the README of every package
 
 ## License
 
-Find all the licenses in the LICENSE of every package
-
-- [NeatMapper](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/LICENSE.md)
-- [NeatMapper.DependencyInjection](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.DependencyInjection/LICENSE.md)
+[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/LICENSE.md)

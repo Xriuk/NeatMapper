@@ -5,7 +5,7 @@
 ### Added
 
 - Added support for:
-  - .NET Framework 4.7, 4.8,
+  - .NET Framework 4.7, 4.8
   - .NET Core 3.1
   - .NET 5.0
 

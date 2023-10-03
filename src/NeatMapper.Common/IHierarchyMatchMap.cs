@@ -1,10 +1,10 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Interface which allows matching two objects of two given types
+	/// Interface which allows matching two objects of two given types or derived types
 	/// </summary>
-	/// <typeparam name="TSource">Source type</typeparam>
-	/// <typeparam name="TDestination">Destination type</typeparam>
-	public interface IMatchMap<TSource, TDestination> {
+	/// <typeparam name="TSource">Source type, includes derived types</typeparam>
+	/// <typeparam name="TDestination">Destination type, includes derived types</typeparam>
+	public interface IHierarchyMatchMap<TSource, TDestination> {
 		/// <summary>
 		/// Checks if two objects are the same (usually by comparing the keys of the two)
 		/// </summary>
@@ -14,13 +14,13 @@
 		/// <returns>true if the two objects match</returns>
 		bool Match(
 #if NET5_0_OR_GREATER
-			TSource? 
+			TSource?
 #else
 			TSource
 #endif
 			source,
 #if NET5_0_OR_GREATER
-			TDestination? 
+			TDestination?
 #else
 			TDestination
 #endif

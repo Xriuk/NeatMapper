@@ -310,6 +310,50 @@ namespace NeatMapper.Tests.Mapping {
 			}
 		}
 
+		public class HierarchyMatchers :
+#if NET7_0_OR_GREATER
+			IHierarchyMatchMapStatic<Product, ProductDto>,
+			IMergeMapStatic<LimitedProduct, ProductDto>
+#else
+			IHierarchyMatchMap<Product, ProductDto>,
+			IMergeMap<LimitedProduct, ProductDto>
+#endif
+			{
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				IHierarchyMatchMapStatic<Product, ProductDto>
+#else
+				IHierarchyMatchMap<Product, ProductDto>
+#endif
+				.Match(Product source, ProductDto destination, MatchingContext context) {
+				return source.Code == destination.Code;
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			ProductDto
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<LimitedProduct, ProductDto>
+#else
+				IMergeMap<LimitedProduct, ProductDto>
+#endif
+				.Map(LimitedProduct source, ProductDto destination, MappingContext context) {
+				if (source != null) {
+					if (destination == null)
+						destination = new LimitedProductDto();
+					destination.Code = source.Code;
+					destination.Categories = new List<int>();
+				}
+				return destination;
+			}
+		}
+
 		IMapper _mapper = null;
 
 		[TestInitialize]
@@ -595,6 +639,47 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreSame(b, result[1]);
 			Assert.AreEqual(7, result[1].Parent);
 			Assert.AreEqual(6, result[2].Id);
+		}
+
+		[TestMethod]
+		public void ShouldMapCollectionsWithHierarchyElementsComparer() {
+			var mapper = new Mapper(new MapperConfigurationOptions {
+				ScanTypes = new List<Type> { typeof(HierarchyMatchers) }
+			});
+
+			var a = new ProductDto {
+				Code = "Test1",
+				Categories = new List<int>()
+			};
+			var b = new ProductDto {
+				Code = "Test2",
+				Categories = new List<int>()
+			};
+			var c = new ProductDto {
+				Code = "Test4",
+				Categories = new List<int>()
+			};
+			var destination = new CustomCollection<ProductDto> { a, b, c };
+			var result = mapper.Map(new[] {
+				new LimitedProduct {
+					Code = "Test4",
+					Categories = new List<Category>()
+				},
+				new LimitedProduct {
+					Code = "Test1",
+					Categories = new List<Category>()
+				},
+				new LimitedProduct {
+					Code = "Test5",
+					Categories = new List<Category>()
+				}
+			}, destination);
+			Assert.IsNotNull(result);
+			Assert.AreSame(destination, result);
+			Assert.AreEqual(3, result.Count());
+			Assert.AreSame(a, result[0]);
+			Assert.AreSame(c, result[1]);
+			Assert.AreEqual("Test5", result[2].Code);
 		}
 
 		[TestMethod]

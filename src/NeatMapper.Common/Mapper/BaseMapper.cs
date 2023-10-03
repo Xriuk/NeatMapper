@@ -41,7 +41,8 @@ namespace NeatMapper.Common.Mapper {
 
 		internal MapData newMaps;
 		internal MapData mergeMaps;
-		internal MapData collectionElementComparers;
+		internal MapData matchers;
+		internal IReadOnlyDictionary<(Type From, Type To), Map> hierarchyMatchersMaps { get; set; }
 
 		internal BaseMapper(IMapperConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration;
@@ -55,13 +56,15 @@ namespace NeatMapper.Common.Mapper {
 				Maps = _configuration.MergeMaps,
 				GenericMaps = _configuration.GenericMergeMaps
 			};
-			collectionElementComparers = new MapData {
+			matchers = new MapData {
 				Maps = _configuration.Matchers,
 				GenericMaps = _configuration.GenericMatchers
 			};
+			hierarchyMatchersMaps = _configuration.HierarchyMatchers;
 		}
 
 
+		/// <inheritdoc cref="IMatcher.Match(object?, Type, object?, Type)" />
 		public bool Match(object source, Type sourceType, object destination, Type destinationType) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -165,11 +168,12 @@ namespace NeatMapper.Common.Mapper {
 
 			throw new MapNotFoundException(types);
 		}
-		
+
 		// (source, destination, context) => bool
 		protected Func<object[], bool> ElementComparerInternal((Type From, Type To) types, bool returnDefault = true) {
 			try {
-				var comparer = MapInternal(types, collectionElementComparers);
+				// Try retrieving a regular map
+				var comparer = MapInternal(types, matchers);
 				return (parameters) => {
 					try {
 						return (bool)comparer.Invoke(parameters);
@@ -180,7 +184,23 @@ namespace NeatMapper.Common.Mapper {
 				};
 			}
 			catch (MapNotFoundException) {
-				if(returnDefault)
+				// Try retrieving a hierarchy map
+				try {
+					var map = hierarchyMatchersMaps.First(m =>
+						m.Key.From.IsAssignableFrom(types.From) &&
+						m.Key.To.IsAssignableFrom(types.To));
+					return (parameters) => {
+						try {
+							return (bool)map.Value.Method.Invoke(map.Value.Method.IsStatic ? null : CreateOrReturnInstance(map.Value.Class), parameters);
+						}
+						catch (Exception e) {
+							throw new MatcherException(e, types);
+						}
+					};
+				}
+				catch {}
+
+				if (returnDefault)
 					return (_) => false;
 				else
 					throw new MatcherNotFound(types);

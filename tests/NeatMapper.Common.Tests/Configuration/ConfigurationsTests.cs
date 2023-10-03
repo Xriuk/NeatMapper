@@ -4,7 +4,6 @@ using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using static NeatMapper.Tests.Configuration.ConfigurationsTests;
 
 namespace NeatMapper.Tests.Configuration {
 	[TestClass]
@@ -186,6 +185,22 @@ namespace NeatMapper.Tests.Configuration {
 			IMatchMap<IList<T3>, IEnumerable<T3>> {
 
 				bool IMatchMap<IList<T3>, IEnumerable<T3>>.Match(IList<T3> source, IEnumerable<T3> destination, MatchingContext context) {
+					throw new NotImplementedException();
+				}
+			}
+		}
+
+		public class GenericHierarchyMatcher1<T1> :
+			IHierarchyMatchMap<T1, int> {
+			bool IHierarchyMatchMap<T1, int>.Match(T1 source, int destination, MatchingContext context) {
+				throw new NotImplementedException();
+			}
+		}
+
+		public class GenericHierarchyMatcher2 {
+			public class GenericHierarchyMatcher<T1> :
+			IHierarchyMatchMap<T1, int> {
+				bool IHierarchyMatchMap<T1, int>.Match(T1 source, int destination, MatchingContext context) {
 					throw new NotImplementedException();
 				}
 			}
@@ -470,6 +485,17 @@ namespace NeatMapper.Tests.Configuration {
 
 			Assert.AreEqual(0, config.Matchers.Count);
 			Assert.AreEqual(0, config.GenericMatchers.Count());
+		}
+
+		[TestMethod]
+		public void ShouldNotScanGenericHierarchyMatchers() {
+			var config = Configure(new MapperConfigurationOptions {
+				ScanTypes = new List<Type> { typeof(GenericHierarchyMatcher1<>), typeof(GenericHierarchyMatcher2.GenericHierarchyMatcher<>) }
+			});
+
+			Assert.AreEqual(0, config.Matchers.Count);
+			Assert.AreEqual(0, config.GenericMatchers.Count());
+			Assert.AreEqual(0, config.HierarchyMatchers.Count);
 		}
 	}
 }

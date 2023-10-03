@@ -425,10 +425,10 @@ IMapper mapper = new Mapper(new MapperConfigurationOptions {
     ScanTypes = new List<Type> { typeof(MyGenericMaps<>), typeof(MyMaps), ... }
 });
 
-// Map with struct
+// Specific int mapping
 var myGenericClassDto1 = mapper.Map<MyGenericClass<int>, MyGenericClassDto<int>>(myGenericClass1);
 
-// Map with class
+// Generic mapping
 var myGenericClassDto3 = mapper.Map<MyGenericClass<Product>, MyGenericClassDto<Product>>(myGenericClass3);
 ```
 
@@ -479,4 +479,4 @@ If you are using `Microsoft.Extensions.DependencyInjection` you may want to inst
 
 ## License
 
-[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/LICENSE.md)
+[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/LICENSE.md)

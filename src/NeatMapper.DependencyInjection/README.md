@@ -30,4 +30,4 @@ For information on how to use the Mapper, check [the main package README](https:
 
 ## License
 
-[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.DependencyInjection/LICENSE.md)
+[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/LICENSE.md)

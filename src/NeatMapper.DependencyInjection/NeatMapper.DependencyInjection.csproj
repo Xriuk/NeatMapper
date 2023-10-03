@@ -16,10 +16,11 @@
 		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<IncludeSymbols>True</IncludeSymbols>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
 	<ItemGroup>
-		<None Remove="LICENSE.md" />
+		<None Remove="..\..\LICENSE.md" />
 		<None Remove="README.md" />
 	</ItemGroup>
 
@@ -44,7 +45,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<EmbeddedResource Include="LICENSE.md">
+		<EmbeddedResource Include="..\..\LICENSE.md">
 			<Pack>True</Pack>
 			<PackagePath>\</PackagePath>
 		</EmbeddedResource>

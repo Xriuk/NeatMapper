@@ -92,13 +92,19 @@ namespace NeatMapper.Configuration {
 
 		#region MergeMap additional options
 		/// <summary>
-		/// <see cref="Core.IMatchMap{TSource, TDestination}.Match"/>
+		/// <see cref="IMatchMap{TSource, TDestination}.Match"/>
 		/// </summary>
 		/// <remarks>Method may be instance or static</remarks>
 		IReadOnlyDictionary<(Type From, Type To), Map> Matchers { get; }
 
 		/// <summary>
-		/// One or two open types which contain <see cref="Core.IMatchMap{TSource, TDestination}.Match"/> for the given open types.<br/>
+		/// <see cref="IHierarchyMatchMap{TSource, TDestination}.Match"/>
+		/// </summary>
+		/// <remarks>Method may be instance or static</remarks>
+		IReadOnlyDictionary<(Type From, Type To), Map> HierarchyMatchers { get; }
+
+		/// <summary>
+		/// One or two open types which contain <see cref="IMatchMap{TSource, TDestination}.Match"/> for the given open types.<br/>
 		/// (IEnumerable&lt;TSource&gt;, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TSource, TDestination&gt;<br/>
 		/// (IEnumerable&lt;TSource&gt;, MyNonGenericClass) =&gt; MyClass&lt;TSource&gt;<br/>
 		/// (MyNonGenericClass, IList&lt;TDestination&gt;) =&gt; MyClass&lt;TDestination&gt;

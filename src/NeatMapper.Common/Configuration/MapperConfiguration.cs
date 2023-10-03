@@ -15,7 +15,7 @@ namespace NeatMapper.Configuration {
 			var genericNewMaps = new List<GenericMap>();
 			var genericMergeMaps = new List<GenericMap>();
 
-			PopulateTypes(i => newMapTypeFilter.Invoke(i) || mergeMapTypeFilter.Invoke(i),
+			PopulateTypes((t, i) => newMapTypeFilter.Invoke(i) || mergeMapTypeFilter.Invoke(i),
 				i => newMapTypeFilter.Invoke(i) ? genericNewMaps : genericMergeMaps,
 				i => newMapTypeFilter.Invoke(i) ? newMaps : mergeMaps);
 
@@ -25,36 +25,53 @@ namespace NeatMapper.Configuration {
 			GenericMergeMaps = genericMergeMaps;
 
 
-			var collectionElementComparers = new Dictionary<(Type From, Type To), Map>();
-			var genericCollectionElementComparers = new List<GenericMap>();
+			var matchers = new Dictionary<(Type From, Type To), Map>();
+			var hierarchyMatchers = new Dictionary<(Type From, Type To), Map>();
+			var genericMatchers = new List<GenericMap>();
+			var genericHierarchyMatchers = new List<GenericMap>();
 
-			PopulateTypes(i => i == typeof(IMatchMap<,>)
+			PopulateTypes((t, i) => (i == typeof(IMatchMap<,>)
 #if NET7_0_OR_GREATER
-			|| i == typeof(IMatchMapStatic<,>)
+				|| i == typeof(IMatchMapStatic<,>)
 #endif
-			,
-				_ => genericCollectionElementComparers,
-				_ => collectionElementComparers);
+				) || ((i == typeof(IHierarchyMatchMap<,>)
+#if NET7_0_OR_GREATER
+				|| i == typeof(IHierarchyMatchMapStatic<,>)
+#endif
+			) && !t.ContainsGenericParameters),
 
-			Matchers = collectionElementComparers;
-			GenericMatchers = genericCollectionElementComparers;
+			i => (i == typeof(IMatchMap<,>)
+#if NET7_0_OR_GREATER
+				|| i == typeof(IMatchMapStatic<,>)
+#endif			
+			) ? genericMatchers : genericHierarchyMatchers,
+
+			i => (i == typeof(IMatchMap<,>)
+#if NET7_0_OR_GREATER
+				|| i == typeof(IMatchMapStatic<,>)
+#endif		
+			) ? matchers : hierarchyMatchers);
+
+			Matchers = matchers;
+			HierarchyMatchers = hierarchyMatchers;
+			GenericMatchers = genericMatchers;
 
 
 			MergeMapsCollectionsOptions = new MergeMapsCollectionsOptions(options.MergeMapsCollectionsOptions);
 
 
-			void PopulateTypes(Func<Type, bool> interfaceFilter, // GetGenericTypeDefinition
-				Func<Type, List<GenericMap>> genericMapsSelector, // GetGenericTypeDefinition
-				Func<Type, Dictionary<(Type From, Type To), Map>> mapsSelector // GetGenericTypeDefinition
+			void PopulateTypes(Func<Type, Type, bool> interfaceFilter, // Type, Interface GetGenericTypeDefinition
+				Func<Type, List<GenericMap>> genericMapsSelector, // Interface GetGenericTypeDefinition
+				Func<Type, Dictionary<(Type From, Type To), Map>> mapsSelector // Interface GetGenericTypeDefinition
 				) { 
 
 				foreach (var type in options.ScanTypes
 					.Distinct()
 					.Where(t => t.IsClass && !t.IsAbstract && (t.DeclaringType == null || !t.DeclaringType.IsGenericType) && t.GetInterfaces().Any(i =>
-						i.IsGenericType && interfaceFilter.Invoke(i.GetGenericTypeDefinition())))) {
+						i.IsGenericType && interfaceFilter.Invoke(t, i.GetGenericTypeDefinition())))) {
 
 					var interfaces = type.GetInterfaces()
-						.Where(i => i.IsGenericType && interfaceFilter.Invoke(i.GetGenericTypeDefinition()));
+						.Where(i => i.IsGenericType && interfaceFilter.Invoke(type, i.GetGenericTypeDefinition()));
 
 					if (type.IsGenericTypeDefinition) {
 						var typeArguments = type.GetGenericArguments();
@@ -117,6 +134,8 @@ namespace NeatMapper.Configuration {
 		public IEnumerable<GenericMap> GenericMergeMaps { get; }
 
 		public IReadOnlyDictionary<(Type From, Type To), Map> Matchers { get; }
+
+		public IReadOnlyDictionary<(Type From, Type To), Map> HierarchyMatchers { get; }
 
 		public IEnumerable<GenericMap> GenericMatchers { get; }
 

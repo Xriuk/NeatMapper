@@ -4,7 +4,7 @@
     <TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0</TargetFrameworks>
 		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">enable</Nullable>
 		<PackageId>NeatMapper.Common</PackageId>
-	  <Version>1.1.0</Version>
+	  <Version>1.2.0</Version>
 		<Authors>Xriuk</Authors>
 		<Title>.NEaT Mapper - Common</Title>
 		<Description>Common classes and interfaces for NeatMapper and NeatMapper.Async</Description>
@@ -15,10 +15,11 @@
 		<PackageIcon>icon.png</PackageIcon>
 		<IncludeSymbols>True</IncludeSymbols>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="LICENSE.md" />
+    <None Remove="..\..\LICENSE.md" />
     <None Remove="README.md" />
   </ItemGroup>
 
@@ -30,13 +31,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="LICENSE.md">
+    <EmbeddedResource Include="..\..\LICENSE.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </EmbeddedResource>
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\..\.editorconfig" Link=".editorconfig" />
     <None Include="..\..\icon.png">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>

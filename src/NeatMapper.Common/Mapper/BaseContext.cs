@@ -5,6 +5,9 @@
 using System;
 
 namespace NeatMapper.Common.Mapper {
+	/// <summary>
+	/// Common class for mapping contexts
+	/// </summary>
 	public abstract class BaseContext {
 		/// <summary>
 		/// Scoped service provider which can be used to retrieve additional services

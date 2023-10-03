@@ -1,6 +1,9 @@
 ﻿using NeatMapper.Common.Mapper;
 
 namespace NeatMapper {
+	/// <summary>
+	/// Contains informations and services for the current matching operation
+	/// </summary>
 	public class MatchingContext : BaseContext {
 		internal MatchingContext() { }
 
