@@ -1,4 +1,6 @@
-﻿namespace NeatMapper.Async {
+﻿using System.Threading.Tasks;
+
+namespace NeatMapper.Async {
 	/// <summary>
 	/// Map which allows mapping an object to an existing one asynchronously
 	/// </summary>

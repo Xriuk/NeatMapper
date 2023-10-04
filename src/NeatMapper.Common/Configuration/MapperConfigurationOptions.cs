@@ -36,13 +36,13 @@ namespace NeatMapper.Configuration {
 		/// Types which to scan for:<br/>
 		/// NewMap<br/>
 		/// MergeMap<br/>
-		/// <see cref="ICollectionElementComparer{TSource, TDestination}"/><br/>
+		/// MatchMap<br/>
 		/// If null will scan for all the assembly
 		/// </summary>
 		public ICollection<Type> ScanTypes { get; set; } = new List<Type>();
 
 		/// <summary>
-		/// Options applied to automatic collections mapping via <see cref="IMapperConfiguration.MergeMaps"/> or <see cref="IMapperConfiguration.GenericMergeMaps"/>
+		/// Options applied to automatic collections mapping via <see cref="MapperConfiguration.MergeMaps"/> or <see cref="MapperConfiguration.GenericMergeMaps"/>
 		/// </summary>
 		public MergeMapsCollectionsOptions MergeMapsCollectionsOptions { get; set; } = new MergeMapsCollectionsOptions();
 	}

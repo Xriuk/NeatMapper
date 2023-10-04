@@ -1,4 +1,6 @@
-﻿namespace NeatMapper.Async {
+﻿using System.Threading;
+
+namespace NeatMapper.Async {
 	/// <summary>
 	/// Contains informations and services for the current asynchronous mapping operation
 	/// </summary>

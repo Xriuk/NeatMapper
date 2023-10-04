@@ -8,7 +8,56 @@ using System.Linq;
 using System.Reflection;
 
 namespace NeatMapper.Configuration {
-	internal sealed class MapperConfiguration : IMapperConfiguration {
+	/// <summary>
+	/// Configuration info for a:<br/>
+	/// NewMap<br/>
+	/// MergeMap<br/>
+	/// MatchMap
+	/// </summary>
+	internal sealed class Map {
+		/// <summary>
+		/// Declaring class of the <see cref="Method"/>
+		/// </summary>
+		public Type Class { get; set; }
+
+		/// <summary>
+		/// Method to invoke
+		/// </summary>
+		/// <remarks>May be instance or static</remarks>
+		public MethodInfo Method { get; set; }
+	}
+
+	/// <summary>
+	/// Configuration info for a generic:<br/>
+	/// NewMap<br/>
+	/// MergeMap<br/>
+	/// MatchMap
+	/// </summary>
+	/// <remarks>At least one of <see cref="From"/> or <see cref="To"/> is an open generic type</remarks>
+	internal sealed class GenericMap {
+		/// <summary>
+		/// Source type, may be a generic open type
+		/// </summary>
+		public Type From { get; set; }
+
+		/// <summary>
+		/// Destination type, may be a generic open type
+		/// </summary>
+		public Type To { get; set; }
+
+		/// <summary>
+		/// Declaring class of the <see cref="Method"/>
+		/// </summary>
+		public Type Class { get; set; }
+
+		/// <summary>
+		/// Handle of the generic method, used with GetMethodFromHandle with generated concrete type during mapping
+		/// </summary>
+		/// <remarks>May be instance or static</remarks>
+		public RuntimeMethodHandle Method { get; set; }
+	}
+
+	internal sealed class MapperConfiguration {
 		public MapperConfiguration(Func<Type, bool> newMapTypeFilter, Func<Type, bool> mergeMapTypeFilter, MapperConfigurationOptions options) { 
 			var newMaps = new Dictionary<(Type From, Type To), Map>();
 			var mergeMaps = new Dictionary<(Type From, Type To), Map>();

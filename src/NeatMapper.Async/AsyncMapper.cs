@@ -1,5 +1,8 @@
 ﻿using NeatMapper.Common.Mapper;
 using NeatMapper.Configuration;
+using System;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace NeatMapper.Async {
 	public class AsyncMapper : BaseMapper, IAsyncMapper {
@@ -29,6 +32,56 @@ namespace NeatMapper.Async {
 			};
 		}
 
+		public Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+				object?
+#else
+				object
+#endif
+			> MapAsync(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+			Type destinationType,
+			CancellationToken cancellationToken = default) {
 
+
+		}
+
+		public Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> MapAsync(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+
+		}
 	}
 }

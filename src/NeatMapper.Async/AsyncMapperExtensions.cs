@@ -1,4 +1,8 @@
 ﻿using NeatMapper.Async.Internal;
+using System;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Async {
 	public static class AsyncMapperExtensions {

@@ -11,8 +11,6 @@ namespace NeatMapper {
 
 		protected override MatchingContext MatchingContext => _mappingContext;
 
-		[Obsolete("Use the constructor with the options")]
-		public Mapper() : this(new MapperConfigurationOptions(), null) {}
 		public Mapper(MapperConfigurationOptions configuration,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?

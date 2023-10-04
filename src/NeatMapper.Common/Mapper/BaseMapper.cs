@@ -35,7 +35,7 @@ namespace NeatMapper.Common.Mapper {
 		protected static IDictionary<Type, object> nonStaticMapsInstances = new ConcurrentDictionary<Type, object>();
 		protected static IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
 
-		internal readonly IMapperConfiguration _configuration;
+		internal readonly MapperConfiguration _configuration;
 		protected readonly IServiceProvider _serviceProvider;
 		protected abstract MatchingContext MatchingContext { get; }
 
@@ -44,7 +44,7 @@ namespace NeatMapper.Common.Mapper {
 		internal MapData matchers;
 		internal IReadOnlyDictionary<(Type From, Type To), Map> hierarchyMatchersMaps { get; set; }
 
-		internal BaseMapper(IMapperConfiguration configuration, IServiceProvider serviceProvider = null) {
+		internal BaseMapper(MapperConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration;
 			_serviceProvider = serviceProvider ?? EmptyServiceProviderInstance;
 
@@ -64,7 +64,7 @@ namespace NeatMapper.Common.Mapper {
 		}
 
 
-		/// <inheritdoc cref="IMatcher.Match(object?, Type, object?, Type)" />
+		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type)" />
 		public bool Match(object source, Type sourceType, object destination, Type destinationType) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));

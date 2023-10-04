@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.0.0] - Unreleased
+
+### Removed
+
+- Mapper empty constructor
+
+### Changed
+
+- NeatMapper.Common dependency version
+
 ## [1.1.0] - 2023-10-02
 
 ### Added
