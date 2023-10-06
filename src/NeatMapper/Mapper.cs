@@ -223,7 +223,8 @@ namespace NeatMapper {
 
 						if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
 							foreach (var element in sourceEnumerable) {
-								addMethod.Invoke(destination, new object[] { elementMapper.Invoke(new object[] { element, sourceAndContext[1] }) });
+								var destinationElement = elementMapper.Invoke(new object[] { element, sourceAndContext[1] });
+								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
 							return ConvertCollectionToType(destination, types.To);
@@ -324,6 +325,7 @@ namespace NeatMapper {
 							}
 						}
 
+						// (source, destination, context) => bool
 						Func<object[], bool> elementComparer;
 						if (mappingOptions?.Matcher != null) {
 							elementComparer = (parameters) => {
