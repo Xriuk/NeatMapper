@@ -39,13 +39,13 @@ namespace NeatMapper.Tests.Configuration {
 
 
 
-			IDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
 
-			IDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
 
 			Dictionary<(Type, Type), AdditionalMap> _matchMaps;
 
-			IDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
 		}
 
 		public class NotParameterlessClass : IMatchMap<string, int> {
@@ -62,6 +62,44 @@ namespace NeatMapper.Tests.Configuration {
 			bool IMatchMap<IList<T1>, IEnumerable<T1>>.Match(IList<T1> source, IEnumerable<T1> destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
+
+			public bool MyMethod(int source, string dest, MatchingContext ctx) {
+				throw new NotImplementedException();
+			}
+		}
+
+		public class AdditionalMapsOpenGeneric : IAdditionalMapsOptions {
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+
+			Dictionary<(Type, Type), AdditionalMap> _matchMaps  = new Dictionary<(Type, Type), AdditionalMap> {
+				{ (typeof(string), typeof(int)), new AdditionalMap{
+						Method = typeof(GenericMap1<>).GetMethod("MyMethod")
+							?? throw new InvalidOperationException(),
+						IgnoreIfAlreadyAdded = true
+					}
+				}
+			};
+
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
+		}
+
+		public class AdditionalMapsClosedGeneric : IAdditionalMapsOptions {
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+
+			Dictionary<(Type, Type), AdditionalMap> _matchMaps = new Dictionary<(Type, Type), AdditionalMap> {
+				{ (typeof(string), typeof(int)), new AdditionalMap{
+						Method = typeof(GenericMap1<int>).GetMethod("MyMethod")
+							?? throw new InvalidOperationException(),
+						IgnoreIfAlreadyAdded = true
+					}
+				}
+			};
+
+			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
 		}
 
 		public class GenericMap2<T1, T2> :
@@ -543,6 +581,17 @@ namespace NeatMapper.Tests.Configuration {
 			Assert.AreEqual(0, config.MatchMaps.Count);
 			Assert.AreEqual(0, config.GenericMatchMaps.Count());
 			Assert.AreEqual(0, config.HierarchyMatchMaps.Count);
+		}
+
+		[TestMethod]
+		public void ShouldAllowAdditionalMapsInClosedGenerics() {
+			Configure(new MapperConfigurationOptions(), new AdditionalMapsClosedGeneric());
+		}
+
+		[TestMethod]
+		public void ShouldNotAllowAdditionalMapsInOpenGenericTypes() {
+			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new MapperConfigurationOptions(), new AdditionalMapsOpenGeneric()));
+			Assert.AreEqual("Additional map methods cannot be generic or specified in an open generic class", exc.Message);
 		}
 	}
 }

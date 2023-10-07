@@ -15,7 +15,33 @@ namespace NeatMapper.Async {
 	public class AsyncMapper : BaseMapper, IAsyncMapper {
 		protected override MatchingContext MatchingContext { get; }
 
+		public AsyncMapper(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			AsyncMapperOptions?
+#else
+			AsyncMapperOptions
+#endif
+			mapperOptions,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) : this(new MapperConfigurationOptions(), mapperOptions, serviceProvider) { }
+		public AsyncMapper(MapperConfigurationOptions configurationOptions,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) : this(configurationOptions, null, serviceProvider) { }
 		public AsyncMapper(MapperConfigurationOptions configuration,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			AsyncMapperOptions?
+#else
+			AsyncMapperOptions
+#endif
+			mapperOptions,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
@@ -31,7 +57,7 @@ namespace NeatMapper.Async {
 #if NET7_0_OR_GREATER
 					|| i == typeof(IAsyncMergeMapStatic<,>)
 #endif
-					, configuration ?? new MapperConfigurationOptions()), serviceProvider) {
+					, configuration ?? new MapperConfigurationOptions(), mapperOptions), serviceProvider) {
 
 			MatchingContext = new MatchingContext {
 				ServiceProvider = serviceProvider,

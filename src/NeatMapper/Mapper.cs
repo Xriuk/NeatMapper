@@ -14,6 +14,19 @@ namespace NeatMapper {
 
 		protected override MatchingContext MatchingContext => _mappingContext;
 
+		public Mapper(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MapperOptions?
+#else
+			MapperOptions
+#endif
+			mapperOptions,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) : this(new MapperConfigurationOptions(), mapperOptions, serviceProvider) { }
 		public Mapper(MapperConfigurationOptions configurationOptions,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?

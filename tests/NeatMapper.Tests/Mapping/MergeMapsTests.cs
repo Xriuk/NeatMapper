@@ -1237,5 +1237,14 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 			}
 		}
+
+		[TestMethod]
+		public void ShouldMapWithAdditionalMaps() {
+			var options = new MapperOptions();
+			options.AddMergeMap<string, int>((s, d, _) => (s?.Length ?? 0) + 2);
+			var mapper = new Mapper(options);
+
+			Assert.AreEqual(6, mapper.Map("Test", 2));
+		}
 	}
 }

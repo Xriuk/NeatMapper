@@ -171,9 +171,16 @@ namespace NeatMapper.Configuration {
 			}
 
 			void AddTypes(Dictionary<(Type From, Type To), MethodInfo> maps,
-				IDictionary<(Type From, Type To), AdditionalMap> addMaps) {
+				IReadOnlyDictionary<(Type From, Type To), AdditionalMap> addMaps) {
 
 				foreach (var map in addMaps) {
+					if ((map.Key.From.IsGenericType && !map.Key.From.IsConstructedGenericType) ||
+						(map.Key.To.IsGenericType && !map.Key.To.IsConstructedGenericType) ||
+						map.Value.Method.IsGenericMethod ||
+						(map.Value.Method.DeclaringType.IsGenericType && !map.Value.Method.DeclaringType.IsConstructedGenericType)) {
+
+						throw new InvalidOperationException("Additional map methods cannot be generic or specified in an open generic class");
+					}
 					if (!map.Value.Method.IsStatic && map.Value.Method.DeclaringType.GetConstructor(Type.EmptyTypes) == null)
 						throw new InvalidOperationException($"Map {map.Value.Method.Name} in class {map.Value.Method.DeclaringType.FullName ?? map.Value.Method.DeclaringType.Name} cannot be instantiated because the class has no parameterless constructor. Either add a parameterless constructor to the class or move the map method to another class");
 					if (maps.ContainsKey(map.Key)) {

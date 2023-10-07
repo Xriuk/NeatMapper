@@ -25,6 +25,7 @@ namespace NeatMapper.Async {
 #else
 			TSource
 #endif
-			source, AsyncMappingContext context);
+			source,
+			AsyncMappingContext context);
 	}
 }

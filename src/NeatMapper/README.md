@@ -477,6 +477,22 @@ IMapper mapper = new Mapper(new MapperConfigurationOptions {
 
 If you are using `Microsoft.Extensions.DependencyInjection` you may want to install [NeatMapper.DependencyInjection](https://www.nuget.org/packages/NeatMapper.DependencyInjection) so that everything will be automatically configured.
 
+### "E fattel tu" (custom maps with lambdas/delegates)
+
+You can expand the mapper by creating your own maps on the spot outside mapping classes or build custom maps with Reflection and Expressions and compile them to delegates.
+
+```csharp
+var mapperOptions = new MapperOptions();
+mapperOptions.AddNewMap<string, int>((s, _) => s?.Length ?? 0);
+
+var mapper = new Mapper(options); // Or new Mapper(new MapperConfigurationOptions { ... }, options);
+mapper.Map<string, int>("Hello world"); // 11
+```
+
+### Answer to the Ultimate Question of Life, the Universe, and Everything
+
+You can find other usage examples in the extended [tests project](https://github.com/Xriuk/NeatMapper/tree/main/tests/NeatMapper.Tests).
+
 ## License
 
 [Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/LICENSE.md)

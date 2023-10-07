@@ -584,5 +584,14 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 			}
 		}
+
+		[TestMethod]
+		public async Task ShouldMapWithAdditionalMaps() {
+			var options = new AsyncMapperOptions();
+			options.AddNewMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0));
+			var mapper = new AsyncMapper(options);
+
+			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
+		}
 	}
 }
