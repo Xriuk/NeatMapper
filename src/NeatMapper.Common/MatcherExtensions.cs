@@ -3,7 +3,7 @@
 namespace NeatMapper {
 	public static class MatcherExtensions {
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMapStatic{TSource, TDestination}.Match"/>
+		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
 		/// </summary>
 		/// <typeparam name="TSource">type of the source object, used to retrieve the available comparers</typeparam>
 		/// <typeparam name="TDestination">type of the destination object, used to retrieve the available comparers</typeparam>

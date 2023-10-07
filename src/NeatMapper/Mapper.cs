@@ -51,7 +51,13 @@ namespace NeatMapper {
 #endif
 			source,
 			Type sourceType,
-			Type destinationType) {
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -65,8 +71,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var types = (From: sourceType, To: destinationType);
-			object 
-				result;
+			object result;
 			try {
 				result = MapInternal(types, newMaps)
 					.Invoke(new object[] { source, _mappingContext });

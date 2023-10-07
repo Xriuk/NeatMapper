@@ -5,6 +5,15 @@
 ### Changed
 
 - NeatMapper dependency version
+- Optimized injection to share the same instance between `IMapper` and `IMatcher` where possible
+
+### Added
+
+- Added support for:
+  - .NET Framework 4.7, 4.8
+  - .NET Standard 2.1 (not tested)
+  - .NET Core 3.1
+  - .NET 5.0
 
 ## [1.0.2] - 2023-10-02
 

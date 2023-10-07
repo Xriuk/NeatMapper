@@ -65,15 +65,14 @@ namespace NeatMapper.Async {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var types = (From: sourceType, To: destinationType);
-			object
-				result;
+			object result;
 			try {
 				result = await TaskUtils.AwaitTask<object>((Task)MapInternal(types, newMaps)
 					.Invoke(new object[] { source, CreateMappingContext(cancellationToken) }));
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = await TaskUtils.AwaitTask<object>((Task)MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, CreateMappingContext(cancellationToken) }));
+					result = await MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, CreateMappingContext(cancellationToken) });
 				}
 				catch (MapNotFoundException) {
 					object destination;
@@ -84,8 +83,15 @@ namespace NeatMapper.Async {
 						throw exc;
 					}
 
+					// Should handle exceptions
 					result = await MapAsync(source, sourceType, destination, destinationType, null, cancellationToken);
 				}
+				catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+					throw new MappingException(e, types);
+				}
+			}
+			catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+				throw new MappingException(e, types);
 			}
 
 			// Should not happen
@@ -149,11 +155,17 @@ namespace NeatMapper.Async {
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = await TaskUtils.AwaitTask<object>((Task)MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source, destination, CreateMappingContext(cancellationToken) }));
+					result = await MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source, destination, CreateMappingContext(cancellationToken) });
 				}
 				catch (MapNotFoundException) {
 					throw exc;
 				}
+				catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+					throw new MappingException(e, types);
+				}
+			}
+			catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+				throw new MappingException(e, types);
 			}
 
 			// Should not happen
@@ -233,7 +245,13 @@ namespace NeatMapper.Async {
 
 						if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
 							foreach (var element in sourceEnumerable) {
-								var destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { element, sourceAndContext[1] }));
+								object destinationElement;
+								try {
+									destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { element, sourceAndContext[1] }));
+								}
+								catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+									throw new MappingException(e, types);
+								}
 								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
@@ -435,7 +453,14 @@ namespace NeatMapper.Async {
 												}
 
 												if (mergeElementMapper != null) {
-													var mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, sourceDestinationAndContext[2] }));
+													object mergeResult;
+													try { 
+														mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, sourceDestinationAndContext[2] }));
+													}
+													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+														throw new MappingException(e, types);
+													}
+
 													if (mergeResult != matchingDestinationElement) {
 														elementsToRemove.Add(matchingDestinationElement);
 														elementsToAdd.Add(mergeResult);
@@ -443,13 +468,28 @@ namespace NeatMapper.Async {
 												}
 												else {
 													elementsToRemove.Add(matchingDestinationElement);
-													var newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+
+													object newResult;
+													try { 
+														newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+													}
+													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+														throw new MappingException(e, types);
+													}
+
 													elementsToAdd.Add(newResult);
 												}
 											}
 											else {
 												if (newElementMapper != null) {
-													var newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+													object newResult;
+													try { 
+														newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+													}
+													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+														throw new MappingException(e, types);
+													}
+
 													elementsToAdd.Add(newResult);
 												}
 												else {
@@ -462,7 +502,14 @@ namespace NeatMapper.Async {
 														tempMergeMapper = true;
 													}
 
-													var mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, sourceDestinationAndContext[2] }));
+													object mergeResult;
+													try { 
+														mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, sourceDestinationAndContext[2] }));
+													}
+													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
+														throw new MappingException(e, types);
+													}
+
 													elementsToAdd.Add(mergeResult);
 												}
 											}

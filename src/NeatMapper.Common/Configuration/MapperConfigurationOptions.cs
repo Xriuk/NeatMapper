@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace NeatMapper.Configuration {
 	/// <summary>
-	/// Options applied to automatic collections mapping via <see cref="IMapperConfiguration.MergeMaps"/> or <see cref="IMapperConfiguration.GenericMergeMaps"/>
+	/// Options applied to automatic collections mapping via <see cref="MapperConfiguration.MergeMaps"/> or <see cref="MapperConfiguration.GenericMergeMaps"/>
 	/// </summary>
 	public sealed class MergeMapsCollectionsOptions {
 		public MergeMapsCollectionsOptions() { }
@@ -15,7 +15,7 @@ namespace NeatMapper.Configuration {
 
 		/// <summary>
 		/// If true, will remove all the elements from destination which do not have a corresponding element in source,
-		/// matched with <see cref="ICollectionElementComparer{TSource, TDestination}"/>
+		/// matched with <see cref="IMatchMap{TSource, TDestination}"/>
 		/// </summary>
 		/// <remarks>Defaults to true</remarks>
 		public bool RemoveNotMatchedDestinationElements { get; set; } = true;

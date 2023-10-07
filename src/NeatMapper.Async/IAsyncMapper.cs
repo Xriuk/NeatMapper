@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Async {
 	/// <summary>
-	/// Interface which allows asynchronously mapping an object to a new one or an existing one
+	/// Interface which allows mapping an object to a new one or an existing one asynchronously
 	/// </summary>
 	public interface IAsyncMapper {
 		/// <summary>

@@ -22,7 +22,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeatMapper.Async.Tests", "tests\NeatMapper.Async.Tests\NeatMapper.Async.Tests.csproj", "{CE6D9E1B-9C3B-4573-91E4-F28F0786C378}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.Async.Tests", "tests\NeatMapper.Async.Tests\NeatMapper.Async.Tests.csproj", "{CE6D9E1B-9C3B-4573-91E4-F28F0786C378}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeatMapper.DependencyInjection.Tests", "tests\NeatMapper.DependencyInjection.Tests\NeatMapper.DependencyInjection.Tests.csproj", "{04C8672E-98D5-4CD9-ABC4-2478ADCDDCB9}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -59,6 +61,10 @@ Global
 		{CE6D9E1B-9C3B-4573-91E4-F28F0786C378}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE6D9E1B-9C3B-4573-91E4-F28F0786C378}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE6D9E1B-9C3B-4573-91E4-F28F0786C378}.Release|Any CPU.Build.0 = Release|Any CPU
+		{04C8672E-98D5-4CD9-ABC4-2478ADCDDCB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{04C8672E-98D5-4CD9-ABC4-2478ADCDDCB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{04C8672E-98D5-4CD9-ABC4-2478ADCDDCB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{04C8672E-98D5-4CD9-ABC4-2478ADCDDCB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -23,11 +23,20 @@ namespace NeatMapper.Async {
 			TDestination
 #endif
 			> MapAsync<TDestination>(this IAsyncMapper mapper, object source, CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			if (source == null)
 				throw new ArgumentNullException(nameof(source));
 			return TaskUtils.AwaitTask<TDestination>(mapper.MapAsync(source, source.GetType(), typeof(TDestination), cancellationToken));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>
@@ -52,9 +61,18 @@ namespace NeatMapper.Async {
 #endif
 			source,
 			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			return TaskUtils.AwaitTask<TDestination>(mapper.MapAsync(source, typeof(TSource), typeof(TDestination), cancellationToken));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>
@@ -89,9 +107,18 @@ namespace NeatMapper.Async {
 #endif
 			destination,
 			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			return TaskUtils.AwaitTask<TDestination>(mapper.MapAsync(source, typeof(TSource), destination, typeof(TDestination), null, cancellationToken));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>
@@ -133,9 +160,18 @@ namespace NeatMapper.Async {
 #endif
 			mappingOptions,
 			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			return TaskUtils.AwaitTask<TDestination>(mapper.MapAsync(source, typeof(TSource), destination, typeof(TDestination), mappingOptions, cancellationToken));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <summary>

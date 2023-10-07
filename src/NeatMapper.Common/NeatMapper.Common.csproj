@@ -16,6 +16,7 @@
 		<IncludeSymbols>True</IncludeSymbols>
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

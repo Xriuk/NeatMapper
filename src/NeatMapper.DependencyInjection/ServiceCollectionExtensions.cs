@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using NeatMapper;
 using NeatMapper.Configuration;
+using System.Linq;
 
 namespace Microsoft.Extensions.DependencyInjection {
 	public static class ServiceCollectionExtensions {
@@ -13,16 +13,31 @@ namespace Microsoft.Extensions.DependencyInjection {
 		/// <param name="matcherLifetime">lifetime of the <see cref="IMatcher"/> service</param>
 		/// <returns>the same services collection so multiple calls could be chained</returns>
 		public static IServiceCollection AddNeatMapper(this IServiceCollection services, ServiceLifetime mapperLifetime = ServiceLifetime.Scoped, ServiceLifetime matcherLifetime = ServiceLifetime.Scoped) {
-			services.TryAdd(new ServiceDescriptor(
-				typeof(IMatcher),
+			services.AddOptions();
+			
+			bool hasMatcher = services.Any(s => s.ServiceType == typeof(IMatcher));
+			
+			services.Add(new ServiceDescriptor(
+				typeof(Mapper),
 				s => new Mapper(s.GetRequiredService<IOptions<MapperConfigurationOptions>>().Value, s),
-				matcherLifetime
+				hasMatcher || (mapperLifetime == matcherLifetime && (mapperLifetime == ServiceLifetime.Singleton || mapperLifetime == ServiceLifetime.Scoped)) ?
+					mapperLifetime :
+					ServiceLifetime.Transient
 			));
 			services.Add(new ServiceDescriptor(
 				typeof(IMapper),
-				s => new Mapper(s.GetRequiredService<IOptions<MapperConfigurationOptions>>().Value, s),
+				s => s.GetRequiredService<Mapper>(),
 				mapperLifetime
 			));
+
+			// In case it wasn't already registered by NeatMapper.Async.DependencyInjection
+			if (!hasMatcher) {
+				services.Add(new ServiceDescriptor(
+					typeof(IMatcher),
+					s => s.GetRequiredService<Mapper>(),
+					matcherLifetime
+				));
+			}
 
 			return services;
 		}

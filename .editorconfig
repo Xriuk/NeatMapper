@@ -1,4 +1,10 @@
 ﻿[*.cs]
 
-# CS1591: Manca il commento XML per il tipo o il membro visibile pubblicamente
-dotnet_diagnostic.CS1591.severity = suggestion
+# Wrong ending tag
+dotnet_diagnostic.CS1570.severity = none
+
+# Missing param tag
+dotnet_diagnostic.CS1573.severity = none
+
+# Missing comment
+dotnet_diagnostic.CS1591.severity = none

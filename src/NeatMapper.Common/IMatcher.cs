@@ -6,7 +6,7 @@ namespace NeatMapper {
 	/// </summary>
 	public interface IMatcher {
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMapStatic{TSource, TDestination}.Match"/>.
+		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
 		/// This will create a delegate which can be invoked multiple times
 		/// </summary>
 		/// <param name="source">object to compare, may be null</param>
