@@ -9,6 +9,9 @@ using System.Collections;
 using System.Linq;
 
 namespace NeatMapper.Async {
+	/// <summary>
+	/// Default implementation for <see cref="IAsyncMapper"/> and <see cref="IMatcher"/>
+	/// </summary>
 	public class AsyncMapper : BaseMapper, IAsyncMapper {
 		protected override MatchingContext MatchingContext { get; }
 
@@ -51,6 +54,12 @@ namespace NeatMapper.Async {
 			source,
 			Type sourceType,
 			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			AsyncMappingOptions?
+#else
+			AsyncMappingOptions
+#endif
+			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -60,7 +69,7 @@ namespace NeatMapper.Async {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
@@ -96,7 +105,7 @@ namespace NeatMapper.Async {
 
 			// Should not happen
 			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name}  is not assignable to type  {destinationType.FullName ?? destinationType.Name}");
 
 			return result;
 
@@ -127,9 +136,9 @@ namespace NeatMapper.Async {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
+			AsyncMappingOptions?
 #else
-			MappingOptions
+			AsyncMappingOptions
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
@@ -141,11 +150,11 @@ namespace NeatMapper.Async {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
-				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
+				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name}  is not assignable to type  {destinationType.FullName ?? destinationType.Name}", nameof(destination));
 
 			var types = (From: sourceType, To: destinationType);
 			object result;
@@ -170,7 +179,7 @@ namespace NeatMapper.Async {
 
 			// Should not happen
 			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name}  is not assignable to type  {destinationType.FullName ?? destinationType.Name}");
 
 			return result;
 

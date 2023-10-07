@@ -4,6 +4,7 @@ using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace NeatMapper.Tests.Configuration {
 	[TestClass]
@@ -18,6 +19,33 @@ namespace NeatMapper.Tests.Configuration {
 			bool IMatchMap<string, int>.Match(string source, int destination, MatchingContext context) {
 				throw new NotImplementedException();
 			}
+		}
+
+		public class AdditionalMaps : IAdditionalMapsOptions {
+			public AdditionalMaps() { }
+			public AdditionalMaps(bool ignore) {
+				_matchMaps = new Dictionary<(Type, Type), AdditionalMap> {
+					{ (typeof(string), typeof(int)), new AdditionalMap{
+						Method = typeof(AdditionalMaps).GetMethod(nameof(MyMethod), BindingFlags.Instance | BindingFlags.NonPublic)
+							?? throw new InvalidOperationException(),
+						IgnoreIfAlreadyAdded = ignore
+					} }
+				};
+			}
+
+			private bool MyMethod(string str, int n, MatchingContext c) {
+				return false;
+			}
+
+
+
+			IDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+
+			IDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
+
+			Dictionary<(Type, Type), AdditionalMap> _matchMaps;
+
+			IDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
 		}
 
 		public class NotParameterlessClass : IMatchMap<string, int> {
@@ -206,9 +234,9 @@ namespace NeatMapper.Tests.Configuration {
 			}
 		}
 
-		internal static MapperConfiguration Configure(MapperConfigurationOptions options) {
+		internal static MapperConfiguration Configure(MapperConfigurationOptions options, IAdditionalMapsOptions additionalOptions = null) {
 			// MatchMap is always configured
-			return new MapperConfiguration(i => false, i => false, options);
+			return new MapperConfiguration(i => false, i => false, options, additionalOptions);
 		}
 
 
@@ -223,9 +251,28 @@ namespace NeatMapper.Tests.Configuration {
 
 		[TestMethod]
 		public void ShouldNotAllowDuplicateMaps() {
-			TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(Map1), typeof(Map2) }
-			}));
+			// Class - Class
+			{ 
+				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+					ScanTypes = new List<Type> { typeof(Map1), typeof(Map2) }
+				}));
+			}
+
+			// Class - Additional maps (throws)
+			{
+				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+					ScanTypes = new List<Type> { typeof(Map1) }
+				}, new AdditionalMaps(false)));
+			}
+
+			// Class - Additional maps (ignores)
+			{
+				var config = Configure(new MapperConfigurationOptions {
+					ScanTypes = new List<Type> { typeof(Map1) }
+				}, new AdditionalMaps(true));
+				Assert.AreEqual(1, config.MatchMaps.Count);
+				Assert.AreSame(typeof(Map1), config.MatchMaps.Single().Value.DeclaringType);
+			}
 		}
 
 		[TestMethod]
@@ -483,8 +530,8 @@ namespace NeatMapper.Tests.Configuration {
 				ScanTypes = new List<Type> { typeof(GenericNestedMap<,>) }
 			});
 
-			Assert.AreEqual(0, config.Matchers.Count);
-			Assert.AreEqual(0, config.GenericMatchers.Count());
+			Assert.AreEqual(0, config.MatchMaps.Count);
+			Assert.AreEqual(0, config.GenericMatchMaps.Count());
 		}
 
 		[TestMethod]
@@ -493,9 +540,9 @@ namespace NeatMapper.Tests.Configuration {
 				ScanTypes = new List<Type> { typeof(GenericHierarchyMatcher1<>), typeof(GenericHierarchyMatcher2.GenericHierarchyMatcher<>) }
 			});
 
-			Assert.AreEqual(0, config.Matchers.Count);
-			Assert.AreEqual(0, config.GenericMatchers.Count());
-			Assert.AreEqual(0, config.HierarchyMatchers.Count);
+			Assert.AreEqual(0, config.MatchMaps.Count);
+			Assert.AreEqual(0, config.GenericMatchMaps.Count());
+			Assert.AreEqual(0, config.HierarchyMatchMaps.Count);
 		}
 	}
 }

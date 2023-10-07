@@ -8,6 +8,13 @@ using System;
 namespace NeatMapper.Tests {
 	[TestClass]
 	public class ServiceCollectionExtensionsTest {
+		public class Maps : INewMap<string, int> {
+			int INewMap<string, int>.Map(string source, MappingContext context) {
+				return source?.Length ?? 0;
+			}
+		}
+
+
 		[TestMethod]
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
@@ -143,6 +150,32 @@ namespace NeatMapper.Tests {
 				scope.ServiceProvider.GetRequiredService<IMapper>();
 				scope.ServiceProvider.GetRequiredService<IMatcher>();
 			}
+		}
+
+		[TestMethod]
+		public void ShouldUseMapperConfigurationOptions() {
+			var serviceCollection = new ServiceCollection();
+			serviceCollection.AddNeatMapper();
+			serviceCollection.Configure<MapperConfigurationOptions>(o => {
+				o.ScanTypes.Add(typeof(Maps));
+			});
+			IServiceProvider services = serviceCollection.BuildServiceProvider();
+
+			var mapper = services.GetRequiredService<IMapper>();
+			mapper.Map<string, int>("AAA");
+		}
+
+		[TestMethod]
+		public void ShouldUseMapperOptions() {
+			var serviceCollection = new ServiceCollection();
+			serviceCollection.AddNeatMapper();
+			serviceCollection.Configure<MapperOptions>(o => {
+				o.AddNewMap<string, int>((s, _) => s?.Length ?? 0);
+			});
+			IServiceProvider services = serviceCollection.BuildServiceProvider();
+
+			var mapper = services.GetRequiredService<IMapper>();
+			mapper.Map<string, int>("AAA");
 		}
 	}
 }

@@ -21,16 +21,12 @@ namespace NeatMapper.Common.Mapper {
 		}
 		internal static readonly EmptyServiceProvider EmptyServiceProviderInstance = new EmptyServiceProvider();
 		internal sealed class MapData {
-			public IReadOnlyDictionary<(Type From, Type To), Map> Maps { get; set; }
+			public IReadOnlyDictionary<(Type From, Type To), MethodInfo> Maps { get; set; }
 
 			public IEnumerable<GenericMap> GenericMaps { get; set; }
 
 			public Dictionary<(Type From, Type To), Func<object[], object>> GenericCache { get; set; } = new Dictionary<(Type From, Type To), Func<object[], object>>();
 		}
-
-		// T[] Enumerable.ToArray(this IEnumerable<T> source);
-		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
-			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
 
 		protected static IDictionary<Type, object> nonStaticMapsInstances = new ConcurrentDictionary<Type, object>();
 		protected static IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
@@ -42,9 +38,12 @@ namespace NeatMapper.Common.Mapper {
 		internal MapData newMaps;
 		internal MapData mergeMaps;
 		internal MapData matchers;
-		internal IReadOnlyDictionary<(Type From, Type To), Map> hierarchyMatchersMaps { get; set; }
+		internal IReadOnlyDictionary<(Type From, Type To), MethodInfo> hierarchyMatchersMaps { get; set; }
 
 		internal BaseMapper(MapperConfiguration configuration, IServiceProvider serviceProvider = null) {
+			if(configuration == null)
+				throw new ArgumentNullException(nameof(configuration));
+
 			_configuration = configuration;
 			_serviceProvider = serviceProvider ?? EmptyServiceProviderInstance;
 
@@ -57,10 +56,10 @@ namespace NeatMapper.Common.Mapper {
 				GenericMaps = _configuration.GenericMergeMaps
 			};
 			matchers = new MapData {
-				Maps = _configuration.Matchers,
-				GenericMaps = _configuration.GenericMatchers
+				Maps = _configuration.MatchMaps,
+				GenericMaps = _configuration.GenericMatchMaps
 			};
-			hierarchyMatchersMaps = _configuration.HierarchyMatchers;
+			hierarchyMatchersMaps = _configuration.HierarchyMatchMaps;
 		}
 
 
@@ -89,7 +88,7 @@ namespace NeatMapper.Common.Mapper {
 				var map = mapData.Maps[types];
 				return (parameters) => {
 					try {
-						return map.Method.Invoke(map.Method.IsStatic ? null : CreateOrReturnInstance(map.Class), parameters);
+						return map.Invoke(map.IsStatic ? null : CreateOrReturnInstance(map.DeclaringType), parameters);
 					}
 					catch(Exception e) {
 						throw new MappingException(e, types);
@@ -191,7 +190,7 @@ namespace NeatMapper.Common.Mapper {
 						m.Key.To.IsAssignableFrom(types.To));
 					return (parameters) => {
 						try {
-							return (bool)map.Value.Method.Invoke(map.Value.Method.IsStatic ? null : CreateOrReturnInstance(map.Value.Class), parameters);
+							return (bool)map.Value.Invoke(map.Value.IsStatic ? null : CreateOrReturnInstance(map.Value.DeclaringType), parameters);
 						}
 						catch (Exception e) {
 							throw new MatcherException(e, types);
@@ -352,6 +351,9 @@ namespace NeatMapper.Common.Mapper {
 			throw new InvalidOperationException("Invalid collection"); // Should not happen
 		}
 
+		// T[] Enumerable.ToArray(this IEnumerable<T> source);
+		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
+			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
 		protected static object ConvertCollectionToType(object collection, Type destination) {
 			if (destination.IsArray)
 				return Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()).Invoke(null, new object[] { collection });

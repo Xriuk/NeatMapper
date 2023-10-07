@@ -12,7 +12,7 @@ namespace NeatMapper {
 		/// <param name="source">object to map, may be null</param>
 		/// <param name="sourceType">type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">currently not used</param>
+		/// <param name="mappingOptions">currently not used, pass null</param>
 		/// <returns>the newly created object of <paramref name="destinationType"/>, may be null</returns>
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 		object?
@@ -44,7 +44,7 @@ namespace NeatMapper {
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>
 		/// <param name="destination">object to map to, may be null</param>
 		/// <param name="destinationType">type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">additional options for the current map</param>
+		/// <param name="mappingOptions">additional options for the current map, null to use default ones</param>
 		/// <returns>
 		/// the resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null

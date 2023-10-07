@@ -406,7 +406,7 @@ namespace NeatMapper.Tests.Mapping {
 			var result = await _mapper.MapAsync<Price, PriceFloat>(new Price {
 				Amount = 40.00m,
 				Currency = "EUR"
-			}, null);
+			}, (PriceFloat)null);
 			Assert.IsNotNull(result);
 			Assert.AreEqual(40f, result.Amount);
 			Assert.AreEqual("EUR", result.Currency);
@@ -453,7 +453,7 @@ namespace NeatMapper.Tests.Mapping {
 							}
 						},
 						Copies = 3
-					}, null);
+					}, (ProductDto)null);
 					Assert.IsNotNull(result);
 					Assert.IsTrue(result.GetType() == typeof(ProductDto));
 				}
@@ -561,7 +561,7 @@ namespace NeatMapper.Tests.Mapping {
 						}
 					},
 					Copies = 3
-				}, null);
+				}, (LimitedProductDto)null);
 				Assert.IsNotNull(result);
 				Assert.AreEqual("Test", result.Code);
 				Assert.IsNotNull(result.Categories);
@@ -585,7 +585,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Null
 				{
-					var result = await _mapper.MapAsync<decimal, Price>(20m, null);
+					var result = await _mapper.MapAsync<decimal, Price>(20m, (Price)null);
 					Assert.IsNotNull(result);
 				}
 			}
@@ -602,7 +602,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Null
 				{
-					var result = await _mapper.MapAsync<float, Price>(20f, null);
+					var result = await _mapper.MapAsync<float, Price>(20f, (Price)null);
 					Assert.IsNotNull(result);
 				}
 			}
@@ -762,25 +762,25 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public async Task ShouldMapNullCollections() {
 			// Null source
-			Assert.IsNull(await _mapper.MapAsync<int[], List<string>>(null, null));
+			Assert.IsNull(await _mapper.MapAsync<int[], List<string>>(null, (List<string>)null));
 			Assert.IsNull(await _mapper.MapAsync<int[], List<string>>(null, new List<string>()));
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<float>>(null, null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<float>>(null, (List<float>)null));
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<float>>(null, new List<float>()));
 
 			// Null destination
 			{
-				var result = await _mapper.MapAsync<int[], List<string>>(new[] { 1, 4, 7 }, null);
+				var result = await _mapper.MapAsync<int[], List<string>>(new[] { 1, 4, 7 }, (List<string>)null);
 				Assert.IsNotNull(result);
 				Assert.AreEqual(3, result.Count);
 			}
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<float>>(new[] { 1, 4, 7 }, null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<float>>(new[] { 1, 4, 7 }, (List<float>)null));
 		}
 
 		[TestMethod]
 		public Task ShouldNotMapNullCollectionsIfCannotCreateDestination() {
-			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], CustomCollectionWithoutParameterlessConstructor<float>>(new[] { 1, 4, 7 }, null));
+			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], CustomCollectionWithoutParameterlessConstructor<float>>(new[] { 1, 4, 7 }, (CustomCollectionWithoutParameterlessConstructor<float>)null));
 		}
 
 		[TestMethod]
@@ -1215,7 +1215,7 @@ namespace NeatMapper.Tests.Mapping {
 					new Category {
 						Id = 6
 					}
-				}, destination, new MappingOptions {
+				}, destination, new AsyncMappingOptions {
 					CollectionRemoveNotMatchedDestinationElements = false
 				});
 				Assert.IsNotNull(result);

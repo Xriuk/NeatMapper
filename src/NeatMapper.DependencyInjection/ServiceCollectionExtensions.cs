@@ -19,7 +19,10 @@ namespace Microsoft.Extensions.DependencyInjection {
 			
 			services.Add(new ServiceDescriptor(
 				typeof(Mapper),
-				s => new Mapper(s.GetRequiredService<IOptions<MapperConfigurationOptions>>().Value, s),
+				s => new Mapper(
+					s.GetService<IOptions<MapperConfigurationOptions>>()?.Value ?? new MapperConfigurationOptions(),
+					s.GetService<IOptions<MapperOptions>>()?.Value,
+					s),
 				hasMatcher || (mapperLifetime == matcherLifetime && (mapperLifetime == ServiceLifetime.Singleton || mapperLifetime == ServiceLifetime.Scoped)) ?
 					mapperLifetime :
 					ServiceLifetime.Transient

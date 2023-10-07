@@ -9,25 +9,6 @@ using System.Reflection;
 
 namespace NeatMapper.Configuration {
 	/// <summary>
-	/// Configuration info for a:<br/>
-	/// NewMap<br/>
-	/// MergeMap<br/>
-	/// MatchMap
-	/// </summary>
-	internal sealed class Map {
-		/// <summary>
-		/// Declaring class of the <see cref="Method"/>
-		/// </summary>
-		public Type Class { get; set; }
-
-		/// <summary>
-		/// Method to invoke
-		/// </summary>
-		/// <remarks>May be instance or static</remarks>
-		public MethodInfo Method { get; set; }
-	}
-
-	/// <summary>
 	/// Configuration info for a generic:<br/>
 	/// NewMap<br/>
 	/// MergeMap<br/>
@@ -58,9 +39,21 @@ namespace NeatMapper.Configuration {
 	}
 
 	internal sealed class MapperConfiguration {
-		public MapperConfiguration(Func<Type, bool> newMapTypeFilter, Func<Type, bool> mergeMapTypeFilter, MapperConfigurationOptions options) { 
-			var newMaps = new Dictionary<(Type From, Type To), Map>();
-			var mergeMaps = new Dictionary<(Type From, Type To), Map>();
+		public MapperConfiguration(
+			Func<Type, bool> newMapTypeFilter,
+			Func<Type, bool> mergeMapTypeFilter,
+			MapperConfigurationOptions options,
+			IAdditionalMapsOptions additionalMaps = null) {
+
+			if(newMapTypeFilter == null)
+				throw new ArgumentNullException(nameof(newMapTypeFilter));
+			if (mergeMapTypeFilter == null)
+				throw new ArgumentNullException(nameof(mergeMapTypeFilter));
+			if (options == null)
+				throw new ArgumentNullException(nameof(options));
+
+			var newMaps = new Dictionary<(Type From, Type To), MethodInfo>();
+			var mergeMaps = new Dictionary<(Type From, Type To), MethodInfo>();
 			var genericNewMaps = new List<GenericMap>();
 			var genericMergeMaps = new List<GenericMap>();
 
@@ -68,14 +61,20 @@ namespace NeatMapper.Configuration {
 				i => newMapTypeFilter.Invoke(i) ? genericNewMaps : genericMergeMaps,
 				i => newMapTypeFilter.Invoke(i) ? newMaps : mergeMaps);
 
+			if(additionalMaps != null) {
+				AddTypes(newMaps, additionalMaps.NewMaps);
+				AddTypes(mergeMaps, additionalMaps.MergeMaps);
+			}
+
+
 			NewMaps = newMaps;
 			MergeMaps = mergeMaps;
 			GenericNewMaps = genericNewMaps;
 			GenericMergeMaps = genericMergeMaps;
 
 
-			var matchers = new Dictionary<(Type From, Type To), Map>();
-			var hierarchyMatchers = new Dictionary<(Type From, Type To), Map>();
+			var matchers = new Dictionary<(Type From, Type To), MethodInfo>();
+			var hierarchyMatchers = new Dictionary<(Type From, Type To), MethodInfo>();
 			var genericMatchers = new List<GenericMap>();
 			var genericHierarchyMatchers = new List<GenericMap>();
 
@@ -101,9 +100,12 @@ namespace NeatMapper.Configuration {
 #endif		
 			) ? matchers : hierarchyMatchers);
 
-			Matchers = matchers;
-			HierarchyMatchers = hierarchyMatchers;
-			GenericMatchers = genericMatchers;
+			if (additionalMaps != null) 
+				AddTypes(matchers, additionalMaps.MatchMaps);
+
+			MatchMaps = matchers;
+			HierarchyMatchMaps = hierarchyMatchers;
+			GenericMatchMaps = genericMatchers;
 
 
 			MergeMapsCollectionsOptions = new MergeMapsCollectionsOptions(options.MergeMapsCollectionsOptions);
@@ -111,7 +113,7 @@ namespace NeatMapper.Configuration {
 
 			void PopulateTypes(Func<Type, Type, bool> interfaceFilter, // Type, Interface GetGenericTypeDefinition
 				Func<Type, List<GenericMap>> genericMapsSelector, // Interface GetGenericTypeDefinition
-				Func<Type, Dictionary<(Type From, Type To), Map>> mapsSelector // Interface GetGenericTypeDefinition
+				Func<Type, Dictionary<(Type From, Type To), MethodInfo>> mapsSelector // Interface GetGenericTypeDefinition
 				) { 
 
 				foreach (var type in options.ScanTypes
@@ -160,33 +162,44 @@ namespace NeatMapper.Configuration {
 							
 							var dictionary = mapsSelector.Invoke(interf.GetGenericTypeDefinition());
 							if (dictionary.ContainsKey((arguments[0], arguments[1])))
-								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, an interface with matching parameters is already defined in class {mapsSelector.Invoke(interf.GetGenericTypeDefinition())[(arguments[0], arguments[1])].Class.Name}");
-							else { 
-								dictionary.Add((arguments[0], arguments[1]), new Map {
-									Class = type,
-									Method = method
-								});
-							}
+								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, an interface with matching parameters is already defined in class {mapsSelector.Invoke(interf.GetGenericTypeDefinition())[(arguments[0], arguments[1])].DeclaringType.Name}");
+							else 
+								dictionary.Add((arguments[0], arguments[1]), method);
 						}
 					}
+				}
+			}
+
+			void AddTypes(Dictionary<(Type From, Type To), MethodInfo> maps,
+				IDictionary<(Type From, Type To), AdditionalMap> addMaps) {
+
+				foreach (var map in addMaps) {
+					if (!map.Value.Method.IsStatic && map.Value.Method.DeclaringType.GetConstructor(Type.EmptyTypes) == null)
+						throw new InvalidOperationException($"Map {map.Value.Method.Name} in class {map.Value.Method.DeclaringType.FullName ?? map.Value.Method.DeclaringType.Name} cannot be instantiated because the class has no parameterless constructor. Either add a parameterless constructor to the class or move the map method to another class");
+					if (maps.ContainsKey(map.Key)) {
+						if(!map.Value.IgnoreIfAlreadyAdded)
+							throw new InvalidOperationException($"Duplicate map {map.Value.Method.Name} in class {map.Value.Method.DeclaringType.FullName ?? map.Value.Method.DeclaringType.Name}, an map with matching parameters is already defined in class {maps[map.Key].DeclaringType.FullName ?? maps[map.Key].DeclaringType.Name}");
+					}
+					else
+						maps.Add(map.Key, map.Value.Method);
 				}
 			}
 		}
 
 
-		public IReadOnlyDictionary<(Type From, Type To), Map> NewMaps { get; }
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> NewMaps { get; }
 
-		public IReadOnlyDictionary<(Type From, Type To), Map> MergeMaps { get; }
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> MergeMaps { get; }
 
 		public IEnumerable<GenericMap> GenericNewMaps { get; }
 
 		public IEnumerable<GenericMap> GenericMergeMaps { get; }
 
-		public IReadOnlyDictionary<(Type From, Type To), Map> Matchers { get; }
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> MatchMaps { get; }
 
-		public IReadOnlyDictionary<(Type From, Type To), Map> HierarchyMatchers { get; }
+		public IReadOnlyDictionary<(Type From, Type To), MethodInfo> HierarchyMatchMaps { get; }
 
-		public IEnumerable<GenericMap> GenericMatchers { get; }
+		public IEnumerable<GenericMap> GenericMatchMaps { get; }
 
 		public MergeMapsCollectionsOptions MergeMapsCollectionsOptions { get; }
 

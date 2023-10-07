@@ -34,10 +34,10 @@ namespace NeatMapper.Configuration {
 
 		/// <summary>
 		/// Types which to scan for:<br/>
-		/// NewMap<br/>
-		/// MergeMap<br/>
-		/// MatchMap<br/>
-		/// If null will scan for all the assembly
+		/// - NewMap<br/>
+		/// - MergeMap<br/>
+		/// - MatchMap<br/>
+		/// - Generic versions of the above
 		/// </summary>
 		public ICollection<Type> ScanTypes { get; set; } = new List<Type>();
 

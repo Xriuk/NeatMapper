@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NeatMapper.Common;
+using System;
 using System.Collections.Generic;
 
 namespace NeatMapper {
@@ -76,7 +77,7 @@ namespace NeatMapper {
 		/// <typeparam name="TDestination">type of the destination object, used to retrieve the available maps</typeparam>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="destination">object to map to, may be null</param>
-		/// <param name="mappingOptions">additional options for the current map</param>
+		/// <param name="mappingOptions">additional options for the current map, null to use default ones</param>
 		/// <returns>
 		/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
@@ -128,7 +129,7 @@ namespace NeatMapper {
 		/// <param name="source">collection to be mapped, may be null</param>
 		/// <param name="destination">collection to map to, may be null</param>
 		/// <param name="matcher">matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
-		/// <param name="removeNotMatchedDestinationElements">if true will remove all the elements from <paramref name="destination"/> which do not have a corresponding element in <paramref name="source"/></param>
+		/// <param name="removeNotMatchedDestinationElements">if true will remove all the elements from <paramref name="destination"/> which do not have a corresponding element in <paramref name="source"/>, null to use default setting</param>
 		/// <returns>
 		/// the resulting collection of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
@@ -152,12 +153,7 @@ namespace NeatMapper {
 			ICollection<TDestinationElement>
 #endif
 			destination,
-#if NET5_0_OR_GREATER
-			Func<TSourceElement?, TDestinationElement?, MatchingContext, bool>
-#else
-			Func<TSourceElement, TDestinationElement, MatchingContext, bool>
-#endif
-			matcher,
+			MatchMapDelegate<TSourceElement, TDestinationElement> matcher,
 			bool? removeNotMatchedDestinationElements = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

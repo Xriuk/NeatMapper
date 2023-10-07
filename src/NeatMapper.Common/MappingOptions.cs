@@ -1,4 +1,4 @@
-﻿using System;
+﻿using NeatMapper.Common;
 
 namespace NeatMapper {
 	/// <summary>
@@ -18,9 +18,9 @@ namespace NeatMapper {
 		/// <remarks>null to ignore and use the defined <see cref="IMatchMap{TSource, TDestination}"/> (if any)</remarks>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			Func<object?, object?, MatchingContext, bool>?
+			MatchMapDelegate<object, object>?
 #else
-			Func<object, object, MatchingContext, bool>
+			MatchMapDelegate<object, object>
 #endif
 			Matcher { get; set; }
 	}

@@ -6,12 +6,28 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace NeatMapper {
+	/// <summary>
+	/// Default implementation for <see cref="IMapper"/> and <see cref="IMatcher"/>
+	/// </summary>
 	public class Mapper : BaseMapper, IMapper {
 		protected readonly MappingContext _mappingContext;
 
 		protected override MatchingContext MatchingContext => _mappingContext;
 
-		public Mapper(MapperConfigurationOptions configuration,
+		public Mapper(MapperConfigurationOptions configurationOptions,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) :this(configurationOptions, null, serviceProvider) {}
+		public Mapper(MapperConfigurationOptions configurationOptions,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MapperOptions?
+#else
+			MapperOptions
+#endif
+			mapperOptions,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
@@ -27,7 +43,9 @@ namespace NeatMapper {
 #if NET7_0_OR_GREATER
 					|| i == typeof(IMergeMapStatic<,>)
 #endif
-					, configuration ?? new MapperConfigurationOptions()), serviceProvider) {
+					,
+					configurationOptions,
+					mapperOptions), serviceProvider) {
 
 			_mappingContext = new MappingContext {
 				ServiceProvider = _serviceProvider,
@@ -66,7 +84,7 @@ namespace NeatMapper {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
@@ -95,7 +113,7 @@ namespace NeatMapper {
 
 			// Should not happen
 			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
 
 			return result;
 
@@ -139,11 +157,11 @@ namespace NeatMapper {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName} is not assignable to type {sourceType.FullName}", nameof(source));
+				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
-				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
+				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
 
 			var types = (From: sourceType, To: destinationType);
 			object result;
@@ -162,7 +180,7 @@ namespace NeatMapper {
 
 			// Should not happen
 			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName} is not assignable to type {destinationType.FullName}");
+				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
 
 			return result;
 

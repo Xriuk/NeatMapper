@@ -9,6 +9,11 @@
 ### Changed
 
 - NeatMapper.Common dependency version
+- `MappingOptions` added to all `IMapper` methods, currently not used everywhere, reserved for future implementations
+
+### Added
+
+- `MapperOptions` which can be used to specify additional mapping methods like delegates/lambdas
 
 ## [1.1.0] - 2023-10-02
 

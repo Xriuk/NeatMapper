@@ -7,7 +7,7 @@ namespace NeatMapper.Tests {
 		public static void AssertDuplicateMap(Action action) {
 			var exc = Assert.ThrowsException<InvalidOperationException>(action);
 
-			Assert.IsTrue(exc.Message.StartsWith("Duplicate interface"));
+			Assert.IsTrue(exc.Message.StartsWith("Duplicate interface") || exc.Message.StartsWith("Duplicate map"));
 		}
 
 		public static void AssertMapNotFound(Func<object> action) {
