@@ -34,7 +34,6 @@ namespace NeatMapper.Common.Mapper {
 
 		internal readonly MapperConfiguration _configuration;
 		protected readonly IServiceProvider _serviceProvider;
-		protected abstract MatchingContext MatchingContext { get; }
 
 		internal MapData newMaps;
 		internal MapData mergeMaps;
@@ -89,8 +88,8 @@ namespace NeatMapper.Common.Mapper {
 		}
 
 
-		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type)" />
-		public bool Match(object source, Type sourceType, object destination, Type destinationType) {
+		/// <inheritdoc cref="IMatcher.Match" />
+		public bool Match(object source, Type sourceType, object destination, Type destinationType, IEnumerable mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
@@ -101,9 +100,17 @@ namespace NeatMapper.Common.Mapper {
 				throw new ArgumentException($"Object of type {destination.GetType().FullName} is not assignable to type {destinationType.FullName}", nameof(destination));
 
 			var types = (From: sourceType, To: destinationType);
-			return ElementComparerInternal(types, false).Invoke(new object[] { source, destination, MatchingContext });
+			return ElementComparerInternal(types, false).Invoke(new object[] { source, destination, CreateMatchingContext(mappingOptions) });
 		}
 
+
+		protected MatchingContext CreateMatchingContext(IEnumerable mappingOptions) {
+			return new MatchingContext {
+				Matcher = this,
+				ServiceProvider = _serviceProvider,
+				MappingOptions = new MappingOptions(mappingOptions)
+			};
+		}
 
 		// (source, context) => destination
 		// (source, destination, context) => destination

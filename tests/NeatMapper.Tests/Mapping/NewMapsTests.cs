@@ -349,6 +349,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("6", _mapper.Map<string>(2f));
 		}
 
+		// DEV: should forward options to merge map
+
 		[TestMethod]
 		public void ShouldNotFallbackToMergeMapIfCannotCreateDestination() {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<ClassWithoutParameterlessConstructor>(""));

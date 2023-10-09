@@ -13,8 +13,6 @@ namespace NeatMapper.Async {
 	/// Default implementation for <see cref="IAsyncMapper"/> and <see cref="IMatcher"/>
 	/// </summary>
 	public class AsyncMapper : BaseMapper, IAsyncMapper {
-		protected override MatchingContext MatchingContext { get; }
-
 		public AsyncMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			AsyncMapperOptions?
@@ -60,13 +58,7 @@ namespace NeatMapper.Async {
 					,
 					configuration ?? new MapperConfigurationOptions(),
 					mapperOptions,
-					serviceProvider) {
-
-			MatchingContext = new MatchingContext {
-				ServiceProvider = serviceProvider,
-				Matcher = this
-			};
-		}
+					serviceProvider) {}
 
 		public async Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -84,9 +76,9 @@ namespace NeatMapper.Async {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncMappingOptions?
+			IEnumerable?
 #else
-			AsyncMappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
@@ -106,11 +98,11 @@ namespace NeatMapper.Async {
 			object result;
 			try {
 				result = await TaskUtils.AwaitTask<object>((Task)MapInternal(types, newMaps, CreateOrReturnInstance)
-					.Invoke(new object[] { source, CreateMappingContext(cancellationToken) }));
+					.Invoke(new object[] { source, CreateMappingContext(mappingOptions, cancellationToken) }));
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = await MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, CreateMappingContext(cancellationToken) });
+					result = await MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, CreateMappingContext(mappingOptions, cancellationToken) });
 				}
 				catch (MapNotFoundException) {
 					object destination;
@@ -122,7 +114,7 @@ namespace NeatMapper.Async {
 					}
 
 					// Should handle exceptions
-					result = await MapAsync(source, sourceType, destination, destinationType, null, cancellationToken);
+					result = await MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 				}
 				catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
 					throw new MappingException(e, types);
@@ -165,9 +157,9 @@ namespace NeatMapper.Async {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncMappingOptions?
+			IEnumerable?
 #else
-			AsyncMappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
@@ -189,11 +181,11 @@ namespace NeatMapper.Async {
 			object result;
 			try {
 				result = await TaskUtils.AwaitTask<object>((Task)MapInternal(types, mergeMaps, CreateOrReturnInstance)
-					.Invoke(new object[] { source, destination, CreateMappingContext(cancellationToken) }));
+					.Invoke(new object[] { source, destination, CreateMappingContext(mappingOptions, cancellationToken) }));
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = await MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source, destination, CreateMappingContext(cancellationToken) });
+					result = await MapCollectionMergeRecursiveInternal(types, destination).Invoke(new object[] { source, destination, CreateMappingContext(mappingOptions, cancellationToken) });
 				}
 				catch (MapNotFoundException) {
 					throw exc;
@@ -221,12 +213,13 @@ namespace NeatMapper.Async {
 #nullable disable
 #endif
 
-		protected AsyncMappingContext CreateMappingContext(CancellationToken cancellationToken) {
+		protected AsyncMappingContext CreateMappingContext(IEnumerable mappingOptions, CancellationToken cancellationToken) {
 			return new AsyncMappingContext {
 				Mapper = this,
 				Matcher = this,
 				ServiceProvider = _serviceProvider,
-				CancellationToken = cancellationToken
+				CancellationToken = cancellationToken,
+				MappingOptions = new MappingOptions(mappingOptions)
 			};
 		}
 
@@ -314,8 +307,7 @@ namespace NeatMapper.Async {
 		// (source, destination, context) => Task<destination>
 		protected Func<object[], Task<object>> MapCollectionMergeRecursiveInternal(
 			(Type From, Type To) types,
-			object destination,
-			MappingOptions mappingOptions = null) {
+			object destination) {
 
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
@@ -391,21 +383,6 @@ namespace NeatMapper.Async {
 							}
 						}
 
-						// (source, destination, context) => bool
-						Func<object[], bool> elementComparer;
-						if (mappingOptions?.Matcher != null) {
-							elementComparer = (parameters) => {
-								try {
-									return mappingOptions.Matcher.Invoke(parameters[0], parameters[1], (MatchingContext)parameters[2]);
-								}
-								catch (Exception e) {
-									throw new MatcherException(e, types);
-								}
-							};
-						}
-						else
-							elementComparer = ElementComparerInternal(elementTypes);
-
 						var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 						var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
 
@@ -422,6 +399,26 @@ namespace NeatMapper.Async {
 										Func<object[], Task<object>> nullMergeCollectionMapping = null;
 										var mergeCollectionMappings = new Dictionary<object, Func<object[], Task<object>>>();
 
+										var mergeMappingOptions = ((AsyncMappingContext)sourceDestinationAndContext[2]).MappingOptions.GetOptions<MergeMappingOptions>();
+
+										// (source, destination, context) => bool
+										Func<object[], bool> elementComparer;
+										if (mergeMappingOptions?.Matcher != null) {
+											elementComparer = (parameters) => {
+												try {
+													return mergeMappingOptions.Matcher.Invoke(parameters[0], parameters[1], (MatchingContext)parameters[2]);
+												}
+												catch (Exception e) {
+													throw new MatcherException(e, types);
+												}
+											};
+										}
+										else
+											elementComparer = ElementComparerInternal(elementTypes);
+
+										var colletionRemoveNotMatched = mergeMappingOptions?.CollectionRemoveNotMatchedDestinationElements
+											?? _configuration.MergeMapsCollectionsOptions.RemoveNotMatchedDestinationElements;
+
 										// Deleted elements (+ missing merge mappings)
 										foreach (var destinationElement in destinationEnumerable) {
 											bool found = false;
@@ -436,11 +433,8 @@ namespace NeatMapper.Async {
 											// Otherwise if we don't have a merge map we try retrieving it, so that we may fail
 											// before mapping elements if needed
 											if (!found) {
-												if (mappingOptions?.CollectionRemoveNotMatchedDestinationElements
-													?? _configuration.MergeMapsCollectionsOptions.RemoveNotMatchedDestinationElements) {
-
+												if (colletionRemoveNotMatched)
 													elementsToRemove.Add(destinationElement);
-												}
 											}
 											else if (mergeElementMapper == null &&
 												(destinationElement == null ?

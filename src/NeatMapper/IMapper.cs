@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 
 namespace NeatMapper {
 	/// <summary>
@@ -12,7 +13,7 @@ namespace NeatMapper {
 		/// <param name="source">object to map, may be null</param>
 		/// <param name="sourceType">type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">currently not used, pass null</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>the newly created object of <paramref name="destinationType"/>, may be null</returns>
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 		object?
@@ -29,22 +30,22 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
+			IEnumerable?
 #else
-			MappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null);
 
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.<br/>
 		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
-		/// (or the passed <see cref="MappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
+		/// (or the passed <see cref="MergeMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
 		/// </summary>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>
 		/// <param name="destination">object to map to, may be null</param>
 		/// <param name="destinationType">type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">additional options for the current map, null to use default ones</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>
 		/// the resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null
@@ -70,9 +71,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
+			IEnumerable?
 #else
-			MappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null);
 	}

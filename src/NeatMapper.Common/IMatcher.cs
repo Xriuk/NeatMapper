@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 
 namespace NeatMapper {
 	/// <summary>
@@ -13,6 +14,7 @@ namespace NeatMapper {
 		/// <param name="sourceType">type of the source object, used to retrieve the available maps</param>
 		/// <param name="destination">object to be compared to, may be null</param>
 		/// <param name="destinationType">type of the destination object, used to retrieve the available maps</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>true if the two objects match</returns>
 		bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -28,6 +30,12 @@ namespace NeatMapper {
 			object
 #endif
 			destination,
-			Type destinationType);
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions = null);
 	}
 }

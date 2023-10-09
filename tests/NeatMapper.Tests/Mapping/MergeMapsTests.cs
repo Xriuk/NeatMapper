@@ -1182,8 +1182,10 @@ namespace NeatMapper.Tests.Mapping {
 					new Category {
 						Id = 6
 					}
-				}, destination, new MappingOptions {
-					CollectionRemoveNotMatchedDestinationElements = false
+				}, destination, new[]{
+					new MergeMappingOptions {
+						CollectionRemoveNotMatchedDestinationElements = false
+					} 
 				});
 				Assert.IsNotNull(result);
 				Assert.AreSame(destination, result);

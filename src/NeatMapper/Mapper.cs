@@ -10,10 +10,6 @@ namespace NeatMapper {
 	/// Default implementation for <see cref="IMapper"/> and <see cref="IMatcher"/>
 	/// </summary>
 	public class Mapper : BaseMapper, IMapper {
-		protected readonly MappingContext _mappingContext;
-
-		protected override MatchingContext MatchingContext => _mappingContext;
-
 		public Mapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MapperOptions?
@@ -59,14 +55,7 @@ namespace NeatMapper {
 					,
 					configurationOptions,
 					mapperOptions,
-					serviceProvider) {
-
-			_mappingContext = new MappingContext {
-				ServiceProvider = _serviceProvider,
-				Mapper = this,
-				Matcher = this
-			};
-		}
+					serviceProvider) {}
 
 
 		public
@@ -85,9 +74,9 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
+			IEnumerable?
 #else
-			MappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null) {
 
@@ -106,11 +95,11 @@ namespace NeatMapper {
 			object result;
 			try {
 				result = MapInternal(types, newMaps, CreateOrReturnInstance)
-					.Invoke(new object[] { source, _mappingContext });
+					.Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, _mappingContext });
+					result = MapCollectionNewRecursiveInternal(types).Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
 				}
 				catch (MapNotFoundException) {
 					object destination;
@@ -121,7 +110,7 @@ namespace NeatMapper {
 						throw exc;
 					}
 
-					result = Map(source, sourceType, destination, destinationType);
+					result = Map(source, sourceType, destination, destinationType, mappingOptions);
 				}
 			}
 
@@ -140,29 +129,29 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
-		object
+			object
 #endif
-		Map(
+			Map(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
-		object
+			object
 #endif
-		source,
-		Type sourceType,
+			source,
+			Type sourceType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
-		object
+			object
 #endif
-		destination,
-		Type destinationType,
+			destination,
+			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
+			IEnumerable?
 #else
-		MappingOptions
+			IEnumerable
 #endif
-		mappingOptions = null) {
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -181,11 +170,11 @@ namespace NeatMapper {
 			object result;
 			try {
 				result = MapInternal(types, mergeMaps, CreateOrReturnInstance)
-					.Invoke(new object[] { source, destination, _mappingContext });
+					.Invoke(new object[] { source, destination, CreateMappingContext(mappingOptions) });
 			}
 			catch (MapNotFoundException exc) {
 				try {
-					result = MapCollectionMergeRecursiveInternal(types, destination, mappingOptions).Invoke(new object[] { source, destination, _mappingContext });
+					result = MapCollectionMergeRecursiveInternal(types, destination).Invoke(new object[] { source, destination, CreateMappingContext(mappingOptions) });
 				}
 				catch (MapNotFoundException) {
 					throw exc;
@@ -206,6 +195,15 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
+
+		protected MappingContext CreateMappingContext(IEnumerable mappingOptions) {
+			return new MappingContext {
+				Mapper = this,
+				Matcher = this,
+				ServiceProvider = _serviceProvider,
+				MappingOptions = new MappingOptions(mappingOptions)
+			};
+		}
 
 		// (source, context) => destination
 		protected Func<object[], object> MapCollectionNewRecursiveInternal((Type From, Type To) types) {
@@ -285,8 +283,7 @@ namespace NeatMapper {
 		// (source, destination, context) => destination
 		protected Func<object[], object> MapCollectionMergeRecursiveInternal(
 			(Type From, Type To) types,
-			object destination,
-			MappingOptions mappingOptions = null) {
+			object destination) {
 
 			// If both types are collections try mapping the element types
 			if (HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
@@ -362,21 +359,6 @@ namespace NeatMapper {
 							}
 						}
 
-						// (source, destination, context) => bool
-						Func<object[], bool> elementComparer;
-						if (mappingOptions?.Matcher != null) {
-							elementComparer = (parameters) => {
-								try {
-									return mappingOptions.Matcher.Invoke(parameters[0], parameters[1], (MatchingContext)parameters[2]);
-								}
-								catch (Exception e) {
-									throw new MatcherException(e, types);
-								}
-							};
-						}
-						else
-							elementComparer = ElementComparerInternal(elementTypes);
-
 						var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 						var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
 
@@ -392,6 +374,27 @@ namespace NeatMapper {
 										Func<object[], object> nullMergeCollectionMapping = null;
 										var mergeCollectionMappings = new Dictionary<object, Func<object[], object>>();
 
+
+										var mergeMappingOptions = ((MappingContext)sourceDestinationAndContext[2]).MappingOptions.GetOptions<MergeMappingOptions>();
+
+										// (source, destination, context) => bool
+										Func<object[], bool> elementComparer;
+										if (mergeMappingOptions?.Matcher != null) {
+											elementComparer = (parameters) => {
+												try {
+													return mergeMappingOptions.Matcher.Invoke(parameters[0], parameters[1], (MatchingContext)parameters[2]);
+												}
+												catch (Exception e) {
+													throw new MatcherException(e, types);
+												}
+											};
+										}
+										else
+											elementComparer = ElementComparerInternal(elementTypes);
+
+										var colletionRemoveNotMatched = mergeMappingOptions?.CollectionRemoveNotMatchedDestinationElements
+											?? _configuration.MergeMapsCollectionsOptions.RemoveNotMatchedDestinationElements;
+
 										// Deleted elements (+ missing merge mappings)
 										foreach (var destinationElement in destinationEnumerable) {
 											bool found = false;
@@ -406,11 +409,8 @@ namespace NeatMapper {
 											// Otherwise if we don't have a merge map we try retrieving it, so that we may fail
 											// before mapping elements if needed
 											if (!found) {
-												if (mappingOptions?.CollectionRemoveNotMatchedDestinationElements
-													?? _configuration.MergeMapsCollectionsOptions.RemoveNotMatchedDestinationElements) {
-
+												if (colletionRemoveNotMatched)
 													elementsToRemove.Add(destinationElement);
-												}
 											}
 											else if (mergeElementMapper == null &&
 												(destinationElement == null ?

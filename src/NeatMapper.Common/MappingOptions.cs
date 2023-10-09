@@ -1,27 +1,47 @@
-﻿using NeatMapper.Common;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Mapping options to use for the mapping operations, this will override any configuration options defined in <see cref="Configuration.MapperConfigurationOptions"/>
+	/// Additional mapping options, contains multiple options of different types,
+	/// each mapper/map should try to retrieve its options and use them
 	/// </summary>
-	public class MappingOptions {
-		/// <summary>
-		/// If true, will remove all the elements from destination which do not have a corresponding element in source,
-		/// matched with <see cref="IMatchMap{TSource, TDestination}"/> (or <see cref="Matcher"/>)
-		/// </summary>
-		/// <remarks>null to ignore and use global setting</remarks>
-		public bool? CollectionRemoveNotMatchedDestinationElements { get; set; }
+	public sealed class MappingOptions {
+		private IDictionary<Type, object> options;
 
-		/// <summary>
-		/// Provides (or overrides) <see cref="IMatchMap{TSource, TDestination}"/> for the outermost collection types
-		/// </summary>
-		/// <remarks>null to ignore and use the defined <see cref="IMatchMap{TSource, TDestination}"/> (if any)</remarks>
+		public MappingOptions(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			options) {
+
+			if(options != null) { 
+				if(options.Cast<object>().GroupBy(o => o.GetType()).Any(g => g.Count() > 1))
+					throw new ArgumentException("Options of the same type must be grouped together");
+
+				this.options = options.Cast<object>().ToDictionary(o => o.GetType(), o => o);
+			}
+			else
+				this.options = new Dictionary<Type, object>();
+		}
+
+
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MatchMapDelegate<object, object>?
+			TOptions?
 #else
-			MatchMapDelegate<object, object>
+			TOptions
 #endif
-			Matcher { get; set; }
+			GetOptions<TOptions>() where TOptions : class {
+
+			if(this.options.TryGetValue(typeof(TOptions), out var options))
+				return options as TOptions;
+			else
+				return null;
+		}
 	}
 }

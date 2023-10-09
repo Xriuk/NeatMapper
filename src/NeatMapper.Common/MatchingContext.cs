@@ -7,10 +7,20 @@ namespace NeatMapper {
 	public class MatchingContext : BaseContext {
 		internal MatchingContext() { }
 
+
 		/// <summary>
 		/// Matcher which can be used for nested matches
 		/// </summary>
 		public IMatcher Matcher { get; internal set; }
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			= null!;
+#endif
+
+		/// <summary>
+		/// Additional mapping options, contains multiple options of different types,
+		/// each mapper/map should try to retrieve its options and use them
+		/// </summary>
+		public MappingOptions MappingOptions { get; internal set; }
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			= null!;
 #endif

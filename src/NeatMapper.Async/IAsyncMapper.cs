@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +15,7 @@ namespace NeatMapper.Async {
 		/// <param name="source">object to map, may be null</param>
 		/// <param name="sourceType">type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">additional options for the current map, null to use default ones</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <param name="cancellationToken">cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
 		/// <returns>a task which when completed returns the newly created object of <paramref name="destinationType"/>, which may be null</returns>
 		Task<
@@ -33,9 +34,9 @@ namespace NeatMapper.Async {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncMappingOptions?
+			IEnumerable?
 #else
-			AsyncMappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default);
@@ -43,13 +44,13 @@ namespace NeatMapper.Async {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.<br/>
 		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
-		/// (or the passed <see cref="MappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
+		/// (or the passed <see cref="MergeMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
 		/// </summary>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>
 		/// <param name="destination">object to map to, may be null</param>
 		/// <param name="destinationType">type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">additional options for the current map, null to use default ones</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <param name="cancellationToken">cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
 		/// <returns>
 		/// a task which when completed returns the resulting object of the mapping of <paramref name="destinationType"/> type,
@@ -77,9 +78,9 @@ namespace NeatMapper.Async {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncMappingOptions?
+			IEnumerable?
 #else
-			AsyncMappingOptions
+			IEnumerable
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default);

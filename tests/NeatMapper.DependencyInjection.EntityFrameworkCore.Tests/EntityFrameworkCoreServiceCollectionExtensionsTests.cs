@@ -722,5 +722,7 @@ namespace NeatMapper.Tests {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<Keyless>(2));
 		}
 #endif
+
+		// DEV: test options
 	}
 }
