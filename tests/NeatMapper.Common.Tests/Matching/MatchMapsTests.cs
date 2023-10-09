@@ -82,7 +82,7 @@ namespace NeatMapper.Tests.Matching {
 
 		public class Matcher : BaseMapper {
 			public Matcher(MapperConfigurationOptions configuration) :
-				base(new MapperConfiguration(_ => false, _ => false, configuration)) {}
+				base(_ => false, _ => false, configuration) {}
 
 			protected override MatchingContext MatchingContext { get; } = new MatchingContext();
 		}

@@ -10,6 +10,9 @@ namespace NeatMapper.Configuration {
 	internal class AdditionalMap {
 		public MethodInfo Method { get; set; }
 
+		// Instance to use if the method is not static, if null will try to create one
+		public object Instance { get; set; }
+
 		public bool IgnoreIfAlreadyAdded { get; set; }
 	}
 

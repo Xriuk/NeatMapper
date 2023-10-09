@@ -33,7 +33,7 @@ namespace NeatMapper {
 #else
 			IServiceProvider
 #endif
-			serviceProvider = null) :this(configurationOptions, null, serviceProvider) {}
+			serviceProvider = null) : this(configurationOptions, null, serviceProvider) {}
 		public Mapper(MapperConfigurationOptions configurationOptions,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MapperOptions?
@@ -47,7 +47,7 @@ namespace NeatMapper {
 			IServiceProvider
 #endif
 			serviceProvider = null) :
-				base(new MapperConfiguration(i => i == typeof(INewMap<,>)
+				base(i => i == typeof(INewMap<,>)
 #if NET7_0_OR_GREATER
 					|| i == typeof(INewMapStatic<,>)
 #endif
@@ -58,7 +58,8 @@ namespace NeatMapper {
 #endif
 					,
 					configurationOptions,
-					mapperOptions), serviceProvider) {
+					mapperOptions,
+					serviceProvider) {
 
 			_mappingContext = new MappingContext {
 				ServiceProvider = _serviceProvider,
@@ -104,7 +105,7 @@ namespace NeatMapper {
 			var types = (From: sourceType, To: destinationType);
 			object result;
 			try {
-				result = MapInternal(types, newMaps)
+				result = MapInternal(types, newMaps, CreateOrReturnInstance)
 					.Invoke(new object[] { source, _mappingContext });
 			}
 			catch (MapNotFoundException exc) {
@@ -179,7 +180,7 @@ namespace NeatMapper {
 			var types = (From: sourceType, To: destinationType);
 			object result;
 			try {
-				result = MapInternal(types, mergeMaps)
+				result = MapInternal(types, mergeMaps, CreateOrReturnInstance)
 					.Invoke(new object[] { source, destination, _mappingContext });
 			}
 			catch (MapNotFoundException exc) {
@@ -221,12 +222,12 @@ namespace NeatMapper {
 				Func<object[], object> elementMapper;
 				try {
 					// (source, context) => destination
-					elementMapper = MapInternal(elementTypes, newMaps);
+					elementMapper = MapInternal(elementTypes, newMaps, CreateOrReturnInstance);
 				}
 				catch (MapNotFoundException) {
 					try {
 						// (source, destination, context) => destination
-						var destinationElementMapper = MapInternal(elementTypes, mergeMaps);
+						var destinationElementMapper = MapInternal(elementTypes, mergeMaps, CreateOrReturnInstance);
 
 						// () => destination
 						var destinationElementFactory = CreateDestinationFactory(elementTypes.To);
@@ -327,7 +328,7 @@ namespace NeatMapper {
 						// () => destination
 						Func<object> destinationElementFactory = null;
 						try {
-							newElementMapper = MapInternal(elementTypes, newMaps);
+							newElementMapper = MapInternal(elementTypes, newMaps, CreateOrReturnInstance);
 						}
 						catch (MapNotFoundException) {
 							// Here we could recreate any nested collection in case the corresponding merge map would fail,
@@ -339,7 +340,7 @@ namespace NeatMapper {
 							catch (MapNotFoundException) { }*/
 						}
 						try {
-							mergeElementMapper = MapInternal(elementTypes, mergeMaps);
+							mergeElementMapper = MapInternal(elementTypes, mergeMaps, CreateOrReturnInstance);
 						}
 						catch (MapNotFoundException) {
 							// If the types are not collections and we don't have a newElementMapper we already know that we can't map them,

@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System;
 using System.Collections.ObjectModel;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper.Configuration {
 	/// <summary>
@@ -31,21 +33,7 @@ namespace NeatMapper.Configuration {
 		/// <typeparam name="TDestination">Destination type</typeparam>
 		/// <param name="newMapDelegate">mapping method</param>
 		public void AddNewMap<TSource, TDestination>(NewMapDelegate<TSource, TDestination> newMapDelegate) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-			if(newMapDelegate == null)
-				throw new ArgumentNullException(nameof(newMapDelegate));
-
-			_newMaps.Add((typeof(TSource), typeof(TDestination)), new AdditionalMap {
-				Method = newMapDelegate.Method,
-				IgnoreIfAlreadyAdded = false
-			});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			AddNewMapInternal(newMapDelegate, false);
 		}
 
 		/// <summary>
@@ -56,6 +44,10 @@ namespace NeatMapper.Configuration {
 		/// <typeparam name="TDestination">Destination type</typeparam>
 		/// <param name="newMapDelegate">mapping method</param>
 		public void TryAddNewMap<TSource, TDestination>(NewMapDelegate<TSource, TDestination> newMapDelegate) {
+			AddNewMapInternal(newMapDelegate, true);
+		}
+
+		private void AddNewMapInternal<TSource, TDestination>(NewMapDelegate<TSource, TDestination> newMapDelegate, bool ignoreIfAdded) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -63,10 +55,15 @@ namespace NeatMapper.Configuration {
 			if (newMapDelegate == null)
 				throw new ArgumentNullException(nameof(newMapDelegate));
 
-			_newMaps.Add((typeof(TSource), typeof(TDestination)), new AdditionalMap {
-				Method = newMapDelegate.Method,
-				IgnoreIfAlreadyAdded = true
-			});
+			var map = new AdditionalMap { IgnoreIfAlreadyAdded = ignoreIfAdded };
+			if (IsRuntime(newMapDelegate)) {
+				NewMapDelegate<TSource, TDestination> method = newMapDelegate.Invoke;
+				map.Method = method.Method;
+				map.Instance = newMapDelegate;
+			}
+			else
+				map.Method = newMapDelegate.Method;
+			_newMaps.Add((typeof(TSource), typeof(TDestination)), map);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -81,21 +78,7 @@ namespace NeatMapper.Configuration {
 		/// <typeparam name="TDestination">Destination type</typeparam>
 		/// <param name="mergeMapDelegate">mapping method</param>
 		public void AddMergeMap<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mergeMapDelegate) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-			if (mergeMapDelegate == null)
-				throw new ArgumentNullException(nameof(mergeMapDelegate));
-
-			_mergeMaps.Add((typeof(TSource), typeof(TDestination)), new AdditionalMap {
-				Method = mergeMapDelegate.Method,
-				IgnoreIfAlreadyAdded = false
-			});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			AddMergeMapInternal(mergeMapDelegate, false);
 		}
 
 		/// <summary>
@@ -106,6 +89,10 @@ namespace NeatMapper.Configuration {
 		/// <typeparam name="TDestination">Destination type</typeparam>
 		/// <param name="mergeMapDelegate">mapping method</param>
 		public void TryAddMergeMap<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mergeMapDelegate) {
+			AddMergeMapInternal(mergeMapDelegate, true);
+		}
+
+		private void AddMergeMapInternal<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mergeMapDelegate, bool ignoreIfAdded) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -113,10 +100,15 @@ namespace NeatMapper.Configuration {
 			if (mergeMapDelegate == null)
 				throw new ArgumentNullException(nameof(mergeMapDelegate));
 
-			_mergeMaps.Add((typeof(TSource), typeof(TDestination)), new AdditionalMap {
-				Method = mergeMapDelegate.Method,
-				IgnoreIfAlreadyAdded = true
-			});
+			var map = new AdditionalMap { IgnoreIfAlreadyAdded = ignoreIfAdded };
+			if (IsRuntime(mergeMapDelegate)) {
+				MergeMapDelegate<TSource, TDestination> method = mergeMapDelegate.Invoke;
+				map.Method = method.Method;
+				map.Instance = mergeMapDelegate;
+			}
+			else
+				map.Method = mergeMapDelegate.Method;
+			_mergeMaps.Add((typeof(TSource), typeof(TDestination)), map);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -131,21 +123,7 @@ namespace NeatMapper.Configuration {
 		/// <typeparam name="TDestination">Destination type</typeparam>
 		/// <param name="matchMapDelegate">mapping method</param>
 		public void AddMatchMap<TSource, TDestination>(MatchMapDelegate<TSource, TDestination> matchMapDelegate) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-			if (matchMapDelegate == null)
-				throw new ArgumentNullException(nameof(matchMapDelegate));
-
-			_matchMaps.Add((typeof(TSource), typeof(TDestination)), new AdditionalMap {
-				Method = matchMapDelegate.Method,
-				IgnoreIfAlreadyAdded = false
-			});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			AddMatchMapInternal(matchMapDelegate, false);
 		}
 
 		/// <summary>
@@ -156,6 +134,10 @@ namespace NeatMapper.Configuration {
 		/// <typeparam name="TDestination">Destination type</typeparam>
 		/// <param name="matchMapDelegate">mapping method</param>
 		public void TryAddMatchMap<TSource, TDestination>(MatchMapDelegate<TSource, TDestination> matchMapDelegate) {
+			AddMatchMapInternal(matchMapDelegate, true);
+		}
+
+		private void AddMatchMapInternal<TSource, TDestination>(MatchMapDelegate<TSource, TDestination> matchMapDelegate, bool ignoreIfAdded) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -163,14 +145,24 @@ namespace NeatMapper.Configuration {
 			if (matchMapDelegate == null)
 				throw new ArgumentNullException(nameof(matchMapDelegate));
 
-			_matchMaps.Add((typeof(TSource), typeof(TDestination)), new AdditionalMap {
-				Method = matchMapDelegate.Method,
-				IgnoreIfAlreadyAdded = true
-			});
+			var map = new AdditionalMap { IgnoreIfAlreadyAdded = ignoreIfAdded };
+			if (IsRuntime(matchMapDelegate)) {
+				MatchMapDelegate<TSource, TDestination> method = matchMapDelegate.Invoke;
+				map.Method = method.Method;
+				map.Instance = matchMapDelegate;
+			}
+			else
+				map.Method = matchMapDelegate.Method;
+			_matchMaps.Add((typeof(TSource), typeof(TDestination)), map);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static bool IsRuntime(Delegate del) {
+			return (del.Method.GetType().FullName?.StartsWith("System.Reflection.Emit.DynamicMethod") == true);
 		}
 	}
 }

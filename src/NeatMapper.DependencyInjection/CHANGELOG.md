@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Namespace of extensions class
 - NeatMapper dependency version
 - Optimized injection to share the same instance between `IMapper` and `IMatcher` where possible
 

@@ -1,4 +1,4 @@
-# .NEaT Mapper - Dependency Injection
+# .NEaT Mapper - Dependency Injection 
 
 [![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.DependencyInjection.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper.DependencyInjection)
 

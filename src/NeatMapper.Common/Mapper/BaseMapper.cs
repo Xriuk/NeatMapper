@@ -28,7 +28,8 @@ namespace NeatMapper.Common.Mapper {
 			public Dictionary<(Type From, Type To), Func<object[], object>> GenericCache { get; set; } = new Dictionary<(Type From, Type To), Func<object[], object>>();
 		}
 
-		protected static IDictionary<Type, object> nonStaticMapsInstances = new ConcurrentDictionary<Type, object>();
+		// Not static because of delegates
+		protected IDictionary<Type, object> nonStaticMapsInstances = new ConcurrentDictionary<Type, object>();
 		protected static IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
 
 		internal readonly MapperConfiguration _configuration;
@@ -40,7 +41,14 @@ namespace NeatMapper.Common.Mapper {
 		internal MapData matchers;
 		internal IReadOnlyDictionary<(Type From, Type To), MethodInfo> hierarchyMatchersMaps { get; set; }
 
-		internal BaseMapper(MapperConfiguration configuration, IServiceProvider serviceProvider = null) {
+		internal BaseMapper(Func<Type, bool> newMapTypeFilter,
+			Func<Type, bool> mergeMapTypeFilter,
+			MapperConfigurationOptions options,
+			IAdditionalMapsOptions additionalMaps = null,
+			IServiceProvider serviceProvider = null) {
+
+			var configuration = new MapperConfiguration(newMapTypeFilter, mergeMapTypeFilter, options, additionalMaps);
+
 			if(configuration == null)
 				throw new ArgumentNullException(nameof(configuration));
 
@@ -60,6 +68,24 @@ namespace NeatMapper.Common.Mapper {
 				GenericMaps = _configuration.GenericMatchMaps
 			};
 			hierarchyMatchersMaps = _configuration.HierarchyMatchMaps;
+
+			// Preload any instances
+			if (additionalMaps != null) {
+				foreach (var map in additionalMaps.NewMaps) {
+					if (map.Value.Instance != null)
+						nonStaticMapsInstances.Add(map.Value.Method.DeclaringType, map.Value.Instance);
+				}
+
+				foreach (var map in additionalMaps.MergeMaps) {
+					if (map.Value.Instance != null)
+						nonStaticMapsInstances.Add(map.Value.Method.DeclaringType, map.Value.Instance);
+				}
+
+				foreach (var map in additionalMaps.MatchMaps) {
+					if (map.Value.Instance != null)
+						nonStaticMapsInstances.Add(map.Value.Method.DeclaringType, map.Value.Instance);
+				}
+			}
 		}
 
 
@@ -81,14 +107,18 @@ namespace NeatMapper.Common.Mapper {
 
 		// (source, context) => destination
 		// (source, destination, context) => destination
-		internal static Func<object[], object> MapInternal((Type From, Type To) types, MapData mapData) {
+		internal static Func<object[], object> MapInternal(
+			(Type From, Type To) types,
+			MapData mapData,
+			Func<Type, object> mapInstanceFactory) {
+
 			// Try retrieving a regular map
 			// or try matching to a generic one
 			if (mapData.Maps.ContainsKey(types)) {
 				var map = mapData.Maps[types];
 				return (parameters) => {
 					try {
-						return map.Invoke(map.IsStatic ? null : CreateOrReturnInstance(map.DeclaringType), parameters);
+						return map.Invoke(map.IsStatic ? null : mapInstanceFactory.Invoke(map.DeclaringType), parameters);
 					}
 					catch(Exception e) {
 						throw new MappingException(e, types);
@@ -151,7 +181,7 @@ namespace NeatMapper.Common.Mapper {
 
 					Func<object[], object> func = (parameters) => {
 						try {
-							return mapMethod.Invoke(mapMethod.IsStatic ? null : CreateOrReturnInstance(concreteType), parameters);
+							return mapMethod.Invoke(mapMethod.IsStatic ? null : mapInstanceFactory.Invoke(concreteType), parameters);
 						}
 						catch (Exception e) {
 							throw new MappingException(e, types);
@@ -172,7 +202,7 @@ namespace NeatMapper.Common.Mapper {
 		protected Func<object[], bool> ElementComparerInternal((Type From, Type To) types, bool returnDefault = true) {
 			try {
 				// Try retrieving a regular map
-				var comparer = MapInternal(types, matchers);
+				var comparer = MapInternal(types, matchers, CreateOrReturnInstance);
 				return (parameters) => {
 					try {
 						return (bool)comparer.Invoke(parameters);
@@ -252,7 +282,7 @@ namespace NeatMapper.Common.Mapper {
 			}
 		}
 
-		internal static object CreateOrReturnInstance(Type classType) {
+		internal object CreateOrReturnInstance(Type classType) {
 			if(!nonStaticMapsInstances.TryGetValue(classType, out var instance)){
 				try {
 					instance = CreateDestinationFactory(classType).Invoke();

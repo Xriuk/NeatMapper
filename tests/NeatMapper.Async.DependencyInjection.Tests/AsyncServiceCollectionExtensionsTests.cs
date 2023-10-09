@@ -2,15 +2,17 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Async;
 using NeatMapper.Configuration;
 using System;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Tests {
 	[TestClass]
-	public class ServiceCollectionExtensionsTest {
-		public class Maps : INewMap<string, int> {
-			int INewMap<string, int>.Map(string source, MappingContext context) {
-				return source?.Length ?? 0;
+	public class ServiceCollectionExtensionsTests {
+		public class Maps : IAsyncNewMap<string, int> {
+			Task<int> IAsyncNewMap<string, int>.MapAsync(string source, AsyncMappingContext context) {
+				return Task.FromResult(source?.Length ?? 0);
 			}
 		}
 
@@ -18,21 +20,21 @@ namespace NeatMapper.Tests {
 		[TestMethod]
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapperAsync(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
-			var mapper = services.GetRequiredService<IMapper>();
+			var mapper = services.GetRequiredService<IAsyncMapper>();
 
-			using (var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope()) {
+			using (var scope = services.CreateScope()) {
 				var matcher2 = services.GetRequiredService<IMatcher>();
-				var mapper2 = services.GetRequiredService<IMapper>();
+				var mapper2 = services.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreSame(matcher, matcher2);
 				Assert.AreSame(mapper, mapper2);
 
 				var matcher3 = scope.ServiceProvider.GetRequiredService<IMatcher>();
-				var mapper3 = scope.ServiceProvider.GetRequiredService<IMapper>();
+				var mapper3 = scope.ServiceProvider.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreSame(matcher2, matcher3);
 				Assert.AreSame(mapper2, mapper3);
@@ -40,7 +42,7 @@ namespace NeatMapper.Tests {
 
 			{
 				var matcher2 = services.GetRequiredService<IMatcher>();
-				var mapper2 = services.GetRequiredService<IMapper>();
+				var mapper2 = services.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreSame(matcher, matcher2);
 				Assert.AreSame(mapper, mapper2);
@@ -50,19 +52,19 @@ namespace NeatMapper.Tests {
 		[TestMethod]
 		public void ShouldRespectLifetime_Scoped() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Scoped, ServiceLifetime.Scoped);
+			serviceCollection.AddNeatMapperAsync(ServiceLifetime.Scoped, ServiceLifetime.Scoped);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			// Not throwing?
 			//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IMatcher>());
-			//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IMapper>());
+			//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IAsyncMapper>());
 
-			using (var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope()) {
+			using (var scope = services.CreateScope()) {
 				var matcher2 = scope.ServiceProvider.GetRequiredService<IMatcher>();
-				var mapper2 = scope.ServiceProvider.GetRequiredService<IMapper>();
+				var mapper2 = scope.ServiceProvider.GetRequiredService<IAsyncMapper>();
 
 				var matcher3 = scope.ServiceProvider.GetRequiredService<IMatcher>();
-				var mapper3 = scope.ServiceProvider.GetRequiredService<IMapper>();
+				var mapper3 = scope.ServiceProvider.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreSame(matcher2, matcher3);
 				Assert.AreSame(mapper2, mapper3);
@@ -72,21 +74,21 @@ namespace NeatMapper.Tests {
 		[TestMethod]
 		public void ShouldRespectLifetime_Transient() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Transient, ServiceLifetime.Transient);
+			serviceCollection.AddNeatMapperAsync(ServiceLifetime.Transient, ServiceLifetime.Transient);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
-			var mapper = services.GetRequiredService<IMapper>();
+			var mapper = services.GetRequiredService<IAsyncMapper>();
 
-			using (var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope()) {
+			using (var scope = services.CreateScope()) {
 				var matcher2 = services.GetRequiredService<IMatcher>();
-				var mapper2 = services.GetRequiredService<IMapper>();
+				var mapper2 = services.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreNotSame(matcher, matcher2);
 				Assert.AreNotSame(mapper, mapper2);
 
 				var matcher3 = scope.ServiceProvider.GetRequiredService<IMatcher>();
-				var mapper3 = scope.ServiceProvider.GetRequiredService<IMapper>();
+				var mapper3 = scope.ServiceProvider.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreNotSame(matcher2, matcher3);
 				Assert.AreNotSame(mapper2, mapper3);
@@ -94,7 +96,7 @@ namespace NeatMapper.Tests {
 
 			{
 				var matcher2 = services.GetRequiredService<IMatcher>();
-				var mapper2 = services.GetRequiredService<IMapper>();
+				var mapper2 = services.GetRequiredService<IAsyncMapper>();
 
 				Assert.AreNotSame(matcher, matcher2);
 				Assert.AreNotSame(mapper, mapper2);
@@ -113,13 +115,13 @@ namespace NeatMapper.Tests {
 		[DataRow(ServiceLifetime.Transient, ServiceLifetime.Transient, false)]
 		public void ShouldReturnSameInstanceForMapperAndMatcherWhenPossible(ServiceLifetime mapperLifetime, ServiceLifetime matcherLifetime, bool shouldBeSameInstance) {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(mapperLifetime, matcherLifetime);
+			serviceCollection.AddNeatMapperAsync(mapperLifetime, matcherLifetime);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
-			using(var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope()) {
-				var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
+			using (var scope = services.CreateScope()) {
+				var mapper = scope.ServiceProvider.GetRequiredService<IAsyncMapper>();
 				var matcher = scope.ServiceProvider.GetRequiredService<IMatcher>();
-				if(shouldBeSameInstance)
+				if (shouldBeSameInstance)
 					Assert.AreSame(mapper, matcher);
 				else
 					Assert.AreNotSame(mapper, matcher);
@@ -140,42 +142,42 @@ namespace NeatMapper.Tests {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.Add(new ServiceDescriptor(
 				typeof(IMatcher),
-				s => new Mapper(s.GetRequiredService<IOptions<MapperConfigurationOptions>>().Value, s),
+				s => new AsyncMapper(s.GetRequiredService<IOptions<MapperConfigurationOptions>>().Value, s),
 				matcherLifetime
 			));
-			serviceCollection.AddNeatMapper(mapperLifetime);
+			serviceCollection.AddNeatMapperAsync(mapperLifetime);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
-			using (var scope = services.GetRequiredService<IServiceScopeFactory>().CreateScope()) {
-				scope.ServiceProvider.GetRequiredService<IMapper>();
+			using (var scope = services.CreateScope()) {
+				scope.ServiceProvider.GetRequiredService<IAsyncMapper>();
 				scope.ServiceProvider.GetRequiredService<IMatcher>();
 			}
 		}
 
 		[TestMethod]
-		public void ShouldUseMapperConfigurationOptions() {
+		public Task ShouldUseMapperConfigurationOptions() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper();
+			serviceCollection.AddNeatMapperAsync();
 			serviceCollection.Configure<MapperConfigurationOptions>(o => {
 				o.ScanTypes.Add(typeof(Maps));
 			});
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
-			var mapper = services.GetRequiredService<IMapper>();
-			mapper.Map<string, int>("AAA");
+			var mapper = services.GetRequiredService<IAsyncMapper>();
+			return mapper.MapAsync<string, int>("AAA");
 		}
 
 		[TestMethod]
-		public void ShouldUseMapperOptions() {
+		public Task ShouldUseMapperOptions() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper();
-			serviceCollection.Configure<MapperOptions>(o => {
-				o.AddNewMap<string, int>((s, _) => s?.Length ?? 0);
+			serviceCollection.AddNeatMapperAsync();
+			serviceCollection.Configure<AsyncMapperOptions>(o => {
+				o.AddNewMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0));
 			});
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
-			var mapper = services.GetRequiredService<IMapper>();
-			mapper.Map<string, int>("AAA");
+			var mapper = services.GetRequiredService<IAsyncMapper>();
+			return mapper.MapAsync<string, int>("AAA");
 		}
 	}
 }

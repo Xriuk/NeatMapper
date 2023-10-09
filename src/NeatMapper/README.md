@@ -9,8 +9,8 @@
 This allows you to create mappings between different types (even generic ones),
 combine them, nest them and reuse them, making your code DRY. Map once, use everywhere.
 
-All of this is achieved with strongly typed maps, easily debuggable,
-no compilation into obscure expressions, no black boxes.
+All of this is achieved with explicit strongly typed maps, easily debuggable,
+no implicit mappings, no conventions, no compilation into obscure expressions, no black boxes.
 
 ## How to install
 
@@ -137,6 +137,40 @@ public class MyMaps :
             destination ??= new CategoryDto();
             destination.Id = source.Id;
             destination.Parent = context.Mapper.Map<Category, CategoryDto>(source.Parent, destination.Parent);
+            ...
+        }
+        return destination;
+    }
+}
+```
+
+You could even map hierarchies by reusing existing maps.
+
+```csharp
+public class MyMaps :
+    IMergeMap<Product, ProductDto>,
+    IMergeMap<LimitedProduct, LimitedProductDto>
+{
+    ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto?, MappingContext context){
+        if(source != null){
+            destination ??= new ProductDto();
+            destination.Code = source.Code;
+            ...
+        }
+        return destination;
+    }
+
+    LimitedProductDto? IMergeMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, LimitedProductDto?, MappingContext context){
+        // Needed to prevent constructing ProductDto in parent map
+        destination ??= new LimitedProductDto();
+        
+        // Map parents (returned destination may be null, depending on the mapping)
+        destination = context.Mapper.Map<Product, ProductDto>(source, destination) as LimitedProductDto;
+        
+        // Map child properties
+        if(source != null){
+            destination ??= new LimitedProductDto();
+            destination.Code = source.Code;
             ...
         }
         return destination;

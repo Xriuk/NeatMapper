@@ -17,5 +17,13 @@ namespace NeatMapper.Tests {
 		public static Task AssertMapNotFound(Func<Task> action) {
 			return Assert.ThrowsExceptionAsync<MapNotFoundException>(action);
 		}
+
+		public static void AssertMatcherNotFound(Func<object> action) {
+			Assert.ThrowsException<MatcherNotFound>(action);
+		}
+
+		public static Task AssertMatcherNotFound(Func<Task> action) {
+			return Assert.ThrowsExceptionAsync<MatcherNotFound>(action);
+		}
 	}
 }

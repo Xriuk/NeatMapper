@@ -28,7 +28,7 @@ namespace NeatMapper {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			if (source == null)
-				throw new ArgumentNullException(nameof(source));
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
 			return(TDestination)mapper.Map(source, source.GetType(), typeof(TDestination));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
