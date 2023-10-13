@@ -368,6 +368,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("6", await _mapper.MapAsync<string>(2f));
 		}
 
+		// DEV: should forward options (except merge.matcher) to merge map
+
 		[TestMethod]
 		public Task ShouldNotFallbackToMergeMapIfCannotCreateDestination() {
 			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<ClassWithoutParameterlessConstructor>(""));
@@ -478,6 +480,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 		}
 
+		// DEV: should forward options (except merge.matcher) to elements
+
 		[TestMethod]
 		public Task ShouldNotMapCollectionsIfCannotCreateDestination() {
 			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<CustomCollectionWithoutParameterlessConstructor<string>>(new[] { 2, -3, 0 }));
@@ -515,6 +519,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("6", result[0]);
 		}
 
+		// DEV: should forward options (except merge.matcher) to merge collection
+
 		[TestMethod]
 		public Task ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {
 			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<ClassWithoutParameterlessConstructor>>(new[] { "" }));
@@ -537,6 +543,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("2", strings[1].ElementAt(0));
 			Assert.AreEqual("4", strings[1].ElementAt(1));
 		}
+
+		// DEV: should forward options (except merge.matcher) to elements of elements
 
 		[TestMethod]
 		public Task ShouldNotMapMultidimensionalArrays() {

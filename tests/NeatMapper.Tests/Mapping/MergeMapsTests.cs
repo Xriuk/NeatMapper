@@ -720,6 +720,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(6, result.ElementAt(2).Id);
 		}
 
+		// DEV: should forward options (except merge.matcher) to elements
+
 		[TestMethod]
 		public void ShouldNotMapCollectionsWithoutMap() {
 			var destination = new List<int>();
@@ -1035,6 +1037,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(3, result[1].Count());
 			Assert.IsTrue(result[1].All(e => e != a1 && e != b1 && e != c1 & e != a2 && e != b2 && e != c2));
 		}
+
+		// DEV: should forward options (except merge.matcher) to elements of elements
 
 		[TestMethod]
 		public void ShouldRespectReturnedValueInCollections() {

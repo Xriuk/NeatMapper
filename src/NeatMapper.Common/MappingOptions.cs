@@ -43,5 +43,9 @@ namespace NeatMapper {
 			else
 				return null;
 		}
+
+		public IEnumerable<object> AsEnumerable() {
+			return options.Values;
+		}
 	}
 }

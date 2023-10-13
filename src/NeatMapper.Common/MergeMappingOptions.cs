@@ -3,6 +3,13 @@
 	/// Mapping options applied to merge mappings, these will override any configuration options defined in <see cref="Configuration.MapperConfigurationOptions"/>
 	/// </summary>
 	public sealed class MergeMappingOptions{
+		public MergeMappingOptions() { }
+		public MergeMappingOptions(MergeMappingOptions other) {
+			CollectionRemoveNotMatchedDestinationElements = other.CollectionRemoveNotMatchedDestinationElements;
+			Matcher = other.Matcher;
+		}
+
+
 		/// <summary>
 		/// If true, will remove all the elements from destination which do not have a corresponding element in source,
 		/// matched with <see cref="IMatchMap{TSource, TDestination}"/> (or <see cref="Matcher"/>)

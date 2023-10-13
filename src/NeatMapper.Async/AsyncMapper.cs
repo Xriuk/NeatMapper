@@ -271,14 +271,26 @@ namespace NeatMapper.Async {
 
 				return async (sourceAndContext) => {
 					try {
-						var destination = CreateCollection(types.To);
-						var addMethod = GetCollectionAddMethod(destination);
-
 						if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
+							var destination = CreateCollection(types.To);
+							var addMethod = GetCollectionAddMethod(destination);
+
+							// Adjust the context so that we don't pass any merge matcher along
+							var context = (AsyncMappingContext)sourceAndContext[1];
+							context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
+								if (!(o is MergeMappingOptions merge))
+									return o;
+								else {
+									var mergeOpts = new MergeMappingOptions(merge);
+									mergeOpts.Matcher = null;
+									return mergeOpts;
+								}
+							}));
+
 							foreach (var element in sourceEnumerable) {
 								object destinationElement;
 								try {
-									destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { element, sourceAndContext[1] }));
+									destinationElement = await TaskUtils.AwaitTask<object>((Task)elementMapper.Invoke(new object[] { element, context }));
 								}
 								catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
 									throw new MappingException(e, types);
@@ -399,7 +411,18 @@ namespace NeatMapper.Async {
 										Func<object[], Task<object>> nullMergeCollectionMapping = null;
 										var mergeCollectionMappings = new Dictionary<object, Func<object[], Task<object>>>();
 
-										var mergeMappingOptions = ((AsyncMappingContext)sourceDestinationAndContext[2]).MappingOptions.GetOptions<MergeMappingOptions>();
+										// Adjust the context so that we don't pass any merge matcher along
+										var context = (AsyncMappingContext)sourceDestinationAndContext[2];
+										var mergeMappingOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+										context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
+											if (!(o is MergeMappingOptions merge))
+												return o;
+											else {
+												var mergeOpts = new MergeMappingOptions(merge);
+												mergeOpts.Matcher = null;
+												return mergeOpts;
+											}
+										}));
 
 										// (source, destination, context) => bool
 										Func<object[], bool> elementComparer;
@@ -423,7 +446,7 @@ namespace NeatMapper.Async {
 										foreach (var destinationElement in destinationEnumerable) {
 											bool found = false;
 											foreach (var sourceElement in sourceEnumerable) {
-												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2] })) {
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, context })) {
 													found = true;
 													break;
 												}
@@ -460,7 +483,7 @@ namespace NeatMapper.Async {
 											bool found = false;
 											object matchingDestinationElement = null;
 											foreach (var destinationElement in destinationEnumerable) {
-												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2] }) &&
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, context }) &&
 													!elementsToRemove.Contains(destinationElement)) {
 
 													matchingDestinationElement = destinationElement;
@@ -487,7 +510,7 @@ namespace NeatMapper.Async {
 												if (mergeElementMapper != null) {
 													object mergeResult;
 													try { 
-														mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, sourceDestinationAndContext[2] }));
+														mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, context }));
 													}
 													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
 														throw new MappingException(e, types);
@@ -503,7 +526,7 @@ namespace NeatMapper.Async {
 
 													object newResult;
 													try { 
-														newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+														newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, context }));
 													}
 													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
 														throw new MappingException(e, types);
@@ -516,7 +539,7 @@ namespace NeatMapper.Async {
 												if (newElementMapper != null) {
 													object newResult;
 													try { 
-														newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+														newResult = await TaskUtils.AwaitTask<object>((Task)newElementMapper.Invoke(new object[] { sourceElement, context }));
 													}
 													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
 														throw new MappingException(e, types);
@@ -536,7 +559,7 @@ namespace NeatMapper.Async {
 
 													object mergeResult;
 													try { 
-														mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, sourceDestinationAndContext[2] }));
+														mergeResult = await TaskUtils.AwaitTask<object>((Task)mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, context }));
 													}
 													catch (Exception e) when (!(e is MappingException) && !(e is CollectionMappingException)) {
 														throw new MappingException(e, types);

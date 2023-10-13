@@ -253,12 +253,24 @@ namespace NeatMapper {
 
 				return (sourceAndContext) => {
 					try {
-						var destination = CreateCollection(types.To);
-						var addMethod = GetCollectionAddMethod(destination);
-
 						if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
+							var destination = CreateCollection(types.To);
+							var addMethod = GetCollectionAddMethod(destination);
+
+							// Adjust the context so that we don't pass any merge matcher along
+							var context = (MappingContext)sourceAndContext[1];
+							context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
+								if (!(o is MergeMappingOptions merge))
+									return o;
+								else {
+									var mergeOpts = new MergeMappingOptions(merge);
+									mergeOpts.Matcher = null;
+									return mergeOpts;
+								}
+							}));
+
 							foreach (var element in sourceEnumerable) {
-								var destinationElement = elementMapper.Invoke(new object[] { element, sourceAndContext[1] });
+								var destinationElement = elementMapper.Invoke(new object[] { element, context });
 								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
@@ -374,8 +386,18 @@ namespace NeatMapper {
 										Func<object[], object> nullMergeCollectionMapping = null;
 										var mergeCollectionMappings = new Dictionary<object, Func<object[], object>>();
 
-
-										var mergeMappingOptions = ((MappingContext)sourceDestinationAndContext[2]).MappingOptions.GetOptions<MergeMappingOptions>();
+										// Adjust the context so that we don't pass any merge matcher along
+										var context = (MappingContext)sourceDestinationAndContext[2];
+										var mergeMappingOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+										context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
+											if (!(o is MergeMappingOptions merge))
+												return o;
+											else {
+												var mergeOpts = new MergeMappingOptions(merge);
+												mergeOpts.Matcher = null;
+												return mergeOpts;
+											}
+										}));
 
 										// (source, destination, context) => bool
 										Func<object[], bool> elementComparer;
@@ -399,7 +421,7 @@ namespace NeatMapper {
 										foreach (var destinationElement in destinationEnumerable) {
 											bool found = false;
 											foreach (var sourceElement in sourceEnumerable) {
-												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2] })) {
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, context })) {
 													found = true;
 													break;
 												}
@@ -436,7 +458,7 @@ namespace NeatMapper {
 											bool found = false;
 											object matchingDestinationElement = null;
 											foreach (var destinationElement in destinationEnumerable) {
-												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, sourceDestinationAndContext[2] }) &&
+												if (elementComparer.Invoke(new object[] { sourceElement, destinationElement, context }) &&
 													!elementsToRemove.Contains(destinationElement)) {
 
 													matchingDestinationElement = destinationElement;
@@ -461,7 +483,7 @@ namespace NeatMapper {
 												}
 
 												if (mergeElementMapper != null) {
-													var mergeResult = mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, sourceDestinationAndContext[2] });
+													var mergeResult = mergeElementMapper.Invoke(new object[] { sourceElement, matchingDestinationElement, context });
 													if (mergeResult != matchingDestinationElement) {
 														elementsToRemove.Add(matchingDestinationElement);
 														elementsToAdd.Add(mergeResult);
@@ -469,12 +491,12 @@ namespace NeatMapper {
 												}
 												else {
 													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+													elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, context }));
 												}
 											}
 											else {
 												if (newElementMapper != null)
-													elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, sourceDestinationAndContext[2] }));
+													elementsToAdd.Add(newElementMapper.Invoke(new object[] { sourceElement, context }));
 												else {
 													var destinationInstance = destinationElementFactory.Invoke();
 
@@ -485,7 +507,7 @@ namespace NeatMapper {
 														tempMergeMapper = true;
 													}
 
-													elementsToAdd.Add(mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, sourceDestinationAndContext[2] }));
+													elementsToAdd.Add(mergeElementMapper.Invoke(new object[] { sourceElement, destinationInstance, context }));
 												}
 											}
 
