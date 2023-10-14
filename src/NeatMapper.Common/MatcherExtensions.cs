@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 
 namespace NeatMapper {
 	public static class MatcherExtensions {
@@ -22,10 +23,16 @@ namespace NeatMapper {
 #else
 			TDestination
 #endif
-			destination) {
+			destination,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions = null) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return mapper.Match(source, typeof(TSource), destination, typeof(TDestination));
+			return mapper.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
 		}
 	}
 }

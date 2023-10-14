@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
 	public class NewMapsTests {
+		public class TestOptions { }
+
 		public class Maps :
 #if NET7_0_OR_GREATER
 			IAsyncNewMapStatic<int, string>,
@@ -47,6 +49,9 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 			{
 
+			public static TestOptions options;
+			public static MergeMappingOptions mergeOptions;
+
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -57,6 +62,8 @@ namespace NeatMapper.Tests.Mapping {
 				IAsyncNewMap<int, string>
 #endif
 				.MapAsync(int source, AsyncMappingContext context) {
+				options = context.MappingOptions.GetOptions<TestOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
 				return Task.FromResult((source * 2).ToString());
 			}
 
@@ -109,6 +116,8 @@ namespace NeatMapper.Tests.Mapping {
 				IAsyncMergeMap<float, string>
 #endif
 				.MapAsync(float source, string destination, AsyncMappingContext context) {
+				options = context.MappingOptions.GetOptions<TestOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
 				return Task.FromResult((source * 3).ToString());
 			}
 
@@ -365,10 +374,47 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldFallbackToMergeMapIfNewMapIsNotDefined() {
-			Assert.AreEqual("6", await _mapper.MapAsync<string>(2f));
-		}
+			// No Options
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
 
-		// DEV: should forward options (except merge.matcher) to merge map
+				Assert.AreEqual("6", await _mapper.MapAsync<string>(2f));
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (without matcher)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var opts = new TestOptions();
+				await _mapper.MapAsync<string>(2f, new[] { opts });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (with matcher, forwards everything)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, c) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await _mapper.MapAsync<string>(2f, new object[] { opts, merge });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.AreSame(merge, Maps.mergeOptions);
+				Assert.IsNotNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
+		}
 
 		[TestMethod]
 		public Task ShouldNotFallbackToMergeMapIfCannotCreateDestination() {
@@ -398,7 +444,12 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapCollections() {
+			// Should forward options except merge.matcher
+
+			// No options
 			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
 				var strings = await _mapper.MapAsync<string[]>(new[] { 2, -3, 0 });
 
 				Assert.IsNotNull(strings);
@@ -406,26 +457,50 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual("4", strings[0]);
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
 			}
 
+			// Options (no merge)
 			{
-				var strings = await _mapper.MapAsync<IList<string>>(new[] { 2, -3, 0 });
+				Maps.options = null;
+				Maps.mergeOptions = null;
+				var opts = new TestOptions();
+				var strings = await _mapper.MapAsync<IList<string>>(new[] { 2, -3, 0 }, new[] { opts });
 
 				Assert.IsNotNull(strings);
 				Assert.AreEqual(3, strings.Count);
 				Assert.AreEqual("4", strings[0]);
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
 			}
 
+			// Options (merge with matcher)
 			{
-				var strings = await _mapper.MapAsync<LinkedList<string>>(new[] { 2, -3, 0 });
+				Maps.options = null;
+				Maps.mergeOptions = null;
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, c) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				var strings = await _mapper.MapAsync<LinkedList<string>>(new[] { 2, -3, 0 }, new object[] { opts, merge });
 
 				Assert.IsNotNull(strings);
 				Assert.AreEqual(3, strings.Count);
 				Assert.AreEqual("4", strings.ElementAt(0));
 				Assert.AreEqual("-6", strings.ElementAt(1));
 				Assert.AreEqual("0", strings.ElementAt(2));
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNotNull(Maps.mergeOptions);
+				Assert.AreNotSame(merge, Maps.mergeOptions);
+				Assert.IsNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
 			}
 
 			{
@@ -480,8 +555,6 @@ namespace NeatMapper.Tests.Mapping {
 			}
 		}
 
-		// DEV: should forward options (except merge.matcher) to elements
-
 		[TestMethod]
 		public Task ShouldNotMapCollectionsIfCannotCreateDestination() {
 			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<CustomCollectionWithoutParameterlessConstructor<string>>(new[] { 2, -3, 0 }));
@@ -512,14 +585,50 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldFallbackToMergeMapInCollections() {
-			var result = await _mapper.MapAsync<IList<string>>(new[] { 2f });
+			// No Options
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
 
-			Assert.IsNotNull(result);
-			Assert.AreEqual(1, result.Count);
-			Assert.AreEqual("6", result[0]);
+				var result = await _mapper.MapAsync<IList<string>>(new[] { 2f });
+				Assert.IsNotNull(result);
+				Assert.AreEqual(1, result.Count);
+				Assert.AreEqual("6", result[0]);
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (without matcher)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var opts = new TestOptions();
+				await _mapper.MapAsync<IList<string>>(new[] { 2f }, new[] { opts });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (with matcher, forwards everything)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, c) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await _mapper.MapAsync<IList<string>>(new[] { 2f }, new object[] { opts, merge });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.AreNotSame(merge, Maps.mergeOptions);
+				Assert.IsNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
 		}
-
-		// DEV: should forward options (except merge.matcher) to merge collection
 
 		[TestMethod]
 		public Task ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {
@@ -528,23 +637,67 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsOfCollections() {
-			var strings = await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
-				new[]{ 2, -3, 0 },
-				new[]{ 1, 2 }
-			});
+			// No options
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
 
-			Assert.IsNotNull(strings);
-			Assert.AreEqual(2, strings.Count);
-			Assert.AreEqual(3, strings[0].Count());
-			Assert.AreEqual(2, strings[1].Count());
-			Assert.AreEqual("4", strings[0].ElementAt(0));
-			Assert.AreEqual("-6", strings[0].ElementAt(1));
-			Assert.AreEqual("0", strings[0].ElementAt(2));
-			Assert.AreEqual("2", strings[1].ElementAt(0));
-			Assert.AreEqual("4", strings[1].ElementAt(1));
+				var strings = await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				});
+
+				Assert.IsNotNull(strings);
+				Assert.AreEqual(2, strings.Count);
+				Assert.AreEqual(3, strings[0].Count());
+				Assert.AreEqual(2, strings[1].Count());
+				Assert.AreEqual("4", strings[0].ElementAt(0));
+				Assert.AreEqual("-6", strings[0].ElementAt(1));
+				Assert.AreEqual("0", strings[0].ElementAt(2));
+				Assert.AreEqual("2", strings[1].ElementAt(0));
+				Assert.AreEqual("4", strings[1].ElementAt(1));
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (no merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var opts = new TestOptions();
+				await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				}, new[] { opts });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (merge with matcher)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, c) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				}, new object[] { opts, merge });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNotNull(Maps.mergeOptions);
+				Assert.AreNotSame(merge, Maps.mergeOptions);
+				Assert.IsNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
 		}
-
-		// DEV: should forward options (except merge.matcher) to elements of elements
 
 		[TestMethod]
 		public Task ShouldNotMapMultidimensionalArrays() {

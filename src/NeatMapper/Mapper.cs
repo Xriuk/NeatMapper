@@ -263,8 +263,9 @@ namespace NeatMapper {
 								if (!(o is MergeMappingOptions merge))
 									return o;
 								else {
-									var mergeOpts = new MergeMappingOptions(merge);
-									mergeOpts.Matcher = null;
+									var mergeOpts = new MergeMappingOptions(merge) {
+										Matcher = null
+									};
 									return mergeOpts;
 								}
 							}));
@@ -393,8 +394,9 @@ namespace NeatMapper {
 											if (!(o is MergeMappingOptions merge))
 												return o;
 											else {
-												var mergeOpts = new MergeMappingOptions(merge);
-												mergeOpts.Matcher = null;
+												var mergeOpts = new MergeMappingOptions(merge) {
+													Matcher = null
+												};
 												return mergeOpts;
 											}
 										}));

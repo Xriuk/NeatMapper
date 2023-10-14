@@ -8,13 +8,18 @@ using System.Collections.Generic;
 namespace NeatMapper.Tests.Matching {
 	[TestClass]
 	public class MatchMapsTests {
+		public class TestMappingOptions { }
+
+
 		public class Maps :
 #if NET7_0_OR_GREATER
 			IMatchMapStatic<int, string>,
+			IMatchMapStatic<float, string>,
 			IMatchMapStatic<Category, CategoryDto>,
 			IHierarchyMatchMapStatic<Product, ProductDto>
 #else
 			IMatchMap<int, string>,
+			IMatchMap<float, string>,
 			IMatchMap<Category, CategoryDto>,
 			IHierarchyMatchMap<Product, ProductDto>
 #endif
@@ -29,6 +34,22 @@ namespace NeatMapper.Tests.Matching {
 				IMatchMap<int, string>
 #endif
 				.Match(int source, string destination, MatchingContext context) {
+				return (source * 2).ToString() == destination;
+			}
+			
+			// Options
+			public static TestMappingOptions options;
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				IMatchMapStatic<float, string>
+#else
+				IMatchMap<float, string>
+#endif
+				.Match(float source, string destination, MatchingContext context) {
+				options = context.MappingOptions.GetOptions<TestMappingOptions>();
 				return (source * 2).ToString() == destination;
 			}
 
@@ -162,6 +183,20 @@ namespace NeatMapper.Tests.Matching {
 			}, new ProductDto {
 				Code = "Test2"
 			}));
+		}
+
+		[TestMethod]
+		public void ShouldSetOptions() {
+			// No options
+			Maps.options = null;
+			_matcher.Match(2f, "4");
+			Assert.IsNull(Maps.options);
+
+			// Options
+			Maps.options = null;
+			var opts = new TestMappingOptions();
+			_matcher.Match(2f, "4", new[] { opts });
+			Assert.AreSame(opts, Maps.options);
 		}
 	}
 }

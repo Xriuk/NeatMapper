@@ -11,6 +11,8 @@ using System.Threading.Tasks;
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
 	public class MergeMapsTests {
+		public class TestOptions { }
+
 		public class Maps :
 #if NET7_0_OR_GREATER
 			IAsyncMergeMapStatic<int, string>,
@@ -53,6 +55,9 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 			{
 
+			public static TestOptions options;
+			public static MergeMappingOptions mergeOptions;
+
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -63,6 +68,8 @@ namespace NeatMapper.Tests.Mapping {
 				IAsyncMergeMap<int, string>
 #endif
 				.MapAsync(int source, string destination, AsyncMappingContext context) {
+				options = context.MappingOptions.GetOptions<TestOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
 				return Task.FromResult((source * 2).ToString());
 			}
 
@@ -189,6 +196,8 @@ namespace NeatMapper.Tests.Mapping {
 				IAsyncMergeMap<decimal, Price>
 #endif
 				.MapAsync(decimal source, Price destination, AsyncMappingContext context) {
+				options = context.MappingOptions.GetOptions<TestOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
 				return Task.FromResult(new Price {
 					Amount = source,
 					Currency = "EUR"
@@ -223,6 +232,8 @@ namespace NeatMapper.Tests.Mapping {
 				IAsyncMergeMap<Category, CategoryDto>
 #endif
 				.MapAsync(Category source, CategoryDto destination, AsyncMappingContext context) {
+				options = context.MappingOptions.GetOptions<TestOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
 				if (source != null) {
 					if (destination == null)
 						destination = new CategoryDto();
@@ -344,6 +355,8 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 			{
 
+			public static TestOptions options;
+			public static MergeMappingOptions mergeOptions;
 
 #if NET7_0_OR_GREATER
 			static
@@ -368,6 +381,8 @@ namespace NeatMapper.Tests.Mapping {
 				IAsyncMergeMap<LimitedProduct, ProductDto>
 #endif
 				.MapAsync(LimitedProduct source, ProductDto destination, AsyncMappingContext context) {
+				options = context.MappingOptions.GetOptions<TestOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
 				if (source != null) {
 					if (destination == null)
 						destination = new LimitedProductDto();
@@ -626,52 +641,188 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithoutElementsComparer() {
-			var a = new Price();
-			var b = new Price();
-			var c = new Price();
-			var destination = new List<Price> { a, b, c };
-			var result = await _mapper.MapAsync(new[] { 20m, 15.25m, 0m }, destination);
-			Assert.IsNotNull(result);
-			Assert.AreSame(destination, result);
-			Assert.AreEqual(3, result.Count());
-			Assert.IsTrue(result.All(v => v != a && v != b && v != c));
+			// No options
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var a = new Price();
+				var b = new Price();
+				var c = new Price();
+				var destination = new List<Price> { a, b, c };
+				var result = await _mapper.MapAsync(new[] { 20m, 15.25m, 0m }, destination);
+				Assert.IsNotNull(result);
+				Assert.AreSame(destination, result);
+				Assert.AreEqual(3, result.Count());
+				Assert.IsTrue(result.All(v => v != a && v != b && v != c));
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (no merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var a = new Price();
+				var b = new Price();
+				var c = new Price();
+				var destination = new List<Price> { a, b, c };
+				var opts = new TestOptions();
+				await _mapper.MapAsync(new[] { 20m, 15.25m, 0m }, destination, new[] { opts });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var a = new Price();
+				var b = new Price();
+				var c = new Price();
+				var destination = new List<Price> { a, b, c };
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, _) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await _mapper.MapAsync(new[] { 20m, 15.25m, 0m }, destination, new object[] { opts, merge });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNotNull(Maps.mergeOptions);
+				Assert.AreNotSame(merge, Maps.mergeOptions);
+				Assert.IsNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
 		}
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithElementsComparer() {
-			var a = new CategoryDto {
-				Id = 2,
-				Parent = 2
-			};
-			var b = new CategoryDto {
-				Id = 3
-			};
-			var c = new CategoryDto {
-				Id = 5
-			};
-			var destination = new CustomCollection<CategoryDto> { a, b, c };
-			var result = await _mapper.MapAsync(new[] {
-				new Category {
-					Id = 3,
-					Parent = new Category {
-						Id = 7
+			// No options
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var a = new CategoryDto {
+					Id = 2,
+					Parent = 2
+				};
+				var b = new CategoryDto {
+					Id = 3
+				};
+				var c = new CategoryDto {
+					Id = 5
+				};
+				var destination = new CustomCollection<CategoryDto> { a, b, c };
+				var result = await _mapper.MapAsync(new[] {
+					new Category {
+						Id = 3,
+						Parent = new Category {
+							Id = 7
+						}
+					},
+					new Category {
+						Id = 2
+					},
+					new Category {
+						Id = 6
 					}
-				},
-				new Category {
-					Id = 2
-				},
-				new Category {
-					Id = 6
-				}
-			}, destination);
-			Assert.IsNotNull(result);
-			Assert.AreSame(destination, result);
-			Assert.AreEqual(3, result.Count());
-			Assert.AreSame(a, result[0]);
-			Assert.IsNull(result[0].Parent);
-			Assert.AreSame(b, result[1]);
-			Assert.AreEqual(7, result[1].Parent);
-			Assert.AreEqual(6, result[2].Id);
+				}, destination);
+				Assert.IsNotNull(result);
+				Assert.AreSame(destination, result);
+				Assert.AreEqual(3, result.Count());
+				Assert.AreSame(a, result[0]);
+				Assert.IsNull(result[0].Parent);
+				Assert.AreSame(b, result[1]);
+				Assert.AreEqual(7, result[1].Parent);
+				Assert.AreEqual(6, result[2].Id);
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (no merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var a = new CategoryDto {
+					Id = 2,
+					Parent = 2
+				};
+				var b = new CategoryDto {
+					Id = 3
+				};
+				var c = new CategoryDto {
+					Id = 5
+				};
+				var destination = new CustomCollection<CategoryDto> { a, b, c };
+				var opts = new TestOptions();
+				await _mapper.MapAsync(new[] {
+					new Category {
+						Id = 3,
+						Parent = new Category {
+							Id = 7
+						}
+					},
+					new Category {
+						Id = 2
+					},
+					new Category {
+						Id = 6
+					}
+				}, destination, new[] { opts });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var a = new CategoryDto {
+					Id = 2,
+					Parent = 2
+				};
+				var b = new CategoryDto {
+					Id = 3
+				};
+				var c = new CategoryDto {
+					Id = 5
+				};
+				var destination = new CustomCollection<CategoryDto> { a, b, c };
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, _) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await _mapper.MapAsync(new[] {
+					new Category {
+						Id = 3,
+						Parent = new Category {
+							Id = 7
+						}
+					},
+					new Category {
+						Id = 2
+					},
+					new Category {
+						Id = 6
+					}
+				}, destination, new object[] { opts, merge });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNotNull(Maps.mergeOptions);
+				Assert.AreNotSame(merge, Maps.mergeOptions);
+				Assert.IsNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
 		}
 
 		[TestMethod]
@@ -680,39 +831,131 @@ namespace NeatMapper.Tests.Mapping {
 				ScanTypes = new List<Type> { typeof(HierarchyMatchers) }
 			});
 
-			var a = new ProductDto {
-				Code = "Test1",
-				Categories = new List<int>()
-			};
-			var b = new ProductDto {
-				Code = "Test2",
-				Categories = new List<int>()
-			};
-			var c = new ProductDto {
-				Code = "Test4",
-				Categories = new List<int>()
-			};
-			var destination = new CustomCollection<ProductDto> { a, b, c };
-			var result = await mapper.MapAsync(new[] {
-				new LimitedProduct {
-					Code = "Test4",
-					Categories = new List<Category>()
-				},
-				new LimitedProduct {
+			// No options
+			{
+				HierarchyMatchers.options = null;
+				HierarchyMatchers.mergeOptions = null;
+
+				var a = new ProductDto {
 					Code = "Test1",
-					Categories = new List<Category>()
-				},
-				new LimitedProduct {
-					Code = "Test5",
-					Categories = new List<Category>()
-				}
-			}, destination);
-			Assert.IsNotNull(result);
-			Assert.AreSame(destination, result);
-			Assert.AreEqual(3, result.Count());
-			Assert.AreSame(a, result[0]);
-			Assert.AreSame(c, result[1]);
-			Assert.AreEqual("Test5", result[2].Code);
+					Categories = new List<int>()
+				};
+				var b = new ProductDto {
+					Code = "Test2",
+					Categories = new List<int>()
+				};
+				var c = new ProductDto {
+					Code = "Test4",
+					Categories = new List<int>()
+				};
+				var destination = new CustomCollection<ProductDto> { a, b, c };
+				var result = await mapper.MapAsync(new[] {
+					new LimitedProduct {
+						Code = "Test4",
+						Categories = new List<Category>()
+					},
+					new LimitedProduct {
+						Code = "Test1",
+						Categories = new List<Category>()
+					},
+					new LimitedProduct {
+						Code = "Test5",
+						Categories = new List<Category>()
+					}
+				}, destination);
+				Assert.IsNotNull(result);
+				Assert.AreSame(destination, result);
+				Assert.AreEqual(3, result.Count());
+				Assert.AreSame(a, result[0]);
+				Assert.AreSame(c, result[1]);
+				Assert.AreEqual("Test5", result[2].Code);
+
+				Assert.IsNull(HierarchyMatchers.options);
+				Assert.IsNull(HierarchyMatchers.mergeOptions);
+			}
+
+			// Options (no merge)
+			{
+				HierarchyMatchers.options = null;
+				HierarchyMatchers.mergeOptions = null;
+
+				var a = new ProductDto {
+					Code = "Test1",
+					Categories = new List<int>()
+				};
+				var b = new ProductDto {
+					Code = "Test2",
+					Categories = new List<int>()
+				};
+				var c = new ProductDto {
+					Code = "Test4",
+					Categories = new List<int>()
+				};
+				var destination = new CustomCollection<ProductDto> { a, b, c };
+				var opts = new TestOptions();
+				await mapper.MapAsync(new[] {
+					new LimitedProduct {
+						Code = "Test4",
+						Categories = new List<Category>()
+					},
+					new LimitedProduct {
+						Code = "Test1",
+						Categories = new List<Category>()
+					},
+					new LimitedProduct {
+						Code = "Test5",
+						Categories = new List<Category>()
+					}
+				}, destination, new[] { opts });
+
+				Assert.AreSame(opts, HierarchyMatchers.options);
+				Assert.IsNull(HierarchyMatchers.mergeOptions);
+			}
+
+			// Options (merge)
+			{
+				HierarchyMatchers.options = null;
+				HierarchyMatchers.mergeOptions = null;
+
+				var a = new ProductDto {
+					Code = "Test1",
+					Categories = new List<int>()
+				};
+				var b = new ProductDto {
+					Code = "Test2",
+					Categories = new List<int>()
+				};
+				var c = new ProductDto {
+					Code = "Test4",
+					Categories = new List<int>()
+				};
+				var destination = new CustomCollection<ProductDto> { a, b, c };
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, _) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await mapper.MapAsync(new[] {
+					new LimitedProduct {
+						Code = "Test4",
+						Categories = new List<Category>()
+					},
+					new LimitedProduct {
+						Code = "Test1",
+						Categories = new List<Category>()
+					},
+					new LimitedProduct {
+						Code = "Test5",
+						Categories = new List<Category>()
+					}
+				}, destination, new object[] { opts, merge });
+
+				Assert.AreSame(opts, HierarchyMatchers.options);
+				Assert.IsNotNull(HierarchyMatchers.mergeOptions);
+				Assert.AreNotSame(merge, HierarchyMatchers.mergeOptions);
+				Assert.IsNull(HierarchyMatchers.mergeOptions.Matcher);
+				Assert.IsFalse(HierarchyMatchers.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
 		}
 
 		[TestMethod]
@@ -752,8 +995,6 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(7, result.ElementAt(1).Parent);
 			Assert.AreEqual(6, result.ElementAt(2).Id);
 		}
-
-		// DEV: should forward options (except merge.matcher) to elements
 
 		[TestMethod]
 		public Task ShouldNotMapCollectionsWithoutMap() {
@@ -986,22 +1227,70 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsOfCollectionsWithoutElementsComparer() {
-			var destination = new List<ICollection<string>>();
-			var result = await _mapper.MapAsync(new[] {
-				new[]{ 2, -3, 0 },
-				new[]{ 1, 2 }
-			}, destination);
+			// No options
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
 
-			Assert.IsNotNull(result);
-			Assert.AreSame(destination, result);
-			Assert.AreEqual(2, result.Count);
-			Assert.AreEqual(3, result[0].Count());
-			Assert.AreEqual(2, result[1].Count());
-			Assert.AreEqual("4", result[0].ElementAt(0));
-			Assert.AreEqual("-6", result[0].ElementAt(1));
-			Assert.AreEqual("0", result[0].ElementAt(2));
-			Assert.AreEqual("2", result[1].ElementAt(0));
-			Assert.AreEqual("4", result[1].ElementAt(1));
+				var destination = new List<ICollection<string>>();
+				var result = await _mapper.MapAsync(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				}, destination);
+
+				Assert.IsNotNull(result);
+				Assert.AreSame(destination, result);
+				Assert.AreEqual(2, result.Count);
+				Assert.AreEqual(3, result[0].Count());
+				Assert.AreEqual(2, result[1].Count());
+				Assert.AreEqual("4", result[0].ElementAt(0));
+				Assert.AreEqual("-6", result[0].ElementAt(1));
+				Assert.AreEqual("0", result[0].ElementAt(2));
+				Assert.AreEqual("2", result[1].ElementAt(0));
+				Assert.AreEqual("4", result[1].ElementAt(1));
+
+				Assert.IsNull(Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (no merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var destination = new List<ICollection<string>>();
+				var opts = new TestOptions();
+				await _mapper.MapAsync(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				}, destination, new[] { opts });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNull(Maps.mergeOptions);
+			}
+
+			// Options (merge)
+			{
+				Maps.options = null;
+				Maps.mergeOptions = null;
+
+				var destination = new List<ICollection<string>>();
+				var opts = new TestOptions();
+				var merge = new MergeMappingOptions {
+					Matcher = (s, d, _) => false,
+					CollectionRemoveNotMatchedDestinationElements = false
+				};
+				await _mapper.MapAsync(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				}, destination, new object[] { opts, merge });
+
+				Assert.AreSame(opts, Maps.options);
+				Assert.IsNotNull(Maps.mergeOptions);
+				Assert.AreNotSame(merge, Maps.mergeOptions);
+				Assert.IsNull(Maps.mergeOptions.Matcher);
+				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+			}
 		}
 
 		[TestMethod]
@@ -1070,8 +1359,6 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(3, result[1].Count());
 			Assert.IsTrue(result[1].All(e => e != a1 && e != b1 && e != c1 & e != a2 && e != b2 && e != c2));
 		}
-
-		// DEV: should forward options (except merge.matcher) to elements of elements
 
 		[TestMethod]
 		public async Task ShouldRespectReturnedValueInCollections() {
