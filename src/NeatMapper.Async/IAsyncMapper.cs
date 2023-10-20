@@ -44,7 +44,7 @@ namespace NeatMapper.Async {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.<br/>
 		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
-		/// (or the passed <see cref="MergeMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
+		/// (or the passed <see cref="MergeCollectionsMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
 		/// </summary>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>

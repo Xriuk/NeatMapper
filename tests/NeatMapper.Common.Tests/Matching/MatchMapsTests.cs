@@ -111,7 +111,7 @@ namespace NeatMapper.Tests.Matching {
 		[TestInitialize]
 		public void Initialize() {
 			_matcher = new Matcher(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(Maps) }
+				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
 
@@ -142,7 +142,7 @@ namespace NeatMapper.Tests.Matching {
 		[TestMethod]
 		public void ShouldMatchChildClassAsParent() {
 			var matcher = new Matcher(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(Maps2) }
+				TypesToScan = new List<Type> { typeof(Maps2) }
 			});
 
 			Assert.IsTrue(matcher.Match<Product, ProductDto>(new LimitedProduct {

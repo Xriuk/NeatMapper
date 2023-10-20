@@ -1,5 +1,4 @@
-﻿using NeatMapper.Common;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,6 +48,29 @@ namespace NeatMapper {
 		/// <summary>
 		/// Maps an object to a new one
 		/// </summary>
+		/// <typeparam name="TDestination">type of the destination object to create, used to retrieve the available maps</typeparam>
+		/// <param name="source">
+		/// object to map, may NOT be null as the source type will be retrieved from it,
+		/// which will be used to retrieve the available maps
+		/// </param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps</param>
+		/// <returns>the newly created object, may be null</returns>
+		public static
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map<TDestination>(this IMapper mapper,
+			object source,
+			params object[] mappingOptions) {
+
+			return mapper.Map<TDestination>(source, mappingOptions.Length > 0 ? (IEnumerable)mappingOptions : null);
+		}
+
+		/// <summary>
+		/// Maps an object to a new one
+		/// </summary>
 		/// <typeparam name="TSource">type of the object to map, used to retrieve the available maps</typeparam>
 		/// <typeparam name="TDestination">type of the destination object to create, used to retrieve the available maps</typeparam>
 		/// <param name="source">object to map, may be null</param>
@@ -85,6 +107,32 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		/// <summary>
+		/// Maps an object to a new one
+		/// </summary>
+		/// <typeparam name="TSource">type of the object to map, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">type of the destination object to create, used to retrieve the available maps</typeparam>
+		/// <param name="source">object to map, may be null</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps</param>
+		/// <returns>the newly created object, may be null</returns>
+		public static
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map<TSource, TDestination>(this IMapper mapper,
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			source,
+			params object[] mappingOptions) {
+
+			return mapper.Map<TSource, TDestination>(source, mappingOptions.Length > 0 ? (IEnumerable)mappingOptions : null);
 		}
 
 		/// <summary>
@@ -139,6 +187,42 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
+		/// Maps an object to an existing one and returns the result
+		/// </summary>
+		/// <typeparam name="TSource">type of the object to be mapped, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">type of the destination object, used to retrieve the available maps</typeparam>
+		/// <param name="source">object to be mapped, may be null</param>
+		/// <param name="destination">object to map to, may be null</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps</param>
+		/// <returns>
+		/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
+		/// may be null
+		/// </returns>
+		public static
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			Map<TSource, TDestination>(this IMapper mapper,
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination,
+			params object[] mappingOptions) {
+
+			return mapper.Map<TSource, TDestination>(source, destination, mappingOptions.Length > 0 ? (IEnumerable)mappingOptions : null);
+		}
+
+		/// <summary>
 		/// Maps a collection to an existing one by matching the elements and returns the result
 		/// </summary>
 		/// <typeparam name="TSourceElement">type of the elements to be mapped, used to retrieve the available maps</typeparam>
@@ -187,9 +271,9 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			var mergeMappingOptions = mappingOptions?.Cast<object>().OfType<MergeMappingOptions>().FirstOrDefault();
+			var mergeMappingOptions = mappingOptions?.Cast<object>().OfType<MergeCollectionsMappingOptions>().FirstOrDefault();
 			if(mergeMappingOptions == null) {
-				mergeMappingOptions = new MergeMappingOptions();
+				mergeMappingOptions = new MergeCollectionsMappingOptions();
 				mappingOptions = mappingOptions != null ? mappingOptions.Cast<object>().Concat(new object[] { mergeMappingOptions }) : new object[] { mergeMappingOptions };
 			}
 			mergeMappingOptions.Matcher = (s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
@@ -206,6 +290,44 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		/// <summary>
+		/// Maps a collection to an existing one by matching the elements and returns the result
+		/// </summary>
+		/// <typeparam name="TSourceElement">type of the elements to be mapped, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestinationElement">type of the destination elements, used to retrieve the available maps</typeparam>
+		/// <param name="source">collection to be mapped, may be null</param>
+		/// <param name="destination">collection to map to, may be null</param>
+		/// <param name="matcher">matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
+		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps</param>
+		/// <returns>
+		/// the resulting collection of the mapping, can be <paramref name="destination"/> or a new one,
+		/// may be null
+		/// </returns>
+		public static
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TDestinationElement>?
+#else
+			ICollection<TDestinationElement>
+#endif
+			Map<TSourceElement, TDestinationElement>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable<TSourceElement>?
+#else
+			IEnumerable<TSourceElement>
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TDestinationElement>?
+#else
+			ICollection<TDestinationElement>
+#endif
+			destination,
+			MatchMapDelegate<TSourceElement, TDestinationElement> matcher,
+			params object[] mappingOptions) {
+
+			return mapper.Map<TSourceElement, TDestinationElement>(source, destination, matcher, mappingOptions.Length > 0 ? (IEnumerable)mappingOptions : null);
 		}
 	}
 }

@@ -13,11 +13,11 @@ using System.Reflection;
 
 namespace NeatMapper {
 	public static class EntityFrameworkCoreServiceCollectionExtensions {
-		private static readonly MethodInfo MapperOptions_TryAddNewMap = typeof(MapperOptions).GetMethod(nameof(MapperOptions.TryAddNewMap))
+		private static readonly MethodInfo MapperOptions_TryAddNewMap = typeof(CustomMapperOptions).GetMethod(nameof(CustomMapperOptions.TryAddNewMap))
 			?? throw new InvalidOperationException("Cannot find method MapperOptions.TryAddNewMap");
-		private static readonly MethodInfo MapperOptions_TryAddMergeMap = typeof(MapperOptions).GetMethod(nameof(MapperOptions.TryAddMergeMap))
+		private static readonly MethodInfo MapperOptions_TryAddMergeMap = typeof(CustomMapperOptions).GetMethod(nameof(CustomMapperOptions.TryAddMergeMap))
 			?? throw new InvalidOperationException("Cannot find method MapperOptions.TryAddMergeMap");
-		private static readonly MethodInfo MapperOptions_TryAddMatchMap = typeof(MapperOptions).GetMethod(nameof(MapperOptions.TryAddMatchMap))
+		private static readonly MethodInfo MapperOptions_TryAddMatchMap = typeof(CustomMapperOptions).GetMethod(nameof(CustomMapperOptions.TryAddMatchMap))
 			?? throw new InvalidOperationException("Cannot find method MapperOptions.TryAddMatchMap");
 		private static readonly MethodInfo ServiceProviderServiceExtensions_GetRequiredService = typeof(ServiceProviderServiceExtensions)
 			.GetMethods().FirstOrDefault(m => m.Name == nameof(ServiceProviderServiceExtensions.GetRequiredService) && m.IsGenericMethod)
@@ -48,7 +48,7 @@ namespace NeatMapper {
 			if (model == null)
 				throw new ArgumentNullException(nameof(model));
 
-			services.Configure<MapperOptions>(options => {
+			services.Configure<CustomMapperOptions>(options => {
 				foreach(var entity in model.GetEntityTypes().Where(e => !e.IsOwned() && e.ClrType != null)) {
 					var key = entity.FindPrimaryKey();
 					if (key == null || key.Properties.Count < 1 || !key.Properties.All(k => k.PropertyInfo != null))

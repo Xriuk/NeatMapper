@@ -15,6 +15,8 @@ namespace NeatMapper {
 		/// <param name="destinationType">type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>the newly created object of <paramref name="destinationType"/>, may be null</returns>
+		/// <exception cref="MapNotFoundException">The provided types could not be mapped</exception>
+		/// <exception cref="MappingException">An exception was thrown while mapping the types, check the inner exception for details</exception>
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 		object?
 #else
@@ -39,7 +41,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.<br/>
 		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
-		/// (or the passed <see cref="MergeMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
+		/// (or the passed <see cref="MergeCollectionsMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
 		/// </summary>
 		/// <param name="source">object to be mapped, may be null</param>
 		/// <param name="sourceType">type of the object to be mapped, used to retrieve the available maps</param>
@@ -50,6 +52,8 @@ namespace NeatMapper {
 		/// the resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
+		/// <exception cref="MapNotFoundException">The provided types could not be mapped</exception>
+		/// <exception cref="MappingException">An exception was thrown while mapping the types, check the inner exception for details</exception>
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 		object?
 #else

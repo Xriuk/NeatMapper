@@ -157,7 +157,7 @@ namespace NeatMapper.Tests {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper();
 			serviceCollection.Configure<MapperConfigurationOptions>(o => {
-				o.ScanTypes.Add(typeof(Maps));
+				o.TypesToScan.Add(typeof(Maps));
 			});
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
@@ -169,7 +169,7 @@ namespace NeatMapper.Tests {
 		public void ShouldUseMapperOptions() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper();
-			serviceCollection.Configure<MapperOptions>(o => {
+			serviceCollection.Configure<CustomMapperOptions>(o => {
 				o.AddNewMap<string, int>((s, _) => s?.Length ?? 0);
 			});
 			IServiceProvider services = serviceCollection.BuildServiceProvider();

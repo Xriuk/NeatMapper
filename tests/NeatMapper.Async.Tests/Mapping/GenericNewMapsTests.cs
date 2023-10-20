@@ -429,7 +429,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new AsyncMapper(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
+				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			});
 		}
 
@@ -452,7 +452,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Class constraint
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithClassType<>) }
+						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
 					Assert.AreEqual(1, await mapper.MapAsync<IEnumerable<Product>, int>(new[] { new Product() }));
 				}
@@ -498,7 +498,7 @@ namespace NeatMapper.Tests.Mapping {
 			// struct
 			{
 				var mapper = new AsyncMapper(new MapperConfigurationOptions {
-					ScanTypes = new List<Type> { typeof(MapsWithStructType<>) }
+					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, int>(new List<Product>()));
@@ -510,7 +510,7 @@ namespace NeatMapper.Tests.Mapping {
 			// class
 			{
 				var mapper = new AsyncMapper(new MapperConfigurationOptions {
-					ScanTypes = new List<Type> { typeof(MapsWithClassType<>) }
+					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Guid>, int>(new List<Guid>()));
@@ -524,7 +524,7 @@ namespace NeatMapper.Tests.Mapping {
 			// unmanaged
 			{
 				var mapper = new AsyncMapper(new MapperConfigurationOptions {
-					ScanTypes = new List<Type> { typeof(MapsWithUnmanagedType<>) }
+					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, int>(new List<Product>()));
@@ -537,7 +537,7 @@ namespace NeatMapper.Tests.Mapping {
 			// new()
 			{
 				var mapper = new AsyncMapper(new MapperConfigurationOptions {
-					ScanTypes = new List<Type> { typeof(MapsWithNewType<>) }
+					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>()));
@@ -549,7 +549,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Not generic
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithBaseClassType<>) }
+						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, int>(new List<Category>()));
@@ -561,7 +561,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Generic
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithBaseClassType<,>) }
+						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<Queue<Category>, Category>(new Queue<Category>()));
@@ -575,7 +575,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Not generic
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithInterfaceType<>) }
+						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, int>(new List<Category>()));
@@ -585,7 +585,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Generic
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithInterfaceType<,>) }
+						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>()));
@@ -599,7 +599,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Simple
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
+						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, Product>(new List<Category>()));
@@ -612,7 +612,7 @@ namespace NeatMapper.Tests.Mapping {
 				// Complex
 				{
 					var mapper = new AsyncMapper(new MapperConfigurationOptions {
-						ScanTypes = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
+						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, Queue<Product>>(new List<Category>()));
@@ -654,7 +654,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public async Task ShouldRespectConstraints() {
 			var mapper = new AsyncMapper(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
+				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
 			});
 
 			Assert.AreEqual(42, await mapper.MapAsync<IList<Product>, int>(new List<Product>()));

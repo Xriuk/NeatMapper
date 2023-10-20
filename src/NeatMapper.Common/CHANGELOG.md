@@ -6,10 +6,14 @@
 
 - `IMapperConfiguration`
 
+### Changed
+
+- 
+
 ### Added
 
 - `IHierarchyMatchMap<TSource, TDestination>` (and its .NET 7+ static counterpart `IHierarchyMatchMapStatic<TSource, TDestination>`) which allows matching two types as well as derived types, will be automatically used when merging collections.
-- Support for additional maps via `IAdditionalMapsOptions`
+- `Matcher`, implementation of `IMatcher`
 
 ## [1.1.0] - 2023-10-02
 

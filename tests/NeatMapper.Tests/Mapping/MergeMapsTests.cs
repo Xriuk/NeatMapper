@@ -52,7 +52,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 
 			public static TestOptions options;
-			public static MergeMappingOptions mergeOptions;
+			public static MergeCollectionsMappingOptions mergeOptions;
 
 #if NET7_0_OR_GREATER
 			static
@@ -65,7 +65,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(int source, string destination, MappingContext context) {
 				options = context.MappingOptions.GetOptions<TestOptions>();
-				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return (source * 2).ToString();
 			}
 
@@ -193,7 +193,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(decimal source, Price destination, MappingContext context) {
 				options = context.MappingOptions.GetOptions<TestOptions>();
-				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return new Price {
 					Amount = source,
 					Currency = "EUR"
@@ -229,7 +229,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(Category source, CategoryDto destination, MappingContext context) {
 				options = context.MappingOptions.GetOptions<TestOptions>();
-				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				if (source != null) {
 					if (destination == null)
 						destination = new CategoryDto();
@@ -332,7 +332,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 
 			public static TestOptions options;
-			public static MergeMappingOptions mergeOptions;
+			public static MergeCollectionsMappingOptions mergeOptions;
 
 #if NET7_0_OR_GREATER
 			static
@@ -358,7 +358,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(LimitedProduct source, ProductDto destination, MappingContext context) {
 				options = context.MappingOptions.GetOptions<TestOptions>();
-				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				if (source != null) {
 					if (destination == null)
 						destination = new LimitedProductDto();
@@ -374,7 +374,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new Mapper(new MapperConfigurationOptions{
-				ScanTypes = new List<Type> { typeof(Maps) }
+				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
 
@@ -653,9 +653,9 @@ namespace NeatMapper.Tests.Mapping {
 				var c = new Price();
 				var destination = new List<Price> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, _) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				_mapper.Map(new[] { 20m, 15.25m, 0m }, destination, new object[] { opts, merge });
 
@@ -663,7 +663,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(Maps.mergeOptions);
 				Assert.AreNotSame(merge, Maps.mergeOptions);
 				Assert.IsNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
@@ -765,9 +765,9 @@ namespace NeatMapper.Tests.Mapping {
 				};
 				var destination = new CustomCollection<CategoryDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, _) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				_mapper.Map(new[] {
 					new Category {
@@ -788,14 +788,14 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(Maps.mergeOptions);
 				Assert.AreNotSame(merge, Maps.mergeOptions);
 				Assert.IsNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithHierarchyElementsComparer() {
 			var mapper = new Mapper(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(HierarchyMatchers) }
+				TypesToScan = new List<Type> { typeof(HierarchyMatchers) }
 			});
 
 			// No options
@@ -898,9 +898,9 @@ namespace NeatMapper.Tests.Mapping {
 				};
 				var destination = new CustomCollection<ProductDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, _) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				mapper.Map(new[] {
 					new LimitedProduct {
@@ -921,7 +921,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(HierarchyMatchers.mergeOptions);
 				Assert.AreNotSame(merge, HierarchyMatchers.mergeOptions);
 				Assert.IsNull(HierarchyMatchers.mergeOptions.Matcher);
-				Assert.IsFalse(HierarchyMatchers.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(HierarchyMatchers.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
@@ -1243,9 +1243,9 @@ namespace NeatMapper.Tests.Mapping {
 
 				var destination = new List<ICollection<string>>();
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, _) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				_mapper.Map(new[] {
 					new[]{ 2, -3, 0 },
@@ -1256,7 +1256,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(Maps.mergeOptions);
 				Assert.AreNotSame(merge, Maps.mergeOptions);
 				Assert.IsNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
@@ -1405,7 +1405,7 @@ namespace NeatMapper.Tests.Mapping {
 			// Global settings
 			{ 
 				var mapper = new Mapper(new MapperConfigurationOptions {
-					ScanTypes = new List<Type> { typeof(Maps) },
+					TypesToScan = new List<Type> { typeof(Maps) },
 					MergeMapsCollectionsOptions = new MergeMapsCollectionsOptions {
 						RemoveNotMatchedDestinationElements = false
 					}
@@ -1474,8 +1474,8 @@ namespace NeatMapper.Tests.Mapping {
 						Id = 6
 					}
 				}, destination, new[]{
-					new MergeMappingOptions {
-						CollectionRemoveNotMatchedDestinationElements = false
+					new MergeCollectionsMappingOptions {
+						RemoveNotMatchedDestinationElements = false
 					} 
 				});
 				Assert.IsNotNull(result);
@@ -1533,7 +1533,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapWithAdditionalMaps() {
-			var options = new MapperOptions();
+			var options = new CustomMapperOptions();
 			options.AddMergeMap<string, int>((s, d, _) => (s?.Length ?? 0) + 2);
 			var mapper = new Mapper(options);
 

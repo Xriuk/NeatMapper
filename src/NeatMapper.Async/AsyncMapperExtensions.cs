@@ -327,9 +327,9 @@ namespace NeatMapper.Async {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			var mergeMappingOptions = mappingOptions?.Cast<object>().OfType<MergeMappingOptions>().FirstOrDefault();
+			var mergeMappingOptions = mappingOptions?.Cast<object>().OfType<MergeCollectionsMappingOptions>().FirstOrDefault();
 			if (mergeMappingOptions == null) {
-				mergeMappingOptions = new MergeMappingOptions();
+				mergeMappingOptions = new MergeCollectionsMappingOptions();
 				mappingOptions = mappingOptions != null ? mappingOptions.Cast<object>().Concat(new object[] { mergeMappingOptions }) : new object[] { mergeMappingOptions };
 			}
 			mergeMappingOptions.Matcher = (s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&

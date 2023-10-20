@@ -32,7 +32,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.Async.Dependency
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.DependencyInjection.EntityFrameworkCore", "src\NeatMapper.DependencyInjection.EntityFrameworkCore\NeatMapper.DependencyInjection.EntityFrameworkCore.csproj", "{451EB7D4-1B8F-4C28-ADFB-9C2CD4D10238}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeatMapper.DependencyInjection.EntityFrameworkCore.Tests", "tests\NeatMapper.DependencyInjection.EntityFrameworkCore.Tests\NeatMapper.DependencyInjection.EntityFrameworkCore.Tests.csproj", "{82BAA0C8-230A-4A76-8B78-85C7798A8717}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.DependencyInjection.EntityFrameworkCore.Tests", "tests\NeatMapper.DependencyInjection.EntityFrameworkCore.Tests\NeatMapper.DependencyInjection.EntityFrameworkCore.Tests.csproj", "{82BAA0C8-230A-4A76-8B78-85C7798A8717}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NeatMapper.Common.EntityFrameworkCore", "src\NeatMapper.Common.EntityFrameworkCore\NeatMapper.Common.EntityFrameworkCore.csproj", "{1E5DFEB5-585B-453D-ABB7-9F485B4E28D4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -89,6 +91,10 @@ Global
 		{82BAA0C8-230A-4A76-8B78-85C7798A8717}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{82BAA0C8-230A-4A76-8B78-85C7798A8717}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{82BAA0C8-230A-4A76-8B78-85C7798A8717}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E5DFEB5-585B-453D-ABB7-9F485B4E28D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E5DFEB5-585B-453D-ABB7-9F485B4E28D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E5DFEB5-585B-453D-ABB7-9F485B4E28D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E5DFEB5-585B-453D-ABB7-9F485B4E28D4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

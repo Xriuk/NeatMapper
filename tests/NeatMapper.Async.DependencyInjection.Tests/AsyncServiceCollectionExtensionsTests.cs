@@ -159,7 +159,7 @@ namespace NeatMapper.Tests {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapperAsync();
 			serviceCollection.Configure<MapperConfigurationOptions>(o => {
-				o.ScanTypes.Add(typeof(Maps));
+				o.TypesToScan.Add(typeof(Maps));
 			});
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 

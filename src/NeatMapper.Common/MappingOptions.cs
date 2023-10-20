@@ -5,11 +5,11 @@ using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Additional mapping options, contains multiple options of different types,
+	/// Additional options, contains multiple options of different types,
 	/// each mapper/map should try to retrieve its options and use them
 	/// </summary>
 	public sealed class MappingOptions {
-		private IDictionary<Type, object> options;
+		private readonly IDictionary<Type, object> options;
 
 		public MappingOptions(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

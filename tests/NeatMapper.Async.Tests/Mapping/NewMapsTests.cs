@@ -50,7 +50,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 
 			public static TestOptions options;
-			public static MergeMappingOptions mergeOptions;
+			public static MergeCollectionsMappingOptions mergeOptions;
 
 #if NET7_0_OR_GREATER
 			static
@@ -63,7 +63,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.MapAsync(int source, AsyncMappingContext context) {
 				options = context.MappingOptions.GetOptions<TestOptions>();
-				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return Task.FromResult((source * 2).ToString());
 			}
 
@@ -117,7 +117,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.MapAsync(float source, string destination, AsyncMappingContext context) {
 				options = context.MappingOptions.GetOptions<TestOptions>();
-				mergeOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+				mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return Task.FromResult((source * 3).ToString());
 			}
 
@@ -284,7 +284,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new AsyncMapper(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(Maps) }
+				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
 
@@ -403,16 +403,16 @@ namespace NeatMapper.Tests.Mapping {
 				Maps.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				await _mapper.MapAsync<string>(2f, new object[] { opts, merge });
 
 				Assert.AreSame(opts, Maps.options);
 				Assert.AreSame(merge, Maps.mergeOptions);
 				Assert.IsNotNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
@@ -484,9 +484,9 @@ namespace NeatMapper.Tests.Mapping {
 				Maps.options = null;
 				Maps.mergeOptions = null;
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				var strings = await _mapper.MapAsync<LinkedList<string>>(new[] { 2, -3, 0 }, new object[] { opts, merge });
 
@@ -500,7 +500,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(Maps.mergeOptions);
 				Assert.AreNotSame(merge, Maps.mergeOptions);
 				Assert.IsNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 
 			{
@@ -617,16 +617,16 @@ namespace NeatMapper.Tests.Mapping {
 				Maps.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				await _mapper.MapAsync<IList<string>>(new[] { 2f }, new object[] { opts, merge });
 
 				Assert.AreSame(opts, Maps.options);
 				Assert.AreNotSame(merge, Maps.mergeOptions);
 				Assert.IsNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
@@ -682,9 +682,9 @@ namespace NeatMapper.Tests.Mapping {
 				Maps.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeMappingOptions {
+				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
-					CollectionRemoveNotMatchedDestinationElements = false
+					RemoveNotMatchedDestinationElements = false
 				};
 				await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
 					new[]{ 2, -3, 0 },
@@ -695,7 +695,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(Maps.mergeOptions);
 				Assert.AreNotSame(merge, Maps.mergeOptions);
 				Assert.IsNull(Maps.mergeOptions.Matcher);
-				Assert.IsFalse(Maps.mergeOptions.CollectionRemoveNotMatchedDestinationElements);
+				Assert.IsFalse(Maps.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 

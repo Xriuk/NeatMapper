@@ -28,7 +28,7 @@ namespace NeatMapper.Tests.Configuration {
 		[TestMethod]
 		public void ShouldNotAllowDuplicateMaps() {
 			TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
-				ScanTypes = new List<Type> { typeof(Map1), typeof(Map2) }
+				TypesToScan = new List<Type> { typeof(Map1), typeof(Map2) }
 			}));
 		}
 	}

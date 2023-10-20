@@ -7,12 +7,14 @@ using NeatMapper.Async.Internal;
 using System.Collections.Generic;
 using System.Collections;
 using System.Linq;
+using NeatMapper.Common.Internal;
 
-namespace NeatMapper.Async {
-	/// <summary>
-	/// Default implementation for <see cref="IAsyncMapper"/> and <see cref="IMatcher"/>
-	/// </summary>
-	public class AsyncMapper : BaseMapper, IAsyncMapper {
+namespace NeatMapper.Async
+{
+    /// <summary>
+    /// Default implementation for <see cref="IAsyncMapper"/> and <see cref="IMatcher"/>
+    /// </summary>
+    public class AsyncMapper : BaseMapper, IAsyncMapper {
 		public AsyncMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			AsyncMapperOptions?
@@ -109,7 +111,7 @@ namespace NeatMapper.Async {
 					try {
 						destination = CreateDestinationFactory(destinationType).Invoke();
 					}
-					catch (DestinationCreationException) {
+					catch (ObjectCreationException) {
 						throw exc;
 					}
 
@@ -254,7 +256,7 @@ namespace NeatMapper.Async {
 							sourceContext[1]
 						});
 					}
-					catch (Exception e) when (e is MapNotFoundException || e is DestinationCreationException) {
+					catch (Exception e) when (e is MapNotFoundException || e is ObjectCreationException) {
 						try {
 							// (source, context) => Task<destination>
 							elementMapper = MapCollectionNewRecursiveInternal(elementTypes);
@@ -278,10 +280,10 @@ namespace NeatMapper.Async {
 							// Adjust the context so that we don't pass any merge matcher along
 							var context = (AsyncMappingContext)sourceAndContext[1];
 							context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
-								if (!(o is MergeMappingOptions merge))
+								if (!(o is MergeCollectionsMappingOptions merge))
 									return o;
 								else {
-									var mergeOpts = new MergeMappingOptions(merge);
+									var mergeOpts = new MergeCollectionsMappingOptions(merge);
 									mergeOpts.Matcher = null;
 									return mergeOpts;
 								}
@@ -330,7 +332,7 @@ namespace NeatMapper.Async {
 					try {
 						destination = CreateCollection(types.To);
 					}
-					catch (DestinationCreationException) {
+					catch (ObjectCreationException) {
 						goto End;
 					}
 				}
@@ -390,7 +392,7 @@ namespace NeatMapper.Async {
 							try {
 								destinationElementFactory = CreateDestinationFactory(elementTypes.To);
 							}
-							catch (DestinationCreationException) {
+							catch (ObjectCreationException) {
 								goto End;
 							}
 						}
@@ -413,12 +415,12 @@ namespace NeatMapper.Async {
 
 										// Adjust the context so that we don't pass any merge matcher along
 										var context = (AsyncMappingContext)sourceDestinationAndContext[2];
-										var mergeMappingOptions = context.MappingOptions.GetOptions<MergeMappingOptions>();
+										var mergeMappingOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 										context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
-											if (!(o is MergeMappingOptions merge))
+											if (!(o is MergeCollectionsMappingOptions merge))
 												return o;
 											else {
-												var mergeOpts = new MergeMappingOptions(merge);
+												var mergeOpts = new MergeCollectionsMappingOptions(merge);
 												mergeOpts.Matcher = null;
 												return mergeOpts;
 											}
@@ -439,7 +441,7 @@ namespace NeatMapper.Async {
 										else
 											elementComparer = ElementComparerInternal(elementTypes);
 
-										var colletionRemoveNotMatched = mergeMappingOptions?.CollectionRemoveNotMatchedDestinationElements
+										var colletionRemoveNotMatched = mergeMappingOptions?.RemoveNotMatchedDestinationElements
 											?? _configuration.MergeMapsCollectionsOptions.RemoveNotMatchedDestinationElements;
 
 										// Deleted elements (+ missing merge mappings)
