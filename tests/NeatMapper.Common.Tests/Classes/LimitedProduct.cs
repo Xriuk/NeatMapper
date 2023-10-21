@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Tests.Classes {
+﻿namespace NeatMapper.Tests {
 	public class LimitedProduct : Product {
 		public int Copies { get; set; }
 	}

@@ -2,14 +2,15 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Options which allow to override mapper for nested maps and service provider
+	/// Options for <see cref="IMapper"/> which allow to override mapper and service provider
+	/// inside the created <see cref="MappingContext"/>
 	/// </summary>
-	public sealed class MapperOverrideOptions {
+	public sealed class MapperOverrideMappingOptions {
 		/// <summary>
 		/// Mapper to be used for nested maps, null to use the one provided by the mapper
 		/// </summary>
 		public
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IMapper?
 #else
 			IMapper
@@ -20,7 +21,7 @@ namespace NeatMapper {
 		/// Service provider to use for the maps, null to use the one provided by the mapper
 		/// </summary>
 		public
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
 			IServiceProvider

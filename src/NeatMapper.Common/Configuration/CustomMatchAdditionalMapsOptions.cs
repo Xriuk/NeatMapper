@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System;
 
-namespace NeatMapper.Configuration{
+namespace NeatMapper{
     public sealed class CustomMatchAdditionalMapsOptions {
 		public CustomMatchAdditionalMapsOptions() {
 			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>();
@@ -31,6 +31,8 @@ namespace NeatMapper.Configuration{
 				throw new ArgumentNullException(nameof(mapDelegate));
 
 			var map = new CustomAdditionalMap {
+				From = typeof(TSource),
+				To = typeof(TDestination),
 				ThrowOnDuplicate = throwOnDuplicate
 			};
 			if ((mapDelegate.Method.GetType().FullName?.StartsWith("System.Reflection.Emit.DynamicMethod") == true)) {

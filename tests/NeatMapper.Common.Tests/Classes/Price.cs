@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Tests.Classes {
+﻿namespace NeatMapper.Tests {
 	public class Price {
 		public decimal Amount { get; set; }
 

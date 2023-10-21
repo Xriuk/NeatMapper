@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Tests.Classes {
+﻿namespace NeatMapper.Tests {
 	public class MyClassInt {
 		public int MyInt { get; set; }
 	}

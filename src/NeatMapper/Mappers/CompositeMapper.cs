@@ -1,9 +1,9 @@
-﻿using System.Collections;
-using System;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeatMapper.Mappers {
+namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which delegates mapping to other <see cref="IMapper"/>s, this allows to combine different mapping capabilities.<br/>
 	/// Each mapper is invoked in order and the first one to succeed in mapping is returned
@@ -30,7 +30,10 @@ namespace NeatMapper.Mappers {
 		/// </summary>
 		/// <param name="mappers">mappers to delegate the mapping to</param>
 		public CompositeMapper(IList<IMapper> mappers) {
-			_mappers = mappers.ToList();
+			if (mappers == null)
+				throw new ArgumentNullException(nameof(mappers));
+
+			_mappers = new List<IMapper>(mappers);
 		}
 
 
@@ -56,6 +59,12 @@ namespace NeatMapper.Mappers {
 #endif
 			mappingOptions = null) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
 			foreach (var mapper in _mappers) {
 				try {
 					return mapper.Map(source, sourceType, destinationType, mappingOptions);
@@ -64,6 +73,10 @@ namespace NeatMapper.Mappers {
 			}
 
 			throw new MapNotFoundException((sourceType, destinationType));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public
@@ -94,6 +107,12 @@ namespace NeatMapper.Mappers {
 #endif
 			mappingOptions = null) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
 			foreach (var mapper in _mappers) {
 				try {
 					return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
@@ -102,6 +121,34 @@ namespace NeatMapper.Mappers {
 			}
 
 			throw new MapNotFoundException((sourceType, destinationType));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		IEnumerable MergeOrCreateMappingOptions(IEnumerable mappingOptions) {
+			var options = mappingOptions?.Cast<object>().OfType<MapperOverrideMappingOptions>().SingleOrDefault();
+			if(options == null){
+				options = new MapperOverrideMappingOptions();
+				if(mappingOptions != null)
+					mappingOptions = mappingOptions.Cast<object>().Concat(new[] { options });
+				else
+					mappingOptions = new[] { options };
+			}
+
+			options.Mapper = this;
+
+			return mappingOptions;
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

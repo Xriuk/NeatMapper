@@ -1,26 +1,25 @@
-﻿using NeatMapper.Configuration;
-using System;
+﻿using System;
 using System.Collections;
 
-namespace NeatMapper.Mappers {
+namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>
 	/// </summary>
 	public sealed class NewMapper : CustomMapper {
 		public NewMapper(
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
 #else
 			CustomMapsOptions
 #endif
 			mapsOptions = null,
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomNewAdditionalMapsOptions?
 #else
 			CustomNewAdditionalMapsOptions
 #endif
 			additionalMapsOptions = null,
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
 			IServiceProvider

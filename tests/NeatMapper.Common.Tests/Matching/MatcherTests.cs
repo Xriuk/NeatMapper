@@ -1,13 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Common.Mapper;
-using NeatMapper.Configuration;
-using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 
-namespace NeatMapper.Tests.Matching {
+namespace NeatMapper.Tests {
 	[TestClass]
-	public class MatchMapsTests {
+	public class MatcherTests {
 		public class TestMappingOptions { }
 
 
@@ -101,16 +98,11 @@ namespace NeatMapper.Tests.Matching {
 			}
 		}
 
-		public class Matcher : BaseMapper {
-			public Matcher(MapperConfigurationOptions configuration) :
-				base(_ => false, _ => false, configuration) {}
-		}
-
 		IMatcher _matcher = null;
 
 		[TestInitialize]
 		public void Initialize() {
-			_matcher = new Matcher(new MapperConfigurationOptions {
+			_matcher = new Matcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
@@ -141,7 +133,7 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestMethod]
 		public void ShouldMatchChildClassAsParent() {
-			var matcher = new Matcher(new MapperConfigurationOptions {
+			var matcher = new Matcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps2) }
 			});
 
@@ -198,5 +190,7 @@ namespace NeatMapper.Tests.Matching {
 			_matcher.Match(2f, "4", new[] { opts });
 			Assert.AreSame(opts, Maps.options);
 		}
+
+		// DEV: test additional maps
 	}
 }

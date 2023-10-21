@@ -1,6 +1,6 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Mapping options applied to merge mappings, these will override any configuration options defined in <see cref="Configuration.MergeCollectionsOptions"/>
+	/// Mapping options applied to merge mappings, these will override any configuration options defined in <see cref="MergeCollectionsOptions"/>
 	/// </summary>
 	public sealed class MergeCollectionsMappingOptions{
 		public MergeCollectionsMappingOptions() { }

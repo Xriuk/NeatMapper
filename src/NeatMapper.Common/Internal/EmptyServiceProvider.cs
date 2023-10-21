@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace NeatMapper.Internal {
+namespace NeatMapper {
 	internal class EmptyServiceProvider : IServiceProvider {
 		internal static readonly EmptyServiceProvider Instance = new EmptyServiceProvider();
 

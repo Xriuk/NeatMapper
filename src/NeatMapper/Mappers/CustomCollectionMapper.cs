@@ -2,7 +2,6 @@
 #nullable disable
 #endif
 
-using NeatMapper.Internal;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -10,16 +9,17 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
 
-namespace NeatMapper.Mappers {
+namespace NeatMapper {
 	/// <summary>
 	/// Base class for mappers which map collections by mapping elements with another <see cref="IMapper"/>
 	/// </summary>
 	public abstract class CustomCollectionMapper : IMapper {
+		// Used as a nested mapper too, includes the collection mapper itself
 		protected readonly IMapper _elementsMapper;
 		protected readonly IServiceProvider _serviceProvider;
 
 		public CustomCollectionMapper(IMapper elementsMapper, IServiceProvider serviceProvider = null) {
-			_elementsMapper = elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper));
+			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
@@ -30,11 +30,11 @@ namespace NeatMapper.Mappers {
 
 		protected MappingContext CreateMappingContext(IEnumerable mappingOptions) {
 			var options = new MappingOptions(mappingOptions);
-			var overrideOptions = options.GetOptions<MapperOverrideOptions>();
+			var overrideOptions = options.GetOptions<MapperOverrideMappingOptions>();
 			return new MappingContext {
-				Mapper = overrideOptions.Mapper ?? this, // DEV: provide CombinedMapper with this and _elementsMapper
-				ServiceProvider = overrideOptions.ServiceProvider ?? _serviceProvider,
-				MappingOptions = new MappingOptions(mappingOptions)
+				Mapper = overrideOptions?.Mapper ?? _elementsMapper,
+				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
+				MappingOptions = options
 			};
 		}
 

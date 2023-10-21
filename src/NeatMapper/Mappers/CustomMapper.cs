@@ -2,12 +2,10 @@
 #nullable disable
 #endif
 
-using NeatMapper.Configuration;
-using NeatMapper.Internal;
 using System;
 using System.Collections;
 
-namespace NeatMapper.Mappers {
+namespace NeatMapper {
 	/// <summary>
 	/// Base class for mappers which use user-defined maps to map types
 	/// </summary>
@@ -27,11 +25,11 @@ namespace NeatMapper.Mappers {
 
 		protected MappingContext CreateMappingContext(IEnumerable mappingOptions) {
 			var options = new MappingOptions(mappingOptions);
-			var overrideOptions = options.GetOptions<MapperOverrideOptions>();
+			var overrideOptions = options.GetOptions<MapperOverrideMappingOptions>();
 			return new MappingContext {
-				Mapper = overrideOptions.Mapper ?? this,
-				ServiceProvider = overrideOptions.ServiceProvider ?? _serviceProvider,
-				MappingOptions = new MappingOptions(mappingOptions)
+				Mapper = overrideOptions?.Mapper ?? this,
+				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
+				MappingOptions = options
 			};
 		}
 	}

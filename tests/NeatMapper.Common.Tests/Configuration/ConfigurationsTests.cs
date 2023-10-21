@@ -1,12 +1,12 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Configuration;
-using NeatMapper.Tests.Classes;
+﻿using Microsoft.Extensions.Options;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using static System.Net.Mime.MediaTypeNames;
 
-namespace NeatMapper.Tests.Configuration {
+namespace NeatMapper.Tests {
 	[TestClass]
 	public class ConfigurationsTests {
 		public class Map1 : IMatchMap<string, int> {
@@ -21,31 +21,10 @@ namespace NeatMapper.Tests.Configuration {
 			}
 		}
 
-		public class AdditionalMaps : IAdditionalMapsOptions {
-			public AdditionalMaps() { }
-			public AdditionalMaps(bool ignore) {
-				_matchMaps = new Dictionary<(Type, Type), AdditionalMap> {
-					{ (typeof(string), typeof(int)), new AdditionalMap{
-						Method = typeof(AdditionalMaps).GetMethod(nameof(MyMethod), BindingFlags.Instance | BindingFlags.NonPublic)
-							?? throw new InvalidOperationException(),
-						IgnoreIfAlreadyAdded = ignore
-					} }
-				};
-			}
-
-			private bool MyMethod(string str, int n, MatchingContext c) {
+		public class AdditionalMaps {
+			public bool MyMethod(string str, int n, MatchingContext c) {
 				return false;
 			}
-
-
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
-
-			Dictionary<(Type, Type), AdditionalMap> _matchMaps;
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
 		}
 
 		public class NotParameterlessClass : IMatchMap<string, int> {
@@ -66,40 +45,6 @@ namespace NeatMapper.Tests.Configuration {
 			public bool MyMethod(int source, string dest, MatchingContext ctx) {
 				throw new NotImplementedException();
 			}
-		}
-
-		public class AdditionalMapsOpenGeneric : IAdditionalMapsOptions {
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
-
-			Dictionary<(Type, Type), AdditionalMap> _matchMaps  = new Dictionary<(Type, Type), AdditionalMap> {
-				{ (typeof(string), typeof(int)), new AdditionalMap{
-						Method = typeof(GenericMap1<>).GetMethod("MyMethod")
-							?? throw new InvalidOperationException(),
-						IgnoreIfAlreadyAdded = true
-					}
-				}
-			};
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
-		}
-
-		public class AdditionalMapsClosedGeneric : IAdditionalMapsOptions {
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.NewMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MergeMaps { get; } = new Dictionary<(Type, Type), AdditionalMap>();
-
-			Dictionary<(Type, Type), AdditionalMap> _matchMaps = new Dictionary<(Type, Type), AdditionalMap> {
-				{ (typeof(string), typeof(int)), new AdditionalMap{
-						Method = typeof(GenericMap1<int>).GetMethod("MyMethod")
-							?? throw new InvalidOperationException(),
-						IgnoreIfAlreadyAdded = true
-					}
-				}
-			};
-
-			IReadOnlyDictionary<(Type From, Type To), AdditionalMap> IAdditionalMapsOptions.MatchMaps => _matchMaps;
 		}
 
 		public class GenericMap2<T1, T2> :
@@ -272,15 +217,20 @@ namespace NeatMapper.Tests.Configuration {
 			}
 		}
 
-		internal static MapperConfiguration Configure(MapperConfigurationOptions options, IAdditionalMapsOptions additionalOptions = null) {
-			// MatchMap is always configured
-			return new MapperConfiguration(i => false, i => false, options, additionalOptions);
+		internal static CustomMapsConfiguration Configure(CustomMapsOptions options, CustomMatchAdditionalMapsOptions additionalMaps = null) {
+			var matcher = new Matcher(options, additionalMaps);
+			return (CustomMapsConfiguration)typeof(Matcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
+		}
+
+		internal static CustomMapsConfiguration ConfigureHierachy(CustomMapsOptions options, CustomMatchAdditionalMapsOptions additionalMaps = null) {
+			var matcher = new Matcher(options, additionalMaps);
+			return (CustomMapsConfiguration)typeof(Matcher).GetField("_hierarchyConfiguration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
 		}
 
 
 		[TestMethod]
 		public void ShouldNotAllowClassesWithoutParameterlessConstructor() {
-			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new MapperConfigurationOptions {
+			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(NotParameterlessClass) }
 			}));
 
@@ -291,31 +241,37 @@ namespace NeatMapper.Tests.Configuration {
 		public void ShouldNotAllowDuplicateMaps() {
 			// Class - Class
 			{ 
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Map1), typeof(Map2) }
 				}));
 			}
 
 			// Class - Additional maps (throws)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				var test = new AdditionalMaps();
+				var options = new CustomMatchAdditionalMapsOptions();
+				options.AddMap<string, int>(test.MyMethod);
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Map1) }
-				}, new AdditionalMaps(false)));
+				}, options));
 			}
 
 			// Class - Additional maps (ignores)
 			{
-				var config = Configure(new MapperConfigurationOptions {
+				var test = new AdditionalMaps();
+				var options = new CustomMatchAdditionalMapsOptions();
+				options.TryAddMap<string, int>(test.MyMethod);
+				var config = Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Map1) }
-				}, new AdditionalMaps(true));
-				Assert.AreEqual(1, config.MatchMaps.Count);
-				Assert.AreSame(typeof(Map1), config.MatchMaps.Single().Value.DeclaringType);
+				}, options);
+				Assert.AreEqual(1, config.Maps.Count);
+				Assert.AreSame(typeof(Map1), config.Maps.Single().Value.Method.DeclaringType);
 			}
 		}
 
 		[TestMethod]
 		public void ShouldNotAllowGenericClassesWithMoreGenericArgumentsThanMap() {
-			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new MapperConfigurationOptions {
+			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(GenericMap4<,>) }
 			}));
 
@@ -324,7 +280,7 @@ namespace NeatMapper.Tests.Configuration {
 
 		[TestMethod]
 		public void ShouldNotAllowGenericClassesWithoutParameterlessConstructor() {
-			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new MapperConfigurationOptions {
+			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(NotParameterlessGenericMap<>) }
 			}));
 
@@ -333,7 +289,7 @@ namespace NeatMapper.Tests.Configuration {
 
 		[TestMethod]
 		public void ShouldNotAllowDuplicateGenericMaps() {
-			TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+			TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(GenericMap2<,>) }
 			}));
 		}
@@ -342,154 +298,154 @@ namespace NeatMapper.Tests.Configuration {
 		public void ShouldNotAllowOverlappingGenericConstraints() {
 			// No constraint - struct
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(StructConstraintGenericMap<>) }
 				}));
 			}
 
 			// No constraint - class
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(ClassConstraintGenericMap<>) }
 				}));
 			}
 
 			// No constraint - unmanaged
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(UnmanagedConstraintGenericMap<>) }
 				}));
 			}
 
 			// No constraint - new()
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// No constraint - base class
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(BaseClassConstraintGenericMap<>) }
 				}));
 			}
 
 			// No constraint - interface
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(InterfaceConstraintGenericMap<>) }
 				}));
 			}
 
 			// No constraint - generic type parameter
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericMap1<>), typeof(GenericTypeParameterConstraintGenericMap1<,>) }
 				}));
 			}
 
 			// new() (counts as no constraint) - struct
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(StructConstraintGenericMap<>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// new() (counts as no constraint) - class
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// new() (counts as no constraint) - unmanaged
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(UnmanagedConstraintGenericMap<>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// new() (counts as no constraint) - base class
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(BaseClassConstraintGenericMap<>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// new() (counts as no constraint) - interface
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(InterfaceConstraintGenericMap<>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// new() (counts as no constraint) - generic type parameter
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(NewConstraintGenericMap<>) }
 				}));
 			}
 
 			// unmanaged - struct
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(UnmanagedConstraintGenericMap<>), typeof(StructConstraintGenericMap<>) }
 				}));
 			}
 
 			// base class - derived class
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(BaseClassConstraintGenericMap<>), typeof(DerivedClassMap<>) }
 				}));
 			}
 
 			// interface - implementing class
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(InterfaceConstraintGenericMap<>), typeof(InterfaceImplementingClass<>) }
 				}));
 			}
 
 			// generic type parameter - struct (too complex to check)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(StructConstraintGenericMap<>) }
 				}));
 			}
 
 			// generic type parameter - class (too complex to check)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(ClassConstraintGenericMap<>) }
 				}));
 			}
 
 			// generic type parameter - unmanaged (too complex to check)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(UnmanagedConstraintGenericMap<>) }
 				}));
 			}
 
 			// generic type parameter - base class (too complex to check)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(BaseClassConstraintGenericMap<>) }
 				}));
 			}
 
 			// generic type parameter - interface (too complex to check)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(InterfaceConstraintGenericMap<>) }
 				}));
 			}
 
 			// generic type parameter - generic type parameter (too complex to check)
 			{
-				TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+				TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(GenericTypeParameterConstraintGenericMap1<,>), typeof(GenericTypeParameterConstraintGenericMap2<,>) }
 				}));
 			}
@@ -499,7 +455,7 @@ namespace NeatMapper.Tests.Configuration {
 		[DataRow(true)]
 		[DataRow(false)]
 		public void ShouldNotConsiderSpecificGenericMapsAsDuplicates(bool genericMap1) {
-			Configure(new MapperConfigurationOptions {
+			Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { genericMap1 ? typeof(GenericMap1<>) : typeof(GenericMap2<,>), typeof(GenericMap3<>) }
 			});
 		}
@@ -508,55 +464,55 @@ namespace NeatMapper.Tests.Configuration {
 		public void ShouldNotConsiderDifferentGenericConstraintsAsDuplicates() {
 			// class - struct
 			{ 
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(StructConstraintGenericMap<>) }
 				});
 			}
 
 			// class - unmanaged
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(UnmanagedConstraintGenericMap<>) }
 				});
 			}
 
 			// class, new() - struct
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(StructConstraintGenericMap<>) }
 				});
 			}
 
 			// class, new() - unmanaged
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(UnmanagedConstraintGenericMap<>) }
 				});
 			}
 
 			// class - unmanaged, new()
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(UnmanagedConstraintGenericMap<>) }
 				});
 			}
 			// class - struct, new()
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ClassConstraintGenericMap<>), typeof(StructConstraintGenericMap<>) }
 				});
 			}
 
 			// base class - not derived class
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(BaseClassConstraintGenericMap<>), typeof(NotDerivedClassMap<>) }
 				});
 			}
 
 			// interface - not implementing class
 			{
-				Configure(new MapperConfigurationOptions {
+				Configure(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(InterfaceConstraintGenericMap<>), typeof(NotDerivedClassMap<>) }
 				});
 			}
@@ -564,33 +520,47 @@ namespace NeatMapper.Tests.Configuration {
 
 		[TestMethod]
 		public void ShouldNotScanNestedClassesInGenericTypes() {
-			var config = Configure(new MapperConfigurationOptions {
+			var config = Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(GenericNestedMap<,>) }
 			});
 
-			Assert.AreEqual(0, config.MatchMaps.Count);
-			Assert.AreEqual(0, config.GenericMatchMaps.Count());
+			Assert.AreEqual(0, config.Maps.Count);
+			Assert.AreEqual(0, config.GenericMaps.Count());
 		}
 
 		[TestMethod]
 		public void ShouldNotScanGenericHierarchyMatchers() {
-			var config = Configure(new MapperConfigurationOptions {
+			var config = Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(GenericHierarchyMatcher1<>), typeof(GenericHierarchyMatcher2.GenericHierarchyMatcher<>) }
 			});
 
-			Assert.AreEqual(0, config.MatchMaps.Count);
-			Assert.AreEqual(0, config.GenericMatchMaps.Count());
-			Assert.AreEqual(0, config.HierarchyMatchMaps.Count);
+			Assert.AreEqual(0, config.Maps.Count);
+			Assert.AreEqual(0, config.GenericMaps.Count());
+
+			config = ConfigureHierachy(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(GenericHierarchyMatcher1<>), typeof(GenericHierarchyMatcher2.GenericHierarchyMatcher<>) }
+			});
+			Assert.AreEqual(0, config.Maps.Count);
+			Assert.AreEqual(0, config.GenericMaps.Count());
 		}
 
 		[TestMethod]
 		public void ShouldAllowAdditionalMapsInClosedGenerics() {
-			Configure(new MapperConfigurationOptions(), new AdditionalMapsClosedGeneric());
+			var test = new GenericMap1<int>();
+			var options = new CustomMatchAdditionalMapsOptions();
+			options.AddMap<int, string>(test.MyMethod);
+			Configure(new CustomMapsOptions(), options);
 		}
 
 		[TestMethod]
 		public void ShouldNotAllowAdditionalMapsInOpenGenericTypes() {
-			var exc = Assert.ThrowsException<InvalidOperationException>(() => Configure(new MapperConfigurationOptions(), new AdditionalMapsOpenGeneric()));
+			var exc = Assert.ThrowsException<InvalidOperationException>(() => new CustomMapsConfiguration((t, i) => false, new CustomMapsOptions(), new[] { new CustomAdditionalMap{
+				From = typeof(int),
+				To = typeof(string),
+				Method = typeof(GenericMap1<>).GetMethod("MyMethod")
+					?? throw new InvalidOperationException(),
+				ThrowOnDuplicate = false
+			} }));
 			Assert.AreEqual("Additional map methods cannot be generic or specified in an open generic class", exc.Message);
 		}
 	}

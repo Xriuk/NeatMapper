@@ -1,5 +1,4 @@
-﻿using NeatMapper.Common.Mapper;
-using System;
+﻿using System;
 
 namespace NeatMapper {
 	/// <summary>

@@ -1,10 +1,13 @@
-﻿using NeatMapper.Common.Mapper;
+﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeatMapper.Internal {
+namespace NeatMapper {
 	internal sealed class ObjectFactory {
 		static readonly IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
 

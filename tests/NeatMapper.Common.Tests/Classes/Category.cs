@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace NeatMapper.Tests.Classes {
+namespace NeatMapper.Tests {
 	public class Category {
 		public int Id { get; set; }
 

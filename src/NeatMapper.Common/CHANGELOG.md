@@ -2,18 +2,19 @@
 
 ## [2.0.0] - Unreleased
 
-### Removed
-
-- `IMapperConfiguration`
-
 ### Changed
 
-- 
+- Every namespace was renamed to `NeatMapper`
+- `IMatcher` added optional `mappingOptions` parameter to override settings for specific matches,
+support and options depends on the mappers and/or the maps, added also to extension methods
+- `MergeMapsCollectionsOptions` renamed in `MergeCollectionsMappingOptions`
 
 ### Added
 
 - `IHierarchyMatchMap<TSource, TDestination>` (and its .NET 7+ static counterpart `IHierarchyMatchMapStatic<TSource, TDestination>`) which allows matching two types as well as derived types, will be automatically used when merging collections.
-- `Matcher`, implementation of `IMatcher`
+- `Matcher`, public implementation of `IMatcher`
+- `CompositeMatcher`: combines one or more `IMatcher`s of the above in a defined order and tries them all, the first one to succeeds matches the objects
+- `CustomMatchAdditionalMapsOptions` which can be used to specify additional matching methods like delegates/lambdas or compiled ones like expressions
 
 ## [1.1.0] - 2023-10-02
 

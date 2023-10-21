@@ -21,10 +21,14 @@
 		<CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Remove="..\..\LICENSE.md" />
-    <None Remove="README.md" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[2,3)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="..\..\LICENSE.md" />
+		<None Remove="README.md" />
+	</ItemGroup>
 
   <ItemGroup>
     <EmbeddedResource Include="..\..\LICENSE.md">
@@ -42,10 +46,6 @@
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[2,3)" />
   </ItemGroup>
 
 </Project>

@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace NeatMapper.Internal {
+namespace NeatMapper {
 	internal static class TypeUtils {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		internal static bool HasInterface(Type type, Type interfaceType) {

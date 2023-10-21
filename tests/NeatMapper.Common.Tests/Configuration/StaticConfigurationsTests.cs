@@ -1,10 +1,10 @@
 ﻿#if NET7_0_OR_GREATER
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
-namespace NeatMapper.Tests.Configuration {
+namespace NeatMapper.Tests {
 	[TestClass]
 	public class StaticConfigurationsTests {
 		public class Map1 : IMatchMap<string, int> {
@@ -19,15 +19,15 @@ namespace NeatMapper.Tests.Configuration {
 			}
 		}
 
-		protected static void Configure(MapperConfigurationOptions options) {
-			// MatchMap is always configured
-			new MapperConfiguration(i => false, i => false, options);
+		internal static CustomMapsConfiguration Configure(CustomMapsOptions options, CustomMatchAdditionalMapsOptions additionalMaps = null) {
+			var matcher = new Matcher(options, additionalMaps);
+			return (CustomMapsConfiguration)typeof(Matcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
 		}
 
 
 		[TestMethod]
 		public void ShouldNotAllowDuplicateMaps() {
-			TestUtils.AssertDuplicateMap(() => Configure(new MapperConfigurationOptions {
+			TestUtils.AssertDuplicateMap(() => Configure(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Map1), typeof(Map2) }
 			}));
 		}

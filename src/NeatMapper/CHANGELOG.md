@@ -4,16 +4,26 @@
 
 ### Removed
 
-- Mapper empty constructor
+- `Mapper` which was replaced by the separate mappers below in the Added section
 
 ### Changed
 
+- Every namespace was renamed to `NeatMapper`
 - NeatMapper.Common dependency version
-- `MappingOptions` added to all `IMapper` methods, currently not used everywhere, reserved for future implementations
+- `IMapper` added optional `mappingOptions` parameter to override settings for specific mappings,
+support and options depends on the mappers and/or the maps, added also to extension methods
 
 ### Added
 
-- `MapperOptions` which can be used to specify additional mapping methods like delegates/lambdas
+- `BaseMapper` from NeatMapper.Common was split into different mappers which can be used separately or combined together (check the [README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md) for instructions):
+   - `NewMapper`: maps only `INewMap`
+   - `MergeMapper`: maps only `IMergeMap`
+   - `NewCollectionMapper`: creates new collections by using another `IMapper` to map elements
+   - `MergeCollectionMapper`: merges collections by using another `IMapper` to map elements
+   - `CompositeMapper`: combines one or more `IMapper`s of the above in a defined order and tries them all, the first one to succeeds maps the objects
+- `Custom{New|Merge}AdditionalMapsOptions` which can be used to specify additional mapping methods like delegates/lambdas or compiled ones like expressions
+- `MapperOverrideMappingOptions`, used to override `IServiceProvider` and/or `IMapper` in the `MappingContext` created by the mapper, implementation depends on the mapper itself
+- NeatMapper.DependencyInjection package merged, now the core package allows injecting `IMapper` and `IMatcher` and configuring them via `IOptions` (check the [README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md) for instructions)
 
 ## [1.1.0] - 2023-10-02
 

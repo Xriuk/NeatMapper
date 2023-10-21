@@ -1,8 +1,7 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System;
 
-namespace NeatMapper.Configuration {
+namespace NeatMapper {
 	/// <summary>
 	/// Options applied to mappers with user-defined mappings
 	/// </summary>
@@ -21,7 +20,7 @@ namespace NeatMapper.Configuration {
 			if(options == null)
 				throw new ArgumentNullException(nameof(options));
 
-			TypesToScan = options.TypesToScan.ToList();
+			TypesToScan = new List<Type>(options.TypesToScan);
 		}
 
 

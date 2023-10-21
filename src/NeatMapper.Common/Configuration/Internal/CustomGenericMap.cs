@@ -1,11 +1,15 @@
-﻿using System;
+﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
 
-namespace NeatMapper.Configuration {
+using System;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Configuration info for a generic used-defined map
 	/// </summary>
 	/// <remarks>At least one of <see cref="From"/> or <see cref="To"/> is an open generic type</remarks>
-	internal class CustomGenericMap {
+	internal sealed class CustomGenericMap {
 		/// <summary>
 		/// Source type of the map
 		/// </summary>

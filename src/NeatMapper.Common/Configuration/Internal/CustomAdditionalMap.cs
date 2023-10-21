@@ -1,8 +1,8 @@
-﻿namespace NeatMapper.Configuration {
+﻿namespace NeatMapper {
 	/// <summary>
 	/// Additional maps defined outside classes (delegates, compiled expressions, ...)
 	/// </summary>
-	internal class CustomAdditionalMap : CustomMap {
+	internal sealed class CustomAdditionalMap : CustomMap {
 		/// <summary>
 		/// If true and the map was already defined will throw an exception, otherwise will simply ignore it
 		/// </summary>

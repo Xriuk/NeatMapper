@@ -1,10 +1,9 @@
-﻿using NeatMapper.Internal;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeatMapper.Mappers {
+namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which creates a new collection and maps elements with another <see cref="IMapper"/>
 	/// by trying new map, then merge map
@@ -12,7 +11,7 @@ namespace NeatMapper.Mappers {
 	public sealed class NewCollectionMapper : CustomCollectionMapper {
 		public NewCollectionMapper(
 			IMapper elementsMapper,
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
 			IServiceProvider
@@ -54,13 +53,88 @@ namespace NeatMapper.Mappers {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var result = MapCollectionNewRecursiveInternal((sourceType, destinationType)).Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
+			(Type From, Type To) types = (sourceType, destinationType);
 
-			// Should not happen
-			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
+			// If both types are collections try mapping the element types
+			if (TypeUtils.HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
+				TypeUtils.HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
 
-			return result;
+				var elementTypes = (
+					From: TypeUtils.GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
+					To: TypeUtils.GetInterfaceElementType(types.To, typeof(IEnumerable<>))
+				);
+
+				// Check if collection can be created
+				if (CanCreateCollection(types.To)) {
+					try {
+						if (source is IEnumerable sourceEnumerable) {
+							var destination = CreateCollection(types.To);
+							var addMethod = GetCollectionAddMethod(destination);
+
+							// Adjust the context so that we don't pass any merge matcher along
+							mappingOptions = mappingOptions?.Cast<object>().Select(o => {
+								if (o is MergeCollectionsMappingOptions merge) {
+									var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+										Matcher = null
+									};
+									return mergeOpts;
+								}
+								else
+									return o;
+							});
+							var context = CreateMappingContext(mappingOptions);
+
+							var canCreateNew = true;
+
+							foreach (var element in sourceEnumerable) {
+								object destinationElement;
+
+								// Try new map
+								if (canCreateNew) {
+									try {
+										destinationElement = _elementsMapper.Map(element, elementTypes.From, elementTypes.To, context.MappingOptions.AsEnumerable());
+										addMethod.Invoke(destination, new object[] { destinationElement });
+										continue;
+									}
+									catch (MapNotFoundException) {
+										canCreateNew = false;
+									}
+								}
+
+								// Try merge map
+								try {
+									destinationElement = ObjectFactory.Create(elementTypes.To);
+								}
+								catch (ObjectCreationException) {
+									throw new MapNotFoundException(types);
+								}
+								destinationElement = _elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, context.MappingOptions.AsEnumerable());
+								addMethod.Invoke(destination, new object[] { destinationElement });
+							}
+
+							var result = ConvertCollectionToType(destination, types.To);
+
+							// Should not happen
+							if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
+								throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
+
+							return result;
+						}
+						else if (source == null)
+							return null;
+						else
+							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+					}
+					catch (MapNotFoundException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new CollectionMappingException(e, types);
+					}
+				}
+			}
+
+			throw new MapNotFoundException(types);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -97,91 +171,5 @@ namespace NeatMapper.Mappers {
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// (source, context) => destination
-		Func<object[], object> MapCollectionNewRecursiveInternal((Type From, Type To) types) {
-			// If both types are collections try mapping the element types
-			if (TypeUtils.HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
-				TypeUtils.HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
-
-				var elementTypes = (
-					From: TypeUtils.GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
-					To: TypeUtils.GetInterfaceElementType(types.To, typeof(IEnumerable<>))
-				);
-
-				// Check if collection can be created
-				if (CanCreateCollection(types.To)) { 
-					return (sourceAndContext) => {
-						try {
-							if (sourceAndContext[0] is IEnumerable sourceEnumerable) {
-								var destination = CreateCollection(types.To);
-								var addMethod = GetCollectionAddMethod(destination);
-
-								// Adjust the context so that we don't pass any merge matcher along
-								var context = (MappingContext)sourceAndContext[1];
-								context.MappingOptions = new MappingOptions(context.MappingOptions.AsEnumerable().Select(o => {
-									if(o is MergeCollectionsMappingOptions merge) {
-										var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-											Matcher = null
-										};
-										return mergeOpts;
-									}
-									else
-										return o;
-								}));
-
-								var canCreateNew = true;
-
-								foreach (var element in sourceEnumerable) {
-									object destinationElement;
-
-									// Try new map
-									if (canCreateNew) { 
-										try {
-											destinationElement = _elementsMapper.Map(element, elementTypes.From, elementTypes.To, context.MappingOptions.AsEnumerable());
-											addMethod.Invoke(destination, new object[] { destinationElement });
-											continue;
-										}
-										catch (MapNotFoundException) {
-											canCreateNew = false;
-										}
-									}
-
-									// Try merge map
-									try {
-										destinationElement = ObjectFactory.Create(elementTypes.To);
-									}
-									catch (ObjectCreationException) {
-										throw new MapNotFoundException(types);
-									}
-									destinationElement = _elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, context.MappingOptions.AsEnumerable());
-									addMethod.Invoke(destination, new object[] { destinationElement });
-								}
-
-								return ConvertCollectionToType(destination, types.To);
-							}
-							else if (sourceAndContext[0] == null)
-								return null;
-							else
-								throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-						}
-						catch (Exception e) {
-							throw new CollectionMappingException(e, types);
-						}
-					};
-				}
-			}
-
-			throw new MapNotFoundException(types);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

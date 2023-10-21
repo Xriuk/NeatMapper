@@ -1,27 +1,25 @@
-﻿using NeatMapper.Configuration;
-using NeatMapper.Internal;
-using System;
+﻿using System;
 using System.Collections;
 
-namespace NeatMapper.Mappers {
+namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>
 	/// </summary>
 	public sealed class MergeMapper : CustomMapper {
 		public MergeMapper(
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
 #else
 			CustomMapsOptions
 #endif
 			mapsOptions = null,
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMergeAdditionalMapsOptions?
 #else
 			CustomMergeAdditionalMapsOptions
 #endif
 			additionalMapsOptions = null,
-#if NET5_0_OR_GREATER
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
 			IServiceProvider
@@ -74,8 +72,17 @@ namespace NeatMapper.Mappers {
 			IEnumerable
 #endif
 			mappingOptions = null) {
+
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
 			// Forward new map to merge by creating a destination
-			return Map(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions);
+			return Map(source, sourceType, destination, destinationType, mappingOptions);
 		}
 
 		override public

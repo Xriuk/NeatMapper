@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Tests.Classes {
+﻿namespace NeatMapper.Tests {
 	public class GenericClass<T> {
 		public int Id { get; set; }
 

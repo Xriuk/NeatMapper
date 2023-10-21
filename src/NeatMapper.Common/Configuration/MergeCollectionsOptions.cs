@@ -1,4 +1,4 @@
-﻿namespace NeatMapper.Configuration {
+﻿namespace NeatMapper {
 	/// <summary>
 	/// Options applied to automatic collections mapping
 	/// </summary>

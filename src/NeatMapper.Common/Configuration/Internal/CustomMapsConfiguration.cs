@@ -1,4 +1,7 @@
-﻿using NeatMapper.Internal;
+﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -6,7 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
-namespace NeatMapper.Configuration {
+namespace NeatMapper {
 	/// <summary>
 	/// Contains informations about custom defined maps (both in classes and outside, both specific and generic)
 	/// </summary>
@@ -97,6 +100,9 @@ namespace NeatMapper.Configuration {
 
 						throw new InvalidOperationException("Additional map methods cannot be generic or specified in an open generic class");
 					}
+
+					// DEV: maybe validate Method against From and To types?
+
 					if (!map.Method.IsStatic && map.Method.DeclaringType.GetConstructor(Type.EmptyTypes) == null && map.Instance == null)
 						throw new InvalidOperationException($"Map {map.Method.Name} in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name} cannot be instantiated because the class has no parameterless constructor. Either add a parameterless constructor to the class or provide an instance or move the map method to another class");
 
@@ -109,6 +115,9 @@ namespace NeatMapper.Configuration {
 						maps.Add(types, map);
 				}
 			}
+
+			Maps = maps;
+			GenericMaps = genericMaps;
 		}
 
 
@@ -184,7 +193,7 @@ namespace NeatMapper.Configuration {
 					if (mapMethod == null)
 						continue;
 
-
+#pragma warning disable IDE0039 // Use local function
 					Func<object[], object> func = (parameters) => {
 						try {
 							return mapMethod.Invoke(mapMethod.IsStatic ? null : CreateOrReturnInstance(concreteType), parameters);
@@ -193,6 +202,7 @@ namespace NeatMapper.Configuration {
 							throw new MappingException(e, types);
 						}
 					};
+#pragma warning restore IDE0039 // Use local function
 
 					// Cache the method
 					_genericCache.Add(types, func);
@@ -253,7 +263,7 @@ namespace NeatMapper.Configuration {
 						!t2Constraints.Where(t2c => !t1Constraints.Any(t1c => t1c.IsAssignableFrom(t2c))).Any();
 				}
 				else if (t1.IsArray && t2.IsArray)
-					return MatchOpenAndClosedGenericsRecursive(t1.GetElementType(), t2.GetElementType());
+					return MatchOpenGenericsRecursive(t1.GetElementType(), t2.GetElementType());
 				else
 					return t1 == t2;
 			}
@@ -265,7 +275,7 @@ namespace NeatMapper.Configuration {
 			if (arguments1.Length != arguments2.Length)
 				return false;
 
-			return arguments1.Zip(arguments2, (a1, a2) => (First: a1, Second: a2)).All((a) => MatchOpenAndClosedGenericsRecursive(a.First, a.Second));
+			return arguments1.Zip(arguments2, (a1, a2) => (First: a1, Second: a2)).All((a) => MatchOpenGenericsRecursive(a.First, a.Second));
 		}
 
 		internal static object CreateOrReturnInstance(Type classType) {
@@ -284,9 +294,9 @@ namespace NeatMapper.Configuration {
 
 		#region Types methods
 #if NET47 || NET48
-		static IDictionary<Type, bool> isUnmanagedCache = new ConcurrentDictionary<Type, bool>();
+		static readonly IDictionary<Type, bool> isUnmanagedCache = new ConcurrentDictionary<Type, bool>();
 #else
-        protected static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference =
+        static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference =
             typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!
                 ?? throw new InvalidOperationException("Could not find RuntimeHelpers.IsReferenceOrContainsReferences");
 #endif
@@ -294,10 +304,8 @@ namespace NeatMapper.Configuration {
 #if NET47 || NET48
 			// https://stackoverflow.com/a/53969223/2672235
 
-			bool answer;
-
 			// check if we already know the answer
-			if (!isUnmanagedCache.TryGetValue(type, out answer)) {
+			if (!isUnmanagedCache.TryGetValue(type, out var answer)) {
 
 				if (!type.IsValueType) {
 					// not a struct -> false
