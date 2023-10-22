@@ -44,8 +44,4 @@
 		</None>
 	</ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\NeatMapper.Common\NeatMapper.Common.csproj" PackageVersion="[2,3)" />
-  </ItemGroup>
-
 </Project>

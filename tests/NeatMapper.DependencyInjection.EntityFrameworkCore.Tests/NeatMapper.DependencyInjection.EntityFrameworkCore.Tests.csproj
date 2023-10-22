@@ -30,7 +30,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NeatMapper.DependencyInjection.EntityFrameworkCore\NeatMapper.DependencyInjection.EntityFrameworkCore.csproj" />
-    <ProjectReference Include="..\NeatMapper.Common.Tests\NeatMapper.Common.Tests.csproj" />
   </ItemGroup>
 
 </Project>

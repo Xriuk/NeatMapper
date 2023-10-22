@@ -8,7 +8,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// Contains informations and services for the current matching operation
 	/// </summary>
-	public class MatchingContext {
+	public sealed class MatchingContext {
 		internal MatchingContext() { }
 
 

@@ -16,7 +16,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\NeatMapper.Async\NeatMapper.Async.csproj" />
-		<ProjectReference Include="..\NeatMapper.Common.Tests\NeatMapper.Common.Tests.csproj" />
 	</ItemGroup>
 
 </Project>

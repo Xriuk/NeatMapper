@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeatMapper.Tests {
+namespace NeatMapper.Tests.Mapping {
 	[TestClass]
 	public class MergeMapperTests {
 		public class Maps :

@@ -12,6 +12,8 @@
 - NeatMapper.Common dependency version
 - `IMapper` added optional `mappingOptions` parameter to override settings for specific mappings,
 support and options depends on the mappers and/or the maps, added also to extension methods
+- `MergeMapsCollectionsOptions` renamed in `MergeCollectionsMappingOptions`
+- NeatMapper.Common package incorporated
 
 ### Added
 
@@ -23,7 +25,12 @@ support and options depends on the mappers and/or the maps, added also to extens
    - `CompositeMapper`: combines one or more `IMapper`s of the above in a defined order and tries them all, the first one to succeeds maps the objects
 - `Custom{New|Merge}AdditionalMapsOptions` which can be used to specify additional mapping methods like delegates/lambdas or compiled ones like expressions
 - `MapperOverrideMappingOptions`, used to override `IServiceProvider` and/or `IMapper` in the `MappingContext` created by the mapper, implementation depends on the mapper itself
-- NeatMapper.DependencyInjection package merged, now the core package allows injecting `IMapper` and `IMatcher` and configuring them via `IOptions` (check the [README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md) for instructions)
+- NeatMapper.DependencyInjection package incorporated, now the core package allows injecting `IMapper` and `IMatcher` and configuring them via `IOptions` (check the [README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md) for instructions)
+- `IHierarchyMatchMap<TSource, TDestination>` (and its .NET 7+ static counterpart `IHierarchyMatchMapStatic<TSource, TDestination>`) which allows matching two types as well as derived types, will be automatically used when merging collections.
+- `Matcher`: public implementation of `IMatcher`
+- `DelegateMatcher`: `IMatcher` which allows matching by using a delegate
+- `CompositeMatcher`: combines one or more `IMatcher`s of the above in a defined order and tries them all, the first one to succeeds matches the objects
+- `CustomMatchAdditionalMapsOptions` which can be used to specify additional matching methods like delegates/lambdas or compiled ones like expressions
 
 ## [1.1.0] - 2023-10-02
 

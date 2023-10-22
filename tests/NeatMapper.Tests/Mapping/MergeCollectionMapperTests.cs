@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace NeatMapper.Tests {
+namespace NeatMapper.Tests.Mapping {
 	public abstract class MergeCollectionMapperTests {
 		public class HierarchyMatchers :
 #if NET7_0_OR_GREATER

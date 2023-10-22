@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 
-namespace NeatMapper.Tests {
+namespace NeatMapper.Tests.Mapping {
 	public class NewCollectionMapperTests {
 		protected IMapper _mapper = null;
 

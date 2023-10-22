@@ -3,7 +3,7 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Options used to define a list of <see cref="IMapper"/>s to use for <see cref="Mappers.CompositeMapper"/>
+	/// Options used to define a list of <see cref="IMapper"/>s to use for <see cref="CompositeMapper"/>
 	/// </summary>
 	/// <remarks>
 	/// Configuration should be done by using <see cref="Microsoft.Extensions.DependencyInjection.OptionsServiceCollectionExtensions.ConfigureAll{TOptions}"/>
@@ -12,7 +12,7 @@ namespace NeatMapper {
 	public sealed class CompositeMapperOptions {
 		/// <summary>
 		/// Named <see cref="Microsoft.Extensions.Options.IOptions{TOptions}"/> which is used to configure any mapper
-		/// which requires an <see cref="IMapper"/> itself, these do not include <see cref="Mappers.CustomCollectionMapper"/>s
+		/// which requires an <see cref="IMapper"/> itself, these do not include <see cref="CustomCollectionMapper"/>s
 		/// </summary>
 		public const string Base = "Base";
 

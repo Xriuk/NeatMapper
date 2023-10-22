@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NeatMapper.Tests {
+namespace NeatMapper.Tests.Matching {
 	[TestClass]
 	public class MatcherTests {
 		public class TestMappingOptions { }
