@@ -38,7 +38,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(mapper));
 			if (source == null)
 				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
-			return(TDestination)mapper.Map(source, source.GetType(), typeof(TDestination), mappingOptions);
+			return(TDestination)mapper.Map(source, source.GetType(), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -102,7 +102,7 @@ namespace NeatMapper {
 
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return(TDestination)mapper.Map(source, typeof(TSource), typeof(TDestination), mappingOptions);
+			return(TDestination)mapper.Map(source, typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -179,7 +179,7 @@ namespace NeatMapper {
 
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
-			return (TDestination)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
+			return (TDestination)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -285,7 +285,7 @@ namespace NeatMapper {
 				typeof(IEnumerable<TSourceElement>),
 				destination,
 				typeof(ICollection<TDestinationElement>),
-				mappingOptions) as ICollection<TDestinationElement>;
+				new MappingOptions(mappingOptions)) as ICollection<TDestinationElement>;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

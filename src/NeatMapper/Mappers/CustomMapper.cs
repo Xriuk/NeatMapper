@@ -19,17 +19,16 @@ namespace NeatMapper {
 		}
 
 
-		public abstract object Map(object source, Type sourceType, Type destinationType, IEnumerable mappingOptions = null);
-		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, IEnumerable mappingOptions = null);
+		public abstract object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
+		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null);
 
 
-		protected MappingContext CreateMappingContext(IEnumerable mappingOptions) {
-			var options = new MappingOptions(mappingOptions);
-			var overrideOptions = options.GetOptions<MapperOverrideMappingOptions>();
+		protected MappingContext CreateMappingContext(MappingOptions options) {
+			var overrideOptions = options?.GetOptions<MapperOverrideMappingOptions>();
 			return new MappingContext {
 				Mapper = overrideOptions?.Mapper ?? this,
 				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options
+				MappingOptions = options ?? MappingOptions.Empty
 			};
 		}
 	}

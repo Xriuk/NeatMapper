@@ -32,9 +32,9 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null);
 
@@ -75,9 +75,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null);
 	}

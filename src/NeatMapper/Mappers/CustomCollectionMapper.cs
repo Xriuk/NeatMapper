@@ -24,8 +24,8 @@ namespace NeatMapper {
 		}
 
 
-		public abstract object Map(object source, Type sourceType, Type destinationType, IEnumerable mappingOptions = null);
-		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, IEnumerable mappingOptions = null);
+		public abstract object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
+		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null);
 
 
 		protected static bool CanCreateCollection(Type destination) {

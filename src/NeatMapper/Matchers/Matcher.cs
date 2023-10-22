@@ -79,9 +79,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 
@@ -139,13 +139,12 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		MatchingContext CreateMatchingContext(IEnumerable mappingOptions) {
-			var options = new MappingOptions(mappingOptions);
-			var overrideOptions = options.GetOptions<MatcherOverrideMappingOptions>();
+		MatchingContext CreateMatchingContext(MappingOptions options) {
+			var overrideOptions = options?.GetOptions<MatcherOverrideMappingOptions>();
 			return new MatchingContext {
 				Matcher = overrideOptions?.Matcher ?? this,
 				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options
+				MappingOptions = options ?? MappingOptions.Empty
 			};
 		}
 

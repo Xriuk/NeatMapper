@@ -37,9 +37,9 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 
@@ -73,16 +73,18 @@ namespace NeatMapper {
 							var addMethod = GetCollectionAddMethod(destination);
 
 							// Adjust the context so that we don't pass any merge matcher along
-							mappingOptions = mappingOptions?.Cast<object>().Select(o => {
-								if (o is MergeCollectionsMappingOptions merge) {
-									var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-										Matcher = null
-									};
-									return mergeOpts;
-								}
-								else
-									return o;
-							});
+							if(mappingOptions?.GetOptions<MergeCollectionsMappingOptions>() != null) {
+								mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Select(o => {
+									if (o is MergeCollectionsMappingOptions merge) {
+										var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+											Matcher = null
+										};
+										return mergeOpts;
+									}
+									else
+										return o;
+								}));
+							}
 
 							var canCreateNew = true;
 
@@ -175,9 +177,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 			// Not mapping merge

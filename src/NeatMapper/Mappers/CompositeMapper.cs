@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Options;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -54,9 +55,9 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-            IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 
@@ -102,9 +103,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-            IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 
@@ -241,19 +242,19 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		IEnumerable MergeOrCreateMappingOptions(IEnumerable mappingOptions) {
-			var options = mappingOptions?.Cast<object>().OfType<MapperOverrideMappingOptions>().SingleOrDefault();
-			if(options == null){
-				options = new MapperOverrideMappingOptions();
-				if(mappingOptions != null)
-					mappingOptions = mappingOptions.Cast<object>().Concat(new[] { options });
+		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
+			var overrideOptions = options?.GetOptions<MapperOverrideMappingOptions>();
+			if(overrideOptions == null){
+				overrideOptions = new MapperOverrideMappingOptions();
+				if(options != null)
+					options = new MappingOptions(options.AsEnumerable().Concat(new[] { overrideOptions }));
 				else
-					mappingOptions = new[] { options };
+					options = new MappingOptions(new[] { overrideOptions });
 			}
 
-			options.Mapper = this;
+			overrideOptions.Mapper = this;
 
-			return mappingOptions;
+			return options;
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

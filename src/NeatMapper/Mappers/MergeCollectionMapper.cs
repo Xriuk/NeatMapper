@@ -62,9 +62,9 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 			throw new MapNotFoundException((sourceType, destinationType));
@@ -92,9 +92,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 
@@ -166,17 +166,19 @@ namespace NeatMapper {
 							var elementsToAdd = new List<object>();
 
 							// Adjust the context so that we don't pass any merge matcher along
-							var mergeMappingOptions = mappingOptions?.Cast<object>().OfType<MergeCollectionsMappingOptions>().SingleOrDefault();
-							mappingOptions = mappingOptions?.Cast<object>().Select(o => {
-								if (o is MergeCollectionsMappingOptions merge) {
-									var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-										Matcher = null
-									};
-									return mergeOpts;
-								}
-								else
-									return o;
-							});
+							var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
+							if(mergeMappingOptions != null) {
+								mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Select(o => {
+									if (o is MergeCollectionsMappingOptions merge) {
+										var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+											Matcher = null
+										};
+										return mergeOpts;
+									}
+									else
+										return o;
+								}));
+							}
 
 							// Create the matcher and the mapping options
 							IMatcher elementMatcher;

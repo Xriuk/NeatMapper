@@ -32,7 +32,7 @@ namespace NeatMapper {
 			mappingOptions = null) {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
-			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
+			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <summary>

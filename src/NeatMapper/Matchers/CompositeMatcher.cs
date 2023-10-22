@@ -49,9 +49,9 @@ namespace NeatMapper {
 			destination,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
+			MappingOptions?
 #else
-			IEnumerable
+			MappingOptions
 #endif
 			mappingOptions = null) {
 
@@ -59,16 +59,16 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			var options = mappingOptions.Cast<object>().OfType<MatcherOverrideMappingOptions>().SingleOrDefault();
-			if (options == null) {
-				options = new MatcherOverrideMappingOptions();
+			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
+			if (overrideOptions == null) {
+				overrideOptions = new MatcherOverrideMappingOptions();
 				if (mappingOptions != null)
-					mappingOptions = mappingOptions.Cast<object>().Concat(new[] { options });
+					mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Concat(new[] { overrideOptions }));
 				else
-					mappingOptions = new[] { options };
+					mappingOptions = new MappingOptions(new[] { overrideOptions });
 			}
 
-			options.Matcher = this;
+			overrideOptions.Matcher = this;
 
 			foreach (var matcher in _matchers) {
 				try {
