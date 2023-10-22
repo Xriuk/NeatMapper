@@ -28,16 +28,6 @@ namespace NeatMapper {
 		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, IEnumerable mappingOptions = null);
 
 
-		protected MappingContext CreateMappingContext(IEnumerable mappingOptions) {
-			var options = new MappingOptions(mappingOptions);
-			var overrideOptions = options.GetOptions<MapperOverrideMappingOptions>();
-			return new MappingContext {
-				Mapper = overrideOptions?.Mapper ?? _elementsMapper,
-				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options
-			};
-		}
-
 		protected static bool CanCreateCollection(Type destination) {
 			if (destination.IsArray)
 				return true;

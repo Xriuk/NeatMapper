@@ -8,15 +8,14 @@ namespace NeatMapper.Tests {
 	public class NewCollectionMapperTests {
 		protected IMapper _mapper = null;
 
-
 		[TestMethod]
 		public void ShouldMapCollections() {
 			// Should forward options except merge.matcher
 
 			// No options
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 				var strings = _mapper.Map<string[]>(new[] { 2, -3, 0 });
 
 				Assert.IsNotNull(strings);
@@ -25,15 +24,15 @@ namespace NeatMapper.Tests {
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
 
-				Assert.IsNull(NewMapperTests.Maps.options);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions);
+				Assert.IsNull(MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 
 			// Options (no merge)
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
-				var opts = new NewMapperTests.TestOptions();
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+				var opts = new TestOptions();
 				var strings = _mapper.Map<IList<string>>(new[] { 2, -3, 0 }, opts);
 
 				Assert.IsNotNull(strings);
@@ -42,15 +41,15 @@ namespace NeatMapper.Tests {
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
 
-				Assert.AreSame(opts, NewMapperTests.Maps.options);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions);
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 
 			// Options (merge with matcher)
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
-				var opts = new NewMapperTests.TestOptions();
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+				var opts = new TestOptions();
 				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
 					RemoveNotMatchedDestinationElements = false
@@ -63,11 +62,11 @@ namespace NeatMapper.Tests {
 				Assert.AreEqual("-6", strings.ElementAt(1));
 				Assert.AreEqual("0", strings.ElementAt(2));
 
-				Assert.AreSame(opts, NewMapperTests.Maps.options);
-				Assert.IsNotNull(NewMapperTests.Maps.mergeOptions);
-				Assert.AreNotSame(merge, NewMapperTests.Maps.mergeOptions);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions.Matcher);
-				Assert.IsFalse(NewMapperTests.Maps.mergeOptions.RemoveNotMatchedDestinationElements);
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.IsNotNull(MappingOptionsUtils.mergeOptions);
+				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
+				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 
 			{
@@ -128,13 +127,15 @@ namespace NeatMapper.Tests {
 		}
 
 		[TestMethod]
-		public void ShouldNotMapCollectionsWithoutMap() {
+		public void ShouldNotMapCollectionsWithouElementsMap() {
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<Category>>(new[] { 2 }));
 		}
 
 		[TestMethod]
-		public void ShouldMapNullCollections() {
+		public void ShouldMapNullCollectionsOnlyIfElementsMapExists() {
 			Assert.IsNull(_mapper.Map<int[], string[]>(null));
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<int[], List<float>>(null));
 		}
 
 		[TestMethod]
@@ -151,11 +152,25 @@ namespace NeatMapper.Tests {
 		}
 
 		[TestMethod]
+		public void ShouldCatchExceptionsInCollectionMaps() {
+			// Normal collections
+			var exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+
+			// Nested collections
+			exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
+			Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+		}
+
+		[TestMethod]
 		public void ShouldMapCollectionsOfCollections() {
 			// No options
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 
 				var strings = _mapper.Map<IList<IEnumerable<string>>>(new[] {
 					new[]{ 2, -3, 0 },
@@ -172,31 +187,31 @@ namespace NeatMapper.Tests {
 				Assert.AreEqual("2", strings[1].ElementAt(0));
 				Assert.AreEqual("4", strings[1].ElementAt(1));
 
-				Assert.IsNull(NewMapperTests.Maps.options);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions);
+				Assert.IsNull(MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 
 			// Options (no merge)
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 
-				var opts = new NewMapperTests.TestOptions();
+				var opts = new TestOptions();
 				_mapper.Map<IList<IEnumerable<string>>>(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
 				}, new[] { opts });
 
-				Assert.AreSame(opts, NewMapperTests.Maps.options);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions);
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 
 			// Options (merge with matcher)
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 
-				var opts = new NewMapperTests.TestOptions();
+				var opts = new TestOptions();
 				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
 					RemoveNotMatchedDestinationElements = false
@@ -206,34 +221,30 @@ namespace NeatMapper.Tests {
 					new[]{ 1, 2 }
 				}, new object[] { opts, merge });
 
-				Assert.AreSame(opts, NewMapperTests.Maps.options);
-				Assert.IsNotNull(NewMapperTests.Maps.mergeOptions);
-				Assert.AreNotSame(merge, NewMapperTests.Maps.mergeOptions);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions.Matcher);
-				Assert.IsFalse(NewMapperTests.Maps.mergeOptions.RemoveNotMatchedDestinationElements);
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.IsNotNull(MappingOptionsUtils.mergeOptions);
+				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
+				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
 
 		[TestMethod]
 		public void ShouldNotMapMultidimensionalArrays() {
+			TestUtils.AssertMapNotFound(() => _mapper.Map<string[]>(new[,] {
+				{ 2, -3, 0 },
+				{ 1, 2, 5 }
+			}));
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[] {
 				new[]{ 2, -3, 0 },
-				new[]{ 1, 2, 5 }
+				new[]{ 1, 2 }
 			}));
-		}
 
-		[TestMethod]
-		public void ShouldCatchExceptionsInCollectionMaps() {
-			// Normal collections
-			var exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
-
-			// Nested collections
-			exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
-			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
-			Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[,] {
+				{ 2, -3, 0 },
+				{ 1, 2, 5 }
+			}));
 		}
 	}
 
@@ -247,62 +258,65 @@ namespace NeatMapper.Tests {
 		}
 	}
 
-	//[TestClass]
+	[TestClass]
 	public class NewCollectionMapperWithMergeMapperTests : NewCollectionMapperTests {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new NewCollectionMapper(new MergeMapper(new CustomMapsOptions {
-				//TypesToScan = new List<Type> { typeof(MergeMapperTests.Maps) }
+				TypesToScan = new List<Type> { typeof(MergeMapperTests.Maps) }
 			}));
 		}
 
 
+		// DEV: we have no way of checking the below atm
+		/*
 		[TestMethod]
 		public void ShouldFallbackToMergeMapInCollections() {
 			// No Options
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 
 				var result = _mapper.Map<IList<string>>(new[] { 2f });
 				Assert.IsNotNull(result);
 				Assert.AreEqual(1, result.Count);
-				Assert.AreEqual("6", result[0]);
+				Assert.AreEqual("MergeMap", result[0]);
 
-				Assert.IsNull(NewMapperTests.Maps.options);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions);
+				Assert.IsNull(MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 
 			// Options (without matcher)
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 
-				var opts = new NewMapperTests.TestOptions();
+				var opts = new TestOptions();
 				_mapper.Map<IList<string>>(new[] { 2f }, new[] { opts });
 
-				Assert.AreSame(opts, NewMapperTests.Maps.options);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions);
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 
 			// Options (with matcher, forwards everything)
 			{
-				NewMapperTests.Maps.options = null;
-				NewMapperTests.Maps.mergeOptions = null;
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
 
-				var opts = new NewMapperTests.TestOptions();
+				var opts = new TestOptions();
 				var merge = new MergeCollectionsMappingOptions {
 					Matcher = (s, d, c) => false,
 					RemoveNotMatchedDestinationElements = false
 				};
 				_mapper.Map<IList<string>>(new[] { 2f }, new object[] { opts, merge });
 
-				Assert.AreSame(opts, NewMapperTests.Maps.options);
-				Assert.AreNotSame(merge, NewMapperTests.Maps.mergeOptions);
-				Assert.IsNull(NewMapperTests.Maps.mergeOptions.Matcher);
-				Assert.IsFalse(NewMapperTests.Maps.mergeOptions.RemoveNotMatchedDestinationElements);
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
+				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
 			}
 		}
+		*/
 
 		[TestMethod]
 		public void ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {

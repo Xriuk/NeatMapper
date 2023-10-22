@@ -1,24 +1,24 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Map which allows mapping an object to an existing one
+	/// Map which allows mapping an object to an existing one, supports open generic types too
 	/// </summary>
-	/// <typeparam name="TSource">Source type</typeparam>
-	/// <typeparam name="TDestination">Destination type</typeparam>
+	/// <typeparam name="TSource">Source type, can be an open generic</typeparam>
+	/// <typeparam name="TDestination">Destination type, can be an open generic</typeparam>
 	public interface IMergeMap<TSource, TDestination> {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result
 		/// </summary>
-		/// <param name="source">object to be mapped, may be null</param>
-		/// <param name="destination">object to map to, may be null</param>
-		/// <param name="context">mapping context, which allows nested mappings, services retrieval via DI, ...</param>
+		/// <param name="source">Object to be mapped, may be null</param>
+		/// <param name="destination">Object to map to, may be null</param>
+		/// <param name="context">Mapping context, which allows nested mappings, services retrieval via DI, additional options, ...</param>
 		/// <returns>
-		/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
+		/// The resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
 #if NET5_0_OR_GREATER
-			TDestination?
+		TDestination?
 #else
-			TDestination
+		TDestination
 #endif
 			Map(
 #if NET5_0_OR_GREATER

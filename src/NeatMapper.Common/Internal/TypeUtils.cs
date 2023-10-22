@@ -16,5 +16,13 @@ namespace NeatMapper {
 				collection.GetGenericArguments()[0] :
 				collection.GetInterfaces().First(i => i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType).GetGenericArguments()[0];
 		}
+
+		internal static Type GetArrayElementType(Type arrayType) {
+			var rank = arrayType.GetArrayRank();
+			if(rank == 1)
+				return arrayType.GetElementType();
+			else
+				return arrayType.GetElementType().MakeArrayType(rank - 1);
+		}
 	}
 }

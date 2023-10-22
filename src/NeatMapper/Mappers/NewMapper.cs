@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>
 	/// </summary>
-	public sealed class NewMapper : CustomMapper {
+	public sealed class NewMapper : CustomMapper, IMapperCanMap {
 		public NewMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
@@ -51,6 +51,7 @@ namespace NeatMapper {
 #endif
 
 
+		#region IMapper methods
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -127,5 +128,27 @@ namespace NeatMapper {
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
+		#endregion
+
+		#region IMapperCanMap methods
+		public bool CanMapNew(Type sourceType, Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			try {
+				_configuration.GetMap((sourceType, destinationType));
+				return true;
+			}
+			catch (MapNotFoundException) {
+				return false;
+			}
+		}
+
+		public bool CanMapMerge(Type sourceType, Type destinationType) {
+			return false;
+		} 
+		#endregion
 	}
 }

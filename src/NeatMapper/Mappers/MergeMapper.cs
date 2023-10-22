@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>
 	/// </summary>
-	public sealed class MergeMapper : CustomMapper {
+	public sealed class MergeMapper : CustomMapper, IMapperCanMap {
 		public MergeMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
@@ -51,6 +51,7 @@ namespace NeatMapper {
 #endif
 
 
+		#region IMapper methods
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -73,6 +74,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+			// Forward new map to merge by creating a destination
 			object destination;
 			try {
 				destination = ObjectFactory.Create(destinationType);
@@ -81,7 +83,6 @@ namespace NeatMapper {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}
 
-			// Forward new map to merge by creating a destination
 			return Map(source, sourceType, destination, destinationType, mappingOptions);
 		}
 
@@ -126,7 +127,7 @@ namespace NeatMapper {
 			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
 				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
 
-			var result = _configuration.GetMap((sourceType, destinationType)).Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
+			var result = _configuration.GetMap((sourceType, destinationType)).Invoke(new object[] { source, destination, CreateMappingContext(mappingOptions) });
 
 			// Should not happen
 			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
@@ -138,5 +139,30 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+		#endregion
+
+		#region IMapperCanMap methods
+		public bool CanMapNew(Type sourceType, Type destinationType) {
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType);
+		}
+
+		public bool CanMapMerge(Type sourceType, Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			try {
+				_configuration.GetMap((sourceType, destinationType));
+				return true;
+			}
+			catch (MapNotFoundException) {
+				return false;
+			}
+		}
+		#endregion
 	}
 }

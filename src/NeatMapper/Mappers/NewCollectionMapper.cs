@@ -5,10 +5,10 @@ using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which creates a new collection and maps elements with another <see cref="IMapper"/>
-	/// by trying new map, then merge map
+	/// <see cref="IMapper"/> which creates a new collection (even nested) and maps elements with another
+	/// <see cref="IMapper"/> by trying new map first, then merge map
 	/// </summary>
-	public sealed class NewCollectionMapper : CustomCollectionMapper {
+	public sealed class NewCollectionMapper : CustomCollectionMapper, IMapperCanMap {
 		public NewCollectionMapper(
 			IMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -20,6 +20,7 @@ namespace NeatMapper {
 			base(elementsMapper, serviceProvider) { }
 
 
+		#region IMapper methods
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -82,7 +83,6 @@ namespace NeatMapper {
 								else
 									return o;
 							});
-							var context = CreateMappingContext(mappingOptions);
 
 							var canCreateNew = true;
 
@@ -92,7 +92,7 @@ namespace NeatMapper {
 								// Try new map
 								if (canCreateNew) {
 									try {
-										destinationElement = _elementsMapper.Map(element, elementTypes.From, elementTypes.To, context.MappingOptions.AsEnumerable());
+										destinationElement = _elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
 										addMethod.Invoke(destination, new object[] { destinationElement });
 										continue;
 									}
@@ -108,7 +108,7 @@ namespace NeatMapper {
 								catch (ObjectCreationException) {
 									throw new MapNotFoundException(types);
 								}
-								destinationElement = _elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, context.MappingOptions.AsEnumerable());
+								destinationElement = _elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
 								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
@@ -120,8 +120,20 @@ namespace NeatMapper {
 
 							return result;
 						}
-						else if (source == null)
-							return null;
+						else if (source == null) {
+							// Check if we can map elements
+							try {
+								if (_elementsMapper.CanMapNew(elementTypes.From, elementTypes.To))
+									return null;
+							}
+							catch { }
+
+							try {
+								if (_elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To))
+									return null;
+							}
+							catch { }
+						}
 						else
 							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 					}
@@ -171,5 +183,54 @@ namespace NeatMapper {
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
+		#endregion
+
+		#region IMapperCanMap methods
+		public bool CanMapNew(Type sourceType, Type destinationType) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
+				TypeUtils.HasInterface(destinationType, typeof(IEnumerable<>)) && destinationType != typeof(string) &&
+				CanCreateCollection(destinationType)) {
+
+				var elementTypes = (
+					From: TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>)),
+					To: TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>))
+				);
+
+				bool cannotVerifyNew = false;
+				try {
+					if(_elementsMapper.CanMapNew(elementTypes.From, elementTypes.To))
+						return true;
+				}
+				catch(InvalidOperationException) {
+					cannotVerifyNew = true;
+				}
+
+				if (_elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To))
+					return true;
+				else if(cannotVerifyNew)
+					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
+			}
+
+			return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		public bool CanMapMerge(Type sourceType, Type destinationType) {
+			return false;
+		}
+		#endregion
 	}
 }

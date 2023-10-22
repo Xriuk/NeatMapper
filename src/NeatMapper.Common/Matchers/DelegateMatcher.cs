@@ -73,7 +73,7 @@ namespace NeatMapper.Common.Matchers {
 			};
 
 			try { 
-				return _matchDelegate.Invoke(source, sourceType, context);
+				return _matchDelegate.Invoke(source, destination, context);
 			}
 			catch (Exception e) {
 				throw new MatcherException(e, (sourceType, destinationType));
