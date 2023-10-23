@@ -3,7 +3,6 @@
 #endif
 
 using System;
-using System.Collections;
 
 namespace NeatMapper {
 	/// <summary>

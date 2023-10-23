@@ -126,7 +126,7 @@ namespace NeatMapper {
 						// Otherwise we must check that first
 						if (destination == null) {
 							try {
-								destination = CreateCollection(types.To);
+								destination = ObjectFactory.CreateCollection(types.To);
 							}
 							catch (ObjectCreationException) {
 								throw new MapNotFoundException(types);
@@ -284,7 +284,7 @@ namespace NeatMapper {
 								addMethod.Invoke(destination, new object[] { element });
 							}
 
-							var result = ConvertCollectionToType(destination, types.To);
+							var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
 
 							// Should not happen
 							if (result != null && !destinationType.IsAssignableFrom(result.GetType()))

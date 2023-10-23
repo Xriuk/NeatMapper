@@ -66,11 +66,11 @@ namespace NeatMapper {
 				);
 
 				// Check if collection can be created
-				if (CanCreateCollection(types.To)) {
+				if (ObjectFactory.CanCreateCollection(types.To)) {
 					try {
 						if (source is IEnumerable sourceEnumerable) {
-							var destination = CreateCollection(types.To);
-							var addMethod = GetCollectionAddMethod(destination);
+							var destination = ObjectFactory.CreateCollection(types.To);
+							var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
 
 							// Adjust the context so that we don't pass any merge matcher along
 							if(mappingOptions?.GetOptions<MergeCollectionsMappingOptions>() != null) {
@@ -114,7 +114,7 @@ namespace NeatMapper {
 								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
-							var result = ConvertCollectionToType(destination, types.To);
+							var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
 
 							// Should not happen
 							if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
@@ -201,7 +201,7 @@ namespace NeatMapper {
 
 			if (TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
 				TypeUtils.HasInterface(destinationType, typeof(IEnumerable<>)) && destinationType != typeof(string) &&
-				CanCreateCollection(destinationType)) {
+				ObjectFactory.CanCreateCollection(destinationType)) {
 
 				var elementTypes = (
 					From: TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>)),

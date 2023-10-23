@@ -53,7 +53,8 @@ namespace NeatMapper.Async {
 #else
 			IEnumerable
 #endif
-			mappingOptions, CancellationToken cancellationToken = default) {
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable

@@ -4,9 +4,9 @@
 	/// </summary>
 	/// <typeparam name="TSource">Source type</typeparam>
 	/// <typeparam name="TDestination">Destination type</typeparam>
-	/// <param name="source">object to map, may be null</param>
-	/// <param name="context">mapping context, which allows nested mappings, services retrieval via DI, ...</param>
-	/// <returns>the newly created object, may be null</returns>
+	/// <param name="source">Object to map, may be null</param>
+	/// <param name="context">Mapping context, which allows nested mappings, services retrieval via DI, ...</param>
+	/// <returns>The newly created object, may be null</returns>
 	public delegate
 #if NET5_0_OR_GREATER
 		TDestination?

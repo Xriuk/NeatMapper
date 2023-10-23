@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -156,6 +155,11 @@ namespace NeatMapper.Tests.DependencyInjection {
 			var mapper = services.GetRequiredService<IMapper>();
 			mapper.Map<string, int>("AAA");
 			mapper.Map<string, float>("BBB", 42f);
+		}
+
+		[TestMethod]
+		public void NestedMapperShouldBeEqualToIMapper() {
+			throw new NotImplementedException();
 		}
 	}
 }

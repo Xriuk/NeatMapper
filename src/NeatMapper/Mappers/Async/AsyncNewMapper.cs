@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
-	/// <summary>
-	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>
-	/// </summary>
-	public sealed class NewMapper : CustomMapper, IMapperCanMap {
-		public NewMapper(
+	public sealed class AsyncNewMapper : AsyncCustomMapper, IAsyncMapperCanMap {
+		public AsyncNewMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
 #else
@@ -14,9 +12,9 @@ namespace NeatMapper {
 #endif
 			mapsOptions = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomNewAdditionalMapsOptions?
+			CustomAsyncNewAdditionalMapsOptions?
 #else
-			CustomNewAdditionalMapsOptions
+			CustomAsyncNewAdditionalMapsOptions
 #endif
 			additionalMapsOptions = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -32,33 +30,33 @@ namespace NeatMapper {
 
 			base(new CustomMapsConfiguration(
 					(_, i) => {
-						if(!i.IsGenericType)
+						if (!i.IsGenericType)
 							return false;
 						var type = i.GetGenericTypeDefinition();
-						return type == typeof(INewMap<,>)
+						return type == typeof(IAsyncNewMap<,>)
 #if NET7_0_OR_GREATER
-							|| type == typeof(INewMapStatic<,>)
+							|| type == typeof(IAsyncNewMapStatic<,>)
 #endif
 						;
 					},
 					mapsOptions ?? new CustomMapsOptions(),
 					additionalMapsOptions?._maps.Values
 				),
-				serviceProvider) {}
+				serviceProvider) { }
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 
 
-		#region IMapper methods
-		override public
+		#region IAsyncMapper methods
+		override public async Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
 			object
 #endif
-			Map(
+			> MapAsync(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -72,7 +70,8 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -85,7 +84,20 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var result = _configuration.GetMap((sourceType, destinationType)).Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
+			var types = (sourceType, destinationType);
+
+			var task = (Task)_configuration.GetMap(types).Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
+
+			object result;
+			try {
+				result = await TaskUtils.AwaitTask<object>(task);
+			}
+			catch (MapNotFoundException) {
+				throw;
+			}
+			catch (Exception e) {
+				throw new MappingException(e, types);
+			}
 
 			// Should not happen
 			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
@@ -98,13 +110,13 @@ namespace NeatMapper {
 #endif
 		}
 
-		override public
+		override public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
 			object
 #endif
-			Map(
+			> MapAsync(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -124,14 +136,15 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 		#endregion
 
-		#region IMapperCanMap methods
-		public bool CanMapNew(Type sourceType, Type destinationType) {
+		#region IAsyncMapperCanMap methods
+		public Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -139,16 +152,16 @@ namespace NeatMapper {
 
 			try {
 				_configuration.GetMap((sourceType, destinationType));
-				return true;
+				return Task.FromResult(true);
 			}
 			catch (MapNotFoundException) {
-				return false;
+				return Task.FromResult(false);
 			}
 		}
 
-		public bool CanMapMerge(Type sourceType, Type destinationType) {
-			return false;
-		} 
+		public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+			return Task.FromResult(false);
+		}
 		#endregion
 	}
 }

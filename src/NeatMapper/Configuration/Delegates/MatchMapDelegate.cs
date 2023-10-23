@@ -4,10 +4,10 @@
 	/// </summary>
 	/// <typeparam name="TSource">Source type</typeparam>
 	/// <typeparam name="TDestination">Destination type</typeparam>
-	/// <param name="source">source object, may be null</param>
-	/// <param name="destination">destination object, may be null</param>
-	/// <param name="context">matching context, which allows nested matches, services retrieval via DI, ...</param>
-	/// <returns>true if the two objects match</returns>
+	/// <param name="source">Source object, may be null</param>
+	/// <param name="destination">Destination object, may be null</param>
+	/// <param name="context">Matching context, which allows nested matches, services retrieval via DI, ...</param>
+	/// <returns>True if the two objects match</returns>
 	public delegate bool MatchMapDelegate<TSource, TDestination>(
 #if NET5_0_OR_GREATER
 		TSource?

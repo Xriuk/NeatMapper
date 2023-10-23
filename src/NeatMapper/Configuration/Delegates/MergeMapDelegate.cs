@@ -4,11 +4,11 @@
 	/// </summary>
 	/// <typeparam name="TSource">Source type</typeparam>
 	/// <typeparam name="TDestination">Destination type</typeparam>
-	/// <param name="source">object to be mapped, may be null</param>
-	/// <param name="destination">object to map to, may be null</param>
-	/// <param name="context">mapping context, which allows nested mappings, services retrieval via DI, ...</param>
+	/// <param name="source">Object to be mapped, may be null</param>
+	/// <param name="destination">Object to map to, may be null</param>
+	/// <param name="context">Mapping context, which allows nested mappings, services retrieval via DI, ...</param>
 	/// <returns>
-	/// the resulting object of the mapping, can be <paramref name="destination"/> or a new one,
+	/// The resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 	/// may be null
 	/// </returns>
 	public delegate
