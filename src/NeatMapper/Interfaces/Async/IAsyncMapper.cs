@@ -16,7 +16,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>T task which when completed returns the newly created object of <paramref name="destinationType"/>, which may be null</returns>
+		/// <returns>A task which when completed returns the newly created object of type <paramref name="destinationType"/>, which may be null</returns>
 		Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -52,7 +52,7 @@ namespace NeatMapper {
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
 		/// <returns>
-		/// A task which when completed returns the resulting object of the mapping of <paramref name="destinationType"/> type,
+		/// A task which when completed returns the resulting object of the mapping of type <paramref name="destinationType"/>,
 		/// which can be the same as <paramref name="destination"/> or a new one, may be null
 		/// </returns>
 		Task<

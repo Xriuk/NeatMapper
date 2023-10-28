@@ -6,9 +6,20 @@ using System.Collections.Generic;
 
 namespace NeatMapper.Tests.DependencyInjection {
 	[TestClass]
-	public class ServiceCollectionExtensionsTests {
-		public class Maps : INewMap<string, int> {
+	public class IMapperServiceCollectionExtensionsTests {
+		public class Maps :
+			INewMap<string, int>,
+			IMergeMap<string, float> {
+
+			public static IMapper Mapper;
+
 			int INewMap<string, int>.Map(string source, MappingContext context) {
+				Mapper = context.Mapper;
+				return source?.Length ?? 0;
+			}
+
+			float IMergeMap<string, float>.Map(string source, float destination, MappingContext context) {
+				Mapper = context.Mapper;
 				return source?.Length ?? 0;
 			}
 		}
@@ -159,7 +170,44 @@ namespace NeatMapper.Tests.DependencyInjection {
 
 		[TestMethod]
 		public void NestedMapperShouldBeEqualToIMapper() {
-			throw new NotImplementedException();
+			var serviceCollection = new ServiceCollection();
+			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.Configure<CustomMapsOptions>(o => {
+				o.TypesToScan.Add(typeof(Maps));
+			});
+			IServiceProvider services = serviceCollection.BuildServiceProvider();
+
+			var mapper = services.GetRequiredService<IMapper>();
+
+			// NewMap
+			{
+				// Normal
+				Maps.Mapper = null;
+				mapper.Map<string, int>("AAA");
+				Assert.IsNotNull(Maps.Mapper);
+				Assert.AreSame(mapper, Maps.Mapper);
+
+				// Collection
+				Maps.Mapper = null;
+				mapper.Map<IEnumerable<string>, List<int>>(new[] { "AAA" });
+				Assert.IsNotNull(Maps.Mapper);
+				Assert.AreSame(mapper, Maps.Mapper);
+			}
+
+			// MergeMap
+			{
+				// Normal
+				Maps.Mapper = null;
+				mapper.Map<string, float>("AAA", 2f);
+				Assert.IsNotNull(Maps.Mapper);
+				Assert.AreSame(mapper, Maps.Mapper);
+
+				// Collection
+				Maps.Mapper = null;
+				mapper.Map<IEnumerable<string>, List<float>>(new[] { "AAA" }, new List<float>());
+				Assert.IsNotNull(Maps.Mapper);
+				Assert.AreSame(mapper, Maps.Mapper);
+			}
 		}
 	}
 }

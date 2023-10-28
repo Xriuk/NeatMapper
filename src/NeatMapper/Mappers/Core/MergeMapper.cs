@@ -142,14 +142,32 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperCanMap methods
-		public bool CanMapNew(Type sourceType, Type destinationType) {
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			return ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType);
+			return ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType, mappingOptions);
 		}
 
-		public bool CanMapMerge(Type sourceType, Type destinationType) {
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)

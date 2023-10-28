@@ -5,7 +5,7 @@ namespace NeatMapper {
 	public static class MatcherExtensions {
 		#region Runtime
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
+		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
 		/// This will create a delegate which can be invoked multiple times
 		/// </summary>
 		/// <param name="source">Object to compare, may be null</param>
@@ -13,7 +13,7 @@ namespace NeatMapper {
 		/// <param name="destination">Object to be compared to, may be null</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns>True if the two objects match</returns>
+		/// <returns><see langword="true"/> if the two objects match</returns>
 		public static bool Match(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -42,7 +42,7 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
+		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
 		/// This will create a delegate which can be invoked multiple times
 		/// </summary>
 		/// <param name="source">Object to compare, may be null</param>
@@ -50,7 +50,7 @@ namespace NeatMapper {
 		/// <param name="destination">Object to be compared to, may be null</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns>True if the two objects match</returns>
+		/// <returns><see langword="true"/> if the two objects match</returns>
 		public static bool Match(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -76,13 +76,13 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
+		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
 		/// </summary>
 		/// <typeparam name="TSource">Type of the source object, used to retrieve the available comparers</typeparam>
 		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available comparers</typeparam>
 		/// <param name="source">Source object, may be null</param>
 		/// <param name="destination">Destination object, may be null</param>
-		/// <returns>True if the two objects are the same</returns>
+		/// <returns><see langword="true"/> if the two objects are equivalent</returns>
 		public static bool Match<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource? 
@@ -108,13 +108,13 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
+		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
 		/// </summary>
 		/// <typeparam name="TSource">Type of the source object, used to retrieve the available comparers</typeparam>
 		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available comparers</typeparam>
 		/// <param name="source">Source object, may be null</param>
 		/// <param name="destination">Destination object, may be null</param>
-		/// <returns>True if the two objects are the same</returns>
+		/// <returns><see langword="true"/> if the two objects are equivalent</returns>
 		public static bool Match<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource? 
@@ -133,7 +133,7 @@ namespace NeatMapper {
 #else
 			IEnumerable
 #endif
-			mappingOptions = null) {
+			mappingOptions) {
 
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
@@ -141,13 +141,13 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Checks if two objects are the same by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
+		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
 		/// </summary>
-		/// <typeparam name="TSource">type of the source object, used to retrieve the available comparers</typeparam>
-		/// <typeparam name="TDestination">type of the destination object, used to retrieve the available comparers</typeparam>
-		/// <param name="source">source object, may be null</param>
-		/// <param name="destination">destination object, may be null</param>
-		/// <returns>true if the two objects are the same</returns>
+		/// <typeparam name="TSource">Type of the source object, used to retrieve the available comparers</typeparam>
+		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available comparers</typeparam>
+		/// <param name="source">Source object, may be null</param>
+		/// <param name="destination">Destination object, may be null</param>
+		/// <returns><see langword="true"/> if the two objects are equivalent</returns>
 		public static bool Match<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource? 

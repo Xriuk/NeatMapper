@@ -140,7 +140,7 @@ namespace NeatMapper {
 							// Check if the collection is not readonly recursively, if it throws it means that
 							// the element mapper will be responsible for mapping the object and not collection mapper recursively
 							try { 
-								if(!await CanMapMerge(sourceType, destinationType, destination as IEnumerable, cancellationToken))
+								if(!await CanMapMerge(sourceType, destinationType, destination as IEnumerable, mappingOptions, cancellationToken))
 									throw new MapNotFoundException(types);
 							}
 							catch (MapNotFoundException) {
@@ -169,20 +169,9 @@ namespace NeatMapper {
 							var elementsToRemove = new List<object>();
 							var elementsToAdd = new List<object>();
 
-							// Adjust the context so that we don't pass any merge matcher along
-							var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
-							if(mergeMappingOptions != null) {
-								mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Select(o => {
-									if (o is MergeCollectionsMappingOptions merge) {
-										var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-											Matcher = null
-										};
-										return mergeOpts;
-									}
-									else
-										return o;
-								}));
-							}
+							mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);
+
+							var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 							// Create the matcher and the mapping options
 							IMatcher elementMatcher;
@@ -236,7 +225,7 @@ namespace NeatMapper {
 									// Try merge map
 									if (canCreateMerge) {
 										try {
-											var mergeResult = await _elementsMapper.MapAsync(sourceElement, elementTypes.From, matchingDestinationElement, elementTypes.To, mappingOptions, cancellationToken);
+											var mergeResult = await elementsMapper.MapAsync(sourceElement, elementTypes.From, matchingDestinationElement, elementTypes.To, mappingOptions, cancellationToken);
 											if (mergeResult != matchingDestinationElement) {
 												elementsToRemove.Add(matchingDestinationElement);
 												elementsToAdd.Add(mergeResult);
@@ -252,13 +241,13 @@ namespace NeatMapper {
 									if (!canCreateNew)
 										throw new MapNotFoundException(types);
 									elementsToRemove.Add(matchingDestinationElement);
-									elementsToAdd.Add(await _elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
+									elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
 								}
 								else {
 									// Try new map
 									if (canCreateNew) {
 										try {
-											elementsToAdd.Add(await _elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
+											elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
 											continue;
 										}
 										catch (MapNotFoundException) {
@@ -276,7 +265,7 @@ namespace NeatMapper {
 									catch (ObjectCreationException) {
 										throw new MapNotFoundException(types);
 									}
-									elementsToAdd.Add(await _elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationToken));
+									elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationToken));
 								}
 							}
 
@@ -307,20 +296,18 @@ namespace NeatMapper {
 					}
 				}
 				else if (source == null) {
+					var elementsMapper = mappingOptions?.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
 					// Check if we can map elements
 					try {
-						// Check if we can map elements
-						try {
-							if (await _elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, cancellationToken))
-								return null;
-						}
-						catch { }
+						if (await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
+							return null;
+					}
+					catch { }
 
-						try {
-							if (await _elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, cancellationToken))
-								return null;
-						}
-						catch { }
+					try {
+						if (await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
+							return null;
 					}
 					catch { }
 				}
@@ -337,12 +324,32 @@ namespace NeatMapper {
 		#endregion
 
 		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+		public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
 			return Task.FromResult(false);
 		}
 
-		public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
-			return CanMapMerge(sourceType, destinationType, null, cancellationToken);
+		public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return CanMapMerge(sourceType, destinationType, null, mappingOptions, cancellationToken);
 		}
 		#endregion
 
@@ -351,7 +358,12 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		async Task<bool> CanMapMerge(Type sourceType, Type destinationType, IEnumerable destination = null, CancellationToken cancellationToken = default) {
+		async Task<bool> CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+			IEnumerable destination = null,
+			MappingOptions mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -379,17 +391,25 @@ namespace NeatMapper {
 					To: TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>))
 				);
 
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+
+				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
+
 				// If the original element mapper can map the types on its own we succeed
 				bool? canMapNew;
 				try {
-					canMapNew = await _originalElementMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, cancellationToken);
+					canMapNew = await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken);
 				}
 				catch (InvalidOperationException) {
 					canMapNew = null;
 				}
 				bool? canMapMerge;
 				try {
-					canMapMerge = await _originalElementMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, cancellationToken);
+					canMapMerge = await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken);
+
+					// If we can only merge map we must be able to create a destination too, in order to map new elements
+					if (canMapMerge == true && canMapNew != true && !ObjectFactory.CanCreate(elementTypes.To))
+						canMapMerge = false;
 				}
 				catch (InvalidOperationException) {
 					canMapMerge = null;
@@ -398,7 +418,7 @@ namespace NeatMapper {
 				// Otherwise we try to check if we can map the types recursively
 				bool? canMapNested;
 				try {
-					canMapNested = await CanMapMerge(elementTypes.From, elementTypes.To, null, cancellationToken);
+					canMapNested = await CanMapMerge(elementTypes.From, elementTypes.To, null, mappingOptions, cancellationToken);
 				}
 				catch (InvalidOperationException) {
 					canMapNested = null;

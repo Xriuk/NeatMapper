@@ -15,7 +15,7 @@ namespace NeatMapper {
 		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns>The newly created object of <paramref name="destinationType"/>, may be null</returns>
+		/// <returns>The newly created object of type <paramref name="destinationType"/>, may be null</returns>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -59,7 +59,7 @@ namespace NeatMapper {
 		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns>The newly created object of <paramref name="destinationType"/>, may be null</returns>
+		/// <returns>The newly created object of type <paramref name="destinationType"/>, may be null</returns>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -342,7 +342,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>
-		/// The resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
+		/// The resulting object of the mapping of type <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
 		public static
@@ -398,7 +398,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>
-		/// The resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
+		/// The resulting object of the mapping of type <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
 		public static
@@ -745,16 +745,29 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 
-		#region CanMap
+		#region CanMapNew
+		#region Runtime
 		/// <summary>
 		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object and try to map it
+		/// otherwise will create a dummy source object (cached) and try to map it
 		/// </summary>
 		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
-		/// <returns>True if an object of <paramref name="destinationType"/> can be created from a parameter of <paramref name="sourceType"/></returns>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
-		public static bool CanMapNew(this IMapper mapper, Type sourceType, Type destinationType) {
+		public static bool CanMapNew(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -769,19 +782,19 @@ namespace NeatMapper {
 
 			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
 			if (mapper is IMapperCanMap mapperCanMap)
-				return mapperCanMap.CanMapNew(sourceType, destinationType);
+				return mapperCanMap.CanMapNew(sourceType, destinationType, mappingOptions);
 
 			// Try creating a default source object and try mapping it
 			object source;
 			try {
-				source = ObjectFactory.Create(sourceType) ?? throw new Exception(); // Just in case
+				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
 			}
 			catch {
 				throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create an object to test it");
 			}
 
 			try {
-				mapper.Map(source, sourceType, destinationType);
+				mapper.Map(source, sourceType, destinationType, mappingOptions);
 				return true;
 			}
 			catch (MapNotFoundException) {
@@ -795,25 +808,140 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object and try to map it
+		/// otherwise will create a dummy source object (cached) and try to map it
 		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <returns>True if an object of <typeparamref name="TDestination"/> can be created from a parameter of <typeparamref name="TSource"/></returns>
+		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
+		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
-		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper) {
-			return mapper.CanMapNew(typeof(TSource), typeof(TDestination));
+		public static bool CanMapNew(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.CanMapNew(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <summary>
+		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source object (cached) and try to map it
+		/// </summary>
+		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
+		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapNew(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+			params object[] mappingOptions) {
+
+			return mapper.CanMapNew(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <summary>
+		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source object (cached) and try to map it
+		/// </summary>
+		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return mapper.CanMapNew(typeof(TSource), typeof(TDestination), mappingOptions);
+		}
+
+		/// <summary>
+		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source object (cached) and try to map it
+		/// </summary>
+		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.CanMapNew(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <summary>
+		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source object (cached) and try to map it
+		/// </summary>
+		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
+			params object[] mappingOptions) {
+
+			return mapper.CanMapNew(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+		#endregion
+
+		#region CanMapMerge
+		#region Runtime
+		/// <summary>
 		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source and destination objects and try to map them
+		/// otherwise will create a dummy source (cached) and destination (not cached) objects and try to map them
 		/// </summary>
 		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <returns>True if an object of <paramref name="sourceType"/> can be merged into an object of <paramref name="destinationType"/></returns>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
-		public static bool CanMapMerge(this IMapper mapper, Type sourceType, Type destinationType) {
+		public static bool CanMapMerge(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -828,13 +956,14 @@ namespace NeatMapper {
 
 			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
 			if (mapper is IMapperCanMap mapperCanMap)
-				return mapperCanMap.CanMapMerge(sourceType, destinationType);
+				return mapperCanMap.CanMapMerge(sourceType, destinationType, mappingOptions);
 
-			// Try creating two default source and destination objects and try mapping them
+			// Try creating two default source and destination objects and try mapping them,
+			// cannot create a cached destination because it could be modified by the map so we could not reuse it
 			object source;
 			object destination;
 			try {
-				source = ObjectFactory.Create(sourceType) ?? throw new Exception(); // Just in case
+				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
 				destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
 			}
 			catch {
@@ -842,7 +971,7 @@ namespace NeatMapper {
 			}
 
 			try {
-				mapper.Map(source, sourceType, destination, destinationType);
+				mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
 				return true;
 			}
 			catch (MapNotFoundException) {
@@ -856,15 +985,115 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source and destination objects and try to map them
+		/// otherwise will create a dummy source (cached) and destination (not cached) objects and try to map them
+		/// </summary>
+		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
+		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapMerge(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.CanMapMerge(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <summary>
+		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source (cached) and destination (not cached) objects and try to map them
+		/// </summary>
+		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
+		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapMerge(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+			params object[] mappingOptions) {
+
+			return mapper.CanMapMerge(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <summary>
+		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source (cached) and destination (not cached) objects and try to map them
 		/// </summary>
 		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
 		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <returns>True if an object of <typeparamref name="TSource"/> can be merged into an object of <typeparamref name="TDestination"/></returns>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
-		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper) {
-			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination));
-		} 
+		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
+			#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination), mappingOptions);
+		}
+
+		/// <summary>
+		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source (cached) and destination (not cached) objects and try to map them
+		/// </summary>
+		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <summary>
+		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports <see cref="IMapperCanMap"/> first
+		/// otherwise will create a dummy source (cached) and destination (not cached) objects and try to map them
+		/// </summary>
+		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
+		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
+		/// <param name="mappingOptions">
+		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
+		/// since some mapper may depend on specific options to map or not two given types
+		/// </param>
+		/// <returns><see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
+		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
+			params object[] mappingOptions) {
+
+			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
 		#endregion
 	}
 }

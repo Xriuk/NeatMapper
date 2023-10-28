@@ -1,6 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-using System;
-using System.Collections;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -23,13 +21,13 @@ namespace NeatMapper {
 		/// <summary>
 		/// Creates the mapper by using the provided mappers list
 		/// </summary>
-		/// <param name="mappers">mappers to delegate the mapping to</param>
+		/// <param name="mappers">Mappers to delegate the mapping to</param>
 		public CompositeMapper(params IMapper[] mappers) : this((IList<IMapper>) mappers) { }
 
 		/// <summary>
 		/// Creates the mapper by using the provided mappers list
 		/// </summary>
-		/// <param name="mappers">mappers to delegate the mapping to</param>
+		/// <param name="mappers">Mappers to delegate the mapping to</param>
 		public CompositeMapper(IList<IMapper> mappers) {
 			if (mappers == null)
 				throw new ArgumentNullException(nameof(mappers));
@@ -131,7 +129,15 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperCanMap methods
-		public bool CanMapNew(Type sourceType, Type destinationType) {
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -142,11 +148,13 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var mappersToIgnore = new List<IMapper>();
 			foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
 				try { 
-					if(mapper.CanMapNew(sourceType, destinationType))
+					if(mapper.CanMapNew(sourceType, destinationType, mappingOptions))
 						return true;
 				}
 				catch (InvalidOperationException) {
@@ -158,7 +166,7 @@ namespace NeatMapper {
 			if (mappersToIgnore.Count != _mappers.Count) { 
 				object source;
 				try {
-					source = ObjectFactory.Create(sourceType) ?? throw new Exception(); // Just in case
+					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
 				}
 				catch {
 					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create an object to test it");
@@ -170,7 +178,7 @@ namespace NeatMapper {
 						continue;
 
 					try {
-						mapper.Map(source, sourceType, destinationType);
+						mapper.Map(source, sourceType, destinationType, mappingOptions);
 						return true;
 					}
 					catch (MapNotFoundException) {}
@@ -187,17 +195,28 @@ namespace NeatMapper {
 #endif
 		}
 
-		public bool CanMapMerge(Type sourceType, Type destinationType) {
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var mappersToIgnore = new List<IMapper>();
 			foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
 				try {
-					if (mapper.CanMapMerge(sourceType, destinationType))
+					if (mapper.CanMapMerge(sourceType, destinationType, mappingOptions))
 						return true;
 				}
 				catch (InvalidOperationException) {
@@ -210,7 +229,7 @@ namespace NeatMapper {
 				object source;
 				object destination;
 				try {
-					source = ObjectFactory.Create(sourceType) ?? throw new Exception(); // Just in case
+					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
 					destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
 				}
 				catch {
@@ -223,7 +242,7 @@ namespace NeatMapper {
 						continue;
 
 					try {
-						mapper.Map(source, sourceType, destination, destinationType);
+						mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
 						return true;
 					}
 					catch (MapNotFoundException) { }
@@ -242,6 +261,7 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
+		// Will override a mapper if not already overridden
 		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
 			var overrideOptions = options?.GetOptions<MapperOverrideMappingOptions>();
 			if(overrideOptions == null){
@@ -252,7 +272,8 @@ namespace NeatMapper {
 					options = new MappingOptions(new[] { overrideOptions });
 			}
 
-			overrideOptions.Mapper = this;
+			if(overrideOptions.Mapper == null)
+				overrideOptions.Mapper = this;
 
 			return options;
 		}

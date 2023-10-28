@@ -3,6 +3,7 @@
 #endif
 
 using System;
+using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
@@ -21,5 +22,46 @@ namespace NeatMapper {
 
 		public abstract object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
 		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null);
+
+
+		// Will override a mapper if not already overridden
+		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
+			var overrideOptions = options?.GetOptions<MapperOverrideMappingOptions>();
+			mergeCollectionsMappingOptions = options?.GetOptions<MergeCollectionsMappingOptions>();
+			if (overrideOptions == null) {
+				overrideOptions = new MapperOverrideMappingOptions();
+				if (options != null) {
+					options = new MappingOptions(options.AsEnumerable().Select(o => {
+						if (o is MergeCollectionsMappingOptions merge) {
+							var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+								Matcher = null
+							};
+							return mergeOpts;
+						}
+						else
+							return o;
+					}).Concat(new[] { overrideOptions }));
+				}
+				else
+					options = new MappingOptions(new[] { overrideOptions });
+			}
+			else {
+				options = new MappingOptions(options.AsEnumerable().Select(o => {
+					if (o is MergeCollectionsMappingOptions merge) {
+						var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+							Matcher = null
+						};
+						return mergeOpts;
+					}
+					else
+						return o;
+				}));
+			}
+
+			if(overrideOptions.Mapper == null)
+				overrideOptions.Mapper = _elementsMapper;
+
+			return options;
+		}
 	}
 }

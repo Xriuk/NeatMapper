@@ -6,12 +6,12 @@
 	/// <typeparam name="TDestination">Destination type, includes derived types</typeparam>
 	public interface IHierarchyMatchMap<TSource, TDestination> {
 		/// <summary>
-		/// Checks if two objects are the same (usually by comparing the keys of the two)
+		/// Checks if two objects are equivalent (usually by comparing the keys of the two)
 		/// </summary>
-		/// <param name="source">source object, may be null</param>
-		/// <param name="destination">destination object, may be null</param>
-		/// <param name="context">matching context, which allows nested matches, services retrieval via DI, ...</param>
-		/// <returns>true if the two objects match</returns>
+		/// <param name="source">Source object, may be null</param>
+		/// <param name="destination">Destination object, may be null</param>
+		/// <param name="context">Matching context, which allows nested matches, services retrieval via DI, ...</param>
+		/// <returns><see langword="true"/> if the two objects match</returns>
 		bool Match(
 #if NET5_0_OR_GREATER
 			TSource?

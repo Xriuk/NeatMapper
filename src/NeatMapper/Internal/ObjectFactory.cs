@@ -13,6 +13,7 @@ using System.Reflection;
 namespace NeatMapper {
 	internal sealed class ObjectFactory {
 		static readonly IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
+		static readonly IDictionary<Type, object> typeInstancesCache = new ConcurrentDictionary<Type, object>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -61,9 +62,39 @@ namespace NeatMapper {
 			return CreateFactory(objectType).Invoke();
 		}
 
+		public static object GetOrCreateCached(Type objectType) {
+			if(typeInstancesCache.TryGetValue(objectType, out var obj))
+				return obj;
+			else {
+				obj = Create(objectType);
+				typeInstancesCache.Add(objectType, obj);
+				return obj;
+			}
+		}
+
 		public static bool CanCreate(Type objectType) {
-			if (typeCreationErrorsCache.TryGetValue(objectType, out var error))
-				return error == null;
+			if (objectType == typeof(string))
+				return true;
+			else if (objectType.IsInterface && objectType.IsGenericType) {
+				var interfaceDefinition = objectType.GetGenericTypeDefinition();
+				if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
+					interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>) ||
+					interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>) || interfaceDefinition == typeof(ISet<>)
+#if NET5_0_OR_GREATER
+					|| interfaceDefinition == typeof(IReadOnlySet<>)
+#endif
+					) {
+
+					return true;
+				}
+			}
+
+			if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
+				if (error == null)
+					return true;
+				else
+					return false;
+			}
 			else {
 				// Try creating an instance
 				try {
@@ -95,24 +126,7 @@ namespace NeatMapper {
 				}
 			}
 
-			if (destination == typeof(string))
-				return true;
-			else if (destination.IsInterface && destination.IsGenericType) {
-				var interfaceDefinition = destination.GetGenericTypeDefinition();
-				if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
-					interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>) ||
-					interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>) ||
-					interfaceDefinition == typeof(ISet<>)
-#if NET5_0_OR_GREATER
-					|| interfaceDefinition == typeof(IReadOnlySet<>)
-#endif
-					) {
-
-					return true;
-				}
-			}
-
-			return ObjectFactory.CanCreate(destination);
+			return CanCreate(destination);
 		}
 
 		// Create a non-readonly collection which could be later converted to the given type
@@ -129,7 +143,7 @@ namespace NeatMapper {
 					destination = typeof(ObservableCollection<>).MakeGenericType(destination.GetGenericArguments());
 			}
 
-			return ObjectFactory.Create(destination);
+			return Create(destination);
 		}
 
 		// Returns an instance method which can be invoked with a single parameter to be added to the collection
@@ -142,11 +156,11 @@ namespace NeatMapper {
 				var collectionGenericType = collectionInstanceType.GetGenericTypeDefinition();
 				if (collectionGenericType == typeof(Queue<>)) {
 					return collectionInstanceType.GetMethod(nameof(Queue<object>.Enqueue))
-						?? throw new InvalidOperationException($"Cannot find method {nameof(Queue)}.{nameof(Queue<object>.ToArray)}");
+						?? throw new InvalidOperationException($"Cannot find method {nameof(Queue)}.{nameof(Queue<object>.Enqueue)}");
 				}
 				else if (collectionGenericType == typeof(Stack<>)) {
 					return collectionInstanceType.GetMethod(nameof(Stack<object>.Push))
-						?? throw new InvalidOperationException($"Cannot find method {nameof(Queue)}.{nameof(Queue<object>.ToArray)}");
+						?? throw new InvalidOperationException($"Cannot find method {nameof(Stack)}.{nameof(Stack<object>.Push)}");
 				}
 			}
 

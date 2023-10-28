@@ -1,12 +1,10 @@
-﻿using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using static System.Net.Mime.MediaTypeNames;
 
-namespace NeatMapper.Tests {
+namespace NeatMapper.Tests.Configuration {
 	[TestClass]
 	public class ConfigurationsTests {
 		public class Map1 : IMatchMap<string, int> {

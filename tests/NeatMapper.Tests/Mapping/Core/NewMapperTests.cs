@@ -313,6 +313,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapPrimitives() {
+			Assert.IsTrue(_mapper.CanMapNew<int, string>());
+
 			Assert.AreEqual("4", _mapper.Map<string>(2));
 			Assert.AreEqual("-6", _mapper.Map<string>(-3));
 			Assert.AreEqual("0", _mapper.Map<string>(0));
@@ -320,14 +322,18 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapClasses() {
-			{ 
+			{
+				Assert.IsTrue(_mapper.CanMapNew<Price, decimal>());
+
 				Assert.AreEqual(20.00m, _mapper.Map<decimal>(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}));
 			}
 
-			{ 
+			{
+				Assert.IsTrue(_mapper.CanMapNew<Price, PriceFloat>());
+
 				var result = _mapper.Map<PriceFloat>(new Price {
 					Amount = 40.00m,
 					Currency = "EUR"
@@ -340,6 +346,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapChildClassAsParent() {
+			Assert.IsTrue(_mapper.CanMapNew<Product, ProductDto>());
+
 			var result = _mapper.Map<Product, ProductDto>(new LimitedProduct {
 				Code = "Test",
 				Categories = new List<Category> {
@@ -355,6 +363,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapWithoutMap() {
+			Assert.IsFalse(_mapper.CanMapNew<bool, int>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(false));
 		}
 
@@ -407,6 +417,8 @@ namespace NeatMapper.Tests.Mapping {
 			var options = new CustomNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => s?.Length ?? 0);
 			var mapper = new NewMapper(null, options);
+
+			Assert.IsTrue(_mapper.CanMapNew<string, int>());
 
 			Assert.AreEqual(4, mapper.Map<int>("Test"));
 		}

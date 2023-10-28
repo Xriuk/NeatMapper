@@ -42,7 +42,7 @@ support and options depends on the mappers and/or the maps, added also to extens
 
 - Added support for:
   - .NET Framework 4.7, 4.8
-  - .NET Standard 2.1 (not tested)
+  - .NET Standard 2.1
   - .NET Core 3.1
   - .NET 5.0
 

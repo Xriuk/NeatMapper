@@ -33,9 +33,9 @@ namespace NeatMapper {
 						if (!i.IsGenericType)
 							return false;
 						var type = i.GetGenericTypeDefinition();
-						return type == typeof(IMergeMap<,>)
+						return type == typeof(IAsyncMergeMap<,>)
 #if NET7_0_OR_GREATER
-							|| type == typeof(IMergeMapStatic<,>)
+							|| type == typeof(IAsyncMergeMapStatic<,>)
 #endif
 						;
 					},
@@ -155,14 +155,37 @@ namespace NeatMapper {
 		#endregion
 
 		#region IAsyncMapperCanMap methods
-		public async Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+		public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			return ObjectFactory.CanCreate(destinationType) && await CanMapAsyncMerge(sourceType, destinationType);
+			if(!ObjectFactory.CanCreate(destinationType))
+				return Task.FromResult(false);
+
+			return CanMapAsyncMerge(sourceType, destinationType, mappingOptions);
 		}
 
-		public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+		public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)

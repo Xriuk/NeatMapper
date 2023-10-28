@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -14,6 +15,8 @@ namespace NeatMapper.Tests.Mapping {
 
 			// No options
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int[], string[]>());
+
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var strings = _mapper.Map<string[]>(new[] { 2, -3, 0 });
@@ -30,6 +33,8 @@ namespace NeatMapper.Tests.Mapping {
 
 			// Options (no merge)
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int[], IList<string>>());
+
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
@@ -47,6 +52,8 @@ namespace NeatMapper.Tests.Mapping {
 
 			// Options (merge with matcher)
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int[], LinkedList<string>>());
+
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
@@ -70,6 +77,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int[], Queue<string>>());
+
 				var strings = _mapper.Map<Queue<string>>(new[] { 2, -3, 0 });
 
 				Assert.IsNotNull(strings);
@@ -80,6 +89,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(_mapper.CanMapNew<string[], SortedList<string, int>>());
+
 				var strings = _mapper.Map<SortedList<string, int>>(new[] { "A", "BB", "CCC" });
 
 				Assert.IsNotNull(strings);
@@ -90,6 +101,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(_mapper.CanMapNew<IEnumerable<int>, Stack<string>>());
+
 				var strings = _mapper.Map<Stack<string>>(new[] { 2, -3, 0 });
 
 				Assert.IsNotNull(strings);
@@ -101,6 +114,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(_mapper.CanMapNew<string[], ReadOnlyDictionary<string, int>>());
+
 				var strings = _mapper.Map<ReadOnlyDictionary<string, int>>(new[] { "A", "BB", "CCC" });
 
 				Assert.IsNotNull(strings);
@@ -111,6 +126,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(_mapper.CanMapNew<IList<int>, CustomCollection<string>>());
+
 				var strings = _mapper.Map<CustomCollection<string>>(new[] { 2, -3, 0 });
 
 				Assert.IsNotNull(strings);
@@ -123,11 +140,15 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapCollectionsIfCannotCreateDestination() {
+			Assert.IsFalse(_mapper.CanMapNew<int[], CustomCollectionWithoutParameterlessConstructor<string>>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<CustomCollectionWithoutParameterlessConstructor<string>>(new[] { 2, -3, 0 }));
 		}
 
 		[TestMethod]
-		public void ShouldNotMapCollectionsWithouElementsMap() {
+		public void ShouldNotMapCollectionsWithoutElementsMap() {
+			Assert.IsFalse(_mapper.CanMapNew<int[], IEnumerable<Category>>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<Category>>(new[] { 2 }));
 		}
 
@@ -169,6 +190,8 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldMapCollectionsOfCollections() {
 			// No options
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int[][], IList<IEnumerable<string>>>());
+
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 
@@ -193,11 +216,13 @@ namespace NeatMapper.Tests.Mapping {
 
 			// Options (no merge)
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int[][], string[][]>());
+
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				_mapper.Map<IList<IEnumerable<string>>>(new[] {
+				_mapper.Map<string[][]>(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
 				}, new[] { opts });
@@ -231,15 +256,23 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapMultidimensionalArrays() {
-			TestUtils.AssertMapNotFound(() => _mapper.Map<string[]>(new[,] {
+			Assert.IsFalse(_mapper.CanMapNew<int[,], string[]>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<string[][]>(new[,] {
 				{ 2, -3, 0 },
 				{ 1, 2, 5 }
 			}));
+
+
+			Assert.IsFalse(_mapper.CanMapNew<int[][], string[,]>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[] {
 				new[]{ 2, -3, 0 },
 				new[]{ 1, 2 }
 			}));
+
+
+			Assert.IsFalse(_mapper.CanMapNew<int[,], string[,]>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[,] {
 				{ 2, -3, 0 },
@@ -320,6 +353,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {
+			Assert.IsFalse(_mapper.CanMapNew<string[], IEnumerable<ClassWithoutParameterlessConstructor>>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<ClassWithoutParameterlessConstructor>>(new[] { "" }));
 		}
 	}

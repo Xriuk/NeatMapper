@@ -18,13 +18,13 @@ namespace NeatMapper {
 		/// <summary>
 		/// Creates the matcher by using the provided matchers list
 		/// </summary>
-		/// <param name="matchers">matchers to delegate the matching to</param>
+		/// <param name="matchers">Matchers to delegate the matching to</param>
 		public CompositeMatcher(params IMatcher[] matchers) : this((IList<IMatcher>)matchers) { }
 
 		/// <summary>
 		/// Creates the matcher by using the provided matchers list
 		/// </summary>
-		/// <param name="matchers">matchers to delegate the matching to</param>
+		/// <param name="matchers">Matchers to delegate the matching to</param>
 		public CompositeMatcher(IList<IMatcher> matchers) {
 			if (matchers == null)
 				throw new ArgumentNullException(nameof(matchers));

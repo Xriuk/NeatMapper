@@ -342,6 +342,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapPrimitives() {
+			Assert.IsTrue(_mapper.CanMapMerge<int, string>());
+
 			Assert.AreEqual("4", _mapper.Map(2, ""));
 			Assert.AreEqual("-6", _mapper.Map(-3, ""));
 			Assert.AreEqual("0", _mapper.Map(0, ""));
@@ -349,15 +351,19 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapClasses() {
-			{ 
+			{
+				Assert.IsTrue(_mapper.CanMapMerge<Price, decimal>());
+
 				Assert.AreEqual(20.00m, _mapper.Map(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}, 21m));
 			}
 
+			Assert.IsTrue(_mapper.CanMapMerge<Price, PriceFloat>());
+
 			// Null destination
-			{ 
+			{
 				var result = _mapper.Map(new Price {
 					Amount = 40.00m,
 					Currency = "EUR"
@@ -383,6 +389,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapChildClassesAsParents() {
+			Assert.IsTrue(_mapper.CanMapMerge<Product, ProductDto>());
+
 			// Parent source
 			{
 				// Not null destination
@@ -489,6 +497,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapWithoutMap() {
+			Assert.IsFalse(_mapper.CanMapMerge<bool, int>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map(false, 0));
 		}
 
@@ -565,6 +575,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldFallbackFromNewMapToMergeMapAndForwardOptions() {
+			Assert.IsTrue(_mapper.CanMapNew<float, string>());
+
 			// No Options
 			{
 				MappingOptionsUtils.options = null;
@@ -609,6 +621,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
+			Assert.IsFalse(_mapper.CanMapNew<string, ClassWithoutParameterlessConstructor>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<ClassWithoutParameterlessConstructor>(""));
 		}
 
@@ -660,6 +674,8 @@ namespace NeatMapper.Tests.Mapping {
 			var options = new CustomMergeAdditionalMapsOptions();
 			options.AddMap<string, int>((s, d, _) => s?.Length ?? 0);
 			var mapper = new MergeMapper(null, options);
+
+			Assert.IsTrue(_mapper.CanMapMerge<string, int>());
 
 			Assert.AreEqual(4, mapper.Map("Test", 2));
 		}

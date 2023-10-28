@@ -12,7 +12,9 @@ namespace NeatMapper {
 	public static class ServiceCollectionExtensions {
 		/// <summary>
 		/// Adds <see cref="IMatcher"/> and <see cref="IMapper"/> to the services collection.<br/>
-		/// To configure them you can use Configure&lt;MapperConfigurationOptions&gt;(...) and Configure&ltMapperOptions&gt;(...)
+		/// To configure them you can use <see cref="OptionsServiceCollectionExtensions.ConfigureAll{TOptions}(IServiceCollection, Action{TOptions})"/>
+		/// to configure <see cref="CompositeMapperOptions"/>, and <see cref="OptionsServiceCollectionExtensions.Configure{TOptions}(IServiceCollection, Action{TOptions})"/>
+		/// to configure all the other options
 		/// </summary>
 		/// <param name="mappersLifetime">Lifetime of the <see cref="IMapper"/> service (and all the specific mappers registered to create it)</param>
 		/// <param name="matchersLifetime">Lifetime of the <see cref="IMatcher"/> service</param>

@@ -4,7 +4,7 @@
 	/// </summary>
 	internal sealed class CustomAdditionalMap : CustomMap {
 		/// <summary>
-		/// If true and the map was already defined will throw an exception, otherwise will simply ignore it
+		/// If <see langword="true"/> and the map was already defined will throw an exception, otherwise will simply ignore it
 		/// </summary>
 		public bool ThrowOnDuplicate { get; set; }
 	}

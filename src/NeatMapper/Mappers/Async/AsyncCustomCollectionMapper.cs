@@ -3,6 +3,7 @@
 #endif
 
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,5 +24,46 @@ namespace NeatMapper {
 
 		public abstract Task<object> MapAsync(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default);
 		public abstract Task<object> MapAsync(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default);
+
+
+		// Will override a mapper if not already overridden
+		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
+			var overrideOptions = options?.GetOptions<AsyncMapperOverrideMappingOptions>();
+			mergeCollectionsMappingOptions = options?.GetOptions<MergeCollectionsMappingOptions>();
+			if (overrideOptions == null) {
+				overrideOptions = new AsyncMapperOverrideMappingOptions();
+				if (options != null) {
+					options = new MappingOptions(options.AsEnumerable().Select(o => {
+						if (o is MergeCollectionsMappingOptions merge) {
+							var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+								Matcher = null
+							};
+							return mergeOpts;
+						}
+						else
+							return o;
+					}).Concat(new[] { overrideOptions }));
+				}
+				else
+					options = new MappingOptions(new[] { overrideOptions });
+			}
+			else {
+				options = new MappingOptions(options.AsEnumerable().Select(o => {
+					if (o is MergeCollectionsMappingOptions merge) {
+						var mergeOpts = new MergeCollectionsMappingOptions(merge) {
+							Matcher = null
+						};
+						return mergeOpts;
+					}
+					else
+						return o;
+				}));
+			}
+
+			if (overrideOptions.Mapper == null)
+				overrideOptions.Mapper = _elementsMapper;
+
+			return options;
+		}
 	}
 }

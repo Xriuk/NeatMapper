@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 
-namespace NeatMapper.Tests {
+namespace NeatMapper.Tests.Configuration {
 	[TestClass]
 	public class StaticConfigurationsTests {
 		public class Map1 : IMatchMap<string, int> {

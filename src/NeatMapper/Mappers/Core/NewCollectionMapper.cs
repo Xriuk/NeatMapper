@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
@@ -72,19 +71,9 @@ namespace NeatMapper {
 							var destination = ObjectFactory.CreateCollection(types.To);
 							var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
 
-							// Adjust the context so that we don't pass any merge matcher along
-							if(mappingOptions?.GetOptions<MergeCollectionsMappingOptions>() != null) {
-								mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Select(o => {
-									if (o is MergeCollectionsMappingOptions merge) {
-										var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-											Matcher = null
-										};
-										return mergeOpts;
-									}
-									else
-										return o;
-								}));
-							}
+							mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+
+							var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 							var canCreateNew = true;
 
@@ -94,7 +83,7 @@ namespace NeatMapper {
 								// Try new map
 								if (canCreateNew) {
 									try {
-										destinationElement = _elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
+										destinationElement = elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
 										addMethod.Invoke(destination, new object[] { destinationElement });
 										continue;
 									}
@@ -110,7 +99,7 @@ namespace NeatMapper {
 								catch (ObjectCreationException) {
 									throw new MapNotFoundException(types);
 								}
-								destinationElement = _elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
+								destinationElement = elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
 								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
@@ -123,15 +112,17 @@ namespace NeatMapper {
 							return result;
 						}
 						else if (source == null) {
+							var elementsMapper = mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
 							// Check if we can map elements
 							try {
-								if (_elementsMapper.CanMapNew(elementTypes.From, elementTypes.To))
+								if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
 									return null;
 							}
 							catch { }
 
 							try {
-								if (_elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To))
+								if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
 									return null;
 							}
 							catch { }
@@ -188,7 +179,15 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperCanMap methods
-		public bool CanMapNew(Type sourceType, Type destinationType) {
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -208,16 +207,20 @@ namespace NeatMapper {
 					To: TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>))
 				);
 
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+
+				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
 				bool cannotVerifyNew = false;
 				try {
-					if(_elementsMapper.CanMapNew(elementTypes.From, elementTypes.To))
+					if(elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
 						return true;
 				}
 				catch(InvalidOperationException) {
 					cannotVerifyNew = true;
 				}
 
-				if (_elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To))
+				if (ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
 					return true;
 				else if(cannotVerifyNew)
 					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
@@ -230,7 +233,16 @@ namespace NeatMapper {
 #endif
 		}
 
-		public bool CanMapMerge(Type sourceType, Type destinationType) {
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
 			return false;
 		}
 		#endregion

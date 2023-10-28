@@ -144,7 +144,16 @@ namespace NeatMapper {
 		#endregion
 
 		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+		public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -159,7 +168,16 @@ namespace NeatMapper {
 			}
 		}
 
-		public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, CancellationToken cancellationToken = default) {
+		public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 			return Task.FromResult(false);
 		}
 		#endregion

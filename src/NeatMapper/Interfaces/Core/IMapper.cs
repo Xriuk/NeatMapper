@@ -14,7 +14,7 @@ namespace NeatMapper {
 		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns>The newly created object of <paramref name="destinationType"/>, may be null</returns>
+		/// <returns>The newly created object of type <paramref name="destinationType"/>, may be null</returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be mapped</exception>
 		/// <exception cref="MappingException">An exception was thrown while mapping the types, check the inner exception for details</exception>
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -49,7 +49,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
 		/// <returns>
-		/// The resulting object of the mapping of <paramref name="destinationType"/> type, can be the same as <paramref name="destination"/> or a new one,
+		/// The resulting object of the mapping of type <paramref name="destinationType"/>, can be the same as <paramref name="destination"/> or a new one,
 		/// may be null
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be mapped</exception>
