@@ -785,7 +785,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
@@ -868,7 +868,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
@@ -897,7 +897,7 @@ namespace NeatMapper {
 		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
@@ -944,7 +944,7 @@ namespace NeatMapper {
 		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
@@ -973,7 +973,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
@@ -1038,13 +1038,13 @@ namespace NeatMapper {
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
-		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
+		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-			return mapper.CanMapAsyncMerge(typeof(TSource), typeof(TDestination), (MappingOptions)null, cancellationToken);
+			return mapper.CanMapAsyncMerge(sourceType, destinationType, (MappingOptions)null, cancellationToken);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1059,7 +1059,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
@@ -1088,7 +1088,7 @@ namespace NeatMapper {
 		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
@@ -1135,7 +1135,7 @@ namespace NeatMapper {
 		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
@@ -1146,7 +1146,7 @@ namespace NeatMapper {
 #else
 			IEnumerable
 #endif
-			mappingOptions = null,
+			mappingOptions,
 			CancellationToken cancellationToken = default) {
 
 			return mapper.CanMapAsyncMerge(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);

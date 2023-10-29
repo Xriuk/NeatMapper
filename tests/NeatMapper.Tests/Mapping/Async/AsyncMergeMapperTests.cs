@@ -366,6 +366,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapPrimitives() {
+			Assert.IsTrue(await _mapper.CanMapAsyncMerge<int, string>());
+
 			Assert.AreEqual("4", await _mapper.MapAsync(2, ""));
 			Assert.AreEqual("-6", await _mapper.MapAsync(-3, ""));
 			Assert.AreEqual("0", await _mapper.MapAsync(0, ""));
@@ -373,15 +375,19 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapClasses() {
-			{ 
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncMerge<Price, decimal>());
+
 				Assert.AreEqual(20.00m, await _mapper.MapAsync(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}, 21m));
 			}
 
+			Assert.IsTrue(await _mapper.CanMapAsyncMerge<Price, PriceFloat>());
+
 			// Null destination
-			{ 
+			{
 				var result = await _mapper.MapAsync(new Price {
 					Amount = 40.00m,
 					Currency = "EUR"
@@ -407,6 +413,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapChildClassesAsParents() {
+			Assert.IsTrue(await _mapper.CanMapAsyncMerge<Product, ProductDto>());
+
 			// Parent source
 			{
 				// Not null destination
@@ -512,8 +520,10 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public Task ShouldNotMapWithoutMap() {
-			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync(false, 0));
+		public async Task ShouldNotMapWithoutMap() {
+			Assert.IsFalse(await _mapper.CanMapAsyncMerge<bool, int>());
+
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(false, 0));
 		}
 
 		[TestMethod]
@@ -589,6 +599,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldFallbackFromNewMapToMergeMapAndForwardOptions() {
+			Assert.IsTrue(await _mapper.CanMapAsyncNew<float, string>());
+
 			// No Options
 			{
 				MappingOptionsUtils.options = null;
@@ -632,8 +644,10 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public Task ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
-			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<ClassWithoutParameterlessConstructor>(""));
+		public async Task ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
+			Assert.IsFalse(await _mapper.CanMapAsyncNew<string, ClassWithoutParameterlessConstructor>());
+
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<ClassWithoutParameterlessConstructor>(""));
 		}
 
 		[TestMethod]
@@ -689,6 +703,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 			var options = new CustomAsyncMergeAdditionalMapsOptions();
 			options.AddMap<string, int>((s, d, _) => Task.FromResult(s?.Length ?? 0));
 			var mapper = new AsyncMergeMapper(null, options);
+
+			Assert.IsTrue(await mapper.CanMapAsyncMerge<string, int>());
 
 			Assert.AreEqual(4, await mapper.MapAsync("Test", 2));
 		}

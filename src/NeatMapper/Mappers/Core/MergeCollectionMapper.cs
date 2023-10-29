@@ -1,7 +1,7 @@
-﻿using NeatMapper.Common.Matchers;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 
 namespace NeatMapper {
@@ -12,7 +12,7 @@ namespace NeatMapper {
 	/// - If a match is not found a new element will be added by mapping them with a <see cref="IMapper"/> by trying new map, then merge map.<br/>
 	/// Not matched elements from the destination collection are treated according to <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
-	public sealed class MergeCollectionMapper : CustomCollectionMapper, IMapperCanMap {
+	public sealed class MergeCollectionMapper : CollectionMapper, IMapperCanMap {
 		readonly IMapper _originalElementMapper;
 		readonly IMatcher _elementsMatcher;
 		readonly MergeCollectionsOptions _mergeCollectionOptions;
@@ -67,6 +67,7 @@ namespace NeatMapper {
 			MappingOptions
 #endif
 			mappingOptions = null) {
+
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
@@ -114,6 +115,17 @@ namespace NeatMapper {
 			// If both types are collections try mapping the element types
 			if (TypeUtils.HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
 				TypeUtils.HasInterface(types.To, typeof(ICollection<>)) && !types.To.IsArray) {
+
+				// If the destination type is not an interface, check if it is not readonly
+				if (!destinationType.IsInterface && destinationType.IsGenericType) {
+					var collectionDefinition = destinationType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						throw new MapNotFoundException(types);
+					}
+				}
 
 				var elementTypes = (
 					From: TypeUtils.GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
@@ -356,6 +368,7 @@ namespace NeatMapper {
 			Type destinationType,
 			IEnumerable destination = null,
 			MappingOptions mappingOptions = null) {
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -364,8 +377,18 @@ namespace NeatMapper {
 			if (TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
 				TypeUtils.HasInterface(destinationType, typeof(ICollection<>)) && !destinationType.IsArray) {
 
-				// Check the destination if provided
-				if(destination != null) { 
+				// If the destination type is not an interface, check if it is not readonly
+				// Otherwise check the destination if provided
+				if (!destinationType.IsInterface && destinationType.IsGenericType) {
+					var collectionDefinition = destinationType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						return false;
+					}
+				}
+				else if (destination != null) { 
 					var destinationInstanceType = destination.GetType();
 					if (destinationInstanceType.IsArray)
 						return false;
@@ -416,8 +439,11 @@ namespace NeatMapper {
 					canMapNested = null;
 				}
 
-				// If we have a destination check if all its elements can be mapped
-				if((canMapNew == true || canMapMerge == true || canMapNested != false) && destination != null) {
+				// If we have a concrete class we already checked that it's not readonly
+				// Otherwise if we have a destination check if all its elements can be mapped
+				if ((canMapNew == true || canMapMerge == true || canMapNested == true) && !destinationType.IsInterface)
+					return true;
+				else if (canMapNested == null && destination != null) {
 					foreach (var element in destination) {
 						var elementInstanceType = element.GetType();
 						if (elementInstanceType.IsArray)
@@ -433,7 +459,7 @@ namespace NeatMapper {
 
 					return true;
 				}
-				else if(canMapNew == false && canMapMerge == false && canMapNested == false)
+				else if (canMapNew == false && canMapMerge == false && canMapNested == false)
 					return false;
 			}
 			else

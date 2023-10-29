@@ -2,43 +2,42 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
-namespace NeatMapper.Tests.Mapping.Async {
+namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class AsyncMergeMapperGenericTests {
+	public class MergeMapperGenericTests {
 		public class Maps<T1, T2, T3> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>> 
+			IMergeMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>> 
 #else
-			IAsyncMergeMap<Tuple<T1, T2>, ValueTuple<T1, T2, T3>>
+			IMergeMap<Tuple<T1, T2>, ValueTuple<T1, T2, T3>>
 #endif
 			{ 
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<(T1, T2, T3)>
+			(T1, T2, T3)
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<Tuple<T1, T2>, (T1, T2, T3)>
+				IMergeMapStatic<Tuple<T1, T2>, (T1, T2, T3)>
 #else
-				IAsyncMergeMap<Tuple<T1, T2>, (T1, T2, T3)>
+				IMergeMap<Tuple<T1, T2>, (T1, T2, T3)>
 #endif
-				.MapAsync(Tuple<T1, T2> source, (T1, T2, T3) destination, AsyncMappingContext context) {
+				.Map(Tuple<T1, T2> source, (T1, T2, T3) destination, MappingContext context) {
 				if (source == null)
-					return Task.FromResult((default(T1), default(T2), default(T3)));
-				return Task.FromResult((source.Item1, source.Item2, default(T3)));
+					return (default(T1), default(T2), default(T3));
+				return (source.Item1, source.Item2, default(T3));
 			}
 		}
 
 		public class Maps<T1, T2> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
-			IAsyncMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
+			IMergeMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
+			IMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
 			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>
 #else
-			IAsyncMergeMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
-			IAsyncMergeMap<GenericClass<T1>, GenericClassDto<T2>>,
+			IMergeMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
+			IMergeMap<GenericClass<T1>, GenericClassDto<T2>>,
 			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>
 #endif
 			{
@@ -46,33 +45,33 @@ namespace NeatMapper.Tests.Mapping.Async {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<(T2, T1)>
+			(T2, T1)
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<Tuple<T1, T2>, (T2, T1)>
+				IMergeMapStatic<Tuple<T1, T2>, (T2, T1)>
 #else
-				IAsyncMergeMap<Tuple<T1, T2>, (T2, T1)>
+				IMergeMap<Tuple<T1, T2>, (T2, T1)>
 #endif
-				.MapAsync(Tuple<T1, T2> source, (T2, T1) destination, AsyncMappingContext context) {
+				.Map(Tuple<T1, T2> source, (T2, T1) destination, MappingContext context) {
 				if (source == null)
-					return Task.FromResult((default(T2), default(T1)));
-				return Task.FromResult((source.Item2, source.Item1));
+					return (default(T2), default(T1));
+				return (source.Item2, source.Item1);
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			async Task<GenericClassDto<T2>>
+			GenericClassDto<T2>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>
+				IMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>
 #else
-				IAsyncMergeMap<GenericClass<T1>, GenericClassDto<T2>>
+				IMergeMap<GenericClass<T1>, GenericClassDto<T2>>
 #endif
-				.MapAsync(GenericClass<T1> source, GenericClassDto<T2> destination, AsyncMappingContext context) {
+				.Map(GenericClass<T1> source, GenericClassDto<T2> destination, MappingContext context) {
 				if (source != null) {
 					if(destination == null)
 						destination = new GenericClassDto<T2>();
 					destination.Id = source.Id;
-					destination.Value = await context.Mapper.MapAsync(source.Value, destination.Value);
+					destination.Value = context.Mapper.Map(source.Value, destination.Value);
 				}
 				return destination;
 			}
@@ -93,32 +92,32 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		public class Maps<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IEnumerable<T1>, IList<T1>>,
-			IAsyncMergeMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>,
-			IAsyncMergeMapStatic<IEnumerable<T1>, string>,
-			IAsyncMergeMapStatic<int, IList<T1>>,
-			IAsyncMergeMapStatic<Queue<T1>, string>,
-			IAsyncMergeMapStatic<T1[], IList<T1>>
+			IMergeMapStatic<IEnumerable<T1>, IList<T1>>,
+			IMergeMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>,
+			IMergeMapStatic<IEnumerable<T1>, string>,
+			IMergeMapStatic<int, IList<T1>>,
+			IMergeMapStatic<Queue<T1>, string>,
+			IMergeMapStatic<T1[], IList<T1>>
 #else
-			IAsyncMergeMap<IEnumerable<T1>, IList<T1>>,
-			IAsyncMergeMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>,
-			IAsyncMergeMap<IEnumerable<T1>, string>,
-			IAsyncMergeMap<int, IList<T1>>,
-			IAsyncMergeMap<Queue<T1>, string>,
-			IAsyncMergeMap<T1[], IList<T1>>
+			IMergeMap<IEnumerable<T1>, IList<T1>>,
+			IMergeMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>,
+			IMergeMap<IEnumerable<T1>, string>,
+			IMergeMap<int, IList<T1>>,
+			IMergeMap<Queue<T1>, string>,
+			IMergeMap<T1[], IList<T1>>
 #endif
 			{
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<IList<T1>>
+			IList<T1>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IEnumerable<T1>, IList<T1>>
+				IMergeMapStatic<IEnumerable<T1>, IList<T1>>
 #else
-				IAsyncMergeMap<IEnumerable<T1>, IList<T1>>
+				IMergeMap<IEnumerable<T1>, IList<T1>>
 #endif
-				.MapAsync(IEnumerable<T1> source, IList<T1> destination, AsyncMappingContext context) {
+				.Map(IEnumerable<T1> source, IList<T1> destination, MappingContext context) {
 				if (destination == null)
 					destination = new List<T1>();
 				destination.Clear();
@@ -127,88 +126,88 @@ namespace NeatMapper.Tests.Mapping.Async {
 						destination.Add(el);
 					}
 				}
-				return Task.FromResult(destination);
+				return destination;
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<IEnumerable<T1>>
+			IEnumerable<T1>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
+				IMergeMapStatic<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
 #else
-				IAsyncMergeMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
+				IMergeMap<IDictionary<string, IDictionary<int, IList<T1>>>, IEnumerable<T1>>
 #endif
-				.MapAsync(IDictionary<string, IDictionary<int, IList<T1>>> source, IEnumerable<T1> destination, AsyncMappingContext context) {
-				return Task.FromResult(Enumerable.Empty<T1>());
+				.Map(IDictionary<string, IDictionary<int, IList<T1>>> source, IEnumerable<T1> destination, MappingContext context) {
+				return Enumerable.Empty<T1>();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<string>
+			string
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IEnumerable<T1>, string>
+				IMergeMapStatic<IEnumerable<T1>, string>
 #else
-				IAsyncMergeMap<IEnumerable<T1>, string>
+				IMergeMap<IEnumerable<T1>, string>
 #endif
-				.MapAsync(IEnumerable<T1> source, string destination, AsyncMappingContext context) {
-				return Task.FromResult("Elements: " + source?.Count());
+				.Map(IEnumerable<T1> source, string destination, MappingContext context) {
+				return "Elements: " + source?.Count();
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<IList<T1>>
+			IList<T1>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<int, IList<T1>>
+				IMergeMapStatic<int, IList<T1>>
 #else
-				IAsyncMergeMap<int, IList<T1>>
+				IMergeMap<int, IList<T1>>
 #endif
-				.MapAsync(int source, IList<T1> destination, AsyncMappingContext context) {
-				return Task.FromResult((IList<T1>)new T1[source]);
+				.Map(int source, IList<T1> destination, MappingContext context) {
+				return new T1[source];
 			}
 
-			// Throws exception (not awaited)
+			// Throws exception
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<string>
+			string
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<Queue<T1>, string>
+				IMergeMapStatic<Queue<T1>, string>
 #else
-				IAsyncMergeMap<Queue<T1>, string>
+				IMergeMap<Queue<T1>, string>
 #endif
-				.MapAsync(Queue<T1> source, string destination, AsyncMappingContext context) {
+				.Map(Queue<T1> source, string destination, MappingContext context) {
 				throw new NotImplementedException();
 			}
 
-			// Nested NewMap (not awaited)
+			// Nested NewMap
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<IList<T1>>
+			IList<T1>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<T1[], IList<T1>>
+				IMergeMapStatic<T1[], IList<T1>>
 #else
-				IAsyncMergeMap<T1[], IList<T1>>
+				IMergeMap<T1[], IList<T1>>
 #endif
-				.MapAsync(T1[] source, IList<T1> destination, AsyncMappingContext context) {
-				return context.Mapper.MapAsync<IEnumerable<T1>, IList<T1>>(source);
+				.Map(T1[] source, IList<T1> destination, MappingContext context) {
+				return context.Mapper.Map<IEnumerable<T1>, IList<T1>>(source);
 			}
 		}
 
-		// Aasync Task error CS0695
+		// Avoid error CS0695
 		public class Maps :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IEnumerable<bool>, IList<bool>>,
-			IAsyncMergeMapStatic<Category, CategoryDto>,
-			IAsyncMergeMapStatic<Product, ProductDto>,
+			IMergeMapStatic<IEnumerable<bool>, IList<bool>>,
+			IMergeMapStatic<Category, CategoryDto>,
+			IMergeMapStatic<Product, ProductDto>,
 			IMatchMapStatic<GenericClass<Product>, GenericClassDto<ProductDto>>
 #else
-			IAsyncMergeMap<IEnumerable<bool>, IList<bool>>,
-			IAsyncMergeMap<Category, CategoryDto>,
-			IAsyncMergeMap<Product, ProductDto>,
+			IMergeMap<IEnumerable<bool>, IList<bool>>,
+			IMergeMap<Category, CategoryDto>,
+			IMergeMap<Product, ProductDto>,
 			IMatchMap<GenericClass<Product>, GenericClassDto<ProductDto>>
 #endif
 			{
@@ -217,51 +216,51 @@ namespace NeatMapper.Tests.Mapping.Async {
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<IList<bool>>
+			IList<bool>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IEnumerable<bool>, IList<bool>>
+				IMergeMapStatic<IEnumerable<bool>, IList<bool>>
 #else
-				IAsyncMergeMap<IEnumerable<bool>, IList<bool>>
+				IMergeMap<IEnumerable<bool>, IList<bool>>
 #endif
-				.MapAsync(IEnumerable<bool> source, IList<bool> destination, AsyncMappingContext context) {
-				return Task.FromResult((IList<bool>)new List<bool>(32));
+				.Map(IEnumerable<bool> source, IList<bool> destination, MappingContext context) {
+				return new List<bool>(32);
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<CategoryDto>
+			CategoryDto
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<Category, CategoryDto>
+				IMergeMapStatic<Category, CategoryDto>
 #else
-				IAsyncMergeMap<Category, CategoryDto>
+				IMergeMap<Category, CategoryDto>
 #endif
-				.MapAsync(Category source, CategoryDto destination, AsyncMappingContext context) {
+				.Map(Category source, CategoryDto destination, MappingContext context) {
 				if (source != null) {
 					if (destination == null)
 						destination = new CategoryDto();
 					destination.Id = source.Id;
 					destination.Parent = source.Parent?.Id;
 				}
-				return Task.FromResult(destination);
+				return destination;
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<ProductDto>
+			ProductDto
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<Product, ProductDto>
+				IMergeMapStatic<Product, ProductDto>
 #else
-				IAsyncMergeMap<Product, ProductDto>
+				IMergeMap<Product, ProductDto>
 #endif
-				.MapAsync(Product source, ProductDto destination, AsyncMappingContext context) {
+				.Map(Product source, ProductDto destination, MappingContext context) {
 				if (source != null) {
 					if (destination == null)
 						destination = new ProductDto();
 					destination.Code = source.Code;
 				}
-				return Task.FromResult(destination);
+				return destination;
 			}
 
 #if NET7_0_OR_GREATER
@@ -281,82 +280,82 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		public class MapsWithClassType<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IEnumerable<T1>, int>,
-			IAsyncMergeMapStatic<IList<T1>, int>
+			IMergeMapStatic<IEnumerable<T1>, int>,
+			IMergeMapStatic<IList<T1>, int>
 #else
-			IAsyncMergeMap<IEnumerable<T1>, int>,
-			IAsyncMergeMap<IList<T1>, int>
+			IMergeMap<IEnumerable<T1>, int>,
+			IMergeMap<IList<T1>, int>
 #endif
 			 where T1 : class {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IEnumerable<T1>, int>
+				IMergeMapStatic<IEnumerable<T1>, int>
 #else
-				IAsyncMergeMap<IEnumerable<T1>, int>
+				IMergeMap<IEnumerable<T1>, int>
 #endif
-				.MapAsync(IEnumerable<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(source?.Count() ?? 0);
+				.Map(IEnumerable<T1> source, int destination, MappingContext context) {
+				return source?.Count() ?? 0;
 			}
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, int>
+				IMergeMapStatic<IList<T1>, int>
 #else
-				IAsyncMergeMap<IList<T1>, int>
+				IMergeMap<IList<T1>, int>
 #endif
-				.MapAsync(IList<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(42);
+				.Map(IList<T1> source, int destination, MappingContext context) {
+				return 42;
 			}
 		}
 
 		public class MapsWithStructType<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, int>
+			IMergeMapStatic<IList<T1>, int>
 #else
-			IAsyncMergeMap<IList<T1>, int>
+			IMergeMap<IList<T1>, int>
 #endif
 			 where T1 : struct {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, int>
+				IMergeMapStatic<IList<T1>, int>
 #else
-				IAsyncMergeMap<IList<T1>, int>
+				IMergeMap<IList<T1>, int>
 #endif
-				.MapAsync(IList<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(36);
+				.Map(IList<T1> source, int destination, MappingContext context) {
+				return 36;
 			}
 		}
 
 		public class MapsWithUnmanagedType<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, int>
+			IMergeMapStatic<IList<T1>, int>
 #else
-			IAsyncMergeMap<IList<T1>, int>
+			IMergeMap<IList<T1>, int>
 #endif
 			where T1 : unmanaged {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, int>
+				IMergeMapStatic<IList<T1>, int>
 #else
-				IAsyncMergeMap<IList<T1>, int>
+				IMergeMap<IList<T1>, int>
 #endif
-				.MapAsync(IList<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(36);
+				.Map(IList<T1> source, int destination, MappingContext context) {
+				return 36;
 			}
 		}
 
@@ -373,61 +372,61 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		public class MapsWithNewType<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, int>
+			IMergeMapStatic<IList<T1>, int>
 #else
-			IAsyncMergeMap<IList<T1>, int>
+			IMergeMap<IList<T1>, int>
 #endif
 			where T1 : new() {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, int>
+				IMergeMapStatic<IList<T1>, int>
 #else
-				IAsyncMergeMap<IList<T1>, int>
+				IMergeMap<IList<T1>, int>
 #endif
-				.MapAsync(IList<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(36);
+				.Map(IList<T1> source, int destination, MappingContext context) {
+				return 36;
 			}
 		}
 
 		public class MapsWithBaseClassType<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, int>
+			IMergeMapStatic<IList<T1>, int>
 #else
-			IAsyncMergeMap<IList<T1>, int>
+			IMergeMap<IList<T1>, int>
 #endif
 			where T1 : Product {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, int>
+				IMergeMapStatic<IList<T1>, int>
 #else
-				IAsyncMergeMap<IList<T1>, int>
+				IMergeMap<IList<T1>, int>
 #endif
-				.MapAsync(IList<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(36);
+				.Map(IList<T1> source, int destination, MappingContext context) {
+				return 36;
 			}
 		}
 
 		public class MapsWithBaseClassType<T1, T2> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<T1, T2>
+			IMergeMapStatic<T1, T2>
 #else
-			IAsyncMergeMap<T1, T2>
+			IMergeMap<T1, T2>
 #endif
 			where T1 : List<T2> {
 			public
 #if NET7_0_OR_GREATER
 				static
 #endif
-				Task<T2> MapAsync(T1 source, T2 destination, AsyncMappingContext context) {
-				return Task.FromResult(default(T2));
+				T2 Map(T1 source, T2 destination, MappingContext context) {
+				return default(T2);
 			}
 		}
 
@@ -435,23 +434,23 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		public class MapsWithInterfaceType<T1> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, int>
+			IMergeMapStatic<IList<T1>, int>
 #else
-			IAsyncMergeMap<IList<T1>, int>
+			IMergeMap<IList<T1>, int>
 #endif
 			where T1 : IDisposable {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<int>
+			int
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, int>
+				IMergeMapStatic<IList<T1>, int>
 #else
-				IAsyncMergeMap<IList<T1>, int>
+				IMergeMap<IList<T1>, int>
 #endif
-				.MapAsync(IList<T1> source, int destination, AsyncMappingContext context) {
-				return Task.FromResult(36);
+				.Map(IList<T1> source, int destination, MappingContext context) {
+				return 36;
 			}
 		}
 
@@ -463,17 +462,17 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		public class MapsWithInterfaceType<T1, T2> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, T2>
+			IMergeMapStatic<IList<T1>, T2>
 #else
-			IAsyncMergeMap<IList<T1>, T2>
+			IMergeMap<IList<T1>, T2>
 #endif
 			where T1 : IEquatable<T2> {
 			public
 #if NET7_0_OR_GREATER
 				static
 #endif
-				Task<T2> MapAsync(IList<T1> source, T2 destination, AsyncMappingContext context) {
-				return Task.FromResult(default(T2));
+				T2 Map(IList<T1> source, T2 destination, MappingContext context) {
+				return default(T2);
 			}
 		}
 
@@ -485,62 +484,64 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		public class MapsWithGenericTypeParameterType<T1, T2> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, T2>
+			IMergeMapStatic<IList<T1>, T2>
 #else
-			IAsyncMergeMap<IList<T1>, T2>
+			IMergeMap<IList<T1>, T2>
 #endif
 			where T1 : T2 {
 			public
 #if NET7_0_OR_GREATER
 				static
 #endif
-				Task<T2> MapAsync(IList<T1> source, T2 destination, AsyncMappingContext context) {
-				return Task.FromResult(default(T2));
+				T2 Map(IList<T1> source, T2 destination, MappingContext context) {
+				return default(T2);
 			}
 		}
 
 		public class MapsWithGenericTypeParameterComplexType<T1, T2> :
 #if NET7_0_OR_GREATER
-			IAsyncMergeMapStatic<IList<T1>, Queue<T2>>
+			IMergeMapStatic<IList<T1>, Queue<T2>>
 #else
-			IAsyncMergeMap<IList<T1>, Queue<T2>>
+			IMergeMap<IList<T1>, Queue<T2>>
 #endif
 			where T1 : T2 where T2 : Product {
 
 #if NET7_0_OR_GREATER
 			static
 #endif
-			Task<Queue<T2>>
+			Queue<T2>
 #if NET7_0_OR_GREATER
-				IAsyncMergeMapStatic<IList<T1>, Queue<T2>>
+				IMergeMapStatic<IList<T1>, Queue<T2>>
 #else
-				IAsyncMergeMap<IList<T1>, Queue<T2>>
+				IMergeMap<IList<T1>, Queue<T2>>
 #endif
-				.MapAsync(IList<T1> source, Queue<T2> destination, AsyncMappingContext context) {
-				return Task.FromResult(new Queue<T2>());
+				.Map(IList<T1> source, Queue<T2> destination, MappingContext context) {
+				return new Queue<T2>();
 			}
 		}
 
 
-		IAsyncMapper _mapper = null;
+		IMapper _mapper = null;
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncMergeMapper(new CustomMapsOptions {
+			_mapper = new MergeMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			});
 		}
 
 
 		[TestMethod]
-		public async Task ShouldMapGenericTypes() {
+		public void ShouldMapGenericTypes() {
 			// 1 parameter
 			{
 				// No constraints
 				{
+					Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<string>, IList<string>>());
+
 					var source = new[] { "Test" };
 					var destination = new List<string>();
-					var result = await _mapper.MapAsync<IEnumerable<string>, IList<string>>(source, destination);
+					var result = _mapper.Map<IEnumerable<string>, IList<string>>(source, destination);
 
 					Assert.IsNotNull(result);
 					Assert.AreSame(destination, result);
@@ -550,10 +551,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Class constraint
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
-					Assert.AreEqual(1, await mapper.MapAsync<IEnumerable<Product>, int>(new[] { new Product() }, 0));
+
+					Assert.IsTrue(mapper.CanMapMerge<IEnumerable<Product>, int>());
+
+					Assert.AreEqual(1, mapper.Map<IEnumerable<Product>, int>(new[] { new Product() }, 0));
 				}
 			}
 
@@ -561,14 +565,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Different
 				{
-					var result = await _mapper.MapAsync<Tuple<string, int>, ValueTuple<int, string>>(new Tuple<string, int>("Test", 4), (0, "AAA"));
+					Assert.IsTrue(_mapper.CanMapMerge<Tuple<string, int>, ValueTuple<int, string>>());
+
+					var result = _mapper.Map<Tuple<string, int>, ValueTuple<int, string>>(new Tuple<string, int>("Test", 4), (0, "AAA"));
 					Assert.AreEqual(4, result.Item1);
 					Assert.AreEqual("Test", result.Item2);
 				}
 
 				// Equal
 				{
-					var result = await _mapper.MapAsync<Tuple<string, string>, ValueTuple<string, string>>(new Tuple<string, string>("Test1", "Test2"), ("AAA", "BBB"));
+					Assert.IsTrue(_mapper.CanMapMerge<Tuple<string, string>, ValueTuple<string, string>>());
+
+					var result = _mapper.Map<Tuple<string, string>, ValueTuple<string, string>>(new Tuple<string, string>("Test1", "Test2"), ("AAA", "BBB"));
 					Assert.AreEqual("Test2", result.Item1);
 					Assert.AreEqual("Test1", result.Item2);
 				}
@@ -578,7 +586,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Shared
 				{
-					var result = await _mapper.MapAsync<Tuple<string, int>, ValueTuple<string, int, bool>>(new Tuple<string, int>("Test", 2), ("AAA", 0, true));
+					Assert.IsTrue(_mapper.CanMapMerge<Tuple<string, int>, ValueTuple<string, int, bool>>());
+
+					var result = _mapper.Map<Tuple<string, int>, ValueTuple<string, int, bool>>(new Tuple<string, int>("Test", 2), ("AAA", 0, true));
 					Assert.AreEqual("Test", result.Item1);
 					Assert.AreEqual(2, result.Item2);
 					Assert.IsFalse(result.Item3);
@@ -587,33 +597,41 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public Task ShouldNotMapNotMatchingGenericTypes() {
+		public void ShouldNotMapNotMatchingGenericTypes() {
 			// Types should be the same
-			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<string>, IList<int>>(new[] { "Test" }, new List<int>()));
+			Assert.IsFalse(_mapper.CanMapMerge<IEnumerable<string>, IList<int>>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<string>, IList<int>>(new[] { "Test" }, new List<int>()));
 		}
 
 		[TestMethod]
-		public async Task ShouldNotMapNotMatchingGenericConstraints() {
+		public void ShouldNotMapNotMatchingGenericConstraints() {
 			// struct
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new MergeMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
-				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, int>(new List<Product>(), 0));
-				await mapper.MapAsync<IList<Guid>, int>(new List<Guid>(), 0);
-				await mapper.MapAsync<IList<ManagedTest>, int>(new List<ManagedTest>(), 0);
-				await mapper.MapAsync<IList<UnmanagedTest>, int>(new List<UnmanagedTest>(), 0);
+				Assert.IsFalse(mapper.CanMapMerge<IList<Product>, int>());
+				Assert.IsTrue(mapper.CanMapMerge<IList<Guid>, int>());
+
+				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>(), 0));
+				mapper.Map<IList<Guid>, int>(new List<Guid>(), 0);
+				mapper.Map<IList<ManagedTest>, int>(new List<ManagedTest>(), 0);
+				mapper.Map<IList<UnmanagedTest>, int>(new List<UnmanagedTest>(), 0);
 			}
 
 			// class
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new MergeMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
-				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Guid>, int>(new List<Guid>(), 0));
-				await mapper.MapAsync<IList<Product>, int>(new List<Product>(), 0);
+				Assert.IsFalse(mapper.CanMapMerge<IList<Guid>, int>());
+				Assert.IsTrue(mapper.CanMapMerge<IList<Product>, int>());
+
+				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Guid>, int>(new List<Guid>(), 0));
+				mapper.Map<IList<Product>, int>(new List<Product>(), 0);
 			}
 
 			// notnull (no runtime constraint)
@@ -622,50 +640,64 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// unmanaged
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new MergeMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
-				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, int>(new List<Product>(), 2));
-				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<ManagedTest>, int>(new List<ManagedTest>(), 2));
-				await mapper.MapAsync<IList<UnmanagedTest>, int>(new List<UnmanagedTest>(), 2);
-				await mapper.MapAsync<IList<Guid>, int>(new List<Guid>(), 2);
-				await mapper.MapAsync<IList<int>, int>(new List<int>(), 2);
+				Assert.IsFalse(mapper.CanMapMerge<IList<Product>, int>());
+				Assert.IsFalse(mapper.CanMapMerge<IList<ManagedTest>, int>());
+				Assert.IsTrue(mapper.CanMapMerge<IList<UnmanagedTest>, int>());
+
+				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>(), 2));
+				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ManagedTest>, int>(new List<ManagedTest>(), 2));
+				mapper.Map<IList<UnmanagedTest>, int>(new List<UnmanagedTest>(), 2);
+				mapper.Map<IList<Guid>, int>(new List<Guid>(), 2);
+				mapper.Map<IList<int>, int>(new List<int>(), 2);
 			}
 
 			// new()
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new MergeMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
-				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>(), 42));
-				await mapper.MapAsync<IList<Product>, int>(new List<Product>(), 42);
+				Assert.IsFalse(mapper.CanMapMerge<IList<ClassWithoutParameterlessConstructor>, int>());
+				Assert.IsTrue(mapper.CanMapMerge<IList<Product>, int>());
+
+				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>(), 42));
+				mapper.Map<IList<Product>, int>(new List<Product>(), 42);
 			}
 
 			// base class
 			{
 				// Not generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, int>(new List<Category>(), 42));
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<List<Product>, int>(new List<Product>(), 42));
-					await mapper.MapAsync<IList<Product>, int>(new List<Product>(), 42);
-					await mapper.MapAsync<IList<LimitedProduct>, int>(new List<LimitedProduct>(), 42);
+					Assert.IsFalse(mapper.CanMapMerge<IList<Category>, int>());
+					Assert.IsTrue(mapper.CanMapMerge<IList<Product>, int>());
+
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>(), 42));
+					TestUtils.AssertMapNotFound(() => mapper.Map<List<Product>, int>(new List<Product>(), 42));
+					mapper.Map<IList<Product>, int>(new List<Product>(), 42);
+					mapper.Map<IList<LimitedProduct>, int>(new List<LimitedProduct>(), 42);
 				}
 
 				// Generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<Queue<Category>, Category>(new Queue<Category>(), new Category()));
-					await mapper.MapAsync<CustomCollection<Category>, Category>(new CustomCollection<Category>(), new Category());
-					await mapper.MapAsync<BaseClassTest, Category>(new BaseClassTest(), new Category());
+					Assert.IsFalse(mapper.CanMapMerge<Queue<Category>, Category>());
+					Assert.IsTrue(mapper.CanMapMerge<CustomCollection<Category>, Category>());
+					Assert.IsTrue(mapper.CanMapMerge<BaseClassTest, Category>());
+
+					TestUtils.AssertMapNotFound(() => mapper.Map<Queue<Category>, Category>(new Queue<Category>(), new Category()));
+					mapper.Map<CustomCollection<Category>, Category>(new CustomCollection<Category>(), new Category());
+					mapper.Map<BaseClassTest, Category>(new BaseClassTest(), new Category());
 				}
 			}
 
@@ -673,23 +705,29 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Not generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, int>(new List<Category>(), 36));
-					await mapper.MapAsync<IList<DisposableTest>, int>(new List<DisposableTest>(), 36);
+					Assert.IsFalse(mapper.CanMapMerge<IList<Category>, int>());
+					Assert.IsTrue(mapper.CanMapMerge<IList<DisposableTest>, int>());
+
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>(), 36));
+					mapper.Map<IList<DisposableTest>, int>(new List<DisposableTest>(), 36);
 				}
 
 				// Generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>(), new Category()));
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Queue<Category>>, Category>(new List<Queue<Category>>(), new Category()));
-					await mapper.MapAsync<IList<EquatableTest>, Product>(new List<EquatableTest>(), new Product());
+					Assert.IsFalse(mapper.CanMapMerge<IList<CustomCollection<Category>>, Category>());
+					Assert.IsTrue(mapper.CanMapMerge<IList<EquatableTest>, Product>());
+
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>(), new Category()));
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Queue<Category>>, Category>(new List<Queue<Category>>(), new Category()));
+					mapper.Map<IList<EquatableTest>, Product>(new List<EquatableTest>(), new Product());
 				}
 			}
 
@@ -697,72 +735,90 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Simple
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, Product>(new List<Category>(), new Product()));
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, LimitedProduct>(new List<Product>(), new LimitedProduct()));
-					await mapper.MapAsync<IList<CustomCollection<int>>, List<int>>(new List<CustomCollection<int>>(), new List<int>());
-					await mapper.MapAsync<IList<BaseClassTest>, List<Category>>(new List<BaseClassTest>(), new List<Category>());
-					await mapper.MapAsync<IList<LimitedProduct>, Product>(new List<LimitedProduct>(), new Product());
+					Assert.IsFalse(mapper.CanMapMerge<IList<Category>, Product>());
+					Assert.IsTrue(mapper.CanMapMerge<IList<CustomCollection<int>>, List<int>>());
+
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Product>(new List<Category>(), new Product()));
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, LimitedProduct>(new List<Product>(), new LimitedProduct()));
+					mapper.Map<IList<CustomCollection<int>>, List<int>>(new List<CustomCollection<int>>(), new List<int>());
+					mapper.Map<IList<BaseClassTest>, List<Category>>(new List<BaseClassTest>(), new List<Category>());
+					mapper.Map<IList<LimitedProduct>, Product>(new List<LimitedProduct>(), new Product());
 				}
 
 				// Complex
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new MergeMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, Queue<Product>>(new List<Category>(), new Queue<Product>()));
-					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, Queue<LimitedProduct>>(new List<Product>(), new Queue<LimitedProduct>()));
-					await mapper.MapAsync<IList<LimitedProduct>, Queue<Product>>(new List<LimitedProduct>(), new Queue<Product>());
-					await mapper.MapAsync<IList<LimitedProduct>, Queue<LimitedProduct>>(new List<LimitedProduct>(), new Queue<LimitedProduct>());
-					await mapper.MapAsync<IList<Product>, Queue<Product>>(new List<Product>(), new Queue<Product>());
+					Assert.IsFalse(mapper.CanMapMerge<IList<Category>, Queue<Product>>());
+					Assert.IsTrue(mapper.CanMapMerge<IList<LimitedProduct>, Queue<Product>>());
+
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Queue<Product>>(new List<Category>(), new Queue<Product>()));
+					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, Queue<LimitedProduct>>(new List<Product>(), new Queue<LimitedProduct>()));
+					mapper.Map<IList<LimitedProduct>, Queue<Product>>(new List<LimitedProduct>(), new Queue<Product>());
+					mapper.Map<IList<LimitedProduct>, Queue<LimitedProduct>>(new List<LimitedProduct>(), new Queue<LimitedProduct>());
+					mapper.Map<IList<Product>, Queue<Product>>(new List<Product>(), new Queue<Product>());
 				}
 			}
 		}
 
 		[TestMethod]
-		public async Task ShouldMapSingleGenericType() {
+		public void ShouldMapSingleGenericType() {
 			// Generic source
-			Assert.AreEqual("Elements: 2", await _mapper.MapAsync<IEnumerable<int>, string>(new[] { 1, 2 }, "a"));
+			{
+				Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<int>, string>());
+
+				Assert.AreEqual("Elements: 2", _mapper.Map<IEnumerable<int>, string>(new[] { 1, 2 }, "a"));
+			}
 
 			// Generic destination
-			var list = await _mapper.MapAsync<int, IList<string>>(3, new List<string>());
-			Assert.IsNotNull(list);
-			Assert.AreEqual(3, list.Count);
-			Assert.IsTrue(list.IsReadOnly);
-			Assert.IsTrue(list.All(e => e == default));
+			{ 
+				Assert.IsTrue(_mapper.CanMapMerge<int, IList<string>>());
+
+				var list = _mapper.Map<int, IList<string>>(3, new List<string>());
+				Assert.IsNotNull(list);
+				Assert.AreEqual(3, list.Count);
+				Assert.IsTrue(list.IsReadOnly);
+				Assert.IsTrue(list.All(e => e == default));
+			}
 		}
 
 		[TestMethod]
-		public Task ShouldMapDeepGenerics() {
+		public void ShouldMapDeepGenerics() {
+			Assert.IsTrue(_mapper.CanMapMerge<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>());
+
 			// Does not throw
-			return _mapper.MapAsync<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>(new Dictionary<string, IDictionary<int, IList<bool>>>(), new List<bool>());
+			_mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>(new Dictionary<string, IDictionary<int, IList<bool>>>(), new List<bool>());
 		}
 
 		[TestMethod]
-		public Task ShouldNotMapNotMatchingDeepGenerics() {
+		public void ShouldNotMapNotMatchingDeepGenerics() {
 			// Types should be the same
-			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>(new Dictionary<string, IDictionary<int, IList<bool>>>(), new List<float>()));
+			Assert.IsFalse(_mapper.CanMapMerge<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>(new Dictionary<string, IDictionary<int, IList<bool>>>(), new List<float>()));
 		}
 
 		[TestMethod]
-		public async Task ShouldRespectConstraints() {
-			var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+		public void ShouldRespectConstraints() {
+			var mapper = new MergeMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
 			});
 
-			Assert.AreEqual(42, await mapper.MapAsync<IList<Product>, int>(new List<Product>(), 2));
+			Assert.AreEqual(42, mapper.Map<IList<Product>, int>(new List<Product>(), 2));
 
-			Assert.AreEqual(36, await mapper.MapAsync<IList<Guid>, int>(new List<Guid>(), 3));
+			Assert.AreEqual(36, mapper.Map<IList<Guid>, int>(new List<Guid>(), 3));
 		}
 
 		[TestMethod]
-		public async Task ShouldPreferSpecificMaps() {
+		public void ShouldPreferSpecificMaps() {
 			var boolArray = new bool[] { true };
-			var boolList = await _mapper.MapAsync<IEnumerable<bool>, IList<bool>>(boolArray, new List<bool>());
+			var boolList = _mapper.Map<IEnumerable<bool>, IList<bool>>(boolArray, new List<bool>());
 
 			Assert.IsNotNull(boolList);
 			Assert.AreNotSame(boolArray, boolList);
@@ -772,11 +828,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 
 		[TestMethod]
-		public async Task ShouldMapCollectionsWithoutElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper);
+		public void ShouldMapCollectionsWithoutElementsComparer() {
+			var mapper = new MergeCollectionMapper(_mapper);
 
 			{
-				var tuples = await mapper.MapAsync(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new List<ValueTuple<int, string>>());
+				Assert.IsTrue(mapper.CanMapMerge<Tuple<string, int>[], List<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new List<ValueTuple<int, string>>());
 
 				Assert.IsNotNull(tuples);
 				Assert.AreEqual(2, tuples.Count);
@@ -787,7 +845,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				var tuples = await mapper.MapAsync(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new LinkedList<ValueTuple<int, string>>());
+				Assert.IsTrue(mapper.CanMapMerge<Tuple<string, int>[], LinkedList<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new LinkedList<ValueTuple<int, string>>());
 
 				Assert.IsNotNull(tuples);
 				Assert.AreEqual(2, tuples.Count);
@@ -798,7 +858,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				var tuples = await mapper.MapAsync(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new CustomCollection<ValueTuple<int, string>>());
+				Assert.IsTrue(mapper.CanMapMerge<Tuple<string, int>[], CustomCollection<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new CustomCollection<ValueTuple<int, string>>());
 
 				Assert.IsNotNull(tuples);
 				Assert.AreEqual(2, tuples.Count);
@@ -810,10 +872,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public async Task ShouldMapCollectionsWithGenericElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
+		public void ShouldMapCollectionsWithGenericElementsComparer() {
+			var mapper = new MergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
+
+			Assert.IsTrue(mapper.CanMapMerge<GenericClass<Category>[], CustomCollection<GenericClassDto<CategoryDto>>>());
+
 			var a = new GenericClassDto<CategoryDto> {
 				Id = 2,
 				Value = new CategoryDto {
@@ -834,7 +899,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				}
 			};
 			var destination = new CustomCollection<GenericClassDto<CategoryDto>> { a, b, c };
-			var result = await mapper.MapAsync(new[] {
+			var result = mapper.Map(new[] {
 				new GenericClass<Category>{
 					Id = 3,
 					Value = new Category {
@@ -868,10 +933,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public async Task ShouldMapCollectionsWithSpecificElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
+		public void ShouldMapCollectionsWithSpecificElementsComparer() {
+			var mapper = new MergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
+
 			var pa = new ProductDto {
 				Code = "Test1"
 			};
@@ -894,7 +960,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Value = pc
 			};
 			var destination = new CustomCollection<GenericClassDto<ProductDto>> { a, b, c };
-			var result = await mapper.MapAsync(new[] {
+			var result = mapper.Map(new[] {
 				new GenericClass<Product>{
 					Id = 3,
 					Value = new Product {
@@ -928,8 +994,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public async Task ShouldMapCollectionsWithCustomElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper);
+		public void ShouldMapCollectionsWithCustomElementsComparer() {
+			var mapper = new MergeCollectionMapper(_mapper);
 			var pa = new ProductDto {
 				Code = "Test1"
 			};
@@ -952,7 +1018,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Value = pc
 			};
 			var destination = new CustomCollection<GenericClassDto<ProductDto>> { a, b, c };
-			var result = await mapper.MapAsync(new[] {
+			var result = mapper.Map(new[] {
 				new GenericClass<Product>{
 					Id = 3,
 					Value = new Product {

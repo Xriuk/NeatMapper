@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections;
+
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which just returns false for every match

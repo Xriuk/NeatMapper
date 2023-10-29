@@ -66,6 +66,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithoutElementsComparer() {
+			Assert.IsTrue(_mapper.CanMapMerge<decimal[], List<Price>>());
+
 			// Should forward options except merge.matcher
 
 			// No options
@@ -129,8 +131,9 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapCollectionsWithoutElementsMap() {
-			var destination = new List<int>();
-			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { false }, destination));
+			Assert.IsFalse(_mapper.CanMapMerge<bool[], List<int>>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { false }, new List<int>()));
 		}
 
 		[TestMethod]
@@ -160,6 +163,8 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldNotMapReadonlyCollectionDestinationWithoutExplicitMap() {
 			{
+				Assert.IsFalse(_mapper.CanMapMerge<decimal[], Price[]>());
+
 				var a = new Price {
 					Amount = 12m,
 					Currency = "EUR"
@@ -184,6 +189,35 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				// Cannot determine
+				Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<IEnumerable<decimal>, ICollection<Price>>());
+
+				var a = new Price {
+					Amount = 12m,
+					Currency = "EUR"
+				};
+				var b = new Price {
+					Amount = 34m,
+					Currency = "EUR"
+				};
+				var c = new Price {
+					Amount = 56m,
+					Currency = "EUR"
+				};
+				var destination = new Price[] { a, b, c };
+				TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<decimal>, ICollection<Price>>(new[] { 20m, 15.25m, 0m }, (ICollection<Price>)destination));
+				// Should not alter destination
+				Assert.AreSame(a, destination[0]);
+				Assert.AreEqual(12m, a.Amount);
+				Assert.AreSame(b, destination[1]);
+				Assert.AreEqual(34m, b.Amount);
+				Assert.AreSame(c, destination[2]);
+				Assert.AreEqual(56m, c.Amount);
+			}
+
+			{
+				Assert.IsFalse(_mapper.CanMapMerge<decimal[], ReadOnlyCollection<Price>>());
+
 				var a = new Price {
 					Amount = 12m,
 					Currency = "EUR"
@@ -210,6 +244,12 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapReadonlyCollectionDestinationNestedWithoutExplicitMap() {
+			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<Category[]>, List<List<CategoryDto>>>());
+
+			// Cannot determine if mappable
+			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<IEnumerable<Category[]>, ICollection<IList<CategoryDto>>>());
+			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<IEnumerable<Category[]>, List<IList<CategoryDto>>>());
+
 			var a1 = new CategoryDto {
 				Id = 2,
 				Parent = 2
@@ -301,6 +341,9 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsOfCollectionsWithoutElementsComparer() {
+			// Cannot determine
+			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<int[][], List<ICollection<string>>>());
+
 			// No options
 			{
 				MappingOptionsUtils.options = null;
@@ -977,6 +1020,8 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapCollectionsIfCannotCreateElement() {
+			Assert.IsFalse(_mapper.CanMapMerge<string[], List<ClassWithoutParameterlessConstructor>>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { "" }, new List<ClassWithoutParameterlessConstructor>()));
 		}
 	}
@@ -1003,6 +1048,22 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("MergeMap", result.ElementAt(0));
 			Assert.AreEqual("NewMap", result.ElementAt(1));
 			Assert.AreEqual("MergeMap", result.ElementAt(2));
+		}
+	}
+
+	[TestClass]
+	public class MergeCollectionMapperCanMapTests {
+		[TestMethod]
+		public void ShouldUseMappingOptions() {
+			var mapper = new MergeCollectionMapper(new NewMapper());
+
+			Assert.IsFalse(mapper.CanMapMerge<IEnumerable<string>, List<int>>());
+
+			var options = new CustomNewAdditionalMapsOptions();
+			options.AddMap<string, int>((s, _) => 0);
+			var mapper2 = new NewMapper(null, options);
+
+			Assert.IsTrue(mapper.CanMapMerge<IEnumerable<string>, List<int>>(new MapperOverrideMappingOptions { Mapper = mapper2 }));
 		}
 	}
 }

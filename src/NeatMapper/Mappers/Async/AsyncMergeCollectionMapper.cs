@@ -1,7 +1,7 @@
-﻿using NeatMapper.Common.Matchers;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +14,7 @@ namespace NeatMapper {
 	/// - If a match is not found a new element will be added by mapping them with a <see cref="IAsyncMapper"/> by trying new map, then merge map.<br/>
 	/// Not matched elements from the destination collection are treated according to <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
-	public sealed class AsyncMergeCollectionMapper : AsyncCustomCollectionMapper, IAsyncMapperCanMap {
+	public sealed class AsyncMergeCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap {
 		readonly IAsyncMapper _originalElementMapper;
 		readonly IMatcher _elementsMatcher;
 		readonly MergeCollectionsOptions _mergeCollectionOptions;
@@ -28,6 +28,12 @@ namespace NeatMapper {
 #endif
 			elementsMatcher = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			AsyncCollectionMappersOptions?
+#else
+			AsyncCollectionMappersOptions
+#endif
+			asyncCollectionMappersOptions = null,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MergeCollectionsOptions?
 #else
 			MergeCollectionsOptions
@@ -39,7 +45,7 @@ namespace NeatMapper {
 			IServiceProvider
 #endif
 			serviceProvider = null) :
-			base(elementsMapper, serviceProvider) {
+			base(elementsMapper, asyncCollectionMappersOptions, serviceProvider) {
 
 			_originalElementMapper = elementsMapper;
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
@@ -70,6 +76,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
+
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
@@ -118,6 +125,17 @@ namespace NeatMapper {
 			// If both types are collections try mapping the element types
 			if (TypeUtils.HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
 				TypeUtils.HasInterface(types.To, typeof(ICollection<>)) && !types.To.IsArray) {
+
+				// If the destination type is not an interface, check if it is not readonly
+				if (!types.To.IsInterface && types.To.IsGenericType) {
+					var collectionDefinition = types.To.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						throw new MapNotFoundException(types);
+					}
+				}
 
 				var elementTypes = (
 					From: TypeUtils.GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
@@ -197,9 +215,6 @@ namespace NeatMapper {
 								}
 							}
 
-							var canCreateNew = true;
-							var canCreateMerge = true;
-
 							// At least one of New or Merge mapper is required to map elements
 							// If both are found they will be used in the following order:
 							// - elements to update will use MergeMap first (on the existing element),
@@ -208,64 +223,79 @@ namespace NeatMapper {
 							//   then MergeMap (by creating a new element and merging to it)
 
 							// Added/updated elements
-							foreach (var sourceElement in sourceEnumerable) {
-								bool found = false;
-								object matchingDestinationElement = null;
-								foreach (var destinationElement in destinationEnumerable) {
-									if (elementMatcher.Match(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions) &&
-										!elementsToRemove.Contains(destinationElement)) {
+							var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
+								?? _asyncCollectionMappersOption.MaxParallelMappings;
 
-										matchingDestinationElement = destinationElement;
-										found = true;
-										break;
+							if(parallelMappings > 1) {
+								// Use the first element to check which map can be used
+								/*var enumerable = sourceEnumerable.Cast<object>();
+								if (enumerable.Any()) {
+									bool canCreateNew;
+									bool canCreateMerge = true;
+								}*/
+							}
+							else {
+								var canCreateNew = true;
+								var canCreateMerge = true;
+								foreach (var sourceElement in sourceEnumerable) {
+									bool found = false;
+									object matchingDestinationElement = null;
+									foreach (var destinationElement in destinationEnumerable) {
+										if (elementMatcher.Match(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions) &&
+											!elementsToRemove.Contains(destinationElement)) {
+
+											matchingDestinationElement = destinationElement;
+											found = true;
+											break;
+										}
 									}
-								}
 
-								if (found) {
-									// Try merge map
-									if (canCreateMerge) {
-										try {
-											var mergeResult = await elementsMapper.MapAsync(sourceElement, elementTypes.From, matchingDestinationElement, elementTypes.To, mappingOptions, cancellationToken);
-											if (mergeResult != matchingDestinationElement) {
-												elementsToRemove.Add(matchingDestinationElement);
-												elementsToAdd.Add(mergeResult);
+									if (found) {
+										// Try merge map
+										if (canCreateMerge) {
+											try {
+												var mergeResult = await elementsMapper.MapAsync(sourceElement, elementTypes.From, matchingDestinationElement, elementTypes.To, mappingOptions, cancellationToken);
+												if (mergeResult != matchingDestinationElement) {
+													elementsToRemove.Add(matchingDestinationElement);
+													elementsToAdd.Add(mergeResult);
+												}
+												continue;
 											}
-											continue;
+											catch (MapNotFoundException) {
+												canCreateMerge = false;
+											}
 										}
-										catch (MapNotFoundException) {
-											canCreateMerge = false;
-										}
-									}
 
-									// Try new map
-									if (!canCreateNew)
-										throw new MapNotFoundException(types);
-									elementsToRemove.Add(matchingDestinationElement);
-									elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
-								}
-								else {
-									// Try new map
-									if (canCreateNew) {
+										// Try new map
+										if (!canCreateNew)
+											throw new MapNotFoundException(types);
+										elementsToRemove.Add(matchingDestinationElement);
+										elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
+									}
+									else {
+										// Try new map
+										if (canCreateNew) {
+											try {
+												elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
+												continue;
+											}
+											catch (MapNotFoundException) {
+												canCreateNew = false;
+											}
+										}
+
+										// Try merge map
+										if (!canCreateMerge)
+											throw new MapNotFoundException(types);
+										object destinationInstance;
 										try {
-											elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
-											continue;
+											destinationInstance = ObjectFactory.Create(elementTypes.To);
 										}
-										catch (MapNotFoundException) {
-											canCreateNew = false;
+										catch (ObjectCreationException) {
+											throw new MapNotFoundException(types);
 										}
+										elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationToken));
 									}
-
-									// Try merge map
-									if (!canCreateMerge)
-										throw new MapNotFoundException(types);
-									object destinationInstance;
-									try {
-										destinationInstance = ObjectFactory.Create(elementTypes.To);
-									}
-									catch (ObjectCreationException) {
-										throw new MapNotFoundException(types);
-									}
-									elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationToken));
 								}
 							}
 
@@ -364,6 +394,7 @@ namespace NeatMapper {
 			IEnumerable destination = null,
 			MappingOptions mappingOptions = null,
 			CancellationToken cancellationToken = default) {
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -372,8 +403,18 @@ namespace NeatMapper {
 			if (TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
 				TypeUtils.HasInterface(destinationType, typeof(ICollection<>)) && !destinationType.IsArray) {
 
-				// Check the destination if provided
-				if(destination != null) { 
+				// If the destination type is not an interface, check if it is not readonly
+				// Otherwise check the destination if provided
+				if (!destinationType.IsInterface && destinationType.IsGenericType) {
+					var collectionDefinition = destinationType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						return false;
+					}
+				}
+				else if (destination != null) { 
 					var destinationInstanceType = destination.GetType();
 					if (destinationInstanceType.IsArray)
 						return false;
@@ -424,8 +465,11 @@ namespace NeatMapper {
 					canMapNested = null;
 				}
 
-				// If we have a destination check if all its elements can be mapped
-				if((canMapNew == true || canMapMerge == true || canMapNested != false) && destination != null) {
+				// If we have a concrete class we already checked that it's not readonly
+				// Otherwise if we have a destination check if all its elements can be mapped
+				if ((canMapNew == true || canMapMerge == true || canMapNested == true) && !destinationType.IsInterface)
+					return true;
+				else if(canMapNested == null && destination != null){
 					foreach (var element in destination) {
 						var elementInstanceType = element.GetType();
 						if (elementInstanceType.IsArray)

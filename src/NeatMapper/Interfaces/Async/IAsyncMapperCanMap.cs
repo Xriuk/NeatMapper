@@ -14,7 +14,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>
@@ -40,7 +40,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
 		/// <returns>

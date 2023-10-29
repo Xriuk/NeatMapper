@@ -3,16 +3,16 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Options used to define a list of <see cref="IMapper"/>s to use for <see cref="CompositeMapper"/>
+	/// Options used to define a list of <see cref="IAsyncMapper"/>s to use for <see cref="AsyncCompositeMapper"/>
 	/// </summary>
 	/// <remarks>
 	/// Configuration should be done by using <see cref="Microsoft.Extensions.DependencyInjection.OptionsServiceCollectionExtensions.ConfigureAll{TOptions}"/>
 	/// or <see cref="Microsoft.Extensions.DependencyInjection.OptionsServiceCollectionExtensions.PostConfigureAll{TOptions}"/>
 	/// </remarks>
-	public sealed class CompositeMapperOptions {
+	public sealed class AsyncCompositeMapperOptions {
 		/// <summary>
 		/// Named <see cref="Microsoft.Extensions.Options.IOptions{TOptions}"/> which is used to configure any mapper
-		/// which requires an <see cref="IMapper"/> itself, these do not include <see cref="CollectionMapper"/>s
+		/// which requires an <see cref="IAsyncMapper"/> itself, these do not include <see cref="AsyncCollectionMapper"/>s
 		/// </summary>
 		public const string Base = "Base";
 
@@ -20,21 +20,21 @@ namespace NeatMapper {
 		/// <summary>
 		/// Creates a new instance
 		/// </summary>
-		public CompositeMapperOptions() {
-			Mappers = new List<IMapper>();
+		public AsyncCompositeMapperOptions() {
+			Mappers = new List<IAsyncMapper>();
 		}
 		/// <summary>
 		/// Creates a new instance by copying options from another instance
 		/// </summary>
 		/// <param name="options">Options to copy from</param>
-		public CompositeMapperOptions(CompositeMapperOptions options) {
+		public AsyncCompositeMapperOptions(AsyncCompositeMapperOptions options) {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
 
-			Mappers = new List<IMapper>(options.Mappers);
+			Mappers = new List<IAsyncMapper>(options.Mappers);
 		}
 
 
-		public IList<IMapper> Mappers { get; set; }
+		public IList<IAsyncMapper> Mappers { get; set; }
 	}
 }

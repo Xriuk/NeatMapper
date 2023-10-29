@@ -1,6 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -256,28 +255,32 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapMultidimensionalArrays() {
-			Assert.IsFalse(_mapper.CanMapNew<int[,], string[]>());
+			{ 
+				Assert.IsFalse(_mapper.CanMapNew<int[,], string[]>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<string[][]>(new[,] {
-				{ 2, -3, 0 },
-				{ 1, 2, 5 }
-			}));
+				TestUtils.AssertMapNotFound(() => _mapper.Map<string[][]>(new[,] {
+					{ 2, -3, 0 },
+					{ 1, 2, 5 }
+				}));
+			}
 
+			{ 
+				Assert.IsFalse(_mapper.CanMapNew<int[][], string[,]>());
 
-			Assert.IsFalse(_mapper.CanMapNew<int[][], string[,]>());
+				TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[] {
+					new[]{ 2, -3, 0 },
+					new[]{ 1, 2 }
+				}));
+			}
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[] {
-				new[]{ 2, -3, 0 },
-				new[]{ 1, 2 }
-			}));
+			{ 
+				Assert.IsFalse(_mapper.CanMapNew<int[,], string[,]>());
 
-
-			Assert.IsFalse(_mapper.CanMapNew<int[,], string[,]>());
-
-			TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[,] {
-				{ 2, -3, 0 },
-				{ 1, 2, 5 }
-			}));
+				TestUtils.AssertMapNotFound(() => _mapper.Map<string[,]>(new[,] {
+					{ 2, -3, 0 },
+					{ 1, 2, 5 }
+				}));
+			}
 		}
 	}
 
@@ -356,6 +359,22 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsFalse(_mapper.CanMapNew<string[], IEnumerable<ClassWithoutParameterlessConstructor>>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<ClassWithoutParameterlessConstructor>>(new[] { "" }));
+		}
+	}
+
+	[TestClass]
+	public class NewCollectionMapperCanMapTests {
+		[TestMethod]
+		public void ShouldUseMappingOptions() {
+			var mapper = new NewCollectionMapper(new NewMapper());
+
+			Assert.IsFalse(mapper.CanMapNew<IEnumerable<string>, IEnumerable<int>>());
+
+			var options = new CustomNewAdditionalMapsOptions();
+			options.AddMap<string, int>((s, _) => 0);
+			var mapper2 = new NewMapper(null, options);
+
+			Assert.IsTrue(mapper.CanMapNew<IEnumerable<string>, IEnumerable<int>>(new MapperOverrideMappingOptions { Mapper = mapper2 }));
 		}
 	}
 }

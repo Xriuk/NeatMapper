@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// <see cref="IMapper"/> which creates a new collection (even nested) and maps elements with another
 	/// <see cref="IMapper"/> by trying new map first, then merge map
 	/// </summary>
-	public sealed class NewCollectionMapper : CustomCollectionMapper, IMapperCanMap {
+	public sealed class NewCollectionMapper : CollectionMapper, IMapperCanMap {
 		public NewCollectionMapper(
 			IMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

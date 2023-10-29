@@ -86,7 +86,7 @@ namespace NeatMapper {
 
 			var types = (sourceType, destinationType);
 
-			var task = (Task)_configuration.GetMap(types).Invoke(new object[] { source, CreateMappingContext(mappingOptions) });
+			var task = (Task)_configuration.GetMap(types).Invoke(new object[] { source, CreateMappingContext(mappingOptions, cancellationToken) });
 
 			object result;
 			try {

@@ -8,11 +8,11 @@ namespace NeatMapper {
 		/// <summary>
 		/// Checks if the mapper can create a new object from a given one
 		/// </summary>
-		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
+		/// <param name="sourceType">Type of the source object, used to retrieve the available map</param>
+		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <returns><see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
@@ -33,7 +33,7 @@ namespace NeatMapper {
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
 		/// <param name="mappingOptions">
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mapper may depend on specific options to map or not two given types
+		/// since some mappers may depend on specific options to map or not two given types
 		/// </param>
 		/// <returns><see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
 		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>

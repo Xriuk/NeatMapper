@@ -337,6 +337,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapPrimitives() {
+			Assert.IsTrue(await _mapper.CanMapAsyncNew<int, string>());
+
 			Assert.AreEqual("4", await _mapper.MapAsync<string>(2));
 			Assert.AreEqual("-6", await _mapper.MapAsync<string>(-3));
 			Assert.AreEqual("0", await _mapper.MapAsync<string>(0));
@@ -344,14 +346,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapClasses() {
-			{ 
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<Price, decimal>());
+
 				Assert.AreEqual(20.00m, await _mapper.MapAsync<decimal>(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}));
 			}
 
-			{ 
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<Price, PriceFloat>());
+
 				var result = await _mapper.MapAsync<PriceFloat>(new Price {
 					Amount = 40.00m,
 					Currency = "EUR"
@@ -364,6 +370,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapChildClassAsParent() {
+			Assert.IsTrue(await _mapper.CanMapAsyncNew<Product, ProductDto>());
+
 			var result = await _mapper.MapAsync<Product, ProductDto>(new LimitedProduct {
 				Code = "Test",
 				Categories = new List<Category> {
@@ -378,8 +386,10 @@ namespace NeatMapper.Tests.Mapping.Async {
 		}
 
 		[TestMethod]
-		public Task ShouldNotMapWithoutMap() {
-			return TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int>(false));
+		public async Task ShouldNotMapWithoutMap() {
+			Assert.IsFalse(await _mapper.CanMapAsyncNew<bool, int>());
+
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int>(false));
 		}
 
 		[TestMethod]
@@ -436,6 +446,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 			var options = new CustomAsyncNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0));
 			var mapper = new AsyncNewMapper(null, options);
+
+			Assert.IsTrue(await mapper.CanMapAsyncNew<string, int>());
 
 			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
 		}

@@ -129,22 +129,26 @@ namespace NeatMapper {
 		internal Func<object[], object> GetMap((Type From, Type To) types) {
 			// Try retrieving a regular map
 			// or try matching to a generic one
-			if (Maps.ContainsKey(types)) {
-				var map = Maps[types];
-				return (parameters) => {
-					try {
-						return map.Method.Invoke(map.Method.IsStatic ? null : map.Instance ?? CreateOrReturnInstance(map.Method.DeclaringType), parameters);
-					}
-					catch (Exception e) {
-						throw new MappingException(e, types);
-					}
-				};
+			lock (Maps) { 
+				if (Maps.TryGetValue(types, out var map)) {
+					return (parameters) => {
+						try {
+							return map.Method.Invoke(map.Method.IsStatic ? null : map.Instance ?? CreateOrReturnInstance(map.Method.DeclaringType), parameters);
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+					};
+				}
 			}
-			else {
-				// Try retrieving from cache
+
+			// Try retrieving from cache
+			lock (_genericCache) { 
 				if (_genericCache.TryGetValue(types, out var method))
 					return method;
+			}
 
+			lock (GenericMaps) { 
 				foreach (var map in GenericMaps) {
 					// Check if the two types are compatible (we'll check constraints when instantiating)
 					if (!MatchOpenAndClosedGenericsRecursive(map.From, types.From) ||
@@ -162,7 +166,7 @@ namespace NeatMapper {
 					var genericArguments = map.Class.GetGenericArguments().Length;
 					if (classArguments
 #if NET6_0_OR_GREATER
-                        .DistinctBy(a => a.OpenGenericArgument)
+						.DistinctBy(a => a.OpenGenericArgument)
 #else
 						.GroupBy(a => a.OpenGenericArgument)
 						.Select(a => a.First())
@@ -205,7 +209,9 @@ namespace NeatMapper {
 #pragma warning restore IDE0039 // Use local function
 
 					// Cache the method
-					_genericCache.Add(types, func);
+					lock (_genericCache) { 
+						_genericCache.Add(types, func);
+					}
 
 					return func;
 				}

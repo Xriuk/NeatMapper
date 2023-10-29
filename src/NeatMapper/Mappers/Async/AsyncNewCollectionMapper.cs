@@ -4,22 +4,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which creates a new collection (even nested) and maps elements with another
 	/// <see cref="IAsyncMapper"/> by trying new map first, then merge map
 	/// </summary>
-	public sealed class AsyncNewCollectionMapper : AsyncCustomCollectionMapper, IAsyncMapperCanMap {
+	public sealed class AsyncNewCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap {
 		public AsyncNewCollectionMapper(
 			IAsyncMapper elementsMapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			AsyncCollectionMappersOptions?
+#else
+			AsyncCollectionMappersOptions
+#endif
+			asyncCollectionMappersOptions = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
 			IServiceProvider
 #endif
 			serviceProvider = null) :
-			base(elementsMapper, serviceProvider) { }
+			base(elementsMapper, asyncCollectionMappersOptions, serviceProvider) { }
 
 
 		#region IAsyncMapper methods
@@ -79,32 +86,102 @@ namespace NeatMapper {
 
 							var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-							var canCreateNew = true;
+							var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
+								?? _asyncCollectionMappersOption.MaxParallelMappings;
 
-							foreach (var element in sourceEnumerable) {
-								object destinationElement;
+							// Check if we need to setup parallel mapping or not
+							if (parallelMappings > 1) {
+								// Use the first element to check which map can be used
+								var enumerable = sourceEnumerable.Cast<object>();
+								if(enumerable.Any()) {
+									bool canCreateNew;
+									{
+										var first = enumerable.First();
+										object destinationElement;
 
-								// Try new map
-								if (canCreateNew) {
+										// Try new map
+										try {
+											destinationElement = await elementsMapper.MapAsync(first, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken);
+											addMethod.Invoke(destination, new object[] { destinationElement });
+											canCreateNew = true;
+										}
+										catch (MapNotFoundException) {
+											canCreateNew = false;
+										}
+
+										// Try merge map
+										if (!canCreateNew) { 
+											try {
+												destinationElement = ObjectFactory.Create(elementTypes.To);
+											}
+											catch (ObjectCreationException) {
+												throw new MapNotFoundException(types);
+											}
+											destinationElement = await elementsMapper.MapAsync(first, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationToken);
+											addMethod.Invoke(destination, new object[] { destinationElement });
+										}
+									}
+
+									// Create and await all the tasks
+									var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+									var semaphore = new SemaphoreSlim(parallelMappings);
+									var tasks = enumerable.Skip(1)
+										.Select(element => Task.Run(async () => {
+											await semaphore.WaitAsync(cancellationSource.Token);
+											try { 
+												if (canCreateNew)
+													return await elementsMapper.MapAsync(element, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token);
+												else
+													return await elementsMapper.MapAsync(element, elementTypes.From, ObjectFactory.Create(elementTypes.To), elementTypes.To, mappingOptions, cancellationSource.Token);
+											}
+											finally {
+												semaphore.Release();
+											}
+										}, cancellationSource.Token))
+										.ToArray();
 									try {
-										destinationElement = await elementsMapper.MapAsync(element, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken);
-										addMethod.Invoke(destination, new object[] { destinationElement });
-										continue;
+										await TaskUtils.WhenAllFailFast(tasks);
 									}
-									catch (MapNotFoundException) {
-										canCreateNew = false;
-									}
-								}
+									catch{
+										// Cancel all the tasks
+										cancellationSource.Cancel();
 
-								// Try merge map
-								try {
-									destinationElement = ObjectFactory.Create(elementTypes.To);
+										throw;
+									}
+
+									// Add the results to the destination
+									foreach(var task in tasks) {
+										addMethod.Invoke(destination, new object[] { task.Result });
+									}
 								}
-								catch (ObjectCreationException) {
-									throw new MapNotFoundException(types);
+							}
+							else {
+								bool canCreateNew = true;
+								foreach (var element in sourceEnumerable) {
+									object destinationElement;
+
+									// Try new map
+									if (canCreateNew) {
+										try {
+											destinationElement = await elementsMapper.MapAsync(element, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken);
+											addMethod.Invoke(destination, new object[] { destinationElement });
+											continue;
+										}
+										catch (MapNotFoundException) {
+											canCreateNew = false;
+										}
+									}
+
+									// Try merge map
+									try {
+										destinationElement = ObjectFactory.Create(elementTypes.To);
+									}
+									catch (ObjectCreationException) {
+										throw new MapNotFoundException(types);
+									}
+									destinationElement = await elementsMapper.MapAsync(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationToken);
+									addMethod.Invoke(destination, new object[] { destinationElement });
 								}
-								destinationElement = await elementsMapper.MapAsync(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationToken);
-								addMethod.Invoke(destination, new object[] { destinationElement });
 							}
 
 							var result = ObjectFactory.ConvertCollectionToType(destination, types.To);

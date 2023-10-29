@@ -113,11 +113,15 @@ namespace NeatMapper.Tests.Matching {
 		[DataRow(-3, "-5", false)]
 		[DataRow(0, "0", true)]
 		public void ShouldMatchPrimitives(int num, string str, bool result) {
+			Assert.IsTrue(_matcher.CanMatch<int, string>());
+
 			Assert.AreEqual(result, _matcher.Match(num, str));
 		}
 
 		[TestMethod]
 		public void ShouldMatchClasses() {
+			Assert.IsTrue(_matcher.CanMatch<Product, ProductDto>());
+
 			Assert.IsTrue(_matcher.Match(new Product {
 				Code = "Test1"
 			}, new ProductDto {
@@ -158,11 +162,15 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestMethod]
 		public void ShouldMatchHierarchies() {
+			Assert.IsTrue(_matcher.CanMatch<LimitedProduct, ProductDto>());
+
 			Assert.IsTrue(_matcher.Match(new LimitedProduct {
 				Code = "Test1"
 			}, new ProductDto {
 				Code = "Test1"
 			}));
+
+			Assert.IsTrue(_matcher.CanMatch<Product, LimitedProductDto>());
 
 			Assert.IsTrue(_matcher.Match(new Product {
 				Code = "Test1"
@@ -191,6 +199,16 @@ namespace NeatMapper.Tests.Matching {
 			Assert.AreSame(opts, Maps.options);
 		}
 
-		// DEV: test additional maps
+		[TestMethod]
+		public void ShouldMatchWithAdditionalMaps() {
+			var options = new CustomMatchAdditionalMapsOptions();
+			options.AddMap<string, int>((s, d, _) => s?.Length == d);
+			var matcher = new Matcher(null, options);
+
+			Assert.IsTrue(matcher.CanMatch<string, int>());
+
+			Assert.IsTrue(matcher.Match("Test", 4));
+			Assert.IsFalse(matcher.Match("Test", 2));
+		}
 	}
 }

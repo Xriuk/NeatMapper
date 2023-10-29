@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections;
 
-namespace NeatMapper.Common.Matchers {
+namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which tries to match the given types using another <see cref="IMatcher"/>
 	/// and returns false in case it throws <see cref="MapNotFoundException"/>

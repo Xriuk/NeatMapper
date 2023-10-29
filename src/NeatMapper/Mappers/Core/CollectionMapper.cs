@@ -9,12 +9,12 @@ namespace NeatMapper {
 	/// <summary>
 	/// Base class for mappers which map collections by mapping elements with another <see cref="IMapper"/>
 	/// </summary>
-	public abstract class CustomCollectionMapper : IMapper {
+	public abstract class CollectionMapper : IMapper {
 		// Used as a nested mapper too, includes the collection mapper itself
 		protected readonly IMapper _elementsMapper;
 		protected readonly IServiceProvider _serviceProvider;
 
-		internal CustomCollectionMapper(IMapper elementsMapper, IServiceProvider serviceProvider = null) {
+		internal CollectionMapper(IMapper elementsMapper, IServiceProvider serviceProvider = null) {
 			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}

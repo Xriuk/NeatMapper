@@ -436,6 +436,8 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// No constraints
 				{ 
+					Assert.IsTrue(_mapper.CanMapNew<IEnumerable<string>, IList<string>>());
+
 					var source = new[] { "Test" };
 					var result = _mapper.Map<IEnumerable<string>, IList<string>>(source);
 
@@ -450,6 +452,9 @@ namespace NeatMapper.Tests.Mapping {
 					var mapper = new NewMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
+
+					Assert.IsTrue(mapper.CanMapNew<IEnumerable<Product>, int>());
+
 					Assert.AreEqual(1, mapper.Map<IEnumerable<Product>, int>(new[] { new Product() }));
 				}
 			}
@@ -458,6 +463,8 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Different
 				{
+					Assert.IsTrue(_mapper.CanMapNew<Tuple<string, int>, ValueTuple<int, string>>());
+
 					var result = _mapper.Map<Tuple<string, int>, ValueTuple<int, string>>(new Tuple<string, int>("Test", 4));
 					Assert.AreEqual(4, result.Item1);
 					Assert.AreEqual("Test", result.Item2);
@@ -465,6 +472,8 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Equal
 				{
+					Assert.IsTrue(_mapper.CanMapNew<Tuple<string, string>, ValueTuple<string, string>>());
+
 					var result = _mapper.Map<Tuple<string, string>, ValueTuple<string, string>>(new Tuple<string, string>("Test1", "Test2"));
 					Assert.AreEqual("Test2", result.Item1);
 					Assert.AreEqual("Test1", result.Item2);
@@ -475,6 +484,8 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Shared
 				{
+					Assert.IsTrue(_mapper.CanMapNew<Tuple<string, int>, ValueTuple<string, int, bool>>());
+
 					var result = _mapper.Map<Tuple<string, int>, ValueTuple<string, int, bool>>(new Tuple<string, int>("Test", 2));
 					Assert.AreEqual("Test", result.Item1);
 					Assert.AreEqual(2, result.Item2);
@@ -486,6 +497,8 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldNotMapNotMatchingGenericTypes() {
 			// Types should be the same
+			Assert.IsFalse(_mapper.CanMapNew<IEnumerable<string>, IList<int>>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<string>, IList<int>>(new[] { "Test" }));
 		}
 
@@ -496,6 +509,9 @@ namespace NeatMapper.Tests.Mapping {
 				var mapper = new NewMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
+
+				Assert.IsFalse(mapper.CanMapNew<IList<Product>, int>());
+				Assert.IsTrue(mapper.CanMapNew<IList<Guid>, int>());
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
 				mapper.Map<IList<Guid>, int>(new List<Guid>());
@@ -508,6 +524,9 @@ namespace NeatMapper.Tests.Mapping {
 				var mapper = new NewMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
+
+				Assert.IsFalse(mapper.CanMapNew<IList<Guid>, int>());
+				Assert.IsTrue(mapper.CanMapNew<IList<Product>, int>());
 
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Guid>, int>(new List<Guid>()));
 				mapper.Map<IList<Product>, int>(new List<Product>());
@@ -523,6 +542,10 @@ namespace NeatMapper.Tests.Mapping {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
+				Assert.IsFalse(mapper.CanMapNew<IList<Product>, int>());
+				Assert.IsFalse(mapper.CanMapNew<IList<ManagedTest>, int>());
+				Assert.IsTrue(mapper.CanMapNew<IList<UnmanagedTest>, int>());
+
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, int>(new List<Product>()));
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ManagedTest>, int>(new List<ManagedTest>()));
 				mapper.Map<IList<UnmanagedTest>, int>(new List<UnmanagedTest>());
@@ -536,6 +559,9 @@ namespace NeatMapper.Tests.Mapping {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
+				Assert.IsFalse(mapper.CanMapNew<IList<ClassWithoutParameterlessConstructor>, int>());
+				Assert.IsTrue(mapper.CanMapNew<IList<Product>, int>());
+
 				TestUtils.AssertMapNotFound(() => mapper.Map<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>()));
 				mapper.Map<IList<Product>, int>(new List<Product>());
 			}
@@ -548,6 +574,9 @@ namespace NeatMapper.Tests.Mapping {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
+					Assert.IsFalse(mapper.CanMapNew<IList<Category>, int>());
+					Assert.IsTrue(mapper.CanMapNew<IList<Product>, int>());
+
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<List<Product>, int>(new List<Product>()));
 					mapper.Map<IList<Product>, int>(new List<Product>());
@@ -559,6 +588,10 @@ namespace NeatMapper.Tests.Mapping {
 					var mapper = new NewMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
+
+					Assert.IsFalse(mapper.CanMapNew<Queue<Category>, Category>());
+					Assert.IsTrue(mapper.CanMapNew<CustomCollection<Category>, Category>());
+					Assert.IsTrue(mapper.CanMapNew<BaseClassTest, Category>());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<Queue<Category>, Category>(new Queue<Category>()));
 					mapper.Map<CustomCollection<Category>, Category>(new CustomCollection<Category>());
@@ -574,6 +607,9 @@ namespace NeatMapper.Tests.Mapping {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
+					Assert.IsFalse(mapper.CanMapNew<IList<Category>, int>());
+					Assert.IsTrue(mapper.CanMapNew<IList<DisposableTest>, int>());
+
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, int>(new List<Category>()));
 					mapper.Map<IList<DisposableTest>, int>(new List<DisposableTest>());
 				}
@@ -584,9 +620,12 @@ namespace NeatMapper.Tests.Mapping {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
+					Assert.IsFalse(mapper.CanMapNew<IList<CustomCollection<Category>>, Category>());
+					Assert.IsTrue(mapper.CanMapNew<IList<EquatableTest>, Product>());
+
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Queue<Category>>, Category>(new List<Queue<Category>>()));
-					mapper.Map< IList<EquatableTest>, Product>(new List<EquatableTest>());
+					mapper.Map<IList<EquatableTest>, Product>(new List<EquatableTest>());
 				}
 			}
 
@@ -597,6 +636,9 @@ namespace NeatMapper.Tests.Mapping {
 					var mapper = new NewMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
+
+					Assert.IsFalse(mapper.CanMapNew<IList<Category>, Product>());
+					Assert.IsTrue(mapper.CanMapNew<IList<CustomCollection<int>>, List<int>>());
 
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Product>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, LimitedProduct>(new List<Product>()));
@@ -611,6 +653,9 @@ namespace NeatMapper.Tests.Mapping {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
+					Assert.IsFalse(mapper.CanMapNew<IList<Category>, Queue<Product>>());
+					Assert.IsTrue(mapper.CanMapNew<IList<LimitedProduct>, Queue<Product>>());
+
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Category>, Queue<Product>>(new List<Category>()));
 					TestUtils.AssertMapNotFound(() => mapper.Map<IList<Product>, Queue<LimitedProduct>>(new List<Product>()));
 					mapper.Map<IList<LimitedProduct>, Queue<Product>>(new List<LimitedProduct>());
@@ -623,27 +668,37 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldMapSingleGenericType() {
 			// Generic source
-			Assert.AreEqual("Elements: 2", _mapper.Map<IEnumerable<int>, string>(new[] { 1, 2 }));
+			{
+				Assert.IsTrue(_mapper.CanMapNew<IEnumerable<int>, string>());
+
+				Assert.AreEqual("Elements: 2", _mapper.Map<IEnumerable<int>, string>(new[] { 1, 2 }));
+			}
 
 			// Generic destination
-			var list = _mapper.Map<int, IList<string>>(3);
-			Assert.IsNotNull(list);
-			Assert.AreEqual(3, list.Count);
-			Assert.IsTrue(list.IsReadOnly);
-			Assert.IsTrue(list.All(e => e == default));
+			{
+				Assert.IsTrue(_mapper.CanMapNew<int, IList<string>>());
+
+				var list = _mapper.Map<int, IList<string>>(3);
+				Assert.IsNotNull(list);
+				Assert.AreEqual(3, list.Count);
+				Assert.IsTrue(list.IsReadOnly);
+				Assert.IsTrue(list.All(e => e == default));
+			}
 		}
 
 		[TestMethod]
 		public void ShouldMapDeepGenerics() {
-			var objectToMap = new Dictionary<string, IDictionary<int, IList<bool>>>();
+			Assert.IsTrue(_mapper.CanMapNew<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>());
 
 			// Does not throw
-			_mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>(objectToMap);
+			_mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>(new Dictionary<string, IDictionary<int, IList<bool>>>());
 		}
 
 		[TestMethod]
 		public void ShouldNotMapNotMatchingDeepGenerics() {
 			// Types should be the same
+			Assert.IsFalse(_mapper.CanMapNew<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>());
+
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>(new Dictionary<string, IDictionary<int, IList<bool>>>()));
 		}
 
@@ -675,6 +730,8 @@ namespace NeatMapper.Tests.Mapping {
 			var mapper = new NewCollectionMapper(_mapper);
 
 			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], ValueTuple<int, string>[]>());
+
 				var tuples = mapper.Map<ValueTuple<int, string>[]>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
 				Assert.IsNotNull(tuples);
@@ -686,6 +743,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], IList<ValueTuple<int, string>>>());
+
 				var tuples = mapper.Map<IList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
 				Assert.IsNotNull(tuples);
@@ -697,6 +756,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], LinkedList<ValueTuple<int, string>>>());
+
 				var tuples = mapper.Map<LinkedList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
 				Assert.IsNotNull(tuples);
@@ -708,6 +769,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], Queue<ValueTuple<int, string>>>());
+
 				var tuples = mapper.Map<Queue<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
 				Assert.IsNotNull(tuples);
@@ -719,6 +782,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], Stack<ValueTuple<int, string>>>());
+
 				var tuples = mapper.Map<Stack<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
 				Assert.IsNotNull(tuples);
@@ -731,6 +796,8 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
+				Assert.IsTrue(mapper.CanMapNew<IEnumerable<Tuple<string, int>>, CustomCollection<ValueTuple<int, string>>>());
+
 				var tuples = mapper.Map<CustomCollection<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
 				Assert.IsNotNull(tuples);

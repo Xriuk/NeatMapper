@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Collections;
 
-namespace NeatMapper.Common.Matchers {
+namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches by invoking a delegate, won't throw as the delegate should always compare two objects
 	/// </summary>

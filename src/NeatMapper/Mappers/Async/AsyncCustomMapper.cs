@@ -24,12 +24,13 @@ namespace NeatMapper {
 		public abstract Task<object> MapAsync(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken  = default);
 
 
-		protected AsyncMappingContext CreateMappingContext(MappingOptions options) {
+		protected AsyncMappingContext CreateMappingContext(MappingOptions options, CancellationToken cancellationToken) {
 			var overrideOptions = options?.GetOptions<AsyncMapperOverrideMappingOptions>();
 			return new AsyncMappingContext {
 				Mapper = overrideOptions?.Mapper ?? this,
 				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options ?? MappingOptions.Empty
+				MappingOptions = options ?? MappingOptions.Empty,
+				CancellationToken = cancellationToken
 			};
 		}
 	}
