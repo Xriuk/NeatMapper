@@ -25,7 +25,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncNewMapStatic<string, KeyValuePair<string, int>>,
 			IAsyncNewMapStatic<string, int>,
 			IAsyncNewMapStatic<decimal, int>,
-			IAsyncNewMapStatic<decimal, string>
+			IAsyncNewMapStatic<decimal, string>,
+			IAsyncNewMapStatic<int, float>
 #else
 			IAsyncNewMap<int, string>,
 			IAsyncNewMap<Price, decimal>,
@@ -43,7 +44,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncNewMap<string, KeyValuePair<string, int>>,
 			IAsyncNewMap<string, int>,
 			IAsyncNewMap<decimal, int>,
-			IAsyncNewMap<decimal, string>
+			IAsyncNewMap<decimal, string>,
+			IAsyncNewMap<int, float>
 #endif
 			{
 
@@ -322,6 +324,23 @@ namespace NeatMapper.Tests.Mapping.Async {
 #endif
 				.MapAsync(decimal source, AsyncMappingContext context) {
 				return Task.FromResult("NewMap");
+			}
+
+			// "long"-running task
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncNewMapStatic<int, float>
+#else
+				IAsyncNewMap<int, float>
+#endif
+				.MapAsync(int source, AsyncMappingContext context) {
+				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
+				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				await Task.Delay(10);
+				return (source * 2);
 			}
 		}
 

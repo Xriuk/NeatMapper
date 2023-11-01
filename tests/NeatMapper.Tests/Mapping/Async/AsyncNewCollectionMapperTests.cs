@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +9,7 @@ using System.Threading.Tasks;
 namespace NeatMapper.Tests.Mapping.Async {
 	public class AsyncNewCollectionMapperTests {
 		protected IAsyncMapper _mapper = null;
+
 
 		[TestMethod]
 		public async Task ShouldMapCollections() {
@@ -140,6 +140,12 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 		}
 
+		// This is mostly to check times
+		[TestMethod]
+		public Task ShouldMapBigCollections() {
+			return _mapper.MapAsync<float[]>(Enumerable.Repeat(0, 100));
+		}
+
 		[TestMethod]
 		public async Task ShouldNotMapCollectionsIfCannotCreateDestination() {
 			Assert.IsFalse(await _mapper.CanMapAsyncNew<int[], CustomCollectionWithoutParameterlessConstructor<string>>());
@@ -158,7 +164,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapNullCollectionsOnlyIfElementsMapExists() {
 			Assert.IsNull(await _mapper.MapAsync<int[], string[]>(null));
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<float>>(null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<decimal>>(null));
 		}
 
 		[TestMethod]

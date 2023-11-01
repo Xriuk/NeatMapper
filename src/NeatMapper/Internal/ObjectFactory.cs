@@ -12,8 +12,8 @@ using System.Reflection;
 
 namespace NeatMapper {
 	internal sealed class ObjectFactory {
-		static readonly IDictionary<Type, string> typeCreationErrorsCache = new ConcurrentDictionary<Type, string>();
-		static readonly IDictionary<Type, object> typeInstancesCache = new ConcurrentDictionary<Type, object>();
+		static readonly IDictionary<Type, string> typeCreationErrorsCache = new Dictionary<Type, string>();
+		static readonly IDictionary<Type, object> typeInstancesCache = new Dictionary<Type, object>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -38,22 +38,24 @@ namespace NeatMapper {
 				}
 			}
 
-			if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
-				if (error == null)
-					return () => Activator.CreateInstance(objectType);
-				else
-					throw new ObjectCreationException(objectType, new Exception(error));
-			}
-			else {
-				// Try creating an instance
-				try {
-					Activator.CreateInstance(objectType);
-					typeCreationErrorsCache.Add(objectType, null);
-					return () => Activator.CreateInstance(objectType);
+			lock (typeCreationErrorsCache) { 
+				if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
+					if (error == null)
+						return () => Activator.CreateInstance(objectType);
+					else
+						throw new ObjectCreationException(objectType, new Exception(error));
 				}
-				catch (Exception e) {
-					typeCreationErrorsCache.Add(objectType, e.Message);
-					throw new ObjectCreationException(objectType, e);
+				else {
+					// Try creating an instance
+					try {
+						Activator.CreateInstance(objectType);
+						typeCreationErrorsCache.Add(objectType, null);
+						return () => Activator.CreateInstance(objectType);
+					}
+					catch (Exception e) {
+						typeCreationErrorsCache.Add(objectType, e.Message);
+						throw new ObjectCreationException(objectType, e);
+					}
 				}
 			}
 		}
@@ -63,12 +65,14 @@ namespace NeatMapper {
 		}
 
 		public static object GetOrCreateCached(Type objectType) {
-			if(typeInstancesCache.TryGetValue(objectType, out var obj))
-				return obj;
-			else {
-				obj = Create(objectType);
-				typeInstancesCache.Add(objectType, obj);
-				return obj;
+			lock (typeInstancesCache) { 
+				if(typeInstancesCache.TryGetValue(objectType, out var obj))
+					return obj;
+				else {
+					obj = Create(objectType);
+					typeInstancesCache.Add(objectType, obj);
+					return obj;
+				}
 			}
 		}
 
@@ -89,22 +93,24 @@ namespace NeatMapper {
 				}
 			}
 
-			if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
-				if (error == null)
-					return true;
-				else
-					return false;
-			}
-			else {
-				// Try creating an instance
-				try {
-					Activator.CreateInstance(objectType);
-					typeCreationErrorsCache.Add(objectType, null);
-					return true;
+			lock (typeCreationErrorsCache) { 
+				if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
+					if (error == null)
+						return true;
+					else
+						return false;
 				}
-				catch (Exception e) {
-					typeCreationErrorsCache.Add(objectType, e.Message);
-					return false;
+				else {
+					// Try creating an instance
+					try {
+						Activator.CreateInstance(objectType);
+						typeCreationErrorsCache.Add(objectType, null);
+						return true;
+					}
+					catch (Exception e) {
+						typeCreationErrorsCache.Add(objectType, e.Message);
+						return false;
+					}
 				}
 			}
 		}

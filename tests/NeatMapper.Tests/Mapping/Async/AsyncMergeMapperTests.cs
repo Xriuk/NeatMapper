@@ -27,7 +27,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMapStatic<string, int>,
 			IAsyncMergeMapStatic<decimal, int>,
 			IMatchMapStatic<decimal, int>,
-			IAsyncMergeMapStatic<decimal, string>
+			IAsyncMergeMapStatic<decimal, string>,
+			IAsyncMergeMapStatic<int, float>
 #else
 			IAsyncMergeMap<int, string>,
 			IAsyncMergeMap<Price, decimal>,
@@ -47,7 +48,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMap<string, int>,
 			IAsyncMergeMap<decimal, int>,
 			IMatchMap<decimal, int>,
-			IAsyncMergeMap<decimal, string>
+			IAsyncMergeMap<decimal, string>,
+			IAsyncMergeMap<int, float>
 #endif
 			{
 
@@ -351,6 +353,21 @@ namespace NeatMapper.Tests.Mapping.Async {
 #endif
 				.MapAsync(decimal source, string destination, AsyncMappingContext context) {
 				return Task.FromResult("MergeMap");
+			}
+
+			// "long"-running task
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<int, float>
+#else
+				IAsyncMergeMap<int, float>
+#endif
+				.MapAsync(int source, float destination, AsyncMappingContext context) {
+				await Task.Delay(10);
+				return (source * 2);
 			}
 		}
 

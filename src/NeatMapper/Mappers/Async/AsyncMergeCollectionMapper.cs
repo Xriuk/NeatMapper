@@ -2,9 +2,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace NeatMapper {
 	/// <summary>
@@ -179,8 +182,6 @@ namespace NeatMapper {
 							if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null))
 								throw new MapNotFoundException(types);
 
-							// Any element that is not mappable will fail on the first mapping
-
 							var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 							var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
 
@@ -188,8 +189,6 @@ namespace NeatMapper {
 							var elementsToAdd = new List<object>();
 
 							mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);
-
-							var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 							// Create the matcher and the mapping options
 							IMatcher elementMatcher;
@@ -215,86 +214,213 @@ namespace NeatMapper {
 								}
 							}
 
-							// At least one of New or Merge mapper is required to map elements
-							// If both are found they will be used in the following order:
-							// - elements to update will use MergeMap first (on the existing element),
-							//   then NewMap (by removing the existing element and adding the new one)
-							// - elements to add will use NewMap first,
-							//   then MergeMap (by creating a new element and merging to it)
+							// Added/updated elements, all the elements are matched first, then mapped, so that there are no side effects during the mapping
+							// (like an element changing after a map and thus matching with another one)
+							var enumerable = sourceEnumerable.Cast<object>();
+							if (enumerable.Any()) {
+								// At least one of New or Merge mapper is required to map elements
+								// If both are found they will be used in the following order:
+								// - elements to update will use MergeMap first (on the existing element),
+								//   then NewMap (by removing the existing element and adding the new one)
+								// - elements to add will use NewMap first,
+								//   then MergeMap (by creating a new element and merging to it)
 
-							// Added/updated elements
-							var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
-								?? _asyncCollectionMappersOption.MaxParallelMappings;
+								var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-							if(parallelMappings > 1) {
-								// Use the first element to check which map can be used
-								/*var enumerable = sourceEnumerable.Cast<object>();
-								if (enumerable.Any()) {
-									bool canCreateNew;
-									bool canCreateMerge = true;
-								}*/
-							}
-							else {
-								var canCreateNew = true;
-								var canCreateMerge = true;
-								foreach (var sourceElement in sourceEnumerable) {
-									bool found = false;
-									object matchingDestinationElement = null;
-									foreach (var destinationElement in destinationEnumerable) {
-										if (elementMatcher.Match(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions) &&
-											!elementsToRemove.Contains(destinationElement)) {
+								var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
+									?? _asyncCollectionMappersOption.MaxParallelMappings;
 
-											matchingDestinationElement = destinationElement;
-											found = true;
-											break;
+								var sourceDestinationMatches = enumerable
+									.Select(sourceElement => {
+										bool found = false;
+										object matchingDestinationElement = null;
+										foreach (var destinationElement in destinationEnumerable) {
+											if (elementMatcher.Match(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions) &&
+												!elementsToRemove.Contains(destinationElement)) {
+
+												matchingDestinationElement = destinationElement;
+												found = true;
+												break;
+											}
 										}
+										return (SourceElement: sourceElement, Found: found, MatchingDestinationElement: matchingDestinationElement);
+									});
+
+								// Check if we need to enable parallel mapping or not
+								if (parallelMappings > 1) {
+									// We do an initial check for the mapping capabilities, to avoid firing up many tasks
+									// which could potentially fail while causing side-effects
+
+									// Check if new map could be used
+									// -1: unknown (must be checked at runtime), 0: false, 1: true
+									int canMapNew;
+									try {
+										canMapNew = (await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken)) ? 1 : 0;
+									}
+									catch (InvalidOperationException) {
+										canMapNew = -1;
 									}
 
-									if (found) {
-										// Try merge map
-										if (canCreateMerge) {
-											try {
-												var mergeResult = await elementsMapper.MapAsync(sourceElement, elementTypes.From, matchingDestinationElement, elementTypes.To, mappingOptions, cancellationToken);
-												if (mergeResult != matchingDestinationElement) {
-													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(mergeResult);
+									// Check if merge map could be used
+									// -1: unknown (must be checked at runtime), 0: false, 1: true
+									int canMapMerge;
+									try {
+										canMapMerge = (await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken)) ? 1 : 0;
+									
+										// If we can only merge map we must be able to create a destination too, in order to map new elements
+										if (canMapMerge == 1 && canMapNew != 1 && !ObjectFactory.CanCreate(elementTypes.To))
+											canMapMerge = 0;
+									}
+									catch (InvalidOperationException) {
+										canMapMerge = -1;
+									}
+
+									// Create and await all the tasks
+									// We group by found destination element because multiple source elements could match with the same destination element
+									var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+									var parallelSemaphore = new SemaphoreSlim(parallelMappings);
+									var exclusiveSemaphore = new SemaphoreSlim(1);
+									var nestedTasks = sourceDestinationMatches
+										// This groups found elements together by the destination, while not found are kept singularly
+										.GroupBy(sourceMapping => (sourceMapping.Found, sourceMapping.MatchingDestinationElement))
+										.SelectMany(sourceGroup => sourceGroup.Key.Found ?
+											(IEnumerable<IEnumerable<(object SourceElement, bool Found, object MatchingDestinationElement)>>)new[] { sourceGroup } :
+											sourceGroup.Select(e => new[] { e }))
+										.Select(sourceGroup => sourceGroup
+											.Select(sourceMapping => Task.Run<(bool Found, object MatchingDestinationElement, object Result)>(async () => {
+												await parallelSemaphore.WaitAsync(cancellationSource.Token);
+												try {
+													if (sourceMapping.Found) {
+														// Try merge map
+														if (Interlocked.CompareExchange(ref canMapMerge, 0, 0) != 0) {
+															try {
+																return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, sourceMapping.MatchingDestinationElement, elementTypes.To, mappingOptions, cancellationSource.Token));
+															}
+															catch (MapNotFoundException) {
+																Interlocked.CompareExchange(ref canMapMerge, 0, -1);
+															}
+														}
+
+														// Try new map
+														if (Interlocked.CompareExchange(ref canMapNew, 0, 0) == 0)
+															throw new MapNotFoundException(types);
+														return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token));
+													}
+													else {
+														// Try new map
+														if (Interlocked.CompareExchange(ref canMapNew, 0, 0) != 0) {
+															try {
+																return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token));
+															}
+															catch (MapNotFoundException) {
+																Interlocked.CompareExchange(ref canMapNew, 0, -1);
+															}
+														}
+
+														// Try merge map
+														if (Interlocked.CompareExchange(ref canMapMerge, 0, 0) == 0)
+															throw new MapNotFoundException(types);
+														object destinationInstance;
+														try {
+															destinationInstance = ObjectFactory.Create(elementTypes.To);
+														}
+														catch (ObjectCreationException) {
+															throw new MapNotFoundException(types);
+														}
+														return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationSource.Token));
+													}
 												}
-												continue;
+												finally {
+													parallelSemaphore.Release();
+												}
+											}, cancellationSource.Token))
+											.ToArray()
+										)
+										.ToArray();
+									var tasks = nestedTasks
+										.Select(innerTasks => Task.Run<object>(async () => {
+											foreach(var innerTask in innerTasks) {
+												await innerTask;
 											}
-											catch (MapNotFoundException) {
-												canCreateMerge = false;
-											}
-										}
-
-										// Try new map
-										if (!canCreateNew)
-											throw new MapNotFoundException(types);
-										elementsToRemove.Add(matchingDestinationElement);
-										elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
+											return null;
+										}, cancellationSource.Token))
+										.ToArray();
+									try {
+										await TaskUtils.WhenAllFailFast(tasks);
 									}
-									else {
-										// Try new map
-										if (canCreateNew) {
-											try {
-												elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
-												continue;
-											}
-											catch (MapNotFoundException) {
-												canCreateNew = false;
-											}
-										}
+									catch {
+										// Cancel all the tasks
+										cancellationSource.Cancel();
 
-										// Try merge map
-										if (!canCreateMerge)
-											throw new MapNotFoundException(types);
-										object destinationInstance;
-										try {
-											destinationInstance = ObjectFactory.Create(elementTypes.To);
+										throw;
+									}
+
+									// Process results
+									foreach(var innerTasks in nestedTasks) {
+										foreach(var innerTask in innerTasks) {
+											var (found, matchingDestinationElement, destinationElement) = innerTask.Result;
+											if (found) {
+												if(matchingDestinationElement != destinationElement) {
+													elementsToRemove.Add(matchingDestinationElement);
+													elementsToAdd.Add(destinationElement);
+												}
+											}
+											else
+												elementsToAdd.Add(destinationElement);
 										}
-										catch (ObjectCreationException) {
-											throw new MapNotFoundException(types);
+									}
+								}
+								else {
+									// Any element that is not mappable will fail on the first mapping
+									var canCreateNew = true;
+									var canCreateMerge = true;
+									foreach (var (sourceElement, found, matchingDestinationElement) in sourceDestinationMatches.ToArray()) {
+										if (found) {
+											// Try merge map
+											if (canCreateMerge) {
+												try {
+													var mergeResult = await elementsMapper.MapAsync(sourceElement, elementTypes.From, matchingDestinationElement, elementTypes.To, mappingOptions, cancellationToken);
+													if (mergeResult != matchingDestinationElement) {
+														elementsToRemove.Add(matchingDestinationElement);
+														elementsToAdd.Add(mergeResult);
+													}
+													continue;
+												}
+												catch (MapNotFoundException) {
+													canCreateMerge = false;
+												}
+											}
+
+											// Try new map
+											if (!canCreateNew)
+												throw new MapNotFoundException(types);
+											elementsToRemove.Add(matchingDestinationElement);
+											elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
 										}
-										elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationToken));
+										else {
+											// Try new map
+											if (canCreateNew) {
+												try {
+													elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken));
+													continue;
+												}
+												catch (MapNotFoundException) {
+													canCreateNew = false;
+												}
+											}
+
+											// Try merge map
+											if (!canCreateMerge)
+												throw new MapNotFoundException(types);
+											object destinationInstance;
+											try {
+												destinationInstance = ObjectFactory.Create(elementTypes.To);
+											}
+											catch (ObjectCreationException) {
+												throw new MapNotFoundException(types);
+											}
+											elementsToAdd.Add(await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationToken));
+										}
 									}
 								}
 							}
@@ -307,6 +433,7 @@ namespace NeatMapper {
 								addMethod.Invoke(destination, new object[] { element });
 							}
 
+							// This is in case we created a collection because it was null
 							var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
 
 							// Should not happen

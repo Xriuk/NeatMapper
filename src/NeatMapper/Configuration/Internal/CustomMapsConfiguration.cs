@@ -14,8 +14,8 @@ namespace NeatMapper {
 	/// Contains informations about custom defined maps (both in classes and outside, both specific and generic)
 	/// </summary>
 	internal sealed class CustomMapsConfiguration {
-		static readonly IDictionary<Type, object> nonStaticMethodsInstances = new ConcurrentDictionary<Type, object>();
-		readonly IDictionary<(Type From, Type To), Func<object[], object>> _genericCache = new ConcurrentDictionary<(Type From, Type To), Func<object[], object>>();
+		static readonly IDictionary<Type, object> nonStaticMethodsInstances = new Dictionary<Type, object>();
+		readonly IDictionary<(Type From, Type To), Func<object[], object>> _genericCache = new Dictionary<(Type From, Type To), Func<object[], object>>();
 
 		/// <param name="interfaceFilter">
 		/// Filter used to retrieve interface(s) for the maps, will receive the declaring type 
@@ -285,17 +285,19 @@ namespace NeatMapper {
 		}
 
 		internal static object CreateOrReturnInstance(Type classType) {
-			if (!nonStaticMethodsInstances.TryGetValue(classType, out var instance)) {
-				try {
-					instance = ObjectFactory.Create(classType);
-					nonStaticMethodsInstances.Add(classType, instance);
+			lock (nonStaticMethodsInstances) { 
+				if (!nonStaticMethodsInstances.TryGetValue(classType, out var instance)) {
+					try {
+						instance = ObjectFactory.Create(classType);
+						nonStaticMethodsInstances.Add(classType, instance);
+					}
+					catch (Exception e) {
+						throw new InvalidOperationException($"Could not create instance of type {classType.FullName ?? classType.Name} for non static interface", e);
+					}
 				}
-				catch (Exception e) {
-					throw new InvalidOperationException($"Could not create instance of type {classType.FullName ?? classType.Name} for non static interface", e);
-				}
-			}
 
-			return instance;
+				return instance;
+			}
 		}
 
 		#region Types methods
