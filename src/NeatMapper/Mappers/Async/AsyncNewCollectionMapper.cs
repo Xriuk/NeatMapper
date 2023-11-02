@@ -133,7 +133,7 @@ namespace NeatMapper {
 												// Try new map
 												if (Interlocked.CompareExchange(ref canMapNew, 0, 0) != 0) {
 													try {
-														return await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationToken);
+														return await elementsMapper.MapAsync(sourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token);
 													}
 													catch (MapNotFoundException) {
 														Interlocked.CompareExchange(ref canMapNew, 0, -1);
@@ -147,7 +147,7 @@ namespace NeatMapper {
 												catch (ObjectCreationException) {
 													throw new MapNotFoundException(types);
 												}
-												return await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationToken);
+												return await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationSource.Token);
 											}
 											finally {
 												semaphore.Release();

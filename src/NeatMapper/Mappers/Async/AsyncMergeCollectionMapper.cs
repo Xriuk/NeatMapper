@@ -279,74 +279,74 @@ namespace NeatMapper {
 									// We group by found destination element because multiple source elements could match with the same destination element
 									var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 									var parallelSemaphore = new SemaphoreSlim(parallelMappings);
-									var exclusiveSemaphore = new SemaphoreSlim(1);
-									var nestedTasks = sourceDestinationMatches
-										// This groups found elements together by the destination, while not found are kept singularly
-										.GroupBy(sourceMapping => (sourceMapping.Found, sourceMapping.MatchingDestinationElement))
-										.SelectMany(sourceGroup => sourceGroup.Key.Found ?
-											(IEnumerable<IEnumerable<(object SourceElement, bool Found, object MatchingDestinationElement)>>)new[] { sourceGroup } :
-											sourceGroup.Select(e => new[] { e }))
-										.Select(sourceGroup => sourceGroup
-											.Select(sourceMapping => Task.Run<(bool Found, object MatchingDestinationElement, object Result)>(async () => {
-												await parallelSemaphore.WaitAsync(cancellationSource.Token);
-												try {
-													if (sourceMapping.Found) {
-														// Try merge map
-														if (Interlocked.CompareExchange(ref canMapMerge, 0, 0) != 0) {
-															try {
-																return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, sourceMapping.MatchingDestinationElement, elementTypes.To, mappingOptions, cancellationSource.Token));
-															}
-															catch (MapNotFoundException) {
-																Interlocked.CompareExchange(ref canMapMerge, 0, -1);
-															}
-														}
-
-														// Try new map
-														if (Interlocked.CompareExchange(ref canMapNew, 0, 0) == 0)
-															throw new MapNotFoundException(types);
-														return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token));
-													}
-													else {
-														// Try new map
-														if (Interlocked.CompareExchange(ref canMapNew, 0, 0) != 0) {
-															try {
-																return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token));
-															}
-															catch (MapNotFoundException) {
-																Interlocked.CompareExchange(ref canMapNew, 0, -1);
-															}
-														}
-
-														// Try merge map
-														if (Interlocked.CompareExchange(ref canMapMerge, 0, 0) == 0)
-															throw new MapNotFoundException(types);
-														object destinationInstance;
+									var tasks = sourceDestinationMatches
+										.Select(sourceMapping => (sourceMapping.Found, sourceMapping.MatchingDestinationElement, Result: Task.Run<object>(async () => {
+											await parallelSemaphore.WaitAsync(cancellationSource.Token);
+											try {
+												if (sourceMapping.Found) {
+													// Try merge map
+													if (Interlocked.CompareExchange(ref canMapMerge, 0, 0) != 0) {
 														try {
-															destinationInstance = ObjectFactory.Create(elementTypes.To);
+															return await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, sourceMapping.MatchingDestinationElement, elementTypes.To, mappingOptions, cancellationSource.Token);
 														}
-														catch (ObjectCreationException) {
-															throw new MapNotFoundException(types);
+														catch (MapNotFoundException) {
+															Interlocked.CompareExchange(ref canMapMerge, 0, -1);
 														}
-														return (sourceMapping.Found, sourceMapping.MatchingDestinationElement, await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationSource.Token));
 													}
+
+													// Try new map
+													if (Interlocked.CompareExchange(ref canMapNew, 0, 0) == 0)
+														throw new MapNotFoundException(types);
+													return await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token);
 												}
-												finally {
-													parallelSemaphore.Release();
+												else {
+													// Try new map
+													if (Interlocked.CompareExchange(ref canMapNew, 0, 0) != 0) {
+														try {
+															return await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, elementTypes.To, mappingOptions, cancellationSource.Token);
+														}
+														catch (MapNotFoundException) {
+															Interlocked.CompareExchange(ref canMapNew, 0, -1);
+														}
+													}
+
+													// Try merge map
+													if (Interlocked.CompareExchange(ref canMapMerge, 0, 0) == 0)
+														throw new MapNotFoundException(types);
+													object destinationInstance;
+													try {
+														destinationInstance = ObjectFactory.Create(elementTypes.To);
+													}
+													catch (ObjectCreationException) {
+														throw new MapNotFoundException(types);
+													}
+													return await elementsMapper.MapAsync(sourceMapping.SourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions, cancellationSource.Token);
 												}
-											}, cancellationSource.Token))
-											.ToArray()
-										)
+											}
+											finally {
+												parallelSemaphore.Release();
+											}
+										}, cancellationSource.Token)))
 										.ToArray();
-									var tasks = nestedTasks
+
+									// This groups found elements together by the destination, while not found are kept singularly
+									var groupedTasks = tasks
+										.GroupBy(task => (task.Found, task.MatchingDestinationElement))
+										.SelectMany(sourceGroup => sourceGroup.Key.Found ?
+											(IEnumerable<IEnumerable<(bool Found, object MatchingDestinationElement, Task<object> Result)>>)new[] { sourceGroup } :
+											sourceGroup.Select(e => new[] { e }))
+										.Select(sourceGroup => sourceGroup.ToArray())
+										.ToArray();
+									var nestedTasks = groupedTasks
 										.Select(innerTasks => Task.Run<object>(async () => {
 											foreach(var innerTask in innerTasks) {
-												await innerTask;
+												await innerTask.Result;
 											}
 											return null;
 										}, cancellationSource.Token))
 										.ToArray();
 									try {
-										await TaskUtils.WhenAllFailFast(tasks);
+										await TaskUtils.WhenAllFailFast(nestedTasks);
 									}
 									catch {
 										// Cancel all the tasks
@@ -356,18 +356,16 @@ namespace NeatMapper {
 									}
 
 									// Process results
-									foreach(var innerTasks in nestedTasks) {
-										foreach(var innerTask in innerTasks) {
-											var (found, matchingDestinationElement, destinationElement) = innerTask.Result;
-											if (found) {
-												if(matchingDestinationElement != destinationElement) {
-													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(destinationElement);
-												}
-											}
-											else
+									foreach(var (found, matchingDestinationElement, resultTask) in tasks) {
+										var destinationElement = resultTask.Result;
+										if (found) {
+											if(matchingDestinationElement != destinationElement) {
+												elementsToRemove.Add(matchingDestinationElement);
 												elementsToAdd.Add(destinationElement);
+											}
 										}
+										else
+											elementsToAdd.Add(destinationElement);
 									}
 								}
 								else {

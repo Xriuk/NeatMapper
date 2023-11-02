@@ -13,10 +13,14 @@ namespace NeatMapper {
 		// Used as a nested mapper too, includes the collection mapper itself
 		protected readonly IMapper _elementsMapper;
 		protected readonly IServiceProvider _serviceProvider;
+		private readonly CollectionMapperMappingOptions _collectionMapperOptions;
 
 		internal CollectionMapper(IMapper elementsMapper, IServiceProvider serviceProvider = null) {
 			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
+			_collectionMapperOptions = new CollectionMapperMappingOptions {
+				Mapper = this
+			};
 		}
 
 
@@ -40,10 +44,10 @@ namespace NeatMapper {
 						}
 						else
 							return o;
-					}).Concat(new[] { overrideOptions }));
+					}).Concat(new object[] { overrideOptions, _collectionMapperOptions }));
 				}
 				else
-					options = new MappingOptions(new[] { overrideOptions });
+					options = new MappingOptions(new object[] { overrideOptions, _collectionMapperOptions });
 			}
 			else {
 				options = new MappingOptions(options.AsEnumerable().Select(o => {
@@ -55,7 +59,7 @@ namespace NeatMapper {
 					}
 					else
 						return o;
-				}));
+				}).Concat(new [] { _collectionMapperOptions }));
 			}
 
 			if(overrideOptions.Mapper == null)
