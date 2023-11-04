@@ -4,16 +4,21 @@
 
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Text;
 
 namespace NeatMapper {
 	internal sealed class ObjectFactory {
-		static readonly IDictionary<Type, string> typeCreationErrorsCache = new Dictionary<Type, string>();
-		static readonly IDictionary<Type, object> typeInstancesCache = new Dictionary<Type, object>();
+		private static readonly MethodInfo StringBuilder_Append_Char = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new[] { typeof(char) })
+			?? throw new InvalidOperationException($"Could not find method {nameof(StringBuilder)}.{nameof(StringBuilder.Append)}({nameof(Char)})");
+		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
+			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
+
+		private static readonly IDictionary<Type, string> typeCreationErrorsCache = new Dictionary<Type, string>();
+		private static readonly IDictionary<Type, object> typeInstancesCache = new Dictionary<Type, object>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -58,6 +63,10 @@ namespace NeatMapper {
 					}
 				}
 			}
+		}
+
+		private static string CreateStringFactory() {
+			return string.Empty;
 		}
 
 		public static object Create(Type objectType) {
@@ -115,12 +124,10 @@ namespace NeatMapper {
 			}
 		}
 
-		static string CreateStringFactory() {
-			return string.Empty;
-		}
-
 		public static bool CanCreateCollection(Type destination) {
-			if (destination.IsArray)
+			if(destination == typeof(string))
+				return true;
+			else if (destination.IsArray)
 				return true;
 			else if (destination.IsGenericType) {
 				var collectionDefinition = destination.GetGenericTypeDefinition();
@@ -137,7 +144,9 @@ namespace NeatMapper {
 
 		// Create a non-readonly collection which could be later converted to the given type
 		public static object CreateCollection(Type destination) {
-			if (destination.IsArray)
+			if(destination == typeof(string))
+				destination = typeof(StringBuilder); 
+			else if (destination.IsArray)
 				destination = typeof(List<>).MakeGenericType(destination.GetElementType());
 			else if (destination.IsGenericType) {
 				var collectionDefinition = destination.GetGenericTypeDefinition();
@@ -155,6 +164,10 @@ namespace NeatMapper {
 		// Returns an instance method which can be invoked with a single parameter to be added to the collection
 		public static MethodInfo GetCollectionAddMethod(object collection) {
 			var collectionInstanceType = collection.GetType();
+
+			if(collectionInstanceType == typeof(StringBuilder))
+				return StringBuilder_Append_Char;
+
 			var collectionInterface = collectionInstanceType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
 			if (collectionInterface != null)
 				return collectionInstanceType.GetInterfaceMap(collectionInterface).TargetMethods.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
@@ -173,10 +186,9 @@ namespace NeatMapper {
 			throw new InvalidOperationException("Invalid collection"); // Should not happen
 		}
 
-		// T[] Enumerable.ToArray(this IEnumerable<T> source);
-		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
-			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
 		public static object ConvertCollectionToType(object collection, Type destination) {
+			if(destination == typeof(string))
+				return ((StringBuilder)collection).ToString();
 			if (destination.IsArray)
 				return Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()).Invoke(null, new object[] { collection });
 			else if (destination.IsGenericType) {

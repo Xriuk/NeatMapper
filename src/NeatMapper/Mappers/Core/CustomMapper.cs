@@ -24,11 +24,11 @@ namespace NeatMapper {
 
 		protected MappingContext CreateMappingContext(MappingOptions options) {
 			var overrideOptions = options?.GetOptions<MapperOverrideMappingOptions>();
-			return new MappingContext {
-				Mapper = overrideOptions?.Mapper ?? this,
-				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options ?? MappingOptions.Empty
-			};
+			return new MappingContext(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Mapper ?? this,
+				options ?? MappingOptions.Empty
+			);
 		}
 	}
 }

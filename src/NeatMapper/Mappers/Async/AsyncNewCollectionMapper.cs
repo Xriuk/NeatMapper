@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IAsyncMapper"/> which creates a new collection (even nested) and maps elements with another
-	/// <see cref="IAsyncMapper"/> by trying new map first, then merge map
+	/// <see cref="IAsyncMapper"/> which creates a new <see cref="System.Collections.Generic.IEnumerable{T}"/>
+	/// (even nested) from a <see cref="System.Collections.Generic.IEnumerable{T}"/> asynchronously
+	/// and maps elements with another <see cref="IAsyncMapper"/> by trying new map first, then merge map
 	/// </summary>
 	public sealed class AsyncNewCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap {
 		public AsyncNewCollectionMapper(
@@ -67,13 +66,8 @@ namespace NeatMapper {
 			(Type From, Type To) types = (sourceType, destinationType);
 
 			// If both types are collections try mapping the element types
-			if (TypeUtils.HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
-				TypeUtils.HasInterface(types.To, typeof(IEnumerable<>)) && types.To != typeof(string)) {
-
-				var elementTypes = (
-					From: TypeUtils.GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
-					To: TypeUtils.GetInterfaceElementType(types.To, typeof(IEnumerable<>))
-				);
+			if (types.From.IsEnumerable() && types.To.IsEnumerable()) {
+				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetEnumerableElementType());
 
 				// Check if collection can be created
 				if (ObjectFactory.CanCreateCollection(types.To)) {
@@ -296,14 +290,8 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
-				TypeUtils.HasInterface(destinationType, typeof(IEnumerable<>)) && destinationType != typeof(string) &&
-				ObjectFactory.CanCreateCollection(destinationType)) {
-
-				var elementTypes = (
-					From: TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>)),
-					To: TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>))
-				);
+			if (sourceType.IsEnumerable() && destinationType.IsEnumerable() && ObjectFactory.CanCreateCollection(destinationType)) {
+				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
 
 				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
 

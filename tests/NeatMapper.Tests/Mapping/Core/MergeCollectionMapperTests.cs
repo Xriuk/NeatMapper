@@ -115,10 +115,7 @@ namespace NeatMapper.Tests.Mapping {
 				var c = new Price();
 				var destination = new List<Price> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				_mapper.Map(new[] { 20m, 15.25m, 0m }, destination, new object[] { opts, merge });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
@@ -126,6 +123,20 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
 				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
 				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
+			}
+
+			{
+				Assert.IsTrue(_mapper.CanMapMerge<string, List<float>>());
+
+				var result = _mapper.Map("world", new List<float>());
+
+				Assert.IsNotNull(result);
+				Assert.AreEqual(5, result.Count);
+				Assert.AreEqual(119f, result[0]);
+				Assert.AreEqual(111f, result[1]);
+				Assert.AreEqual(114f, result[2]);
+				Assert.AreEqual(108f, result[3]);
+				Assert.AreEqual(100f, result[4]);
 			}
 		}
 
@@ -239,6 +250,12 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(34m, b.Amount);
 				Assert.AreSame(c, destination[2]);
 				Assert.AreEqual(56m, c.Amount);
+			}
+
+			{
+				Assert.IsFalse(_mapper.CanMapMerge<IList<int>, string>());
+
+				TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 104, 101, 108, 108, 111 }, ""));
 			}
 		}
 
@@ -393,10 +410,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				var destination = new List<ICollection<string>>();
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions (false, (s, d, c) => false);
 				_mapper.Map(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
@@ -551,10 +565,7 @@ namespace NeatMapper.Tests.Mapping {
 				};
 				var destination = new CustomCollection<CategoryDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions (false, (s, d, _) => false);
 				_mapper.Map(new[] {
 					new Category {
 						Id = 3,
@@ -722,10 +733,7 @@ namespace NeatMapper.Tests.Mapping {
 				};
 				var destination = new CustomCollection<ProductDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				mapper.Map(new[] {
 					new LimitedProduct {
 						Code = "Test4",
@@ -916,9 +924,7 @@ namespace NeatMapper.Tests.Mapping {
 						Id = 6
 					}
 				}, destination, new[]{
-					new MergeCollectionsMappingOptions {
-						RemoveNotMatchedDestinationElements = false
-					}
+					new MergeCollectionsMappingOptions(false)
 				});
 				Assert.IsNotNull(result);
 				Assert.AreSame(destination, result);
@@ -1063,7 +1069,7 @@ namespace NeatMapper.Tests.Mapping {
 			options.AddMap<string, int>((s, _) => 0);
 			var mapper2 = new NewMapper(null, options);
 
-			Assert.IsTrue(mapper.CanMapMerge<IEnumerable<string>, List<int>>(new MapperOverrideMappingOptions { Mapper = mapper2 }));
+			Assert.IsTrue(mapper.CanMapMerge<IEnumerable<string>, List<int>>(new MapperOverrideMappingOptions(mapper2)));
 		}
 	}
 }

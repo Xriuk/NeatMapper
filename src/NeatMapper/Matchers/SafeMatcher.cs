@@ -6,10 +6,12 @@ namespace NeatMapper {
 	/// and returns false in case it throws <see cref="MapNotFoundException"/>
 	/// </summary>
 	public sealed class SafeMatcher : IMatcher {
-		readonly IMatcher _matcher;
+		private readonly IMatcher _matcher;
+		private readonly NestedMatchingContext _nestedMatchingContext;
 
 		public SafeMatcher(IMatcher matcher) {
 			_matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
+			_nestedMatchingContext = new NestedMatchingContext(this);
 		}
 
 
@@ -34,6 +36,9 @@ namespace NeatMapper {
 			MappingOptions
 #endif
 			mappingOptions = null) {
+
+			mappingOptions = (mappingOptions ?? MappingOptions.Empty)
+				.ReplaceOrAdd<NestedMatchingContext>(n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
 
 			try {
 				return _matcher.Match(source, sourceType, destination, destinationType, mappingOptions);

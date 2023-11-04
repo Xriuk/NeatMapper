@@ -121,10 +121,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				var c = new Price();
 				var destination = new List<Price> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				await _mapper.MapAsync(new[] { 20m, 15.25m, 0m }, destination, new object[] { opts, merge });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
@@ -132,6 +129,20 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
 				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
 				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
+			}
+
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncMerge<string, List<float>>());
+
+				var result = await _mapper.MapAsync("world", new List<float>());
+
+				Assert.IsNotNull(result);
+				Assert.AreEqual(5, result.Count);
+				Assert.AreEqual(119f, result[0]);
+				Assert.AreEqual(111f, result[1]);
+				Assert.AreEqual(114f, result[2]);
+				Assert.AreEqual(108f, result[3]);
+				Assert.AreEqual(100f, result[4]);
 			}
 		}
 
@@ -251,6 +262,12 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreEqual(34m, b.Amount);
 				Assert.AreSame(c, destination[2]);
 				Assert.AreEqual(56m, c.Amount);
+			}
+
+			{
+				Assert.IsFalse(await _mapper.CanMapAsyncMerge<IList<int>, string>());
+
+				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { 104, 101, 108, 108, 111 }, ""));
 			}
 		}
 
@@ -405,10 +422,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				var destination = new List<ICollection<string>>();
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				await _mapper.MapAsync(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
@@ -586,10 +600,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				};
 				var destination = new CustomCollection<CategoryDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				await _mapper.MapAsync(new[] {
 					new Category {
 						Id = 3,
@@ -757,10 +768,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				};
 				var destination = new CustomCollection<ProductDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, _) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				await mapper.MapAsync(new[] {
 					new LimitedProduct {
 						Code = "Test4",
@@ -953,9 +961,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 						Id = 6
 					}
 				}, destination, new[]{
-					new MergeCollectionsMappingOptions {
-						RemoveNotMatchedDestinationElements = false
-					}
+					new MergeCollectionsMappingOptions(false)
 				});
 				Assert.IsNotNull(result);
 				Assert.AreSame(destination, result);
@@ -1225,7 +1231,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			options.AddMap<string, int>((s, _) => Task.FromResult(0));
 			var mapper2 = new AsyncNewMapper(null, options);
 
-			Assert.IsTrue(await mapper.CanMapAsyncMerge<IEnumerable<string>, List<int>>(new[] { new AsyncMapperOverrideMappingOptions { Mapper = mapper2 } }));
+			Assert.IsTrue(await mapper.CanMapAsyncMerge<IEnumerable<string>, List<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
 		}
 	}
 }

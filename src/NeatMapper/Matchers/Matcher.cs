@@ -141,11 +141,11 @@ namespace NeatMapper {
 
 		MatchingContext CreateMatchingContext(MappingOptions options) {
 			var overrideOptions = options?.GetOptions<MatcherOverrideMappingOptions>();
-			return new MatchingContext {
-				Matcher = overrideOptions?.Matcher ?? this,
-				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options ?? MappingOptions.Empty
-			};
+			return new MatchingContext (
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Matcher ?? this,
+				options ?? MappingOptions.Empty
+			);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

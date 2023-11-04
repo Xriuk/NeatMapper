@@ -6,6 +6,25 @@ namespace NeatMapper {
 	/// inside the created <see cref="AsyncMappingContext"/>
 	/// </summary>
 	public sealed class AsyncMapperOverrideMappingOptions {
+		public AsyncMapperOverrideMappingOptions(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IAsyncMapper?
+#else
+			IAsyncMapper
+#endif
+			mapper = null,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) {
+
+			Mapper = mapper;
+			ServiceProvider = serviceProvider;
+		}
+
+
 		/// <summary>
 		/// Mapper to be used for nested maps, null to use the one provided by the mapper
 		/// </summary>
@@ -15,7 +34,12 @@ namespace NeatMapper {
 #else
 			IAsyncMapper
 #endif
-			Mapper { get; set; }
+			Mapper {
+				get;
+#if NET5_0_OR_GREATER
+				init;
+#endif
+		}
 
 		/// <summary>
 		/// Service provider to use for the maps, null to use the one provided by the mapper
@@ -26,6 +50,11 @@ namespace NeatMapper {
 #else
 			IServiceProvider
 #endif
-			ServiceProvider { get; set; }
+			ServiceProvider {
+				get;
+#if NET5_0_OR_GREATER
+				init;
+#endif
+		}
 	}
 }

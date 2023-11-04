@@ -14,6 +14,7 @@ namespace NeatMapper {
 
 		private readonly IDictionary<Type, object> options;
 
+
 		public MappingOptions(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -23,8 +24,8 @@ namespace NeatMapper {
 			options) {
 
 			if(options != null) { 
-				if(options.Cast<object>().GroupBy(o => o.GetType()).Any(g => g.Count() > 1))
-					throw new ArgumentException("Options of the same type must be grouped together");
+				if(options.Cast<object>().GroupBy(o => o?.GetType()).Any(g => g.Count() > 1))
+					throw new ArgumentException("Options of the same type must be grouped together, null options are not allowed");
 
 				this.options = options.Cast<object>().ToDictionary(o => o.GetType(), o => o);
 			}
@@ -35,16 +36,73 @@ namespace NeatMapper {
 
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			TOptions?
+			object?
 #else
-			TOptions
+			object
 #endif
-			GetOptions<TOptions>() where TOptions : class {
+			GetOptions(Type optionsType){
 
-			if(this.options.TryGetValue(typeof(TOptions), out var options))
-				return options as TOptions;
+			if(optionsType == null)
+				throw new ArgumentNullException(nameof(optionsType));
+
+			if(this.options.TryGetValue(optionsType, out var options))
+				return options;
 			else
 				return null;
+		}
+
+		public MappingOptions Replace(IDictionary<Type, Func<object,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			>> factories) {
+
+			if(factories == null)
+				throw new ArgumentNullException(nameof(factories));
+			if(factories.Count == 0)
+				return Empty;
+
+			return new MappingOptions(
+				AsEnumerable()
+				.Select(o => {
+					if(factories.TryGetValue(o.GetType(), out var factory))
+						return factory.Invoke(o);
+					else
+						return o;
+				})
+				.Where(o => o != null)
+			);
+		}
+
+
+		public MappingOptions ReplaceOrAdd(IDictionary<Type, Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			>> factories) {
+
+			if (factories == null)
+				throw new ArgumentNullException(nameof(factories));
+			if (factories.Count == 0)
+				return Empty;
+
+			return new MappingOptions(factories
+				.Select(f => f.Value.Invoke(GetOptions(f.Key)))
+				.Where(o => o != null)
+				.Concat(options
+					.Where(o => !factories.ContainsKey(o.Key))
+					.Select(o => o.Value))
+			);
 		}
 
 		public IEnumerable<object> AsEnumerable() {

@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
@@ -36,22 +35,33 @@ namespace NeatMapper.EntityFrameworkCore {
 		});
 		private static readonly MethodInfo EntityFrameworkQueryableExtensions_Load = typeof(EntityFrameworkQueryableExtensions).GetMethod(nameof(EntityFrameworkQueryableExtensions.Load))
 			?? throw new InvalidOperationException("Could not find EntityFrameworkQueryableExtensions.Load<T>()");
+		private static readonly MethodInfo Queryable_FirstOrDefault = typeof(Queryable).GetMethods().First(m => m.Name == nameof(Queryable.FirstOrDefault) && m.GetParameters().Length == 1);
+		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
+			?? throw new InvalidOperationException("Could not find Enumerable.ToArray<T>()");
 
 
 		private readonly IModel _model;
 		private readonly Type _dbContextType;
 		private readonly IServiceProvider _serviceProvider;
+		private readonly EntityFrameworkCoreOptions _entityFrameworkCoreOptions;
 		private readonly IDictionary<(Type, Type), Delegate> _entityToKeyCache = new Dictionary<(Type, Type), Delegate>();
 		private readonly IDictionary<(Type, Type), Delegate> _keyToValuesCache = new Dictionary<(Type, Type), Delegate>();
 
 		public EntityFrameworkCoreMapper(
 			IModel model,
 			Type dbContextType,
-			IServiceProvider serviceProvider) {
+			IServiceProvider serviceProvider,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			EntityFrameworkCoreOptions?
+#else
+			EntityFrameworkCoreOptions
+#endif
+			entityFrameworkCoreOptions = null) {
 
 			_model = model ?? throw new ArgumentNullException(nameof(model));
 			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
 			_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			_entityFrameworkCoreOptions = entityFrameworkCoreOptions ?? new EntityFrameworkCoreOptions();
 
 #if !NET5_0 && !NETCOREAPP3_1
 			if (_serviceProvider.GetService<IServiceProviderIsService>()?.IsService(dbContextType) == false)
@@ -97,17 +107,13 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (!CanMapNew(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			(Type From, Type To)? collectionElementTypes = NeatMapper.TypeUtils.HasInterface(destinationType, typeof(IEnumerable<>)) && destinationType != typeof(string) ?
-				((Type From, Type To)?)(
-					NeatMapper.TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>)),
-					NeatMapper.TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>))
-				) :
+			(Type From, Type To)? collectionElementTypes = destinationType.IsEnumerable() && destinationType != typeof(string) ?
+				((Type From, Type To)?)(sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType()) :
 				null;
+
 			bool entityToKey;
-			if(collectionElementTypes != null) {
-				var elementType = NeatMapper.TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>));
-				entityToKey = elementType.IsKeyType() || elementType.IsCompositeKeyType();
-			}
+			if(collectionElementTypes != null) 
+				entityToKey = collectionElementTypes.Value.To.IsKeyType() || collectionElementTypes.Value.To.IsCompositeKeyType();
 			else
 				entityToKey = destinationType.IsKeyType() || destinationType.IsCompositeKeyType();
 
@@ -245,6 +251,9 @@ namespace NeatMapper.EntityFrameworkCore {
 						}
 					}
 
+					var retrievalMode = mappingOptions.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+						?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
+
 					// Check if we are mapping a collection or just a single entity
 					if (collectionElementTypes != null) {
 						if (source is IEnumerable sourceEnumerable) {
@@ -255,57 +264,74 @@ namespace NeatMapper.EntityFrameworkCore {
 								?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
 
 							// Retrieve tracked local entities and create expressions for missing
-							(object LocalEntity, LambdaExpression Predicate)[] localsAndPredicates = sourceEnumerable
+							EntityMappingInfo[] localsAndPredicates = sourceEnumerable
 								.Cast<object>()
 								.Select(sourceElement => {
-									var values = sourceElement != null ?
-										(keyToValuesMap.DynamicInvoke(source) as object[]
-											?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {types.To.FullName ?? types.To.Name}")) :
-										null;
-									if(values == null)
-										return (null, null);
+									if (sourceElement == null)
+										return new EntityMappingInfo();
 
-									var entityParam = Expression.Parameter(types.To, "entity");
-									Expression body = key.Properties
-										.Select((p, i) => Expression.Equal(Expression.Property(entityParam, p.PropertyInfo), Expression.Constant(values[i])))
-										.Aggregate(Expression.AndAlso);
-									var expr = Expression.Lambda(typeof(Predicate<>).MakeGenericType(types.To), body, entityParam);
+									var keyValues = keyToValuesMap.DynamicInvoke(sourceElement) as object[]
+										?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {types.To.FullName ?? types.To.Name}");
 
-									if(dbSet == null)
-										return (null, expr);
-									else { 
-										var deleg = expr.Compile();
-										var localEntity = local
+									var expr = GetEntityExpression(keyValues, key);
+									var deleg = expr.Compile();
+
+									object localEntity;
+									if(retrievalMode != EntitiesRetrievalMode.Remote) {
+										localEntity = local
 											.Cast<object>()
 											.FirstOrDefault(e => (bool)deleg.DynamicInvoke(e));
-										return (localEntity, localEntity != null ? null : expr);
+
+										if(retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
+											AttachEntity(db, ref localEntity, keyValues, key);
 									}
+									else
+										localEntity = null;
+
+									return new EntityMappingInfo {
+										LocalEntity = localEntity,
+										Expression = localEntity != null ? null : expr,
+										Delegate = deleg
+									};
 								})
 								.ToArray();
 
 							// Query db for missing entities if needed
-							var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity != null && lp.Predicate == null);
-							if(missingEntities.Any()) {
-								var filterExpression = ExpressionUtils.Or(missingEntities.Select(m => m.Predicate));
-								EntityFrameworkQueryableExtensions_Load.MakeGenericMethod(types.To).Invoke(null, new object[] {
-										Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, filterExpression })
-									});
+							if(retrievalMode == EntitiesRetrievalMode.LocalOrRemote || retrievalMode == EntitiesRetrievalMode.Remote) { 
+								var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Expression != null);
+								if(missingEntities.Any()) {
+									var filterExpression = ExpressionUtils.Or(missingEntities.Select(m => m.Expression));
+									var query = Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, filterExpression });
+
+									if(retrievalMode == EntitiesRetrievalMode.LocalOrRemote) { 
+										EntityFrameworkQueryableExtensions_Load.MakeGenericMethod(types.To).Invoke(null, new object[] { query });
+										foreach (var localAndPredicate in localsAndPredicates) {
+											if(localAndPredicate.LocalEntity != null || localAndPredicate.Delegate == null)
+												continue;
+
+											localAndPredicate.LocalEntity = local
+												.Cast<object>()
+												.FirstOrDefault(e => (bool)localAndPredicate.Delegate.DynamicInvoke(e));
+										}
+									}
+									else {
+										var entities = Enumerable_ToArray.MakeGenericMethod(types.To).Invoke(null, new object[] { query }) as IEnumerable
+											?? throw new InvalidOperationException("Invalid result returned");
+										foreach (var localAndPredicate in localsAndPredicates.Where(lp => lp.Delegate != null)) {
+											localAndPredicate.LocalEntity = entities
+												.Cast<object>()
+												.FirstOrDefault(e => (bool)localAndPredicate.Delegate.DynamicInvoke(e));
+										}
+									}
+								}
 							}
 
 							// Create collection and populate it
 							var destination = ObjectFactory.CreateCollection(destinationType);
 							var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
 
-							foreach(var (localEntity, predicate) in localsAndPredicates) {
-								if(localEntity == null){
-									var deleg = predicate.Compile();
-									var remoteEntity = local
-										.Cast<object>()
-										.FirstOrDefault(e => (bool)deleg.DynamicInvoke(e));
-									addMethod.Invoke(destination, new object[] { remoteEntity });
-								}
-								else
-									addMethod.Invoke(destination, new object[] { localEntity });
+							foreach(var localAndPredicate in localsAndPredicates) {
+								addMethod.Invoke(destination, new object[] { localAndPredicate.LocalEntity });
 							}
 
 							result = ObjectFactory.ConvertCollectionToType(destination, destinationType);
@@ -319,10 +345,49 @@ namespace NeatMapper.EntityFrameworkCore {
 						if(source == null)
 							return null;
 
-						if (!(keyToValuesMap.DynamicInvoke(source) is object[] keyValues))
-							throw new InvalidOperationException($"Invalid key(s) returned for entity of type {types.To.FullName ?? types.To.Name}");
+						// Check how we need to retrieve the entity
+						if(retrievalMode == EntitiesRetrievalMode.Local || retrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
+							var key = _model.FindEntityType(types.To).FindPrimaryKey();
+							var dbSet = db.GetType().GetMethod(nameof(DbContext.Set)).Invoke(db, null)
+								?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
+							var local = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
+								?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
 
-						result = db.Find(destinationType, keyValues);
+							var keyValues = keyToValuesMap.DynamicInvoke(source) as object[]
+								?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {types.To.FullName ?? types.To.Name}");
+
+							var expr = GetEntityExpression(keyValues, key);
+
+							result = local
+								.Cast<object>()
+								.FirstOrDefault(e => (bool)expr.Compile().DynamicInvoke(e));
+
+							// Attach a new entity to the context if not found, and mark it as unchanged
+							if(retrievalMode == EntitiesRetrievalMode.LocalOrAttach && result == null)
+								AttachEntity(db, ref result, keyValues, key);
+						}
+						else if(retrievalMode == EntitiesRetrievalMode.LocalOrRemote) { 
+							if (!(keyToValuesMap.DynamicInvoke(source) is object[] keyValues))
+								throw new InvalidOperationException($"Invalid key(s) returned for entity of type {types.To.FullName ?? types.To.Name}");
+
+							result = db.Find(types.To, keyValues);
+						}
+						else if(retrievalMode == EntitiesRetrievalMode.Remote) {
+							var key = _model.FindEntityType(types.To).FindPrimaryKey();
+							var dbSet = db.GetType().GetMethod(nameof(DbContext.Set)).Invoke(db, null)
+								?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
+
+							var keyValues = keyToValuesMap.DynamicInvoke(source) as object[]
+								?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {types.To.FullName ?? types.To.Name}");
+
+							var expr = GetEntityExpression(keyValues, key);
+
+							result = Queryable_FirstOrDefault.MakeGenericMethod(types.To).Invoke(null, new object[] {
+								Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, expr })
+							});
+						}
+						else
+							throw new InvalidOperationException("Unknown retrieval mode");
 					}
 				}
 
@@ -337,6 +402,23 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			throw new MapNotFoundException((sourceType, destinationType));
+
+
+			LambdaExpression GetEntityExpression(object[] keyValues, IKey key) {
+				var entityParam = Expression.Parameter(types.To, "entity");
+				Expression body = key.Properties
+					.Select((p, i) => Expression.Equal(Expression.Property(entityParam, p.PropertyInfo), Expression.Constant(keyValues[i])))
+					.Aggregate(Expression.AndAlso);
+				return Expression.Lambda(typeof(Predicate<>).MakeGenericType(types.To), body, entityParam);
+			}
+
+			void AttachEntity(DbContext db, ref object entity, object[] keyValues, IKey key) {
+				entity = ObjectFactory.Create(types.To);
+				for (int i = 0; i < keyValues.Length; i++) {
+					key.Properties[i].PropertyInfo?.SetValue(entity, keyValues[i]);
+				}
+				db.Entry(entity).State = EntityState.Unchanged;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -428,8 +510,12 @@ namespace NeatMapper.EntityFrameworkCore {
 #endif
 			mappingOptions = null) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			// Prevent being used by a collection mapper
-			if(mappingOptions?.GetOptions<CollectionMapperMappingOptions>()?.Mapper != null)
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<NestedMappingContext>()))
 				return false;
 
 			if (sourceType == null)
@@ -438,14 +524,12 @@ namespace NeatMapper.EntityFrameworkCore {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			// We could also map collections of keys/entities
-			if(NeatMapper.TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
-				NeatMapper.TypeUtils.HasInterface(destinationType, typeof(IEnumerable<>)) && destinationType != typeof(string)) {
-
+			if(sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsEnumerable() && destinationType != typeof(string)) {
 				if(!ObjectFactory.CanCreateCollection(destinationType))
 					return false;
 
-				sourceType = NeatMapper.TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>));
-				destinationType = NeatMapper.TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>));
+				sourceType = sourceType.GetEnumerableElementType();
+				destinationType = destinationType.GetEnumerableElementType();
 			}
 
 			// Check which type is the key and which is the entity, since NewMap can be used both ways
@@ -463,6 +547,10 @@ namespace NeatMapper.EntityFrameworkCore {
 				return false;
 
 			return CanMap(entityType, keyType);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public bool CanMapMerge(
@@ -475,8 +563,12 @@ namespace NeatMapper.EntityFrameworkCore {
 #endif
 			mappingOptions = null) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			// Prevent being used by a collection mapper
-			if (mappingOptions?.GetOptions<CollectionMapperMappingOptions>()?.Mapper != null)
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<NestedMappingContext>()))
 				return false;
 
 			if (sourceType == null)
@@ -485,9 +577,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			bool cannotDetermineMap = false;
-			if (NeatMapper.TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
-				NeatMapper.TypeUtils.HasInterface(destinationType, typeof(ICollection<>)) && !destinationType.IsArray) {
-
+			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsCollection() && !destinationType.IsArray) {
 				if (!ObjectFactory.CanCreateCollection(destinationType))
 					return false;
 
@@ -504,8 +594,8 @@ namespace NeatMapper.EntityFrameworkCore {
 				else
 					cannotDetermineMap = true;
 
-				sourceType = NeatMapper.TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>));
-				destinationType = NeatMapper.TypeUtils.GetInterfaceElementType(destinationType, typeof(ICollection<>));
+				sourceType = sourceType.GetEnumerableElementType();
+				destinationType = destinationType.GetCollectionElementType();
 			}
 
 			// MergeMap can only map from key to entity so we check source and destination types
@@ -520,9 +610,17 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else
 				return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 		#endregion
 
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
 
 		private bool CanMap(Type entityType, Type keyType) {
 			if (!entityType.IsClass)
@@ -547,5 +645,17 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			return true;
 		}
+
+		private bool CheckCollectionMapperNestedContextRecursive(NestedMappingContext context) {
+			if(context == null)
+				return false;
+			if(context.ParentMapper is CollectionMapper)
+				return true;
+			return CheckCollectionMapperNestedContextRecursive(context.ParentContext);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

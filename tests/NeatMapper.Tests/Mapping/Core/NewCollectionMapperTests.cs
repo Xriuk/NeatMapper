@@ -56,10 +56,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				var strings = _mapper.Map<LinkedList<string>>(new[] { 2, -3, 0 }, opts, merge);
 
 				Assert.IsNotNull(strings);
@@ -134,6 +131,28 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual("4", strings[0]);
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
+			}
+
+			{
+				Assert.IsTrue(_mapper.CanMapNew<IList<int>, string>());
+
+				var str = _mapper.Map<string>(new[] { 104, 101, 108, 108, 111 });
+
+				Assert.AreEqual("hello", str);
+			}
+
+			{
+				Assert.IsTrue(_mapper.CanMapNew<string, float[]>());
+
+				var result = _mapper.Map<float[]>("world");
+
+				Assert.IsNotNull(result);
+				Assert.AreEqual(5, result.Length);
+				Assert.AreEqual(119f, result[0]);
+				Assert.AreEqual(111f, result[1]);
+				Assert.AreEqual(114f, result[2]);
+				Assert.AreEqual(108f, result[3]);
+				Assert.AreEqual(100f, result[4]);
 			}
 		}
 
@@ -236,10 +255,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				_mapper.Map<IList<IEnumerable<string>>>(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
@@ -374,7 +390,7 @@ namespace NeatMapper.Tests.Mapping {
 			options.AddMap<string, int>((s, _) => 0);
 			var mapper2 = new NewMapper(null, options);
 
-			Assert.IsTrue(mapper.CanMapNew<IEnumerable<string>, IEnumerable<int>>(new MapperOverrideMappingOptions { Mapper = mapper2 }));
+			Assert.IsTrue(mapper.CanMapNew<IEnumerable<string>, IEnumerable<int>>(new MapperOverrideMappingOptions(mapper2)));
 		}
 	}
 }

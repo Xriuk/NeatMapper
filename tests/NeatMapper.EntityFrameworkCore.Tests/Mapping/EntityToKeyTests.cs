@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NeatMapper.EntityFrameworkCore.Tests {
+namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 	[TestClass]
 	public class EntityToKeyTests {
 		IMapper _mapper = null;
@@ -180,6 +180,39 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			TestUtils.AssertMapNotFound(() => _mapper.Map(new StringKey { Id = "Test" }, ""));
 			TestUtils.AssertMapNotFound(() => _mapper.Map<IntKey, int?>(new IntKey { Id = 2 }, 3));
 		}
+
+		[TestMethod]
+		public void ShouldNotMapEntitiesWithShadowKeys() {
+			Assert.IsFalse(_mapper.CanMapNew<ShadowIntKey, int>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new ShadowIntKey()));
+		}
+
+		[TestMethod]
+		public void ShouldNotMapOwnedEntities() {
+			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity, int>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new OwnedEntity()));
+
+			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity, Tuple<string, int>>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<Tuple<string, int>>(new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<Tuple<int, int>>(new OwnedEntity()));
+
+			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity, (string, int)>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<(string, int)>(new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<(int, int)>(new OwnedEntity()));
+		}
+
+#if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+		[TestMethod]
+		public void ShouldNotMapKeylessEntities() {
+			Assert.IsFalse(_mapper.CanMapNew<Keyless, int>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new Keyless()));
+		}
+#endif
 
 
 		[TestMethod]

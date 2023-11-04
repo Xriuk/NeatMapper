@@ -8,8 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Reflection;
 
 namespace NeatMapper.EntityFrameworkCore {
 	public static class EntityFrameworkCoreServiceCollectionExtensions {
@@ -59,7 +57,8 @@ namespace NeatMapper.EntityFrameworkCore {
 				s => new EntityFrameworkCoreMapper(
 					model,
 					typeof(TContext),
-					s),
+					s,
+					s.GetService<IOptions<EntityFrameworkCoreOptions>>()?.Value),
 				mapperLifetime));
 			#endregion
 

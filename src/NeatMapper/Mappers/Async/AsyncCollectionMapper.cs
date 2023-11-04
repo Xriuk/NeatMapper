@@ -16,11 +16,13 @@ namespace NeatMapper {
 		protected readonly IAsyncMapper _elementsMapper;
 		protected readonly AsyncCollectionMappersOptions _asyncCollectionMappersOption;
 		protected readonly IServiceProvider _serviceProvider;
+		private readonly AsyncNestedMappingContext _nestedMappingContext;
 
 		internal AsyncCollectionMapper(IAsyncMapper elementsMapper, AsyncCollectionMappersOptions asyncCollectionMappersOptions = null, IServiceProvider serviceProvider = null) {
 			_elementsMapper = new AsyncCompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			_asyncCollectionMappersOption = asyncCollectionMappersOptions ?? new AsyncCollectionMappersOptions();
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
+			_nestedMappingContext = new AsyncNestedMappingContext(this);
 		}
 
 
@@ -30,42 +32,12 @@ namespace NeatMapper {
 
 		// Will override a mapper if not already overridden
 		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
-			var overrideOptions = options?.GetOptions<AsyncMapperOverrideMappingOptions>();
 			mergeCollectionsMappingOptions = options?.GetOptions<MergeCollectionsMappingOptions>();
-			if (overrideOptions == null) {
-				overrideOptions = new AsyncMapperOverrideMappingOptions();
-				if (options != null) {
-					options = new MappingOptions(options.AsEnumerable().Select(o => {
-						if (o is MergeCollectionsMappingOptions merge) {
-							var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-								Matcher = null
-							};
-							return mergeOpts;
-						}
-						else
-							return o;
-					}).Concat(new[] { overrideOptions }));
-				}
-				else
-					options = new MappingOptions(new[] { overrideOptions });
-			}
-			else {
-				options = new MappingOptions(options.AsEnumerable().Select(o => {
-					if (o is MergeCollectionsMappingOptions merge) {
-						var mergeOpts = new MergeCollectionsMappingOptions(merge) {
-							Matcher = null
-						};
-						return mergeOpts;
-					}
-					else
-						return o;
-				}));
-			}
-
-			if (overrideOptions.Mapper == null)
-				overrideOptions.Mapper = _elementsMapper;
-
-			return options;
+			return (options ?? MappingOptions.Empty)
+				.Replace<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(m.RemoveNotMatchedDestinationElements, null))
+				.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
+					m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
+					n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext);
 		}
 	}
 }

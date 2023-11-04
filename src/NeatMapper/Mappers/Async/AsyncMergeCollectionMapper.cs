@@ -2,16 +2,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IAsyncMapper"/> which merges a collection (even nested) with an existing one asynchronously, can also create a new collection.<br/>
+	/// <see cref="IAsyncMapper"/> which merges a <see cref="IEnumerable{T}"/> (even nested) with an existing
+	/// <see cref="ICollection{T}"/> (not readonly) asynchronously, will create a new <see cref="ICollection{T}"/> if destination is null.<br/>
 	/// Will try to match elements of the source collection with the destination by using an <see cref="IMatcher"/> if provided:<br/>
 	/// - If a match is found will try to merge the two elements or will replace with a new one by using a <see cref="IAsyncMapper"/>.<br/>
 	/// - If a match is not found a new element will be added by mapping them with a <see cref="IAsyncMapper"/> by trying new map, then merge map.<br/>
@@ -126,9 +124,7 @@ namespace NeatMapper {
 			(Type From, Type To) types = (sourceType, destinationType);
 
 			// If both types are collections try mapping the element types
-			if (TypeUtils.HasInterface(types.From, typeof(IEnumerable<>)) && types.From != typeof(string) &&
-				TypeUtils.HasInterface(types.To, typeof(ICollection<>)) && !types.To.IsArray) {
-
+			if (types.From.IsEnumerable() && types.To.IsCollection() && !types.To.IsArray) {
 				// If the destination type is not an interface, check if it is not readonly
 				if (!types.To.IsInterface && types.To.IsGenericType) {
 					var collectionDefinition = types.To.GetGenericTypeDefinition();
@@ -140,10 +136,7 @@ namespace NeatMapper {
 					}
 				}
 
-				var elementTypes = (
-					From: TypeUtils.GetInterfaceElementType(types.From, typeof(IEnumerable<>)),
-					To: TypeUtils.GetInterfaceElementType(types.To, typeof(ICollection<>))
-				);
+				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetCollectionElementType());
 
 				if (source is IEnumerable sourceEnumerable) {
 					try {
@@ -525,9 +518,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (TypeUtils.HasInterface(sourceType, typeof(IEnumerable<>)) && sourceType != typeof(string) &&
-				TypeUtils.HasInterface(destinationType, typeof(ICollection<>)) && !destinationType.IsArray) {
-
+			if (sourceType.IsEnumerable() && destinationType.IsCollection() && !destinationType.IsArray) {
 				// If the destination type is not an interface, check if it is not readonly
 				// Otherwise check the destination if provided
 				if (!destinationType.IsInterface && destinationType.IsGenericType) {
@@ -552,10 +543,7 @@ namespace NeatMapper {
 						return false;
 				}
 
-				var elementTypes = (
-					From: TypeUtils.GetInterfaceElementType(sourceType, typeof(IEnumerable<>)),
-					To: TypeUtils.GetInterfaceElementType(destinationType, typeof(IEnumerable<>))
-				);
+				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
 
 				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
 

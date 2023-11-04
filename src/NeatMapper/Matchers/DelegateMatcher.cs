@@ -64,11 +64,11 @@ namespace NeatMapper {
 #endif
 
 			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
-			var context = new MatchingContext {
-				Matcher = overrideOptions?.Matcher ?? _nestedMatcher,
-				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = mappingOptions ?? MappingOptions.Empty
-			};
+			var context = new MatchingContext(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Matcher ?? _nestedMatcher,
+				mappingOptions ?? MappingOptions.Empty
+			);
 
 			try { 
 				return _matchDelegate.Invoke(source, destination, context);

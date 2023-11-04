@@ -638,17 +638,11 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
-			if (mergeMappingOptions == null) {
-				mergeMappingOptions = new MergeCollectionsMappingOptions();
-				if(mappingOptions == null)
-					mappingOptions = new MappingOptions(new [] { mergeMappingOptions });
-				else
-					mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Concat(new[] { mergeMappingOptions }));
-			}
-			mergeMappingOptions.Matcher = (s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
-				(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
-				matcher((TSourceElement)s, (TDestinationElement)d, c);
+			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
+				m?.RemoveNotMatchedDestinationElements,
+				(s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
+					(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
+					matcher((TSourceElement)s, (TDestinationElement)d, c)));
 
 			return mapper.Map(
 				source,

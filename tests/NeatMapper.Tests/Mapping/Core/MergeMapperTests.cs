@@ -25,7 +25,9 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMapStatic<string, int>,
 			IMergeMapStatic<decimal, int>,
 			IMatchMapStatic<decimal, int>,
-			IMergeMapStatic<decimal, string>
+			IMergeMapStatic<decimal, string>,
+			IMergeMapStatic<int, char>,
+			IMergeMapStatic<char, float>
 #else
 			IMergeMap<int, string>,
 			IMergeMap<Price, decimal>,
@@ -44,7 +46,9 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMap<string, int>,
 			IMergeMap<decimal, int>,
 			IMatchMap<decimal, int>,
-			IMergeMap<decimal, string>
+			IMergeMap<decimal, string>,
+			IMergeMap<int, char>,
+			IMergeMap<char, float>
 #endif
 			{
 
@@ -328,6 +332,33 @@ namespace NeatMapper.Tests.Mapping {
 				.Map(decimal source, string destination, MappingContext context) {
 				return "MergeMap";
 			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			char
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<int, char>
+#else
+				IMergeMap<int, char>
+#endif
+				.Map(int source, char destination, MappingContext context) {
+				return (char)source;
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			float
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<char, float>
+#else
+				IMergeMap<char, float>
+#endif
+				.Map(char source, float destination, MappingContext context) {
+				return (float)source;
+			}
 		}
 
 		IMapper _mapper = null;
@@ -606,10 +637,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, c) => false);
 				_mapper.Map<string>(2f, opts, merge);
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);

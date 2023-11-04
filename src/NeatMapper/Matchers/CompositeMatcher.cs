@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace NeatMapper {
 	public sealed class CompositeMatcher : IMatcher {
@@ -8,7 +7,8 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		readonly IList<IMatcher> _matchers;
+		private readonly IList<IMatcher> _matchers;
+		private readonly NestedMatchingContext _nestedMatchingContext;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -29,6 +29,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(matchers));
 
 			_matchers = new List<IMatcher>(matchers);
+			_nestedMatchingContext = new NestedMatchingContext(this);
 		}
 
 
@@ -54,20 +55,14 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
-			if (overrideOptions == null) {
-				overrideOptions = new MatcherOverrideMappingOptions();
-				if (mappingOptions != null)
-					mappingOptions = new MappingOptions(mappingOptions.AsEnumerable().Concat(new[] { overrideOptions }));
-				else
-					mappingOptions = new MappingOptions(new[] { overrideOptions });
-			}
-
-			overrideOptions.Matcher = this;
+			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
+				m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
 
 			foreach (var matcher in _matchers) {
 				try {

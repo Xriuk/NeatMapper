@@ -2,11 +2,12 @@
 
   <PropertyGroup>
 		<TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0</TargetFrameworks>
+		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">enable</Nullable>
 		<PackageId>NeatMapper.EntityFrameworkCore</PackageId>
 		<Version>2.0.0</Version>
 		<Authors>Xriuk</Authors>
 		<Title>.NEaT Mapper - Entity Framework Core</Title>
-		<Description>Creates automatic maps between entities and their keys, supports normal maps and asynchronous ones, also supports collections (not nested)</Description>
+		<Description>Creates automatic maps between entities and their keys, supports normal maps and asynchronous ones, also supports collections (not nested) and asynchronous maps</Description>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.EntityFrameworkCore</RepositoryUrl>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>

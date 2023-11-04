@@ -59,10 +59,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				var strings = await _mapper.MapAsync<LinkedList<string>>(new[] { 2, -3, 0 }, new object[]{ opts, merge });
 
 				Assert.IsNotNull(strings);
@@ -137,6 +134,28 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreEqual("4", strings[0]);
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
+			}
+
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<IList<int>, string>());
+
+				var str = await _mapper.MapAsync<string>(new[] { 104, 101, 108, 108, 111 });
+
+				Assert.AreEqual("hello", str);
+			}
+
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<string, float[]>());
+
+				var result = await _mapper.MapAsync<float[]>("world");
+
+				Assert.IsNotNull(result);
+				Assert.AreEqual(5, result.Length);
+				Assert.AreEqual(119f, result[0]);
+				Assert.AreEqual(111f, result[1]);
+				Assert.AreEqual(114f, result[2]);
+				Assert.AreEqual(108f, result[3]);
+				Assert.AreEqual(100f, result[4]);
 			}
 		}
 
@@ -262,10 +281,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
@@ -478,7 +494,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			options.AddMap<string, int>((s, _) => Task.FromResult(0));
 			var mapper2 = new AsyncNewMapper(null, options);
 
-			Assert.IsTrue(await mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>(new[] { new AsyncMapperOverrideMappingOptions { Mapper = mapper2 } }));
+			Assert.IsTrue(await mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
 		}
 	}
 }

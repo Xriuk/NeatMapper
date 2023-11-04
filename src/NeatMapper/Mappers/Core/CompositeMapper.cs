@@ -12,7 +12,8 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		readonly IList<IMapper> _mappers;
+		private readonly IList<IMapper> _mappers;
+		private readonly NestedMappingContext _nestedMappingContext;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -33,6 +34,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(mappers));
 
 			_mappers = new List<IMapper>(mappers);
+			_nestedMappingContext = new NestedMappingContext(this);
 		}
 
 
@@ -257,19 +259,9 @@ namespace NeatMapper {
 
 		// Will override a mapper if not already overridden
 		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			var overrideOptions = options?.GetOptions<MapperOverrideMappingOptions>();
-			if(overrideOptions == null){
-				overrideOptions = new MapperOverrideMappingOptions();
-				if(options != null)
-					options = new MappingOptions(options.AsEnumerable().Concat(new[] { overrideOptions }));
-				else
-					options = new MappingOptions(new[] { overrideOptions });
-			}
-
-			if(overrideOptions.Mapper == null)
-				overrideOptions.Mapper = this;
-
-			return options;
+			return (options ?? MappingOptions.Empty).ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
+				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

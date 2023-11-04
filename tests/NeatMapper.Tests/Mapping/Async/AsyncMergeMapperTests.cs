@@ -28,7 +28,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMapStatic<decimal, int>,
 			IMatchMapStatic<decimal, int>,
 			IAsyncMergeMapStatic<decimal, string>,
-			IAsyncMergeMapStatic<int, float>
+			IAsyncMergeMapStatic<int, float>,
+			IAsyncMergeMapStatic<int, char>,
+			IAsyncMergeMapStatic<char, float>
 #else
 			IAsyncMergeMap<int, string>,
 			IAsyncMergeMap<Price, decimal>,
@@ -49,7 +51,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMap<decimal, int>,
 			IMatchMap<decimal, int>,
 			IAsyncMergeMap<decimal, string>,
-			IAsyncMergeMap<int, float>
+			IAsyncMergeMap<int, float>,
+			IAsyncMergeMap<int, char>,
+			IAsyncMergeMap<char, float>
 #endif
 			{
 
@@ -369,6 +373,33 @@ namespace NeatMapper.Tests.Mapping.Async {
 				await Task.Delay(10);
 				return (source * 2);
 			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<char>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<int, char>
+#else
+				IAsyncMergeMap<int, char>
+#endif
+				.MapAsync(int source, char destination, AsyncMappingContext context) {
+				return Task.FromResult((char)source);
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<char, float>
+#else
+				IAsyncMergeMap<char, float>
+#endif
+				.MapAsync(char source, float destination, AsyncMappingContext context) {
+				return Task.FromResult((float)source);
+			}
 		}
 
 		IAsyncMapper _mapper = null;
@@ -647,10 +678,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
+				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
 				await _mapper.MapAsync<string>(2f, new object[]{ opts, merge });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);

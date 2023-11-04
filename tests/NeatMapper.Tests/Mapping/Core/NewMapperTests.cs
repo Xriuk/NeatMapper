@@ -23,7 +23,9 @@ namespace NeatMapper.Tests.Mapping {
 			INewMapStatic<string, KeyValuePair<string, int>>,
 			INewMapStatic<string, int>,
 			INewMapStatic<decimal, int>,
-			INewMapStatic<decimal, string>
+			INewMapStatic<decimal, string>,
+			INewMapStatic<int, char>,
+			INewMapStatic<char, float>
 #else
 			INewMap<int, string>,
 			INewMap<Price, decimal>,
@@ -40,7 +42,9 @@ namespace NeatMapper.Tests.Mapping {
 			INewMap<string, KeyValuePair<string, int>>,
 			INewMap<string, int>,
 			INewMap<decimal, int>,
-			INewMap<decimal, string>
+			INewMap<decimal, string>,
+			INewMap<int, char>,
+			INewMap<char, float>
 #endif
 			{
 
@@ -298,6 +302,33 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(decimal source, MappingContext context) {
 				return "NewMap";
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			char
+#if NET7_0_OR_GREATER
+				INewMapStatic<int, char>
+#else
+				INewMap<int, char>
+#endif
+				.Map(int source, MappingContext context) {
+				return (char)source;
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			float
+#if NET7_0_OR_GREATER
+				INewMapStatic<char, float>
+#else
+				INewMap<char, float>
+#endif
+				.Map(char source, MappingContext context) {
+				return (float)source;
 			}
 		}
 

@@ -26,12 +26,12 @@ namespace NeatMapper {
 
 		protected AsyncMappingContext CreateMappingContext(MappingOptions options, CancellationToken cancellationToken) {
 			var overrideOptions = options?.GetOptions<AsyncMapperOverrideMappingOptions>();
-			return new AsyncMappingContext {
-				Mapper = overrideOptions?.Mapper ?? this,
-				ServiceProvider = overrideOptions?.ServiceProvider ?? _serviceProvider,
-				MappingOptions = options ?? MappingOptions.Empty,
-				CancellationToken = cancellationToken
-			};
+			return new AsyncMappingContext(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Mapper ?? this,
+				options ?? MappingOptions.Empty,
+				cancellationToken
+			);
 		}
 	}
 }

@@ -26,7 +26,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncNewMapStatic<string, int>,
 			IAsyncNewMapStatic<decimal, int>,
 			IAsyncNewMapStatic<decimal, string>,
-			IAsyncNewMapStatic<int, float>
+			IAsyncNewMapStatic<int, float>,
+			IAsyncNewMapStatic<int, char>,
+			IAsyncNewMapStatic<char, float>
 #else
 			IAsyncNewMap<int, string>,
 			IAsyncNewMap<Price, decimal>,
@@ -45,7 +47,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncNewMap<string, int>,
 			IAsyncNewMap<decimal, int>,
 			IAsyncNewMap<decimal, string>,
-			IAsyncNewMap<int, float>
+			IAsyncNewMap<int, float>,
+			IAsyncNewMap<int, char>,
+			IAsyncNewMap<char, float>
 #endif
 			{
 
@@ -341,6 +345,33 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				await Task.Delay(10);
 				return (source * 2);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<char>
+#if NET7_0_OR_GREATER
+				IAsyncNewMapStatic<int, char>
+#else
+				IAsyncNewMap<int, char>
+#endif
+				.MapAsync(int source, AsyncMappingContext context) {
+				return Task.FromResult((char)source);
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncNewMapStatic<char, float>
+#else
+				IAsyncNewMap<char, float>
+#endif
+				.MapAsync(char source, AsyncMappingContext context) {
+				return Task.FromResult((float)source);
 			}
 		}
 
