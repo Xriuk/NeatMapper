@@ -3,8 +3,9 @@
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches by invoking a delegate, won't throw as the delegate should always compare two objects
+	/// (will return false for those that cannot be matched)
 	/// </summary>
-	public sealed class DelegateMatcher : IMatcher {
+	public sealed class DelegateMatcher : IMatcher, IMatcherCanMatch {
 		readonly MatchMapDelegate<object, object> _matchDelegate;
 		readonly IMatcher _nestedMatcher;
 		readonly IServiceProvider _serviceProvider;
@@ -80,6 +81,20 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			// Always true as the types CAN be matched, but the delegate should return false for not compatible types
+			return true;
 		}
 	}
 }

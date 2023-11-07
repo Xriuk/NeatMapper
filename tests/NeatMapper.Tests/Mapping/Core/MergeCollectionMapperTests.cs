@@ -1069,7 +1069,7 @@ namespace NeatMapper.Tests.Mapping {
 			options.AddMap<string, int>((s, _) => 0);
 			var mapper2 = new NewMapper(null, options);
 
-			Assert.IsTrue(mapper.CanMapMerge<IEnumerable<string>, List<int>>(new MapperOverrideMappingOptions(mapper2)));
+			Assert.IsTrue(mapper.CanMapMerge<IEnumerable<string>, List<int>>(new[] { new MapperOverrideMappingOptions(mapper2) }));
 		}
 	}
 }

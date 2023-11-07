@@ -2,6 +2,8 @@
 
 namespace NeatMapper.EntityFrameworkCore.Tests {
 	public class TestContext : DbContext {
+		public TestContext(DbContextOptions<TestContext> options) : base(options) { }
+
 		protected override void OnModelCreating(ModelBuilder modelBuilder) {
 			base.OnModelCreating(modelBuilder);
 
@@ -37,15 +39,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 				.HasKey("StringId");
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
-				modelBuilder.Entity<Keyless>()
-					.HasNoKey();
+			modelBuilder.Entity<Keyless>()
+				.HasNoKey();
 #endif
-		}
-
-		protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) {
-			base.OnConfiguring(optionsBuilder);
-
-			optionsBuilder.UseInMemoryDatabase("Test");
 		}
 	}
 }

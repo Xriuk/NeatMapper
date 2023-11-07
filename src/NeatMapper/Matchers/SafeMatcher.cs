@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <see cref="IMatcher"/> which tries to match the given types using another <see cref="IMatcher"/>
 	/// and returns false in case it throws <see cref="MapNotFoundException"/>
 	/// </summary>
-	public sealed class SafeMatcher : IMatcher {
+	public sealed class SafeMatcher : IMatcher, IMatcherCanMatch {
 		private readonly IMatcher _matcher;
 		private readonly NestedMatchingContext _nestedMatchingContext;
 
@@ -46,6 +46,22 @@ namespace NeatMapper {
 			catch(MapNotFoundException){
 				return false;
 			}
+		}
+
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			mappingOptions = (mappingOptions ?? MappingOptions.Empty)
+				.ReplaceOrAdd<NestedMatchingContext>(n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
+
+			return _matcher.CanMatch(sourceType, destinationType, mappingOptions);
 		}
 	}
 }

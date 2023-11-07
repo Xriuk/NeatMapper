@@ -11,29 +11,64 @@ using System.Linq;
 
 namespace NeatMapper.EntityFrameworkCore {
 	public static class EntityFrameworkCoreServiceCollectionExtensions {
-		public static IServiceCollection AddEntitiesMaps<TContext>(this IServiceCollection services, ServiceLifetime mapperLifetime = ServiceLifetime.Singleton) where TContext : DbContext {
+		/// <inheritdoc cref="AddNeatMapperEntityFrameworkCore{TContext}(IServiceCollection, IModel, ServiceLifetime, ServiceLifetime)"/>
+		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services,
+			ServiceLifetime mapperLifetime = ServiceLifetime.Singleton,
+			ServiceLifetime matcherLifetime = ServiceLifetime.Singleton) where TContext : DbContext {
+
 			if (services == null)
 				throw new ArgumentNullException(nameof(services));
 
 			if (typeof(TContext).GetConstructor(Type.EmptyTypes) != null) {
 				using(var instance = (TContext)Activator.CreateInstance(typeof(TContext))) {
-					return services.AddEntitiesMaps<TContext>(instance.Model, mapperLifetime);
+					return services.AddNeatMapperEntityFrameworkCore<TContext>(instance.Model, mapperLifetime, matcherLifetime);
 				}
 			}
 			else { 
 				using (var serviceProvider = services.BuildServiceProvider()) {
 					using(var scope = serviceProvider.CreateScope()) {
-						return services.AddEntitiesMaps<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model, mapperLifetime);
+						return services.AddNeatMapperEntityFrameworkCore<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model, mapperLifetime, matcherLifetime);
 					}
 				}
 			}
 		}
 
-		public static IServiceCollection AddEntitiesMaps<TContext>(this IServiceCollection services, IModel model, ServiceLifetime mapperLifetime = ServiceLifetime.Singleton) where TContext : DbContext {
+		/// <summary>
+		/// Adds <see cref="IMatcher"/> and <see cref="IMapper"/> to the services collection.<br/>
+		/// To configure them you can use <see cref="OptionsServiceCollectionExtensions.ConfigureAll{TOptions}(IServiceCollection, Action{TOptions})"/>
+		/// to configure <see cref="CompositeMapperOptions"/>, and <see cref="OptionsServiceCollectionExtensions.Configure{TOptions}(IServiceCollection, Action{TOptions})"/>
+		/// to configure all the other options
+		/// </summary>
+		/// <typeparam name="TContext">Type of the DbContext to use with the mapper</typeparam>
+		/// <param name="mapperLifetime">Lifetime of the <see cref="EntityFrameworkCoreMapper"/> service</param>
+		/// <param name="asyncMapperLifetime">Lifetime of the <see cref="AsyncEntityFrameworkCoreMapper"/> service</param>
+		/// <param name="matcherLifetime">Lifetime of the <see cref="EntityFrameworkCoreMatcher"/> service</param>
+		/// <returns>The same services collection so multiple calls could be chained</returns>
+		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services,
+			IModel model,
+			ServiceLifetime mapperLifetime = ServiceLifetime.Singleton,
+			ServiceLifetime matcherLifetime = ServiceLifetime.Singleton) where TContext : DbContext {
+
 			if (services == null)
 				throw new ArgumentNullException(nameof(services));
 			if (model == null)
 				throw new ArgumentNullException(nameof(model));
+
+			#region IMatcher
+			// Added to all options
+			services.AddTransient<IConfigureOptions<CompositeMatcherOptions>>(
+				s => new ConfigureNamedOptions<CompositeMatcherOptions, EntityFrameworkCoreMatcher>(
+					null,
+					s.GetRequiredService<EntityFrameworkCoreMatcher>(),
+					(o, m) => o.Matchers.Add(m)
+				)
+			);
+
+			services.Add(new ServiceDescriptor(
+				typeof(EntityFrameworkCoreMatcher),
+				s => new EntityFrameworkCoreMatcher(model),
+				matcherLifetime));
+			#endregion
 
 			#region IMapper
 			// Added to all options
@@ -58,7 +93,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					model,
 					typeof(TContext),
 					s,
-					s.GetService<IOptions<EntityFrameworkCoreOptions>>()?.Value),
+					s.GetService<IOptions<EntityFrameworkCoreOptions>>()?.Value,
+					s.GetService<IMatcher>(),
+					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value),
 				mapperLifetime));
 			#endregion
 

@@ -24,7 +24,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			var arguments = type.GetGenericArguments();
 			if(type.IsNullableValueTuple())
 				arguments = arguments[0].GetGenericArguments();
-			return arguments.Length > 0 && arguments.All(a => a.IsKeyType());
+			return arguments.Length > 1 && arguments.All(a => a.IsKeyType());
 		}
 	}
 }

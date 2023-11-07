@@ -37,7 +37,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
-				var strings = _mapper.Map<IList<string>>(new[] { 2, -3, 0 }, opts);
+				var strings = _mapper.Map<IList<string>>(new[] { 2, -3, 0 }, new object[] { opts });
 
 				Assert.IsNotNull(strings);
 				Assert.AreEqual(3, strings.Count);
@@ -57,7 +57,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
 				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
-				var strings = _mapper.Map<LinkedList<string>>(new[] { 2, -3, 0 }, opts, merge);
+				var strings = _mapper.Map<LinkedList<string>>(new[] { 2, -3, 0 }, new object[] { opts, merge });
 
 				Assert.IsNotNull(strings);
 				Assert.AreEqual(3, strings.Count);
@@ -390,7 +390,7 @@ namespace NeatMapper.Tests.Mapping {
 			options.AddMap<string, int>((s, _) => 0);
 			var mapper2 = new NewMapper(null, options);
 
-			Assert.IsTrue(mapper.CanMapNew<IEnumerable<string>, IEnumerable<int>>(new MapperOverrideMappingOptions(mapper2)));
+			Assert.IsTrue(mapper.CanMapNew<IEnumerable<string>, IEnumerable<int>>(new []{ new MapperOverrideMappingOptions(mapper2) }));
 		}
 	}
 }

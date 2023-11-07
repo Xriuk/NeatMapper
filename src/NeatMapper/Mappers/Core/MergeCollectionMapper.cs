@@ -14,9 +14,9 @@ namespace NeatMapper {
 	/// Not matched elements from the destination collection are treated according to <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
 	public sealed class MergeCollectionMapper : CollectionMapper, IMapperCanMap {
-		readonly IMapper _originalElementMapper;
-		readonly IMatcher _elementsMatcher;
-		readonly MergeCollectionsOptions _mergeCollectionOptions;
+		private readonly IMapper _originalElementMapper;
+		private readonly IMatcher _elementsMatcher;
+		private readonly MergeCollectionsOptions _mergeCollectionOptions;
 
 		public MergeCollectionMapper(
 			IMapper elementsMapper,

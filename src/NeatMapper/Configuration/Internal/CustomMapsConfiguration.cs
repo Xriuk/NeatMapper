@@ -14,7 +14,6 @@ namespace NeatMapper {
 	/// Contains informations about custom defined maps (both in classes and outside, both specific and generic)
 	/// </summary>
 	internal sealed class CustomMapsConfiguration {
-		static readonly IDictionary<Type, object> nonStaticMethodsInstances = new Dictionary<Type, object>();
 		readonly IDictionary<(Type From, Type To), Func<object[], object>> _genericCache = new Dictionary<(Type From, Type To), Func<object[], object>>();
 
 		/// <param name="interfaceFilter">
@@ -53,14 +52,14 @@ namespace NeatMapper {
 							.Distinct()
 							.ToArray();
 						if (!typeArguments.All(t => interfaceOpenGenericArguments.Contains(t)))
-							throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the generic arguments of the interface do not fully cover the generic arguments of the class so they cannot be inferred");
+							throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the generic arguments of the interface do not fully cover the generic arguments of the class, so they cannot be inferred");
 						else {
 							var duplicate = genericMaps.FirstOrDefault(m => MatchOpenGenericsRecursive(m.From, interfaceArguments[0]) && MatchOpenGenericsRecursive(m.To, interfaceArguments[1]));
 							if (duplicate != null)
 								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}. If the class has generic constraints check that they do not overlap");
 							var method = type.GetInterfaceMap(interf).TargetMethods.First();
 							if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null)
-								throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static interface (available in .NET 7)");
+								throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static version of the interface (available in .NET 7 version or greater)");
 
 							genericMaps.Add(new CustomGenericMap {
 								From = interfaceArguments[0],
@@ -133,7 +132,12 @@ namespace NeatMapper {
 				if (Maps.TryGetValue(types, out var map)) {
 					return (parameters) => {
 						try {
-							return map.Method.Invoke(map.Method.IsStatic ? null : map.Instance ?? CreateOrReturnInstance(map.Method.DeclaringType), parameters);
+							return map.Method.Invoke(
+								map.Method.IsStatic ?
+									null :
+									(map.Instance ?? ObjectFactory.GetOrCreateCached(map.Method.DeclaringType)),
+								parameters
+							);
 						}
 						catch (Exception e) {
 							throw new MappingException(e, types);
@@ -200,7 +204,11 @@ namespace NeatMapper {
 #pragma warning disable IDE0039 // Use local function
 					Func<object[], object> func = (parameters) => {
 						try {
-							return mapMethod.Invoke(mapMethod.IsStatic ? null : CreateOrReturnInstance(concreteType), parameters);
+							return mapMethod.Invoke(
+								mapMethod.IsStatic ?
+									null :
+									ObjectFactory.GetOrCreateCached(concreteType),
+								parameters);
 						}
 						catch (Exception e) {
 							throw new MappingException(e, types);
@@ -282,22 +290,6 @@ namespace NeatMapper {
 				return false;
 
 			return arguments1.Zip(arguments2, (a1, a2) => (First: a1, Second: a2)).All((a) => MatchOpenGenericsRecursive(a.First, a.Second));
-		}
-
-		internal static object CreateOrReturnInstance(Type classType) {
-			lock (nonStaticMethodsInstances) { 
-				if (!nonStaticMethodsInstances.TryGetValue(classType, out var instance)) {
-					try {
-						instance = ObjectFactory.Create(classType);
-						nonStaticMethodsInstances.Add(classType, instance);
-					}
-					catch (Exception e) {
-						throw new InvalidOperationException($"Could not create instance of type {classType.FullName ?? classType.Name} for non static interface", e);
-					}
-				}
-
-				return instance;
-			}
 		}
 
 		#region Types methods

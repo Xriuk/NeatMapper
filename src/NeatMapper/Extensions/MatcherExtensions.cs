@@ -41,38 +41,6 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(matcher));
 			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
-
-		/// <summary>
-		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
-		/// This will create a delegate which can be invoked multiple times
-		/// </summary>
-		/// <param name="source">Object to compare, may be null</param>
-		/// <param name="sourceType">Type of the source object, used to retrieve the available maps</param>
-		/// <param name="destination">Object to be compared to, may be null</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns><see langword="true"/> if the two objects match</returns>
-		public static bool Match(this IMatcher matcher,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-			params object[] mappingOptions) {
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-		}
 		#endregion
 
 		#region Explicit source and destination
@@ -140,34 +108,6 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-		}
-
-		/// <summary>
-		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
-		/// </summary>
-		/// <typeparam name="TSource">Type of the source object, used to retrieve the available comparers</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available comparers</typeparam>
-		/// <param name="source">Source object, may be null</param>
-		/// <param name="destination">Destination object, may be null</param>
-		/// <returns><see langword="true"/> if the two objects are equivalent</returns>
-		public static bool Match<TSource, TDestination>(this IMatcher matcher,
-#if NET5_0_OR_GREATER
-			TSource? 
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination? 
-#else
-			TDestination
-#endif
-			destination,
-			params object[] mappingOptions) {
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion
@@ -267,26 +207,6 @@ namespace NeatMapper {
 
 			return matcher.CanMatch(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
-
-		/// <summary>
-		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
-		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and destination objects
-		/// (cached) and try to match them
-		/// </summary>
-		/// <param name="sourceType">Type of the source object, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
-		/// since some matchers may depend on specific options to match or not two given types
-		/// </param>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be matched
-		/// with an object of type <paramref name="sourceType"/>
-		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types</exception>
-		public static bool CanMatch(this IMatcher matcher, Type sourceType, Type destinationType, params object[] mappingOptions) {
-			return matcher.CanMatch(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-		}
 		#endregion
 
 		#region Explicit source and destination
@@ -342,26 +262,6 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return matcher.CanMatch(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-		}
-
-		/// <summary>
-		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
-		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and destination objects
-		/// (cached) and try to match them
-		/// </summary>
-		/// <typeparam name="TSource">Type of the source object, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
-		/// since some matchers may depend on specific options to match or not two given types
-		/// </param>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be matched
-		/// with an object of type <typeparamref name="TSource"/>
-		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types</exception>
-		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher, params object[] mappingOptions) {
-			return matcher.CanMatch(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

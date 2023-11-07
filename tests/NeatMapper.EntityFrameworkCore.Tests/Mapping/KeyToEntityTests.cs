@@ -4,24 +4,42 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Tests;
 using System.Collections.Generic;
 using System;
+using Moq;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Data.Common;
+using Microsoft.Data.Sqlite;
 using System.Linq;
 
 namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
-	[TestClass]
-	public class KeyToEntityTests {
-		IMapper _mapper = null;
-		TestContext _db = null;
+	public abstract class KeyToEntityBase {
+		private SqliteConnection _connection = null;
+		private ServiceProvider _serviceProvider = null;
+		protected Mock<DbCommandInterceptor> _interceptorMock = null;
+		protected IMapper _mapper = null;
+		protected TestContext _db = null;
+
+		protected virtual void Configure(EntityFrameworkCoreOptions options) {
+
+		}
 
 		[TestInitialize]
 		public void Initialize() {
-			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddDbContext<TestContext>();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddEntitiesMaps<TestContext>();
-			var serviceProvider = serviceCollection.BuildServiceProvider();
-			_mapper = serviceProvider.GetRequiredService<IMapper>();
+			_interceptorMock = new Mock<DbCommandInterceptor>(MockBehavior.Loose) {
+				CallBase = true
+			};
 
-			_db = serviceProvider.GetRequiredService<TestContext>();
+			var serviceCollection = new ServiceCollection();
+			serviceCollection.AddLogging();
+			_connection = new SqliteConnection("Filename=:memory:");
+			_connection.Open();
+			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection).AddInterceptors(_interceptorMock.Object), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
+			serviceCollection.ConfigureAll<EntityFrameworkCoreOptions>(Configure);
+			_serviceProvider = serviceCollection.BuildServiceProvider();
+			_mapper = _serviceProvider.GetRequiredService<IMapper>();
+
+			_db = _serviceProvider.GetRequiredService<TestContext>();
 			_db.Database.EnsureDeleted();
 			_db.Database.EnsureCreated();
 
@@ -52,13 +70,26 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				entry.State = EntityState.Detached;
 			}
 #endif
+
+			_interceptorMock.Invocations.Clear();
 		}
 
+		[TestCleanup]
+		public void Cleanup() {
+			_serviceProvider.Dispose();
+			_connection.Dispose();
+		}
+	}
 
+	[TestClass]
+	public class KeyToEntityTests : KeyToEntityBase {
 		[TestMethod]
 		public void ShouldMapKeyToEntity() {
 			// Not null
 			{
+				Assert.IsTrue(_mapper.CanMapNew<int, IntKey>());
+				Assert.IsTrue(_mapper.CanMapNew<Guid, GuidKey>());
+
 				Assert.IsNotNull(_mapper.Map<IntKey>(2));
 				Assert.IsNull(_mapper.Map<IntKey>(3));
 				Assert.IsNotNull(_mapper.Map<GuidKey>(new Guid("56033406-E593-4076-B48A-70988C9F9190")));
@@ -69,12 +100,17 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			// Null
 			{
+				Assert.IsTrue(_mapper.CanMapNew<string, StringKey>());
+
 				Assert.IsNull(_mapper.Map<string, StringKey>(null));
 			}
 		}
 
 		[TestMethod]
 		public void ShouldMapNullableKeyToEntity() {
+			Assert.IsTrue(_mapper.CanMapNew<int?, IntKey>());
+			Assert.IsTrue(_mapper.CanMapNew<Guid?, GuidKey>());
+
 			// Not null
 			{
 				Assert.IsNotNull(_mapper.Map<int?, IntKey>(2));
@@ -94,6 +130,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldMapCompositeKeyToEntity() {
 			// Tuple
 			{
+				Assert.IsTrue(_mapper.CanMapNew<Tuple<int, Guid>, CompositePrimitiveKey>());
+				Assert.IsTrue(_mapper.CanMapNew<Tuple<int, string>, CompositeClassKey>());
+
 				// Not null
 				{
 					Assert.IsNotNull(_mapper.Map<CompositePrimitiveKey>(Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190"))));
@@ -114,6 +153,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			// ValueTuple
 			{
+				Assert.IsTrue(_mapper.CanMapNew<(int, Guid), CompositePrimitiveKey>());
+				Assert.IsTrue(_mapper.CanMapNew<(int, string), CompositeClassKey>());
+
 				// Not null
 				{
 					Assert.IsNotNull(_mapper.Map<CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190"))));
@@ -129,6 +171,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapNullableCompositeKeyToEntity() {
+			Assert.IsTrue(_mapper.CanMapNew<(int, Guid)?, CompositePrimitiveKey>());
+			Assert.IsTrue(_mapper.CanMapNew<(int, string)?, CompositeClassKey>());
+
 			// Not null
 			{
 				Assert.IsNotNull(_mapper.Map<(int, Guid)?, CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190"))));
@@ -152,14 +197,23 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldNotMapCompositeKeyToEntitysIfOrderIsWrong() {
 			// Tuple
 			{
+				Assert.IsFalse(_mapper.CanMapNew<Tuple<Guid, int>, CompositePrimitiveKey>());
+				Assert.IsFalse(_mapper.CanMapNew<Tuple<string, int>, CompositeClassKey>());
+
 				TestUtils.AssertMapNotFound(() => _mapper.Map<CompositePrimitiveKey>(Tuple.Create(new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
 				TestUtils.AssertMapNotFound(() => _mapper.Map<CompositeClassKey>(Tuple.Create("Test", 2)));
 			}
 
 			// ValueTuple
 			{
+				Assert.IsFalse(_mapper.CanMapNew<(Guid, int), CompositePrimitiveKey>());
+				Assert.IsFalse(_mapper.CanMapNew<(string, int), CompositeClassKey>());
+
 				TestUtils.AssertMapNotFound(() => _mapper.Map<CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
 				TestUtils.AssertMapNotFound(() => _mapper.Map<CompositeClassKey>(("Test", 2)));
+
+				Assert.IsFalse(_mapper.CanMapNew<(Guid, int)?, CompositePrimitiveKey>());
+				Assert.IsFalse(_mapper.CanMapNew<(string, int)?, CompositeClassKey>());
 
 				TestUtils.AssertMapNotFound(() => _mapper.Map<(Guid, int)?, CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
 				TestUtils.AssertMapNotFound(() => _mapper.Map<(string, int)?, CompositeClassKey>(("Test", 2)));
@@ -199,6 +253,269 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 #endif
 
-		// DEV: test entities retrieval modes
+		[TestMethod]
+		public void ShouldMapKeysCollectionToEntitiesCollection() {
+			Assert.IsTrue(_mapper.CanMapNew<int[], IEnumerable<IntKey>>());
+
+			{
+				var result = _mapper.Map<IEnumerable<IntKey>>(new[] { 2 , 0 });
+				Assert.AreEqual(2, result.Count());
+				Assert.IsNotNull(result.First());
+				Assert.IsNull(result.Last());
+			}
+
+			{
+				var result = _mapper.Map<GuidKey[]>(new List<Guid> { Guid.Empty, new Guid("56033406-E593-4076-B48A-70988C9F9190") });
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+
+			{
+				var result = _mapper.Map<StringKey[]>(new[] { null, "Test" });
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+		}
+	}
+
+
+	[TestClass]
+	public class KeyToEntityLocalTests : KeyToEntityBase {
+		protected override void Configure(EntityFrameworkCoreOptions options) {
+			options.EntitiesRetrievalMode = EntitiesRetrievalMode.Local;
+		}
+
+
+		[TestMethod]
+		public void ShouldNotFindNotLoadedSingleEntities() {
+			Assert.IsNull(_mapper.Map<IntKey>(2));
+			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedSingleEntities() {
+			_db.Find<IntKey>(2);
+
+			Assert.IsNotNull(_mapper.Map<IntKey>(2));
+			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+		}
+
+		[TestMethod]
+		public void ShouldNotFindNotLoadedMultipleEntities() {
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNull(result[0]);
+			Assert.IsNull(result[1]);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedMultipleEntities() {
+			_db.Find<IntKey>(2);
+
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNull(result[1]);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+		}
+	}
+
+	[TestClass]
+	public class KeyToEntityLocalOrAttachTests : KeyToEntityBase {
+		protected override void Configure(EntityFrameworkCoreOptions options) {
+			options.EntitiesRetrievalMode = EntitiesRetrievalMode.LocalOrAttach;
+		}
+
+
+		[TestMethod]
+		public void ShouldAttachNotLoadedSingleEntities() {
+			{ 
+				var result = _mapper.Map<IntKey>(2);
+				Assert.IsNotNull(result);
+				Assert.IsNull(result.Entity);
+			}
+
+			{
+				var result = _mapper.Map<IntKey>(3);
+				Assert.IsNotNull(result);
+				Assert.IsNull(result.Entity);
+			}
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedSingleEntities() {
+			_db.Find<IntKey>(2);
+
+			{
+				var result = _mapper.Map<IntKey>(2);
+				Assert.IsNotNull(result);
+				Assert.IsNotNull(result.Entity);
+			}
+
+			{
+				var result = _mapper.Map<IntKey>(3);
+				Assert.IsNotNull(result);
+				Assert.IsNull(result.Entity);
+			}
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+		}
+
+		[TestMethod]
+		public void ShouldAttachNotLoadedMultipleEntities() {
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNull(result[0].Entity);
+			Assert.IsNotNull(result[1]);
+			Assert.IsNull(result[1].Entity);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedMultipleEntities() {
+			_db.Find<IntKey>(2);
+
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNotNull(result[0].Entity);
+			Assert.IsNotNull(result[1]);
+			Assert.IsNull(result[1].Entity);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+		}
+	}
+
+	[TestClass]
+	public class KeyToEntityLocalOrRemoteTests : KeyToEntityBase {
+		protected override void Configure(EntityFrameworkCoreOptions options) {
+			options.EntitiesRetrievalMode = EntitiesRetrievalMode.LocalOrRemote;
+		}
+
+
+		[TestMethod]
+		public void ShouldFindNotLoadedSingleEntities() {
+			{
+				var result = _mapper.Map<IntKey>(2);
+				Assert.IsNotNull(result);
+				Assert.IsNotNull(result.Entity);
+			}
+
+			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedSingleEntities() {
+			_db.Find<IntKey>(2);
+
+			{
+				var result = _mapper.Map<IntKey>(2);
+				Assert.IsNotNull(result);
+				Assert.IsNotNull(result.Entity);
+			}
+
+			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+		}
+
+		[TestMethod]
+		public void ShouldAttachNotLoadedMultipleEntities() {
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNotNull(result[0].Entity);
+			Assert.IsNull(result[1]);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedMultipleEntities() {
+			_db.Find<IntKey>(2);
+
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNotNull(result[0].Entity);
+			Assert.IsNull(result[1]);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+		}
+	}
+
+	[TestClass]
+	public class KeyToEntityRemoteTests : KeyToEntityBase {
+		protected override void Configure(EntityFrameworkCoreOptions options) {
+			options.EntitiesRetrievalMode = EntitiesRetrievalMode.Remote;
+		}
+
+
+		[TestMethod]
+		public void ShouldFindNotLoadedSingleEntities() {
+			{
+				var result = _mapper.Map<IntKey>(2);
+				Assert.IsNotNull(result);
+				Assert.IsNotNull(result.Entity);
+			}
+
+			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedSingleEntities() {
+			_db.Find<IntKey>(2);
+
+			{
+				var result = _mapper.Map<IntKey>(2);
+				Assert.IsNotNull(result);
+				Assert.IsNotNull(result.Entity);
+			}
+
+			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(3));
+		}
+
+		[TestMethod]
+		public void ShouldAttachNotLoadedMultipleEntities() {
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNotNull(result[0].Entity);
+			Assert.IsNull(result[1]);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+		}
+
+		[TestMethod]
+		public void ShouldFindLoadedMultipleEntities() {
+			_db.Find<IntKey>(2);
+
+			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNotNull(result[0].Entity);
+			Assert.IsNull(result[1]);
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+		}
 	}
 }

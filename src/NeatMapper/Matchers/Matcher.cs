@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches objects by using <see cref="IMatchMap{TSource, TDestination}"/>
 	/// </summary>
-	public sealed class Matcher : IMatcher {
+	public sealed class Matcher : IMatcher, IMatcherCanMatch {
 		readonly CustomMapsConfiguration _configuration;
 		readonly CustomMapsConfiguration _hierarchyConfiguration;
 		readonly IServiceProvider _serviceProvider;
@@ -122,7 +122,12 @@ namespace NeatMapper {
 					throw new MapNotFoundException(types);
 				}
 				try {
-					return (bool)map.Value.Method.Invoke(map.Value.Method.IsStatic ? null : map.Value.Instance ?? CustomMapsConfiguration.CreateOrReturnInstance(map.Value.Method.DeclaringType), new object[] { source, destination, CreateMatchingContext(mappingOptions) });
+					return (bool)map.Value.Method.Invoke(
+						map.Value.Method.IsStatic ?
+							null :
+							(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType)),
+						new object[] { source, destination, CreateMatchingContext(mappingOptions) }
+					);
 				}
 				catch (Exception e) {
 					throw new MatcherException(e, types);
@@ -132,6 +137,36 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			(Type From, Type To) types = (sourceType, destinationType);
+
+			try {
+				// Try retrieving a regular map
+				_configuration.GetMap(types);
+				return true;
+			}
+			catch (MapNotFoundException) {
+				// Try retrieving a hierarchy map
+				return _hierarchyConfiguration.Maps.Any(m =>
+					m.Key.From.IsAssignableFrom(types.From) &&
+					m.Key.To.IsAssignableFrom(types.To));
+			}
 		}
 
 

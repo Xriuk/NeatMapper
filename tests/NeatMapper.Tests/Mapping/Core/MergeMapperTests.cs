@@ -625,7 +625,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				_mapper.Map<string>(2f, opts);
+				_mapper.Map<string>(2f, new object[] { opts });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
@@ -638,7 +638,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				var opts = new TestOptions();
 				var merge = new MergeCollectionsMappingOptions(false, (s, d, c) => false);
-				_mapper.Map<string>(2f, opts, merge);
+				_mapper.Map<string>(2f, new object[] { opts, merge });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
 				Assert.AreSame(merge, MappingOptionsUtils.mergeOptions);

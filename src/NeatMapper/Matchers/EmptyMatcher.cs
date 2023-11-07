@@ -2,9 +2,12 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which just returns false for every match
+	/// Singleton <see cref="IMatcher"/> which just returns false for every match
 	/// </summary>
-	public sealed class EmptyMatcher : IMatcher {
+	public sealed class EmptyMatcher : IMatcher, IMatcherCanMatch {
+		/// <summary>
+		/// Singleton instance of the matcher
+		/// </summary>
 		public static readonly IMatcher Instance = new EmptyMatcher();
 
 
@@ -25,6 +28,19 @@ namespace NeatMapper {
 			object
 #endif
 			destination,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
+		public bool CanMatch(
+			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?

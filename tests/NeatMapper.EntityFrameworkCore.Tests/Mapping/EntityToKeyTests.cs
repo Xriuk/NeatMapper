@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Tests;
 using System;
@@ -8,16 +10,27 @@ using System.Linq;
 namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 	[TestClass]
 	public class EntityToKeyTests {
-		IMapper _mapper = null;
+		private SqliteConnection _connection = null;
+		private ServiceProvider _serviceProvider = null;
+		private IMapper _mapper = null;
 
 		[TestInitialize]
 		public void Initialize() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddDbContext<TestContext>();
+			serviceCollection.AddLogging();
+			_connection = new SqliteConnection("Filename=:memory:");
+			_connection.Open();
+			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddEntitiesMaps<TestContext>();
-			var serviceProvider = serviceCollection.BuildServiceProvider();
-			_mapper = serviceProvider.GetRequiredService<IMapper>();
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
+			_serviceProvider = serviceCollection.BuildServiceProvider();
+			_mapper = _serviceProvider.GetRequiredService<IMapper>();
+		}
+
+		[TestCleanup]
+		public void Cleanup() {
+			_serviceProvider.Dispose();
+			_connection.Dispose();
 		}
 
 
