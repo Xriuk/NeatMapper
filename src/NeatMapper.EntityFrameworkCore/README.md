@@ -28,13 +28,14 @@ And you are ready to map your entities
 
 ```csharp
 // Map a key to an entity
-var entity = mapper.MapAsync<MyEntity>(2);
+var entity = mapper.Map<MyEntity>(2);
+var entity = await mapper.MapAsync<MyEntity>(2);
 
 // Map a composite key to an entity with tuples (System.Tuple or System.ValueTuple)
-var entity = mapper.MapAsync<MyEntityWithCompositeKey>((2, "StringKey"));
+var entity = await mapper.MapAsync<MyEntityWithCompositeKey>((2, "StringKey"));
 
 // Map multiple keys to their respective entities
-var entities = mapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
+var entities = await mapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 
 
 // Map entity to key(s)
