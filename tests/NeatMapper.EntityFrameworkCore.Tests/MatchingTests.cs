@@ -24,7 +24,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			_connection.Open();
 			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>(ServiceLifetime.Singleton);
 			serviceCollection.ConfigureAll<EntityFrameworkCoreOptions>(Configure);
 			_serviceProvider = serviceCollection.BuildServiceProvider();
 			_matcher = _serviceProvider.GetRequiredService<IMatcher>();
@@ -326,6 +326,40 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 
 					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositePrimitiveKey, (Guid, int)?>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, (new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
 					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositeClassKey, (string, int)?>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, ("Test", 2)));
+				}
+			}
+		}
+
+		[TestMethod]
+		public void ShouldMatchEntityWithEntity() {
+			Assert.IsTrue(_matcher.CanMatch<IntKey, IntKey>());
+			Assert.IsTrue(_matcher.CanMatch<GuidKey, GuidKey>());
+			Assert.IsTrue(_matcher.CanMatch<StringKey, StringKey>());
+
+			{
+				// Not null
+				{
+					Assert.IsTrue(_matcher.Match(new IntKey { Id = 2 }, new IntKey { Id = 2 }));
+					Assert.IsFalse(_matcher.Match(new IntKey { Id = 3 }, new IntKey { Id = 2 }));
+
+					Assert.IsTrue(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+					Assert.IsFalse(_matcher.Match(new GuidKey(), new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+
+					Assert.IsTrue(_matcher.Match(new StringKey { Id = "Test" }, new StringKey { Id = "Test" }));
+					Assert.IsFalse(_matcher.Match(new StringKey { Id = "Test2" }, new StringKey { Id = "Test" }));
+				}
+
+				// Null
+				{
+					Assert.IsFalse(_matcher.Match<IntKey, IntKey>(new IntKey { Id = 2 }, null));
+					Assert.IsFalse(_matcher.Match<IntKey, IntKey>(null, null));
+					Assert.IsFalse(_matcher.Match<IntKey, IntKey>(new IntKey { Id = 3 }, null));
+
+					Assert.IsFalse(_matcher.Match<GuidKey, GuidKey>(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, null));
+					Assert.IsFalse(_matcher.Match<GuidKey, GuidKey>(new GuidKey(), null));
+
+					Assert.IsFalse(_matcher.Match<StringKey, StringKey>(new StringKey { Id = "Test" }, null));
+					Assert.IsFalse(_matcher.Match<StringKey, StringKey>(null, null));
 				}
 			}
 		}

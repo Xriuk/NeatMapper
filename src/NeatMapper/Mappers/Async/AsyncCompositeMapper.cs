@@ -158,19 +158,20 @@ namespace NeatMapper {
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
-			var mappersToIgnore = new List<IAsyncMapper>();
+			var undeterminateMappers = new List<IAsyncMapper>();
 			foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
 				try { 
 					if(await mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken))
 						return true;
 				}
 				catch (InvalidOperationException) {
-					mappersToIgnore.Add(mapper);
+					undeterminateMappers.Add(mapper);
 				}
 			}
 
 			// Try creating a default source object and try mapping it
-			if (mappersToIgnore.Count != _mappers.Count) { 
+			var mappersLeft = _mappers.Where(m => !(m is IAsyncMapperCanMap) || undeterminateMappers.IndexOf(m) != -1);
+			if (mappersLeft.Any()) {
 				object source;
 				try {
 					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
@@ -179,11 +180,7 @@ namespace NeatMapper {
 					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create an object to test it");
 				}
 
-				foreach (var mapper in _mappers) {
-					// Skip mappers which cannot be checked
-					if (mappersToIgnore.Contains(mapper))
-						continue;
-
+				foreach (var mapper in mappersLeft) {
 					try {
 						await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
 						return true;
@@ -192,7 +189,7 @@ namespace NeatMapper {
 				}
 			}
 
-			if(mappersToIgnore.Count > 0)
+			if(undeterminateMappers.Count > 0)
 				throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
 			else
 				return false;
@@ -221,19 +218,20 @@ namespace NeatMapper {
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
-			var mappersToIgnore = new List<IAsyncMapper>();
+			var undeterminateMappers = new List<IAsyncMapper>();
 			foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
 				try {
 					if (await mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken))
 						return true;
 				}
 				catch (InvalidOperationException) {
-					mappersToIgnore.Add(mapper);
+					undeterminateMappers.Add(mapper);
 				}
 			}
 
 			// Try creating two default source and destination objects and try mapping them
-			if (mappersToIgnore.Count != _mappers.Count) {
+			var mappersLeft = _mappers.Where(m => !(m is IAsyncMapperCanMap) || undeterminateMappers.IndexOf(m) != -1);
+			if (mappersLeft.Any()) {
 				object source;
 				object destination;
 				try {
@@ -244,11 +242,7 @@ namespace NeatMapper {
 					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create the objects to test it");
 				}
 
-				foreach (var mapper in _mappers) {
-					// Skip mappers which cannot be checked
-					if(mappersToIgnore.Contains(mapper))
-						continue;
-
+				foreach (var mapper in mappersLeft) {
 					try {
 						await mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 						return true;
@@ -257,7 +251,7 @@ namespace NeatMapper {
 				}
 			}
 
-			if (mappersToIgnore.Count > 0)
+			if (undeterminateMappers.Count > 0)
 				throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
 			else
 				return false;

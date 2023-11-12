@@ -1,18 +1,16 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which matches objects by using <see cref="IMatchMap{TSource, TDestination}"/>
+	/// <see cref="IMatcher"/> which matches objects by using <see cref="IHierarchyMatchMap{TSource, TDestination}"/>
 	/// </summary>
-	public sealed class Matcher : IMatcher, IMatcherCanMatch {
+	public sealed class HierarchyCustomMatcher : IMatcher, IMatcherCanMatch {
 		readonly CustomMapsConfiguration _configuration;
-		readonly CustomMapsConfiguration _hierarchyConfiguration;
 		readonly IServiceProvider _serviceProvider;
 
-		public Matcher(
+		public HierarchyCustomMatcher(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
 #else
@@ -20,9 +18,9 @@ namespace NeatMapper {
 #endif
 			mapsOptions = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomMatchAdditionalMapsOptions?
+			CustomHierarchyMatchAdditionalMapsOptions?
 #else
-			CustomMatchAdditionalMapsOptions
+			CustomHierarchyMatchAdditionalMapsOptions
 #endif
 			additionalMapsOptions = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -33,19 +31,6 @@ namespace NeatMapper {
 			serviceProvider = null) {
 
 			_configuration = new CustomMapsConfiguration(
-				(_, i) => {
-					if (!i.IsGenericType)
-						return false;
-					var type = i.GetGenericTypeDefinition();
-					return type == typeof(IMatchMap<,>)
-#if NET7_0_OR_GREATER
-						|| type == typeof(IMatchMapStatic<,>)
-#endif
-					;
-				},
-				mapsOptions ?? new CustomMapsOptions(),
-				additionalMapsOptions?._maps.Values);
-			_hierarchyConfiguration = new CustomMapsConfiguration(
 				(t, i) => {
 					// Hierarchy matchers do not support generic maps
 					if (!i.IsGenericType || t.ContainsGenericParameters)
@@ -57,7 +42,8 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				mapsOptions ?? new CustomMapsOptions()
+				mapsOptions ?? new CustomMapsOptions(),
+				additionalMapsOptions?._maps.Values
 			);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
@@ -100,38 +86,25 @@ namespace NeatMapper {
 
 			(Type From, Type To) types = (sourceType, destinationType);
 
+			KeyValuePair<(Type From, Type To), CustomMap> map;
 			try {
-				// Try retrieving a regular map
-				var comparer = _configuration.GetMap(types);
-				try {
-					return (bool)comparer.Invoke(new object[] { source, destination, CreateMatchingContext(mappingOptions) });
-				}
-				catch (MappingException e) {
-					throw new MatcherException(e.InnerException, types);
-				}
+				map = _configuration.Maps.First(m =>
+					m.Key.From.IsAssignableFrom(types.From) &&
+					m.Key.To.IsAssignableFrom(types.To));
 			}
-			catch (MapNotFoundException) {
-				// Try retrieving a hierarchy map
-				KeyValuePair<(Type From, Type To), CustomMap> map;
-				try { 
-					map = _hierarchyConfiguration.Maps.First(m =>
-						m.Key.From.IsAssignableFrom(types.From) &&
-						m.Key.To.IsAssignableFrom(types.To));
-				}
-				catch {
-					throw new MapNotFoundException(types);
-				}
-				try {
-					return (bool)map.Value.Method.Invoke(
-						map.Value.Method.IsStatic ?
-							null :
-							(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType)),
-						new object[] { source, destination, CreateMatchingContext(mappingOptions) }
-					);
-				}
-				catch (Exception e) {
-					throw new MatcherException(e, types);
-				}
+			catch {
+				throw new MapNotFoundException(types);
+			}
+			try {
+				return (bool)map.Value.Method.Invoke(
+					map.Value.Method.IsStatic ?
+						null :
+						(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType)),
+					new object[] { source, destination, CreateMatchingContext(mappingOptions) }
+				);
+			}
+			catch (Exception e) {
+				throw new MatcherException(e, types);
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -154,19 +127,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			(Type From, Type To) types = (sourceType, destinationType);
-
-			try {
-				// Try retrieving a regular map
-				_configuration.GetMap(types);
-				return true;
-			}
-			catch (MapNotFoundException) {
-				// Try retrieving a hierarchy map
-				return _hierarchyConfiguration.Maps.Any(m =>
-					m.Key.From.IsAssignableFrom(types.From) &&
-					m.Key.To.IsAssignableFrom(types.To));
-			}
+			return _configuration.Maps.Any(m => m.Key.From.IsAssignableFrom(sourceType) && m.Key.To.IsAssignableFrom(destinationType));
 		}
 
 
@@ -176,7 +137,7 @@ namespace NeatMapper {
 
 		MatchingContext CreateMatchingContext(MappingOptions options) {
 			var overrideOptions = options?.GetOptions<MatcherOverrideMappingOptions>();
-			return new MatchingContext (
+			return new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
 				overrideOptions?.Matcher ?? this,
 				options ?? MappingOptions.Empty

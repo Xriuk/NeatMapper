@@ -1,8 +1,9 @@
-﻿using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Tests;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 	[TestClass]
@@ -28,10 +29,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				var result = _mapper.Map<int, IntKey>(2, entity);
 				Assert.IsNotNull(result);
 				Assert.AreNotSame(entity, result);
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<int, IntKey>(2, entity, mappingOptions));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int, IntKey>(2, entity, mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 
 				Assert.IsNull(_mapper.Map<int, IntKey>(3, new IntKey()));
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<int, IntKey>(3, new IntKey(), mappingOptions));
+				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int, IntKey>(3, new IntKey(), mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 
 			// Null key
@@ -42,7 +45,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(_mapper.Map<string, StringKey>(null, (StringKey)null));
 
 				Assert.IsNull(_mapper.Map<string, StringKey>(null, new StringKey()));
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<string, StringKey>(null, new StringKey(), mappingOptions));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<string, StringKey>(null, new StringKey(), mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 		}
 
@@ -63,7 +67,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				var result = _mapper.Map<int?, IntKey>(2, entity);
 				Assert.IsNotNull(result);
 				Assert.AreNotSame(entity, result);
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<int?, IntKey>(2, entity, mappingOptions));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int?, IntKey>(2, entity, mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 
 			// Null key
@@ -72,7 +77,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(_mapper.Map<int?, IntKey>(null, (IntKey)null));
 
 				Assert.IsNull(_mapper.Map<int?, IntKey>(null, new IntKey()));
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<int?, IntKey>(null, new IntKey(), mappingOptions));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int?, IntKey>(null, new IntKey(), mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 		}
 
@@ -97,10 +103,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 					var result = _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity);
 					Assert.IsNotNull(result);
 					Assert.AreNotSame(entity, result);
-					Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity, mappingOptions));
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity, mappingOptions));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 
 					Assert.IsNull(_mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(Tuple.Create(3, new Guid("56033406-E593-4076-B48A-70988C9F9190")), new CompositePrimitiveKey()));
-					Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(Tuple.Create(2, Guid.Empty), new CompositePrimitiveKey(), mappingOptions));
+					exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(Tuple.Create(2, Guid.Empty), new CompositePrimitiveKey(), mappingOptions));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 				}
 
 				// Null key
@@ -109,7 +117,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 					Assert.IsNull(_mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(null, (CompositePrimitiveKey)null));
 
 					Assert.IsNull(_mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(null, new CompositePrimitiveKey()));
-					Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(null, new CompositePrimitiveKey(), mappingOptions));
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<Tuple<int, Guid>, CompositePrimitiveKey>(null, new CompositePrimitiveKey(), mappingOptions));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 				}
 			}
 
@@ -132,10 +141,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 					var result = _mapper.Map<(int, Guid), CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity);
 					Assert.IsNotNull(result);
 					Assert.AreNotSame(entity, result);
-					Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<(int, Guid), CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity, mappingOptions));
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<(int, Guid), CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity, mappingOptions));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 
 					Assert.IsNull(_mapper.Map<(int, Guid), CompositePrimitiveKey>((3, new Guid("56033406-E593-4076-B48A-70988C9F9190")), new CompositePrimitiveKey()));
-					Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<(int, Guid), CompositePrimitiveKey>((2, Guid.Empty), new CompositePrimitiveKey(), mappingOptions));
+					exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<(int, Guid), CompositePrimitiveKey>((2, Guid.Empty), new CompositePrimitiveKey(), mappingOptions));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 				}
 			}
 		}
@@ -159,10 +170,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				var result = _mapper.Map<(int, Guid)?, CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity);
 				Assert.IsNotNull(result);
 				Assert.AreNotSame(entity, result);
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<(int, Guid)?, CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity, mappingOptions));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<(int, Guid)?, CompositePrimitiveKey>((2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), entity, mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 
 				Assert.IsNull(_mapper.Map<(int, Guid)?, CompositePrimitiveKey>((3, new Guid("56033406-E593-4076-B48A-70988C9F9190")), new CompositePrimitiveKey()));
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<(int, Guid)?, CompositePrimitiveKey>((2, Guid.Empty), new CompositePrimitiveKey(), mappingOptions));
+				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<(int, Guid)?, CompositePrimitiveKey>((2, Guid.Empty), new CompositePrimitiveKey(), mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 
 			// Null key
@@ -171,7 +184,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(_mapper.Map<(int, Guid)?, CompositePrimitiveKey>(null, (CompositePrimitiveKey)null));
 
 				Assert.IsNull(_mapper.Map<(int, Guid)?, CompositePrimitiveKey>(null, new CompositePrimitiveKey()));
-				Assert.ThrowsException<DuplicateEntityException>(() => _mapper.Map<(int, Guid)?, CompositePrimitiveKey>(null, new CompositePrimitiveKey(), mappingOptions));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<(int, Guid)?, CompositePrimitiveKey>(null, new CompositePrimitiveKey(), mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 		}
 
@@ -234,5 +248,127 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			TestUtils.AssertMapNotFound(() => _mapper.Map(2, (Keyless)null));
 		}
 #endif
+
+
+		[TestMethod]
+		public void ShouldMapKeysCollectionToEntitiesCollection() {
+			Assert.IsTrue(_mapper.CanMapMerge<int[], List<IntKey>>());
+			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<int[], ICollection<IntKey>>());
+
+			// Normal
+			{
+				var list = new List<IntKey>();
+				var result = _mapper.Map(new[] { 2, 0 }, list);
+				Assert.AreSame(list, result);
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result.First());
+				Assert.IsNull(result.Last());
+			}
+
+			// Duplicate replaced
+			{
+				var entity = new IntKey {
+					Id = 2
+				};
+				var result = _mapper.Map(new[] { 2, 0 }, new List<IntKey> { entity });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result.First());
+				Assert.AreNotSame(entity, result.First());
+				Assert.IsNull(result.Last());
+			}
+
+			// Duplicate same
+			{
+				var entity =  _db.Find<IntKey>(2);
+				var result = _mapper.Map(new[] { 2, 0 }, new List<IntKey> { entity });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result.First());
+				Assert.AreSame(entity, result.First());
+				Assert.IsNull(result.Last());
+			}
+
+			// Duplicate throws
+			{
+				var entity = new IntKey {
+					Id = 2
+				};
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2, 0 }, new List<IntKey> { entity }, mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
+			}
+		}
+
+		[TestMethod]
+		public void ShouldMapNullableKeysCollectioToEntitiesCollection() {
+			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<int?>, List<IntKey>>());
+
+			{
+				var result = _mapper.Map(new int?[] { 2, null }, new List<IntKey>());
+				Assert.AreEqual(2, result.Count());
+				Assert.IsNotNull(result.First());
+				Assert.IsNull(result.Last());
+			}
+
+			{
+				var result = _mapper.Map(new List<Guid?> { null, new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new List<GuidKey>());
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+		}
+
+		[TestMethod]
+		public void ShouldMapCompositeKeysCollectionToEntitiesCollection() {
+			// Tuple
+			{
+				Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<Tuple<int, Guid>>, List<CompositePrimitiveKey>>());
+
+				var result = _mapper.Map(new Tuple<int, Guid>[] { null, Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190")) }, new List<CompositePrimitiveKey>());
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+
+			// ValueTuple
+			{
+				Assert.IsTrue(_mapper.CanMapMerge<(int, Guid)[], List<CompositePrimitiveKey>>());
+
+				var result = _mapper.Map(new (int, Guid)[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), default((int, Guid)) }, new List<CompositePrimitiveKey>());
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNull(result[1]);
+			}
+		}
+
+		[TestMethod]
+		public void ShouldMapNullableCompositeKeysCollectionToEntitiesCollection() {
+			Assert.IsTrue(_mapper.CanMapMerge<(int, Guid)?[], List<CompositePrimitiveKey>>());
+
+			var result = _mapper.Map(new (int, Guid)?[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), null }, new List<CompositePrimitiveKey>());
+			Assert.AreEqual(2, result.Count);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNull(result[1]);
+		}
+
+		[TestMethod]
+		public void ShouldAttachDestinationIfNotNullInLocalOrAttachMode() {
+			var destination = new IntKey {
+				Id = 3
+			};
+			var result = _mapper.Map<int, IntKey>(3, destination, new[] { new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOrAttach) });
+			Assert.AreSame(destination, result);
+		}
+
+		[TestMethod]
+		public void ShouldAttachDestinationIfNotNullInLocalOrAttachModeInCollection() {
+			var destination = new IntKey {
+				Id = 3
+			};
+			var result = _mapper.Map(new[] { 2, 3, 4 }, new List<IntKey> { destination }, new[] { new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOrAttach) });
+			Assert.AreEqual(3, result.Count);
+			Assert.IsNotNull(result);
+			Assert.AreSame(destination, result[0]);
+			Assert.IsNotNull(result[1]);
+			Assert.IsNotNull(result[2]);
+		}
 	}
 }

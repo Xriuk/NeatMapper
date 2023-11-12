@@ -868,7 +868,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithGenericElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
+			var mapper = new AsyncMergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 			var a = new GenericClassDto<CategoryDto> {
@@ -926,7 +926,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithSpecificElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
+			var mapper = new AsyncMergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 			var pa = new ProductDto {

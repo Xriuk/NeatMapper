@@ -1,33 +1,47 @@
-# .NEaT Mapper - Dependency Injection 
+# .NEaT Mapper - Entity Framework Core
 
-[![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.DependencyInjection.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper.DependencyInjection)
+[![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.EntityFrameworkCore.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
 
 ## What is this package
 
-Dependency Injection extensions for [NeatMapper](https://www.nuget.org/packages/NeatMapper)
+Entity Framework Core maps for [NeatMapper](https://www.nuget.org/packages/NeatMapper). This allows mapping automatically entities to their keys (even composite) and vice-versa.
 
 ## How to install
 
 You can find all the other packages on Nuget https://www.nuget.org/profiles/xriuk
 
-You can install this package directly from Nuget https://www.nuget.org/packages/NeatMapper.DependencyInjection
+You can install this package directly from Nuget https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore
 
 ## How to use
 
 While configuring your services simply add
 
 ```csharp
-servicesCollection.Configure<MapperConfigurationOptions>(o => o.ScanTypes = Assembly.GetExecutingAssembly().GetTypes().ToList());
-//servicesCollection.Configure<MapperOptions>(o => ...);
-servicesCollection.AddNeatMapper();
-
-...
-
-var mapper = serviceProvider.GetRequiredService<IMapper>();
-mapper.Map<Foo, Bar>(...);
+services.AddDbContext<TestContext>();
+services.AddNeatMapper();
+services.AddNeatMapperEntityFrameworkCore<TestContext>();
 ```
 
-For information on how to use the Mapper, check [the main package README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md).
+And you are ready to map your entities
+
+```csharp
+// Map a key to an entity
+var entity = mapper.MapAsync<MyEntity>(2);
+
+// Map a composite key to an entity with tuples (System.Tuple or System.ValueTuple)
+var entity = mapper.MapAsync<MyEntityWithCompositeKey>((2, "StringKey"));
+
+// Map multiple keys to their respective entities
+var entities = mapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
+
+
+// Map entity to key(s)
+(int MyIntKey, string MyStringKey) = mapper.Map<(int, string)>(myEntity);
+```
+
+## Advanced options
+
+Find more advanced use cases in the [wiki](https://github.com/Xriuk/NeatMapper/wiki/Entity-Framework-Core) or in the extended [tests project](https://github.com/Xriuk/NeatMapper/tree/main/tests/NeatMapper.EntityFrameworkCore.Tests).
 
 ## License
 

@@ -10,10 +10,11 @@ using System;
 using System.Linq;
 
 namespace NeatMapper.EntityFrameworkCore {
-	public static class EntityFrameworkCoreServiceCollectionExtensions {
-		/// <inheritdoc cref="AddNeatMapperEntityFrameworkCore{TContext}(IServiceCollection, IModel, ServiceLifetime, ServiceLifetime)"/>
+	public static class ServiceCollectionExtensions {
+		/// <inheritdoc cref="AddNeatMapperEntityFrameworkCore{TContext}(IServiceCollection, IModel, ServiceLifetime, ServiceLifetime, ServiceLifetime)"/>
 		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services,
 			ServiceLifetime mapperLifetime = ServiceLifetime.Singleton,
+			ServiceLifetime asyncMapperLifetime = ServiceLifetime.Singleton,
 			ServiceLifetime matcherLifetime = ServiceLifetime.Singleton) where TContext : DbContext {
 
 			if (services == null)
@@ -21,13 +22,13 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			if (typeof(TContext).GetConstructor(Type.EmptyTypes) != null) {
 				using(var instance = (TContext)Activator.CreateInstance(typeof(TContext))) {
-					return services.AddNeatMapperEntityFrameworkCore<TContext>(instance.Model, mapperLifetime, matcherLifetime);
+					return services.AddNeatMapperEntityFrameworkCore<TContext>(instance.Model, mapperLifetime, asyncMapperLifetime, matcherLifetime);
 				}
 			}
 			else { 
 				using (var serviceProvider = services.BuildServiceProvider()) {
 					using(var scope = serviceProvider.CreateScope()) {
-						return services.AddNeatMapperEntityFrameworkCore<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model, mapperLifetime, matcherLifetime);
+						return services.AddNeatMapperEntityFrameworkCore<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model, mapperLifetime, asyncMapperLifetime, matcherLifetime);
 					}
 				}
 			}
@@ -47,6 +48,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services,
 			IModel model,
 			ServiceLifetime mapperLifetime = ServiceLifetime.Singleton,
+			ServiceLifetime asyncMapperLifetime = ServiceLifetime.Singleton,
 			ServiceLifetime matcherLifetime = ServiceLifetime.Singleton) where TContext : DbContext {
 
 			if (services == null)
@@ -97,6 +99,35 @@ namespace NeatMapper.EntityFrameworkCore {
 					s.GetService<IMatcher>(),
 					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value),
 				mapperLifetime));
+			#endregion
+
+			#region IAsyncMapper
+			// Added to all options
+			services.AddTransient<IConfigureOptions<AsyncCompositeMapperOptions>>(
+				s => new ConfigureNamedOptions<AsyncCompositeMapperOptions, AsyncEntityFrameworkCoreMapper>(
+					null,
+					s.GetRequiredService<AsyncEntityFrameworkCoreMapper>(),
+					(o, e) => {
+						// Try adding before collection mappers
+						var collectionMapper = o.Mappers.OfType<AsyncCollectionMapper>().FirstOrDefault();
+						if (collectionMapper != null)
+							o.Mappers.Insert(o.Mappers.IndexOf(collectionMapper), e);
+						else
+							o.Mappers.Add(e);
+					}
+				)
+			);
+
+			services.Add(new ServiceDescriptor(
+				typeof(AsyncEntityFrameworkCoreMapper),
+				s => new AsyncEntityFrameworkCoreMapper(
+					model,
+					typeof(TContext),
+					s,
+					s.GetService<IOptions<EntityFrameworkCoreOptions>>()?.Value,
+					s.GetService<IMatcher>(),
+					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value),
+				asyncMapperLifetime));
 			#endregion
 
 			return services;

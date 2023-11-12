@@ -29,10 +29,14 @@ namespace NeatMapper {
 			#region IMatcher
 			// Added to all options
 			services.AddTransient<IConfigureOptions<CompositeMatcherOptions>>(
-				s => new ConfigureNamedOptions<CompositeMatcherOptions, Matcher>(
+				s => new ConfigureNamedOptions<CompositeMatcherOptions, CustomMatcher, HierarchyCustomMatcher>(
 					null,
-					s.GetRequiredService<Matcher>(),
-					(o, m) => o.Matchers.Add(m)
+					s.GetRequiredService<CustomMatcher>(),
+					s.GetRequiredService<HierarchyCustomMatcher>(),
+					(o, m, h) => {
+						o.Matchers.Add(m);
+						o.Matchers.Add(h);
+					}
 				)
 			);
 
@@ -40,10 +44,19 @@ namespace NeatMapper {
 
 			// Normal matcher
 			services.Add(new ServiceDescriptor(
-				typeof(Matcher),
-				s => new Matcher(
+				typeof(CustomMatcher),
+				s => new CustomMatcher(
 					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
 					s.GetService<IOptions<CustomMatchAdditionalMapsOptions>>()?.Value,
+					s),
+				matchersLifetime));
+
+			// Hierarchy matcher
+			services.Add(new ServiceDescriptor(
+				typeof(HierarchyCustomMatcher),
+				s => new HierarchyCustomMatcher(
+					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptions<CustomHierarchyMatchAdditionalMapsOptions>>()?.Value,
 					s),
 				matchersLifetime));
 

@@ -102,9 +102,14 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestInitialize]
 		public void Initialize() {
-			_matcher = new Matcher(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(Maps) }
-			});
+			_matcher = new CompositeMatcher(
+				new CustomMatcher(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(Maps) }
+				}),
+				new HierarchyCustomMatcher(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(Maps) }
+				})
+			);
 		}
 
 
@@ -137,7 +142,7 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestMethod]
 		public void ShouldMatchChildClassAsParent() {
-			var matcher = new Matcher(new CustomMapsOptions {
+			var matcher = new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps2) }
 			});
 
@@ -203,7 +208,7 @@ namespace NeatMapper.Tests.Matching {
 		public void ShouldMatchWithAdditionalMaps() {
 			var options = new CustomMatchAdditionalMapsOptions();
 			options.AddMap<string, int>((s, d, _) => s?.Length == d);
-			var matcher = new Matcher(null, options);
+			var matcher = new CustomMatcher(null, options);
 
 			Assert.IsTrue(matcher.CanMatch<string, int>());
 

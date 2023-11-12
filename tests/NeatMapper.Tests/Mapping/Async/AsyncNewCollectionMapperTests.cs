@@ -204,13 +204,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Not awaited
 			{ 
 				// Normal collections
-				var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync<IEnumerable<int>>(new[] { 2f }));
+				var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<int>>(new[] { 2f }));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 				// Nested collections
-				exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+				exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 			}
@@ -218,13 +218,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Awaited
 			{
 				// Normal collections
-				var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync<IEnumerable<decimal>>(new[] { 2f }));
+				var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<decimal>>(new[] { 2f }));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 				// Nested collections
-				exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<decimal>>>(new[] { new[] { 2f } }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+				exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<decimal>>>(new[] { new[] { 2f } }));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 			}
@@ -438,7 +438,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MaxParallelMappings = 10
 			});
 
-			var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 100, 201 }));
+			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 100, 201 }));
 			await Task.Delay(300);
 
 			Assert.AreEqual(2, mapped);
@@ -475,7 +475,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MaxParallelMappings = 10
 			});
 
-			var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 100, 201 }));
+			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 100, 201 }));
 			await Task.Delay(300);
 
 			Assert.AreEqual(2, mapped);

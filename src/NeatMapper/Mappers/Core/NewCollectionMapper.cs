@@ -129,7 +129,7 @@ namespace NeatMapper {
 						throw;
 					}
 					catch (Exception e) {
-						throw new CollectionMappingException(e, types);
+						throw new MappingException(e, types);
 					}
 				}
 			}

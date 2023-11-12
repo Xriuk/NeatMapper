@@ -22,7 +22,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			_connection.Open();
 			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>(ServiceLifetime.Singleton);
 			_serviceProvider = serviceCollection.BuildServiceProvider();
 			_mapper = _serviceProvider.GetRequiredService<IMapper>();
 		}

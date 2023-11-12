@@ -62,7 +62,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncMergeCollectionMapper(GetElementsMapper(), new Matcher(new CustomMapsOptions {
+			_mapper = new AsyncMergeCollectionMapper(GetElementsMapper(), new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(AsyncMergeMapperTests.Maps) }
 			}), new AsyncCollectionMappersOptions {
 				MaxParallelMappings = GetParallelMappings()
@@ -443,17 +443,17 @@ namespace NeatMapper.Tests.Mapping.Async {
 				// Normal collections
 				{
 					// Without comparer
-					var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { 2f }, new List<int>()));
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { 2f }, new List<int>()));
 					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 					// Exception in comparer
-					exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { 2m }, new List<int>() { 3 }));
+					exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { 2m }, new List<int>() { 3 }));
 					Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 					// Exception in custom comparer
-					exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new NotImplementedException()));
+					exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new NotImplementedException()));
 					Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 				}
@@ -461,19 +461,19 @@ namespace NeatMapper.Tests.Mapping.Async {
 				// Nested collections
 				{
 					// Without comparer
-					var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { new[] { 2f } }, new List<List<int>> { new List<int>() }));
-					Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { new[] { 2f } }, new List<List<int>> { new List<int>() }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 
 					// Exception in comparer
-					exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { new[] { 2m } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => true));
-					Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+					exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { new[] { 2m } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => true));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MatcherException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 
 					// Exception in custom comparer
-					exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new NotImplementedException()));
+					exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new NotImplementedException()));
 					Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 				}
@@ -484,7 +484,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				// Normal collections
 				{
 					// Without comparer
-					var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { 2f }, new List<decimal>()));
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { 2f }, new List<decimal>()));
 					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 				}
@@ -492,8 +492,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 				// Nested collections
 				{
 					// Without comparer
-					var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => _mapper.MapAsync(new[] { new[] { 2f } }, new List<List<decimal>> { new List<decimal>() }));
-					Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { new[] { 2f } }, new List<List<decimal>> { new List<decimal>() }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
 					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 				}
@@ -664,7 +664,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithHierarchyElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(GetElementsMapper(typeof(HierarchyMatchers)), new Matcher(new CustomMapsOptions {
+			var mapper = new AsyncMergeCollectionMapper(GetElementsMapper(typeof(HierarchyMatchers)), new HierarchyCustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(HierarchyMatchers) }
 			}));
 
@@ -890,7 +890,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldNotRemoveUnmatchedElementsFromDestinationIfSpecified() {
 			// Global settings
 			{
-				var mapper = new AsyncMergeCollectionMapper(GetElementsMapper(), new Matcher(new CustomMapsOptions {
+				var mapper = new AsyncMergeCollectionMapper(GetElementsMapper(), new CustomMatcher(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MergeMapperTests.Maps) }
 				}), new AsyncCollectionMappersOptions {
 					MaxParallelMappings = GetParallelMappings()
@@ -1137,7 +1137,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MaxParallelMappings = 10
 			});
 
-			var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => mapper.MapAsync<IEnumerable<int>, ICollection<string>>(new[] { 1, 51, 100, 201 }, new List<string>()));
+			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, ICollection<string>>(new[] { 1, 51, 100, 201 }, new List<string>()));
 			await Task.Delay(300);
 
 			Assert.AreEqual(2, mapped);
@@ -1183,7 +1183,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MaxParallelMappings = 10
 			});
 
-			var exc = await Assert.ThrowsExceptionAsync<CollectionMappingException>(() => mapper.MapAsync<IEnumerable<int>, ICollection<string>>(new[] { 1, 51, 100, 201 }, new List<string>()));
+			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, ICollection<string>>(new[] { 1, 51, 100, 201 }, new List<string>()));
 			await Task.Delay(300);
 
 			Assert.AreEqual(2, mapped);

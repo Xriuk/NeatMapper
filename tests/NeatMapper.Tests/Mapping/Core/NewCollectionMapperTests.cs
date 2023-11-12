@@ -193,13 +193,13 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldCatchExceptionsInCollectionMaps() {
 			// Normal collections
-			var exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
+			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
 			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 			// Nested collections
-			exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+			exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
 			Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 		}

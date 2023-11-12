@@ -873,7 +873,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithGenericElementsComparer() {
-			var mapper = new MergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
+			var mapper = new MergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 
@@ -934,7 +934,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithSpecificElementsComparer() {
-			var mapper = new MergeCollectionMapper(_mapper, new Matcher(new CustomMapsOptions {
+			var mapper = new MergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 

@@ -1,6 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
@@ -15,41 +14,17 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// <see cref="IMapper"/> which converts entities to and from their keys, even composite keys
 	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>.<br/>
 	/// Also supports collections (not nested).<br/>
-	/// When mapping keys to entities, entities will be searched locally in the <see cref="DbContext"/> first,
-	/// otherwise a query to the db will be made
+	/// When mapping keys to entities, may be searched locally in the <see cref="DbContext"/> first,
+	/// otherwise a query to the db will be made, depending on <see cref="EntityFrameworkCoreOptions"/>
+	/// (and <see cref="EntityFrameworkCoreMappingOptions"/>).
 	/// </summary>
-	public sealed class EntityFrameworkCoreMapper : IMapper, IMapperCanMap {
-		private static readonly MethodInfo Queryable_Where = typeof(Queryable).GetMethods().First(m => {
-			if(m.Name != nameof(Queryable.Where))
-				return false;
-			var parameters = m.GetParameters();
-			if(parameters.Length == 2 && parameters[1].ParameterType.IsGenericType) {
-				var delegateType = parameters[1].ParameterType.GetGenericArguments()[0];
-				if(delegateType.IsGenericType && delegateType.GetGenericTypeDefinition() == typeof(Func<,>))
-					return true;
-			}
-
-			return false;
-		});
+	public sealed class EntityFrameworkCoreMapper : EntityFrameworkCoreBaseMapper, IMapper, IMapperCanMap {
 		private static readonly MethodInfo EntityFrameworkQueryableExtensions_Load = typeof(EntityFrameworkQueryableExtensions).GetMethod(nameof(EntityFrameworkQueryableExtensions.Load))
 			?? throw new InvalidOperationException("Could not find EntityFrameworkQueryableExtensions.Load<T>()");
-		private static readonly MethodInfo Queryable_FirstOrDefault = typeof(Queryable).GetMethods().First(m => m.Name == nameof(Queryable.FirstOrDefault) && m.GetParameters().Length == 1);
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException("Could not find Enumerable.ToArray<T>()");
+		private static readonly MethodInfo Queryable_FirstOrDefault = typeof(Queryable).GetMethods().First(m => m.Name == nameof(Queryable.FirstOrDefault) && m.GetParameters().Length == 1);
 
-
-		private readonly IModel _model;
-		private readonly Type _dbContextType;
-		private readonly IServiceProvider _serviceProvider;
-		private readonly EntityFrameworkCoreOptions _entityFrameworkCoreOptions;
-		private readonly IMatcher _elementsMatcher;
-		private readonly MergeCollectionsOptions _mergeCollectionOptions;
-		// entity: (entity) => key
-		private readonly IDictionary<Type, Delegate> _entityToKeyCache = new Dictionary<Type, Delegate>();
-		private readonly IDictionary<Type, Delegate> _valueTupleToTupleCache = new Dictionary<Type, Delegate>();
-		// entity: (key) => [...values]
-		private readonly IDictionary<Type, Delegate> _keyToValuesCache = new Dictionary<Type, Delegate>();
-		private readonly IDictionary<Type, Delegate> _tupleToValueTupleCache = new Dictionary<Type, Delegate>();
 
 		public EntityFrameworkCoreMapper(
 			IModel model,
@@ -72,22 +47,8 @@ namespace NeatMapper.EntityFrameworkCore {
 #else
 			MergeCollectionsOptions
 #endif
-			mergeCollectionsOptions = null) {
-
-			_model = model ?? throw new ArgumentNullException(nameof(model));
-			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
-			if(!typeof(DbContext).IsAssignableFrom(_dbContextType))
-				throw new ArgumentException($"Type {_dbContextType.FullName ?? _dbContextType.Name} is not derived from DbContext", nameof(dbContextType));
-			_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-			_entityFrameworkCoreOptions = entityFrameworkCoreOptions ?? new EntityFrameworkCoreOptions();
-			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
-			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
-
-#if !NET5_0 && !NETCOREAPP3_1
-			if (_serviceProvider.GetService<IServiceProviderIsService>()?.IsService(dbContextType) == false)
-				throw new ArgumentException($"The provided IServiceProvider does not support the DbContext of type {_dbContextType.FullName ?? _dbContextType.Name}");
-#endif
-		}
+			mergeCollectionsOptions = null) :
+				base(model, dbContextType, serviceProvider, entityFrameworkCoreOptions, elementsMatcher, mergeCollectionsOptions) {}
 
 
 		#region IMapper methods
@@ -150,25 +111,8 @@ namespace NeatMapper.EntityFrameworkCore {
 					var entityToKeyMap = GetOrCreateEntityToKeyMap(types.From, types.To);
 
 					Delegate valueTupleToTuple;
-					if (types.To.IsTuple()) { 
-						lock (_valueTupleToTupleCache) {
-							if (!_valueTupleToTupleCache.TryGetValue(types.From, out valueTupleToTuple)) {
-								var keyParam = Expression.Parameter(TupleUtils.GetValueTupleConstructor(types.To.UnwrapNullable().GetGenericArguments()).DeclaringType
-									?? throw new InvalidOperationException(), "key");
-								// new Tuple<...>(key.Item1, ...)
-								Expression body = Expression.New(
-									TupleUtils.GetTupleConstructor(keyParam.Type.GetGenericArguments()),
-									Enumerable.Range(1, keyParam.Type.GetGenericArguments().Count()).Select(n => Expression.Field(keyParam, "Item" + n)));
-								// key == default(KEY) ? null : KEY
-								body = Expression.Condition(
-									Expression.Call(keyParam, keyParam.Type.GetMethod(nameof(ValueTuple.Equals), new [] { keyParam.Type }), Expression.Default(keyParam.Type)),
-									Expression.Constant(null, body.Type),
-									body);
-								valueTupleToTuple = Expression.Lambda(typeof(Func<,>).MakeGenericType(keyParam.Type, body.Type), body, keyParam).Compile();
-								_valueTupleToTupleCache.Add(types.From, valueTupleToTuple);
-							}
-						}
-					}
+					if (types.To.IsTuple())
+						valueTupleToTuple = GetOrCreateValueTupleToTupleMap(types.From, types.To);
 					else
 						valueTupleToTuple = null;
 
@@ -211,35 +155,8 @@ namespace NeatMapper.EntityFrameworkCore {
 					if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
 						return null;
 
-					var efCoreOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
-
 					// Retrieve the db context from the services
-					DbContext db = efCoreOptions?.DbContextInstance;
-					if(db != null && db.GetType() != _dbContextType)
-						db = null;
-					if (db == null) {
-						var overrideOptions = mappingOptions?.GetOptions<MapperOverrideMappingOptions>();
-						if(overrideOptions?.ServiceProvider != null) {
-							try {
-								db = overrideOptions?.ServiceProvider.GetRequiredService(_dbContextType) as DbContext;
-							}
-							catch {
-								db = null;
-							}
-						}
-						else
-							db = null;
-						if(db == null) {
-							try {
-								db = _serviceProvider.GetRequiredService(_dbContextType) as DbContext;
-							}
-							catch {
-								db = null;
-							}
-							if (db == null)
-								throw new InvalidOperationException($"Could not retrieve a DbContext of type {_dbContextType.FullName ?? _dbContextType.Name}");
-						}
-					}
+					var db = RetrieveDbContext(mappingOptions);
 
 					// Create and cache the delegate if needed
 					var keyToValuesMap = GetOrCreateKeyToValuesMap(types.To, types.From);
@@ -285,7 +202,7 @@ namespace NeatMapper.EntityFrameworkCore {
 											.FirstOrDefault(e => (bool)deleg.DynamicInvoke(e));
 
 										if(localEntity == null && retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
-											AttachEntity(db, ref localEntity, keyValues, key);
+											AttachEntity(types.To, db, ref localEntity, keyValues, key);
 									}
 									else
 										localEntity = null;
@@ -366,7 +283,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 							// Attach a new entity to the context if not found, and mark it as unchanged
 							if(retrievalMode == EntitiesRetrievalMode.LocalOrAttach && result == null)
-								AttachEntity(db, ref result, keyValues, key);
+								AttachEntity(types.To, db, ref result, keyValues, key);
 						}
 						else if(retrievalMode == EntitiesRetrievalMode.LocalOrRemote)
 							result = db.Find(types.To, keyValues);
@@ -403,14 +320,6 @@ namespace NeatMapper.EntityFrameworkCore {
 					.Select((p, i) => Expression.Equal(Expression.Property(entityParam, p.PropertyInfo), Expression.Constant(keyValues[i])))
 					.Aggregate(Expression.AndAlso);
 				return Expression.Lambda(typeof(Func<,>).MakeGenericType(types.To, typeof(bool)), body, entityParam);
-			}
-
-			void AttachEntity(DbContext db, ref object entity, object[] keyValues, IKey key) {
-				entity = ObjectFactory.Create(types.To);
-				for (int i = 0; i < keyValues.Length; i++) {
-					key.Properties[i].PropertyInfo?.SetValue(entity, keyValues[i]);
-				}
-				db.Entry(entity).State = EntityState.Unchanged;
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -459,7 +368,20 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
 				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
 
-			if (!CanMapMerge(sourceType, destinationType, mappingOptions))
+			var efCoreOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var entitiesRetrievalMode = efCoreOptions?.EntitiesRetrievalMode
+				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
+
+			// Adjust LocalOrAttach options to prevent attaching (we'll do it here)
+			MappingOptions destinationMappingOptions;
+			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
+				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
+					.Replace<EntityFrameworkCoreMappingOptions>(o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.Local, o.DbContextInstance, o.ThrowOnDuplicateEntity));
+			}
+			else
+				destinationMappingOptions = mappingOptions;
+
+			if (!CanMapMerge(sourceType, destinationType, destinationMappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			(Type From, Type To)? collectionElementTypes = destinationType.IsCollection() && !destinationType.IsArray ?
@@ -468,8 +390,16 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			(Type From, Type To) types = collectionElementTypes ?? (sourceType, destinationType);
 
-			var throwOnDuplicateEntity = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.ThrowOnDuplicateEntity
+			var throwOnDuplicateEntity = efCoreOptions?.ThrowOnDuplicateEntity
 				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
+
+			// Retrieve the db context from the services
+			DbContext db = null;
+			IKey key = null;
+			if(entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) { 
+				db = RetrieveDbContext(mappingOptions);
+				key = _model.FindEntityType(types.To).FindPrimaryKey();
+			}
 
 			// Check if we are mapping a collection or just a single entity
 			if (collectionElementTypes != null) {
@@ -491,9 +421,9 @@ namespace NeatMapper.EntityFrameworkCore {
 						if (destination == null) 
 							return Map(source, sourceType, destinationType, mappingOptions);
 						else {
-							// Check if the collection is not readonly recursively
+							// Check if the collection is not readonly
 							try {
-								if (!CanMapMerge(sourceType, destinationType, destination as IEnumerable, mappingOptions))
+								if (!CanMapMerge(sourceType, destinationType, destination as IEnumerable, destinationMappingOptions))
 									throw new MapNotFoundException((sourceType, destinationType));
 							}
 							catch (MapNotFoundException) {
@@ -507,89 +437,13 @@ namespace NeatMapper.EntityFrameworkCore {
 							if (destinationInstanceType.IsArray)
 								throw new MapNotFoundException((sourceType, destinationType));
 
-							var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
-								.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-							// If the collection is readonly we cannot map to it
-							if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null))
-								throw new MapNotFoundException(types);
-
-							var sourceEntitiesEnumerable = Map(source, sourceType, destinationType, mappingOptions) as IEnumerable
+							var sourceEntitiesEnumerable = Map(source, sourceType, destinationType, destinationMappingOptions) as IEnumerable
 								?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
-							var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
-							var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
+							MergeCollection(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable,
+								types, db, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
 
-							var elementsToRemove = new List<object>();
-							var elementsToAdd = new List<object>();
-
-							var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
-
-							// Create the matcher
-							IMatcher elementMatcher;
-							if (mergeMappingOptions?.Matcher != null)
-								elementMatcher = new SafeMatcher(new DelegateMatcher(mergeMappingOptions.Matcher, _elementsMatcher, _serviceProvider));
-							else
-								elementMatcher = _elementsMatcher;
-
-							// Deleted elements
-							if (mergeMappingOptions?.RemoveNotMatchedDestinationElements
-								?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements) {
-								foreach (var destinationElement in destinationEnumerable) {
-									bool found = false;
-									foreach (var sourceElement in sourceEntitiesEnumerable) {
-										if (elementMatcher.Match(sourceElement, types.To, destinationElement, types.To, mappingOptions)) {
-											found = true;
-											break;
-										}
-									}
-
-									if (!found)
-										elementsToRemove.Add(destinationElement);
-								}
-							}
-
-							// Added/updated elements
-							foreach (var sourceEntityElement in sourceEntitiesEnumerable) {
-								bool found = false;
-								object matchingDestinationElement = null;
-								foreach (var destinationElement in destinationEnumerable) {
-									if (elementMatcher.Match(sourceEntityElement, types.To, destinationElement, types.To, mappingOptions) &&
-										!elementsToRemove.Contains(destinationElement)) {
-
-										matchingDestinationElement = destinationElement;
-										found = true;
-										break;
-									}
-								}
-
-								if (found) {
-									if (matchingDestinationElement != sourceEntityElement) {
-										if (throwOnDuplicateEntity) {
-											if (sourceEntityElement != null) 
-												throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", GetKeyValues(types.To, types.From, GetOrCreateEntityToKeyMap(types.To, types.From).DynamicInvoke(sourceEntityElement)))}");
-											else
-												throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
-										}
-										else{
-											elementsToRemove.Add(matchingDestinationElement);
-											elementsToAdd.Add(sourceEntityElement);
-										}
-									}
-								}
-								else 
-									elementsToAdd.Add(sourceEntityElement);
-							}
-
-							foreach (var element in elementsToRemove) {
-								if (!(bool)removeMethod.Invoke(destination, new object[] { element }))
-									throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
-							}
-							foreach (var element in elementsToAdd) {
-								addMethod.Invoke(destination, new object[] { element });
-							}
-
-							return destination;
+							return destinationEnumerable;
 						}
 						else
 							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
@@ -606,33 +460,52 @@ namespace NeatMapper.EntityFrameworkCore {
 					throw new MappingException(e, (sourceType, destinationType));
 				}
 			}
-			else { 
-				if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source)) {
-					if(destination != null && throwOnDuplicateEntity) 
-						throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for the default key. When merging objects make sure that they match");
+			else {
+				try { 
+					if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source)) {
+						if(destination != null && throwOnDuplicateEntity) 
+							throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for the default key. When merging objects make sure that they match");
 
-					return null;
+						return null;
+					}
+
+					// Forward the retrieval to NewMap, since we have to retrieve/create a new entity
+					var result = Map(source, sourceType, destinationType, destinationMappingOptions);
+
+					if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && result == null) {
+						if (destination != null) {
+							db.Attach(destination);
+							result = destination;
+						}
+						else 
+							AttachEntity(types.To, db, ref result, GetKeyValues(types.To, types.From, source), key);
+					}
+					else if((result == null || destination != null) && destination != result && throwOnDuplicateEntity) {
+						if (result != null)
+							throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", GetKeyValues(types.To, types.From, source))}");
+						else
+							throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
+					}
+
+					return result;
 				}
-
-				// Forward the retrieval to NewMap, since we have to retrieve/create a new entity
-				var result = Map(source, sourceType, destinationType, mappingOptions);
-
-				if((result == null || destination != null) && destination != result && throwOnDuplicateEntity) {
-					if (result != null)
-						throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", GetKeyValues(types.To, types.From, source))}");
-					else
-						throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
+				catch (MappingException) {
+					throw;
 				}
-
-				return result;
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch (Exception e) {
+					throw new MappingException(e, (sourceType, destinationType));
+				}
 			}
 
 
-			object[] GetKeyValues(Type entityType, Type keyType, object key) {
+			object[] GetKeyValues(Type entityType, Type keyType, object keyEntity) {
 				var keyToValuesMap = GetOrCreateKeyToValuesMap(entityType, keyType);
 				if (keyType.IsTuple())
-					key = GetOrCreateTupleToValueTupleMap(entityType, keyType).DynamicInvoke(key);
-				return keyToValuesMap.DynamicInvoke(key) as object[]
+					keyEntity = GetOrCreateTupleToValueTupleMap(entityType, keyType).DynamicInvoke(keyEntity);
+				return keyToValuesMap.DynamicInvoke(keyEntity) as object[]
 					?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {entityType.FullName ?? entityType.Name}");
 			}
 
@@ -715,179 +588,15 @@ namespace NeatMapper.EntityFrameworkCore {
 #nullable disable
 #endif
 
-		bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-			IEnumerable destination = null,
-			MappingOptions mappingOptions = null) {
-
-			// Prevent being used by a collection mapper
-			if (CheckCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<NestedMappingContext>()))
-				return false;
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			(Type From, Type To) elementTypes;
-			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsCollection() && !destinationType.IsArray) {
-				if (!ObjectFactory.CanCreateCollection(destinationType))
-					return false;
-
-				// If the destination type is not an interface, check if it is not readonly
-				// If the destination type is not an interface, check if it is not readonly
-				// Otherwise check the destination if provided
-				if (!destinationType.IsInterface && destinationType.IsGenericType) {
-					var collectionDefinition = destinationType.GetGenericTypeDefinition();
-					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
-						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
-						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
-
-						return false;
-					}
-				}
-				else if (destination != null) {
-					var destinationInstanceType = destination.GetType();
-					if (destinationInstanceType.IsArray)
-						return false;
-
-					var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
-						.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-					// If the collection is readonly we cannot map to it
-					if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null))
-						return false;
-				}
-
-				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetCollectionElementType());
-			}
-			else
-				elementTypes = (sourceType, destinationType);
-
-			// MergeMap can only map from key to entity so we check source and destination types
-			if (!elementTypes.From.IsKeyType() && !elementTypes.From.IsCompositeKeyType())
-				return false;
-
-			if (CanMap(elementTypes.To, elementTypes.From)) {
-				if(sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsCollection() && !destinationType.IsArray) { 
-					if (!destinationType.IsInterface || destination != null)
-						return true;
-
-					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
-				}
-				else
-					return true;
-			}
-			else
-				return false;
+		override protected bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions) {
+			return CheckCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<NestedMappingContext>());
 		}
-
-		private bool CanMap(Type entityType, Type keyType) {
-			if (!entityType.IsClass)
-				return false;
-
-			// Check if the entity is in the model
-			var modelEntity = _model.FindEntityType(entityType);
-			if (modelEntity == null || modelEntity.IsOwned())
-				return false;
-
-			// Check that the entity has a key and that it matches the key type
-			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1 || !key.Properties.All(p => p.PropertyInfo != null))
-				return false;
-			if (keyType.IsCompositeKeyType()) {
-				var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
-				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
-					return false;
-			}
-			else if (key.Properties.Count != 1 || (key.Properties[0].ClrType != keyType && !keyType.IsNullable(key.Properties[0].ClrType)))
-				return false;
-
-			return true;
-		}
-
 		private bool CheckCollectionMapperNestedContextRecursive(NestedMappingContext context) {
 			if(context == null)
 				return false;
 			if(context.ParentMapper is CollectionMapper)
 				return true;
 			return CheckCollectionMapperNestedContextRecursive(context.ParentContext);
-		}
-
-		private Delegate GetOrCreateEntityToKeyMap(Type entityType, Type keyType) {
-			lock (_entityToKeyCache) {
-				if (!_entityToKeyCache.TryGetValue(entityType, out var entityToKeyMap)) {
-					var entityParam = Expression.Parameter(entityType, "entity");
-					var modelEntity = _model.FindEntityType(entityType);
-					var key = modelEntity.FindPrimaryKey();
-					Expression body;
-					if (key.Properties.Count == 1) {
-						// entity.Id
-						body = Expression.Property(entityParam, key.Properties[0].PropertyInfo);
-					}
-					else {
-						// new ValueTuple<...>(entity.Key1, ...)
-						body = Expression.New(
-							TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()),
-							key.Properties.Select(p => Expression.Property(entityParam, p.PropertyInfo)));
-					}
-
-					// entity != null ? KEY : default(KEY)
-					body = Expression.Condition(
-						Expression.NotEqual(entityParam, Expression.Constant(null, entityParam.Type)),
-						body,
-						Expression.Default(body.Type));
-					entityToKeyMap = Expression.Lambda(typeof(Func<,>).MakeGenericType(entityParam.Type, body.Type), body, entityParam).Compile();
-					_entityToKeyCache.Add(entityType, entityToKeyMap);
-				}
-
-				return entityToKeyMap;
-			}
-		}
-
-		private Delegate GetOrCreateKeyToValuesMap(Type entityType, Type keyType) {
-			lock (_keyToValuesCache) {
-				if (!_keyToValuesCache.TryGetValue(entityType, out var keyToValuesMap)) {
-					var keyParam = Expression.Parameter(keyType.IsCompositeKeyType() ? TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType : keyType.UnwrapNullable(), "key");
-					var key = _model.FindEntityType(entityType).FindPrimaryKey();
-					Expression body;
-					if (key.Properties.Count == 1) {
-						// new object[]{ (object)key }
-						body = Expression.NewArrayInit(typeof(object), Expression.Convert(keyParam, typeof(object)));
-					}
-					else {
-						// new object[]{ (object)key.Item1, ... }
-						body = Expression.NewArrayInit(typeof(object),
-							Enumerable.Range(1, key.Properties.Count)
-								.Select(n => Expression.Convert(Expression.PropertyOrField(keyParam, "Item" + n), typeof(object))));
-					}
-
-					keyToValuesMap = Expression.Lambda(typeof(Func<,>).MakeGenericType(keyParam.Type, body.Type), body, keyParam).Compile();
-					_keyToValuesCache.Add(entityType, keyToValuesMap);
-				}
-
-				return keyToValuesMap;
-			}
-		}
-
-		private Delegate GetOrCreateTupleToValueTupleMap(Type entityType, Type tupleType) {
-			if(!tupleType.IsTuple())
-				throw new ArgumentException("Type is not a Tuple", nameof(tupleType));
-
-			lock (_tupleToValueTupleCache) {
-				if (!_tupleToValueTupleCache.TryGetValue(entityType, out var tupleToValueTuple)) {
-					var keyParam = Expression.Parameter(tupleType, "key");
-					// new ValueTuple<...>(key.Item1, ...)
-					Expression body = Expression.New(
-						TupleUtils.GetValueTupleConstructor(keyParam.Type.GetGenericArguments()),
-						Enumerable.Range(1, keyParam.Type.GetGenericArguments().Count()).Select(n => Expression.Property(keyParam, "Item" + n)));
-					tupleToValueTuple = Expression.Lambda(typeof(Func<,>).MakeGenericType(keyParam.Type, body.Type), body, keyParam).Compile();
-					_tupleToValueTupleCache.Add(entityType, tupleToValueTuple);
-				}
-
-				return tupleToValueTuple;
-			}
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

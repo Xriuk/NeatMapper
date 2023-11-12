@@ -29,7 +29,9 @@
 		}
 
 		/// <summary>
-		/// Provides (or overrides) <see cref="IMatchMap{TSource, TDestination}"/> for the outermost collection types
+		/// Provides (or overrides) <see cref="IMatchMap{TSource, TDestination}"/> for the outermost collection types.<br/>
+		/// You should use the type-safe extensions for <see cref="MapperExtensions"/> or <see cref="AsyncMapperExtensions"/>
+		/// instead of setting this directly.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the defined <see cref="IMatchMap{TSource, TDestination}"/> (if any)</remarks>
 		public

@@ -4,7 +4,7 @@
 
 [![NeatMapper](https://img.shields.io/nuget/vpre/NeatMapper.svg?label=NeatMapper)](https://www.nuget.org/packages/NeatMapper)
 
-[![NeatMapper.DependencyInjection](https://img.shields.io/nuget/vpre/NeatMapper.DependencyInjection.svg?label=NeatMapper.DependencyInjection)](https://www.nuget.org/packages/NeatMapper.DependencyInjection)
+[![NeatMapper.EntityFrameworkCore](https://img.shields.io/nuget/vpre/NeatMapper.EntityFrameworkCore.svg?label=NeatMapper.EntityFrameworkCore)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
 
 ## What is this project
 
@@ -16,29 +16,20 @@ combine them, nest them and reuse them, making your code DRY. Map once, use ever
 All of this is achieved with strongly typed maps, easily debuggable,
 no compilation into obscure expressions, no black boxes.
 
-It also supports async maps (coming soon) and services via Dependency Injection (DI).
+It also supports asynchronous maps and services via Dependency Injection (DI).
 
 ## How to install
 
-You can find all the packages on Nuget https://www.nuget.org/profiles/xriuk
+You can install the core package directly from Nuget [NeatMapper](https://www.nuget.org/packages/NeatMapper).
 
-Choose whether you need:
-- The normal mapper ([NeatMapper](https://www.nuget.org/packages/NeatMapper))
-- Or the async one (NeatMapper.Async) (coming soon)
-- or both
-
-If you are using Dependency Injection (DI) in your project you may want to install these packages instead:
-- ([NeatMapper.DependencyInjection](https://www.nuget.org/packages/NeatMapper.DependencyInjection))
-- (NeatMapper.Async.DependencyInjection) (coming soon)
-
-They both include the relative package above
+If you are using Entity Framework Core you may want to install [NeatMapper.EntityFrameworkCore](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore) too to map your entities.
 
 ## How to use
 
 Find specific instructions in the README of every package
 
 - [NeatMapper](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md)
-- [NeatMapper.DependencyInjection](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.DependencyInjection/README.md)
+- [NeatMapper.EntityFrameworkCore](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.EntityFrameworkCore/README.md)
 
 ## License
 

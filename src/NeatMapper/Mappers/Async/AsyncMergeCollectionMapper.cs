@@ -171,10 +171,6 @@ namespace NeatMapper {
 							var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
 								.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
 
-							// If the collection is readonly we cannot map to it
-							if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null))
-								throw new MapNotFoundException(types);
-
 							var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 							var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
 
@@ -440,7 +436,7 @@ namespace NeatMapper {
 						throw;
 					}
 					catch (Exception e) {
-						throw new CollectionMappingException(e, types);
+						throw new MappingException(e, types);
 					}
 				}
 				else if (source == null) {

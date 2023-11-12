@@ -58,7 +58,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new MergeCollectionMapper(GetElementsMapper(), new Matcher(new CustomMapsOptions {
+			_mapper = new MergeCollectionMapper(GetElementsMapper(), new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(MergeMapperTests.Maps) }
 			}));
 		}
@@ -429,17 +429,17 @@ namespace NeatMapper.Tests.Mapping {
 			// Normal collections
 			{
 				// Without comparer
-				var exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map(new[] { 2f }, new List<int>()));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2f }, new List<int>()));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 				// Exception in comparer
-				exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map(new[] { 2m }, new List<int>() { 3 }));
+				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2m }, new List<int>() { 3 }));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
 				// Exception in custom comparer
-				exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new NotImplementedException()));
+				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new NotImplementedException()));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 			}
@@ -447,19 +447,19 @@ namespace NeatMapper.Tests.Mapping {
 			// Nested collections
 			{
 				// Without comparer
-				var exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int>() }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int>() }));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 
 				// Exception in comparer
-				exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map(new[] { new[] { 2m } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => true));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(CollectionMappingException));
+				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2m } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => true));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MatcherException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
 
 				// Exception in custom comparer
-				exc = Assert.ThrowsException<CollectionMappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new NotImplementedException()));
+				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new NotImplementedException()));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
 				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 			}
@@ -629,7 +629,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithHierarchyElementsComparer() {
-			var mapper = new MergeCollectionMapper(GetElementsMapper(typeof(HierarchyMatchers)), new Matcher(new CustomMapsOptions {
+			var mapper = new MergeCollectionMapper(GetElementsMapper(typeof(HierarchyMatchers)), new HierarchyCustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(HierarchyMatchers) }
 			}));
 
@@ -855,7 +855,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldNotRemoveUnmatchedElementsFromDestinationIfSpecified() {
 			// Global settings
 			{
-				var mapper = new MergeCollectionMapper(GetElementsMapper(), new Matcher(new CustomMapsOptions {
+				var mapper = new MergeCollectionMapper(GetElementsMapper(), new CustomMatcher(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MergeMapperTests.Maps) }
 				}), new MergeCollectionsOptions {
 					RemoveNotMatchedDestinationElements = false

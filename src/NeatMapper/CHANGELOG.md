@@ -5,6 +5,7 @@
 ### Removed
 
 - `Mapper` which was replaced by the separate mappers below in the **Added** section
+- `CollectionMappingException` which was replaced by `MappingException` (nested)
 
 ### Changed
 
@@ -27,7 +28,8 @@ support and options depends on the mappers and/or the maps, added also to extens
 - NeatMapper.DependencyInjection package embedded, now the core package allows injecting `IMapper` (and also `IAsyncMapper`) and `IMatcher` and configuring them via `IOptions` (check the [README](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md) for instructions)
 - `IHierarchyMatchMap<TSource, TDestination>` (and its .NET 7+ static counterpart `IHierarchyMatchMapStatic<TSource, TDestination>`) which allows matching two types as well as derived types, will be automatically used when merging collections.
 - Various `IMatcher` default implementations:
-   - `Matcher`: matches using `IMatchMap`
+   - `CustomMatcher`: matches using `IMatchMap`
+   - `HierachyCustomMatcher`: matches using `IHierarchyMatchMap`
    - `EmptyMatcher`: passthrough matcher which returns false for every match
    - `SafeMatcher`: wraps another `IMatcher` and returns false in case it cannot match the given types
    - `DelegateMatcher`: matches using a custom delegate

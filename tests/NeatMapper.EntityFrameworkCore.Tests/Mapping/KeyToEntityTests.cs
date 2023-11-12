@@ -34,7 +34,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			_connection.Open();
 			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection).AddInterceptors(_interceptorMock.Object), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.ConfigureAll<EntityFrameworkCoreOptions>(Configure);
 			_serviceProvider = serviceCollection.BuildServiceProvider();
 			_mapper = _serviceProvider.GetRequiredService<IMapper>();
@@ -66,7 +66,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 #if NET5_0_OR_GREATER
 			_db.ChangeTracker.Clear();
 #else
-			foreach (var entry in _db.ChangeTracker.Entries().ToArray()) {
+			foreach (var entry in _db.ChangeTracker.Entries<IntKey>().ToArray()) {
 				entry.State = EntityState.Detached;
 			}
 #endif
@@ -253,6 +253,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 #endif
 
+
 		[TestMethod]
 		public void ShouldMapKeysCollectionToEntitiesCollection() {
 			Assert.IsTrue(_mapper.CanMapNew<int[], IEnumerable<IntKey>>());
@@ -278,6 +279,58 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNotNull(result[1]);
 			}
 		}
+
+		[TestMethod]
+		public void ShouldMapNullableKeysCollectioToEntitiesCollection() {
+			Assert.IsTrue(_mapper.CanMapNew<IEnumerable<int?>, IntKey[]>());
+
+			{
+				var result = _mapper.Map<IEnumerable<IntKey>>(new int?[] { 2, null });
+				Assert.AreEqual(2, result.Count());
+				Assert.IsNotNull(result.First());
+				Assert.IsNull(result.Last());
+			}
+
+			{
+				var result = _mapper.Map<GuidKey[]>(new List<Guid?> { null, new Guid("56033406-E593-4076-B48A-70988C9F9190") });
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+		}
+
+		[TestMethod]
+		public void ShouldMapCompositeKeysCollectionToEntitiesCollection() {
+			// Tuple
+			{
+				Assert.IsTrue(_mapper.CanMapNew<IEnumerable<Tuple<int, Guid>>, CompositePrimitiveKey[]>());
+
+				var result = _mapper.Map<CompositePrimitiveKey[]>(new Tuple<int, Guid>[] { null, Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190")) });
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+
+			// ValueTuple
+			{
+				Assert.IsTrue(_mapper.CanMapNew<(int, Guid)[], List<CompositePrimitiveKey>>());
+
+				var result = _mapper.Map<CompositePrimitiveKey[]>(new (int, Guid)[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), default((int, Guid)) });
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNull(result[1]);
+			}
+		}
+
+		[TestMethod]
+		public void ShouldMapNullableCompositeKeysCollectionToEntitiesCollection() {
+			Assert.IsTrue(_mapper.CanMapNew<(int, Guid)?[], CompositePrimitiveKey[]>());
+
+			var result = _mapper.Map<CompositePrimitiveKey[]>(new (int, Guid)?[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), null });
+			Assert.AreEqual(2, result.Length);
+			Assert.IsNotNull(result[0]);
+			Assert.IsNull(result[1]);
+		}
 	}
 
 
@@ -294,6 +347,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+			Assert.AreEqual(0, _db.ChangeTracker.Entries<IntKey>().Count());
 		}
 
 		[TestMethod]
@@ -304,6 +358,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -314,6 +370,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNull(result[1]);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+			Assert.AreEqual(0, _db.ChangeTracker.Entries<IntKey>().Count());
 		}
 
 		[TestMethod]
@@ -326,6 +383,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNull(result[1]);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 	}
 
@@ -341,16 +400,16 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{ 
 				var result = _mapper.Map<IntKey>(2);
 				Assert.IsNotNull(result);
-				Assert.IsNull(result.Entity);
 			}
 
 			{
 				var result = _mapper.Map<IntKey>(3);
 				Assert.IsNotNull(result);
-				Assert.IsNull(result.Entity);
 			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+			Assert.AreEqual(2, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -360,16 +419,16 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				var result = _mapper.Map<IntKey>(2);
 				Assert.IsNotNull(result);
-				Assert.IsNotNull(result.Entity);
 			}
 
 			{
 				var result = _mapper.Map<IntKey>(3);
 				Assert.IsNotNull(result);
-				Assert.IsNull(result.Entity);
 			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			Assert.AreEqual(2, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -377,11 +436,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
-			Assert.IsNull(result[0].Entity);
 			Assert.IsNotNull(result[1]);
-			Assert.IsNull(result[1].Entity);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
+			Assert.AreEqual(2, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -391,11 +450,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
-			Assert.IsNotNull(result[0].Entity);
 			Assert.IsNotNull(result[1]);
-			Assert.IsNull(result[1].Entity);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			Assert.AreEqual(2, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 	}
 
@@ -411,12 +470,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				var result = _mapper.Map<IntKey>(2);
 				Assert.IsNotNull(result);
-				Assert.IsNotNull(result.Entity);
 			}
 
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -426,23 +486,25 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				var result = _mapper.Map<IntKey>(2);
 				Assert.IsNotNull(result);
-				Assert.IsNotNull(result.Entity);
 			}
 
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
-		public void ShouldAttachNotLoadedMultipleEntities() {
+		public void ShouldFindNotLoadedMultipleEntities() {
 			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
-			Assert.IsNotNull(result[0].Entity);
 			Assert.IsNull(result[1]);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -452,10 +514,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
-			Assert.IsNotNull(result[0].Entity);
 			Assert.IsNull(result[1]);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 	}
 
@@ -471,12 +534,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				var result = _mapper.Map<IntKey>(2);
 				Assert.IsNotNull(result);
-				Assert.IsNotNull(result.Entity);
 			}
 
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -486,23 +550,25 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				var result = _mapper.Map<IntKey>(2);
 				Assert.IsNotNull(result);
-				Assert.IsNotNull(result.Entity);
 			}
 
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(3));
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
-		public void ShouldAttachNotLoadedMultipleEntities() {
+		public void ShouldFindNotLoadedMultipleEntities() {
 			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
-			Assert.IsNotNull(result[0].Entity);
 			Assert.IsNull(result[1]);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 
 		[TestMethod]
@@ -512,10 +578,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
-			Assert.IsNotNull(result[0].Entity);
 			Assert.IsNull(result[1]);
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
+			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
 	}
 }

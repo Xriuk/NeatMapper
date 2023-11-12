@@ -216,13 +216,13 @@ namespace NeatMapper.Tests.Configuration {
 		}
 
 		internal static CustomMapsConfiguration Configure(CustomMapsOptions options, CustomMatchAdditionalMapsOptions additionalMaps = null) {
-			var matcher = new Matcher(options, additionalMaps);
-			return (CustomMapsConfiguration)typeof(Matcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
+			var matcher = new CustomMatcher(options, additionalMaps);
+			return (CustomMapsConfiguration)typeof(CustomMatcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
 		}
 
-		internal static CustomMapsConfiguration ConfigureHierachy(CustomMapsOptions options, CustomMatchAdditionalMapsOptions additionalMaps = null) {
-			var matcher = new Matcher(options, additionalMaps);
-			return (CustomMapsConfiguration)typeof(Matcher).GetField("_hierarchyConfiguration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
+		internal static CustomMapsConfiguration ConfigureHierachy(CustomMapsOptions options, CustomHierarchyMatchAdditionalMapsOptions additionalMaps = null) {
+			var matcher = new HierarchyCustomMatcher(options, additionalMaps);
+			return (CustomMapsConfiguration)typeof(HierarchyCustomMatcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
 		}
 
 
