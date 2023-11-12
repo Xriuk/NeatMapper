@@ -7,7 +7,7 @@
 		<Version>2.0.0</Version>
 		<Authors>Xriuk</Authors>
 		<Title>.NEaT Mapper - Entity Framework Core</Title>
-		<Description>Creates automatic maps between entities and their keys, supports normal maps and asynchronous ones, also supports collections (not nested) and asynchronous maps</Description>
+		<Description>Creates automatic maps between entities and their keys, supports normal maps and asynchronous ones, also supports collections (not nested).</Description>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.EntityFrameworkCore</RepositoryUrl>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>

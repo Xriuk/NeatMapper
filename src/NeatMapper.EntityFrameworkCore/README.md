@@ -4,7 +4,9 @@
 
 ## What is this package
 
-Entity Framework Core maps for [NeatMapper](https://www.nuget.org/packages/NeatMapper). This allows mapping automatically entities to their keys (even composite) and vice-versa.
+Entity Framework Core maps for [NeatMapper](https://www.nuget.org/packages/NeatMapper).
+
+Creates automatic maps between entities and their keys, supports normal maps and asynchronous ones, also supports collections (not nested).
 
 ## How to install
 
