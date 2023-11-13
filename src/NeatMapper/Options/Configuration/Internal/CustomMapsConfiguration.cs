@@ -20,22 +20,22 @@ namespace NeatMapper {
 		/// Filter used to retrieve interface(s) for the maps, will receive the declaring type 
 		/// and implemented interface type as parameters
 		/// </param>
-		/// <param name="options">Options to retrieve the maps</param>
+		/// <param name="typesToScan">Types to scan for maps</param>
 		/// <param name="additionalMaps">Additional defined maps, if set will be added after the maps defined in classes</param>
 		internal CustomMapsConfiguration(
 			Func<Type, Type, bool> interfaceFilter,
-			CustomMapsOptions options,
+			IEnumerable<Type> typesToScan,
 			IEnumerable<CustomAdditionalMap> additionalMaps = null) {
 
 			if (interfaceFilter == null)
 				throw new ArgumentNullException(nameof(interfaceFilter));
-			if (options == null)
-				throw new ArgumentNullException(nameof(options));
+			if (typesToScan == null)
+				throw new ArgumentNullException(nameof(typesToScan));
 
 			var maps = new Dictionary<(Type From, Type To), CustomMap>();
 			var genericMaps = new List<CustomGenericMap>();
 
-			foreach (var type in options.TypesToScan.Distinct().Where(t => t.IsClass && !t.IsAbstract &&
+			foreach (var type in typesToScan.Distinct().Where(t => t.IsClass && !t.IsAbstract &&
 				(t.DeclaringType == null || !t.DeclaringType.IsGenericType) &&
 				t.GetInterfaces().Any(i => interfaceFilter.Invoke(t, i)))) {
 

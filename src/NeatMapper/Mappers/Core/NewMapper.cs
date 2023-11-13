@@ -40,7 +40,7 @@ namespace NeatMapper {
 #endif
 						;
 					},
-					mapsOptions ?? new CustomMapsOptions(),
+					(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
 					additionalMapsOptions?._maps.Values
 				),
 				serviceProvider) {}
