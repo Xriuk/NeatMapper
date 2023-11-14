@@ -2,6 +2,6 @@
 
 namespace NeatMapper.Expressions {
 	public interface IProjectionMap<TSource, TDestination> {
-		public static abstract Expression<Func<TSource, TDestination>> Map(ProjectionContext context);
+		Expression<Func<TSource?, TDestination?>> Project(ProjectionContext context);
 	}
 }

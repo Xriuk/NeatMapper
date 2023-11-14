@@ -552,7 +552,7 @@ namespace NeatMapper.Tests.Configuration {
 
 		[TestMethod]
 		public void ShouldNotAllowAdditionalMapsInOpenGenericTypes() {
-			var exc = Assert.ThrowsException<InvalidOperationException>(() => new CustomMapsConfiguration((t, i) => false, new CustomMapsOptions(), new[] { new CustomAdditionalMap{
+			var exc = Assert.ThrowsException<InvalidOperationException>(() => new CustomMapsConfiguration((t, i) => false, new CustomMapsOptions().TypesToScan, new[] { new CustomAdditionalMap{
 				From = typeof(int),
 				To = typeof(string),
 				Method = typeof(GenericMap1<>).GetMethod("MyMethod")

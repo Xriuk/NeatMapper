@@ -31,7 +31,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NeatMapper.EntityFrameworkCore\NeatMapper.EntityFrameworkCore.csproj" />
-		<ProjectReference Include="..\..\tests\NeatMapper.Tests\NeatMapper.Tests.csproj" />
+		<ProjectReference Include="..\NeatMapper.Tests\NeatMapper.Tests.csproj" />
   </ItemGroup>
 
 </Project>

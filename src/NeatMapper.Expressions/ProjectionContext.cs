@@ -1,13 +1,19 @@
 ﻿namespace NeatMapper.Expressions {
 	public sealed class ProjectionContext {
-		public ProjectionContext(IServiceProvider serviceProvider, IProjector mapper) {
+		public ProjectionContext(IServiceProvider serviceProvider, IProjector projector) :
+			this(serviceProvider, new NestedProjector(projector ?? throw new ArgumentNullException(nameof(projector)))) {}
+		public ProjectionContext(IServiceProvider serviceProvider, NestedProjector projector) {
 			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-			Mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+			Projector = projector ?? throw new ArgumentNullException(nameof(projector));
 		}
+
 
 
 		public IServiceProvider ServiceProvider { get; }
 
-		public IProjector Mapper { get; }
+		/// <summary>
+		/// Projector to be used for nested projections.
+		/// </summary>
+		public NestedProjector Projector { get; }
 	}
 }
