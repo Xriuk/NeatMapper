@@ -6,7 +6,7 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Contains informations and services for the current mapping operation
+	/// Contains informations and services for the current mapping operation.
 	/// </summary>
 	public sealed class MappingContext {
 		public MappingContext(IServiceProvider serviceProvider, IMapper mapper, MappingOptions mappingOptions) {
@@ -17,18 +17,18 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Service provider which can be used to retrieve additional services
+		/// Service provider which can be used to retrieve additional services.
 		/// </summary>
 		public IServiceProvider ServiceProvider { get; }
 
 		/// <summary>
-		/// Mapper which can be used for nested mappings
+		/// Mapper which can be used for nested mappings.
 		/// </summary>
 		public IMapper Mapper { get; }
 
 		/// <summary>
 		/// Additional mapping options, contains multiple options of different types,
-		/// each mapper/map should try to retrieve its options and use them
+		/// each mapper/map should try to retrieve its options and use them.
 		/// </summary>
 		public MappingOptions MappingOptions { get; }
 	}

@@ -3,7 +3,22 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
+	/// <summary>
+	/// <see cref="IAsyncMapper"/> which maps objects by using <see cref="IAsyncNewMap{TSource, TDestination}"/>.
+	/// </summary>
 	public sealed class AsyncNewMapper : AsyncCustomMapper, IAsyncMapperCanMap {
+		/// <summary>
+		/// Creates a new instance of <see cref="AsyncNewMapper"/>.<br/>
+		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
+		/// should be specified.
+		/// </summary>
+		/// <param name="mapsOptions">Options to retrieve user-defined maps for the mapper, null to ignore.</param>
+		/// <param name="additionalMapsOptions">Additional user-defined maps for the mapper, null to ignore.</param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to the maps inside <see cref="AsyncMappingContext"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during mapping with <see cref="AsyncMapperOverrideMappingOptions"/>.
+		/// </param>
 		public AsyncNewMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
@@ -93,6 +108,9 @@ namespace NeatMapper {
 				result = await TaskUtils.AwaitTask<object>(task);
 			}
 			catch (MapNotFoundException) {
+				throw;
+			}
+			catch (TaskCanceledException) {
 				throw;
 			}
 			catch (Exception e) {

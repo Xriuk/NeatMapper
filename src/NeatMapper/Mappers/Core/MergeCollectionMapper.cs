@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -17,7 +18,30 @@ namespace NeatMapper {
 		private readonly IMapper _originalElementMapper;
 		private readonly IMatcher _elementsMatcher;
 		private readonly MergeCollectionsOptions _mergeCollectionOptions;
+		private readonly IServiceProvider _serviceProvider;
 
+		/// <summary>
+		/// Creates a new instance of <see cref="MergeCollectionMapper"/>.
+		/// </summary>
+		/// <param name="elementsMapper">
+		/// <see cref="IMapper"/> to use to map collection elements.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// </param>
+		/// <param name="elementsMatcher">
+		/// <see cref="IMatcher"/> used to match elements between collections to merge them,
+		/// if null the elements won't be matched (this will effectively be the same as using
+		/// <see cref="NewCollectionMapper"/>).<br/>
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
+		/// </param>
+		/// <param name="mergeCollectionsOptions">
+		/// Additional merging options to apply during mapping, null to use default.<br/>
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
+		/// </param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to <see cref="MergeCollectionsMappingOptions.Matcher"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// </param>
 		public MergeCollectionMapper(
 			IMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -38,11 +62,12 @@ namespace NeatMapper {
 			IServiceProvider
 #endif
 			serviceProvider = null) :
-			base(elementsMapper, serviceProvider) {
+				base(elementsMapper) {
 
 			_originalElementMapper = elementsMapper;
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
 			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
+			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
 
@@ -289,6 +314,9 @@ namespace NeatMapper {
 							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 					}
 					catch (MapNotFoundException) {
+						throw;
+					}
+					catch (TaskCanceledException) {
 						throw;
 					}
 					catch (Exception e) {

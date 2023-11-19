@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -25,7 +26,9 @@ namespace NeatMapper.Tests.Mapping {
 			INewMapStatic<decimal, int>,
 			INewMapStatic<decimal, string>,
 			INewMapStatic<int, char>,
-			INewMapStatic<char, float>
+			INewMapStatic<char, float>,
+			INewMapStatic<decimal, float>,
+			INewMapStatic<decimal, bool>
 #else
 			INewMap<int, string>,
 			INewMap<Price, decimal>,
@@ -44,7 +47,9 @@ namespace NeatMapper.Tests.Mapping {
 			INewMap<decimal, int>,
 			INewMap<decimal, string>,
 			INewMap<int, char>,
-			INewMap<char, float>
+			INewMap<char, float>,
+			INewMap<decimal, float>,
+			INewMap<decimal, bool>
 #endif
 			{
 
@@ -330,6 +335,33 @@ namespace NeatMapper.Tests.Mapping {
 				.Map(char source, MappingContext context) {
 				return (float)source;
 			}
+
+			// Throws task canceled
+#if NET7_0_OR_GREATER
+			static
+#endif
+			float
+#if NET7_0_OR_GREATER
+				INewMapStatic<decimal, float>
+#else
+				INewMap<decimal, float>
+#endif
+				.Map(decimal source, MappingContext context) {
+				throw new TaskCanceledException();
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				INewMapStatic<decimal, bool>
+#else
+				INewMap<decimal, bool>
+#endif
+				.Map(decimal source, MappingContext context) {
+				return true;
+			}
 		}
 
 		IMapper _mapper = null;
@@ -439,8 +471,14 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldCatchExceptionsInMaps() {
-			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(2f));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+			// Should wrap exceptions
+			{ 
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(2f));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+			}
+
+			// Should not wrap TaskCanceledException
+			Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map<float>(0m));
 		}
 
 		[TestMethod]

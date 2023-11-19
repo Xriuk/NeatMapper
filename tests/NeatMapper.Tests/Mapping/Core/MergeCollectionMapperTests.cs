@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping {
 	public abstract class MergeCollectionMapperTests {
@@ -426,42 +427,72 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldCatchExceptionsInCollectionMaps() {
-			// Normal collections
+			// Should wrap exceptions
 			{
-				// Without comparer
-				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2f }, new List<int>()));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+				// Normal collections
+				{
+					// Without comparer
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2f }, new List<int>()));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
-				// Exception in comparer
-				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2m }, new List<int>() { 3 }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+					// Exception in comparer
+					exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2m }, new List<int>() { 3 }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
-				// Exception in custom comparer
-				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new NotImplementedException()));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+					// Exception in custom comparer
+					exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new NotImplementedException()));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+				}
+
+				// Nested collections
+				{
+					// Without comparer
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int>() }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+
+					// Exception in comparer
+					exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2m } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => true));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MatcherException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+
+					// Exception in custom comparer
+					exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new NotImplementedException()));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+				}
 			}
 
-			// Nested collections
+			// Should not wrap TaskCanceledException
 			{
-				// Without comparer
-				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int>() }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+				// Normal collections
+				{
+					// Without comparer
+					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { 2m }, new List<float>()));
 
-				// Exception in comparer
-				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2m } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => true));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MatcherException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+					// Exception in comparer
+					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { 2m }, new List<bool>() { true }));
 
-				// Exception in custom comparer
-				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new NotImplementedException()));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MatcherException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+					// Exception in custom comparer
+					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { 2f }, new List<int>() { 3 }, (a, b, c) => throw new TaskCanceledException()));
+				}
+
+				// Nested collections
+				{
+					// Without comparer
+					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { new[] { 2m } }, new List<List<float>> { new List<float>() }));
+
+					// Exception in comparer
+					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { new[] { 2m } }, new List<List<bool>> { new List<bool> { true } }, (a, b, c) => true));
+
+					// Exception in custom comparer
+					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new TaskCanceledException()));
+				}
 			}
 		}
 	}

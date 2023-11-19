@@ -8,7 +8,8 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Base class for asynchronous mappers which use user-defined maps to map types
+	/// Base class for asynchronous mappers which use user-defined maps to map types.
+	/// Internal class.
 	/// </summary>
 	public abstract class AsyncCustomMapper : IAsyncMapper {
 		internal readonly CustomMapsConfiguration _configuration;

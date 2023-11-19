@@ -14,7 +14,7 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		readonly IList<IAsyncMapper> _mappers;
+		private readonly IList<IAsyncMapper> _mappers;
 		private readonly AsyncNestedMappingContext _nestedMappingContext;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

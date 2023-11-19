@@ -8,27 +8,19 @@ namespace NeatMapper {
 	/// Each mapper is invoked in order and the first one to succeed in mapping is returned
 	/// </summary>
 	public sealed class CompositeMapper : IMapper, IMapperCanMap {
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private readonly IList<IMapper> _mappers;
 		private readonly NestedMappingContext _nestedMappingContext;
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-
 		/// <summary>
-		/// Creates the mapper by using the provided mappers list
+		/// Creates a new instance of <see cref="CompositeMapper"/>.
 		/// </summary>
-		/// <param name="mappers">Mappers to delegate the mapping to</param>
+		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public CompositeMapper(params IMapper[] mappers) : this((IList<IMapper>) mappers) { }
 
 		/// <summary>
-		/// Creates the mapper by using the provided mappers list
+		/// Creates a new instance of <see cref="CompositeMapper"/>.
 		/// </summary>
-		/// <param name="mappers">Mappers to delegate the mapping to</param>
+		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public CompositeMapper(IList<IMapper> mappers) {
 			if (mappers == null)
 				throw new ArgumentNullException(nameof(mappers));

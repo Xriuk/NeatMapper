@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -73,6 +74,9 @@ namespace NeatMapper {
 
 			try { 
 				return _matchDelegate.Invoke(source, destination, context);
+			}
+			catch (TaskCanceledException) {
+				throw;
 			}
 			catch (Exception e) {
 				throw new MatcherException(e, (sourceType, destinationType));

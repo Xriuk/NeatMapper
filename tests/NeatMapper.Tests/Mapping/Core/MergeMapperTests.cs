@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -27,7 +28,10 @@ namespace NeatMapper.Tests.Mapping {
 			IMatchMapStatic<decimal, int>,
 			IMergeMapStatic<decimal, string>,
 			IMergeMapStatic<int, char>,
-			IMergeMapStatic<char, float>
+			IMergeMapStatic<char, float>,
+			IMergeMapStatic<decimal, float>,
+			IMergeMapStatic<decimal, bool>,
+			IMatchMapStatic<decimal, bool>
 #else
 			IMergeMap<int, string>,
 			IMergeMap<Price, decimal>,
@@ -48,7 +52,10 @@ namespace NeatMapper.Tests.Mapping {
 			IMatchMap<decimal, int>,
 			IMergeMap<decimal, string>,
 			IMergeMap<int, char>,
-			IMergeMap<char, float>
+			IMergeMap<char, float>,
+			IMergeMap<decimal, float>,
+			IMergeMap<decimal, bool>,
+			IMatchMap<decimal, bool>
 #endif
 			{
 
@@ -358,6 +365,47 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(char source, float destination, MappingContext context) {
 				return (float)source;
+			}
+
+			// Throws task canceled
+#if NET7_0_OR_GREATER
+			static
+#endif
+			float
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<decimal, float>
+#else
+				IMergeMap<decimal, float>
+#endif
+				.Map(decimal source, float destination, MappingContext context) {
+				throw new TaskCanceledException();
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<decimal, bool>
+#else
+				IMergeMap<decimal, bool>
+#endif
+				.Map(decimal source, bool destination, MappingContext context) {
+				return true;
+			}
+
+			// Throws task canceled
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				IMatchMapStatic<decimal, bool>
+#else
+				IMatchMap<decimal, bool>
+#endif
+				.Match(decimal source, bool destination, MatchingContext context) {
+				throw new TaskCanceledException();
 			}
 		}
 
@@ -693,8 +741,14 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldCatchExceptionsInMaps() {
-			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(2f, 2));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+			// Should wrap exceptions
+			{
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(2f, 2));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+			}
+
+			// Should not wrap TaskCanceledException
+			Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(0m, 0f));
 		}
 
 		[TestMethod]

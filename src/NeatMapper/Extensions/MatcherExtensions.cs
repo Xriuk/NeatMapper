@@ -5,16 +5,7 @@ namespace NeatMapper {
 	public static class MatcherExtensions {
 		#region Match
 		#region Runtime
-		/// <summary>
-		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>.
-		/// This will create a delegate which can be invoked multiple times
-		/// </summary>
-		/// <param name="source">Object to compare, may be null</param>
-		/// <param name="sourceType">Type of the source object, used to retrieve the available maps</param>
-		/// <param name="destination">Object to be compared to, may be null</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <returns><see langword="true"/> if the two objects match</returns>
+		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
 		public static bool Match(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -44,14 +35,9 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <summary>
-		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
-		/// </summary>
-		/// <typeparam name="TSource">Type of the source object, used to retrieve the available comparers</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available comparers</typeparam>
-		/// <param name="source">Source object, may be null</param>
-		/// <param name="destination">Destination object, may be null</param>
-		/// <returns><see langword="true"/> if the two objects are equivalent</returns>
+		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
 		public static bool Match<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource? 
@@ -77,14 +63,7 @@ namespace NeatMapper {
 			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
 		}
 
-		/// <summary>
-		/// Checks if two objects are equivalent by invoking the corresponding <see cref="IMatchMap{TSource, TDestination}.Match"/>
-		/// </summary>
-		/// <typeparam name="TSource">Type of the source object, used to retrieve the available comparers</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available comparers</typeparam>
-		/// <param name="source">Source object, may be null</param>
-		/// <param name="destination">Destination object, may be null</param>
-		/// <returns><see langword="true"/> if the two objects are equivalent</returns>
+		/// <inheritdoc cref="Match{TSource, TDestination}(IMatcher, TSource, TDestination, MappingOptions)"/>
 		public static bool Match<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource? 
@@ -116,20 +95,10 @@ namespace NeatMapper {
 		#region Runtime
 		/// <summary>
 		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
-		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and destination objects
+		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and a dummy destination objects
 		/// (cached) and try to match them
 		/// </summary>
-		/// <param name="sourceType">Type of the source object, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
-		/// since some matchers may depend on specific options to match or not two given types
-		/// </param>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be matched
-		/// with an object of type <paramref name="sourceType"/>
-		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types</exception>
+		/// <inheritdoc cref="IMatcherCanMatch.CanMatch(Type, Type, MappingOptions)"/>
 		public static bool CanMatch(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
@@ -179,22 +148,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
-		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and destination objects
-		/// (cached) and try to match them
-		/// </summary>
-		/// <param name="sourceType">Type of the source object, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
-		/// since some matchers may depend on specific options to match or not two given types
-		/// </param>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be matched
-		/// with an object of type <paramref name="sourceType"/>
-		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types</exception>
+		/// <inheritdoc cref="CanMatch(IMatcher, Type, Type, MappingOptions)"/>
 		public static bool CanMatch(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
@@ -210,22 +164,15 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <summary>
-		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
-		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and destination objects
-		/// (cached) and try to match them
-		/// </summary>
-		/// <typeparam name="TSource">Type of the source object, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
-		/// since some matchers may depend on specific options to match or not two given types
-		/// </param>
+		/// <inheritdoc cref="CanMatch(IMatcher, Type, Type, MappingOptions)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="CanMatch(IMatcher, Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="CanMatch(IMatcher, Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="CanMatch(IMatcher, Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be matched
-		/// with an object of type <typeparamref name="TSource"/>
+		/// with an object of type <typeparamref name="TSource"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types</exception>
+		/// <inheritdoc cref="CanMatch(IMatcher, Type, Type, MappingOptions)" path="/exception"/>
 		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -237,22 +184,7 @@ namespace NeatMapper {
 			return matcher.CanMatch(typeof(TSource), typeof(TDestination), mappingOptions);
 		}
 
-		/// <summary>
-		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
-		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and destination objects
-		/// (cached) and try to match them
-		/// </summary>
-		/// <typeparam name="TSource">Type of the source object, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
-		/// since some matchers may depend on specific options to match or not two given types
-		/// </param>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be matched
-		/// with an object of type <typeparamref name="TSource"/>
-		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types</exception>
+		/// <inheritdoc cref="CanMatch{TSource, TDestination}(IMatcher, MappingOptions)"/>
 		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?

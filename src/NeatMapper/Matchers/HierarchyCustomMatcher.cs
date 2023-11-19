@@ -1,14 +1,16 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System;
+using System.Threading.Tasks;
+using System.Reflection;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches objects by using <see cref="IHierarchyMatchMap{TSource, TDestination}"/>
 	/// </summary>
 	public sealed class HierarchyCustomMatcher : IMatcher, IMatcherCanMatch {
-		readonly CustomMapsConfiguration _configuration;
-		readonly IServiceProvider _serviceProvider;
+		private readonly CustomMapsConfiguration _configuration;
+		private readonly IServiceProvider _serviceProvider;
 
 		public HierarchyCustomMatcher(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -102,6 +104,15 @@ namespace NeatMapper {
 						(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType)),
 					new object[] { source, destination, CreateMatchingContext(mappingOptions) }
 				);
+			}
+			catch (TargetInvocationException e) {
+				if (e.InnerException is TaskCanceledException)
+					throw e.InnerException;
+				else
+					throw new MatcherException(e.InnerException, types);
+			}
+			catch (TaskCanceledException) {
+				throw;
 			}
 			catch (Exception e) {
 				throw new MatcherException(e, types);

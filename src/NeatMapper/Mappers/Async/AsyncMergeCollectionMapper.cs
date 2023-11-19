@@ -16,10 +16,36 @@ namespace NeatMapper {
 	/// Not matched elements from the destination collection are treated according to <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
 	public sealed class AsyncMergeCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap {
-		readonly IAsyncMapper _originalElementMapper;
-		readonly IMatcher _elementsMatcher;
-		readonly MergeCollectionsOptions _mergeCollectionOptions;
+		private readonly IAsyncMapper _originalElementMapper;
+		private readonly IMatcher _elementsMatcher;
+		private readonly MergeCollectionsOptions _mergeCollectionOptions;
+		private readonly IServiceProvider _serviceProvider;
 
+		/// <summary>
+		/// Creates a new instance of <see cref="AsyncMergeCollectionMapper"/>.
+		/// </summary>
+		/// <param name="elementsMapper">
+		/// <see cref="IAsyncMapper"/> to use to map collection elements.<br/>
+		/// Can be overridden during mapping with <see cref="AsyncMapperOverrideMappingOptions"/>.
+		/// </param>
+		/// <param name="elementsMatcher">
+		/// <see cref="IMatcher"/> used to match elements between collections to merge them,
+		/// if null the elements won't be matched (this will effectively be the same as using
+		/// <see cref="AsyncNewCollectionMapper"/>).<br/>
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
+		/// </param>
+		/// <param name="asyncCollectionMappersOptions">
+		/// Additional parallelization options to apply during mapping, null to use default.<br/>
+		/// Can be overridden during mapping with <see cref="AsyncCollectionMappersMappingOptions"/>.</param>
+		/// <param name="mergeCollectionsOptions">
+		/// Additional merging options to apply during mapping, null to use default.<br/>
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
+		/// </param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to <see cref="MergeCollectionsMappingOptions.Matcher"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during mapping with <see cref="AsyncMapperOverrideMappingOptions"/>.
+		/// </param>
 		public AsyncMergeCollectionMapper(
 			IAsyncMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -46,11 +72,12 @@ namespace NeatMapper {
 			IServiceProvider
 #endif
 			serviceProvider = null) :
-			base(elementsMapper, asyncCollectionMappersOptions, serviceProvider) {
+			base(elementsMapper, asyncCollectionMappersOptions) {
 
 			_originalElementMapper = elementsMapper;
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
 			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
+			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
 
@@ -217,7 +244,7 @@ namespace NeatMapper {
 								var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 								var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
-									?? _asyncCollectionMappersOption.MaxParallelMappings;
+									?? _asyncCollectionMappersOptions.MaxParallelMappings;
 
 								var sourceDestinationMatches = enumerable
 									.Select(sourceElement => {
@@ -433,6 +460,9 @@ namespace NeatMapper {
 							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 					}
 					catch (MapNotFoundException) {
+						throw;
+					}
+					catch (TaskCanceledException) {
 						throw;
 					}
 					catch (Exception e) {

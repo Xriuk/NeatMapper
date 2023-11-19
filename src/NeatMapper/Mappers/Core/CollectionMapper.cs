@@ -6,17 +6,16 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Base class for mappers which map collections by mapping elements with another <see cref="IMapper"/>
+	/// Base class for mappers which map collections by mapping elements with another <see cref="IMapper"/>.
+	/// Internal class.
 	/// </summary>
 	public abstract class CollectionMapper : IMapper {
 		// Used as a nested mapper too, includes the collection mapper itself
 		protected readonly IMapper _elementsMapper;
-		protected readonly IServiceProvider _serviceProvider;
 		private readonly NestedMappingContext _nestedMappingContext;
 
-		internal CollectionMapper(IMapper elementsMapper, IServiceProvider serviceProvider = null) {
+		internal CollectionMapper(IMapper elementsMapper) {
 			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
-			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 			_nestedMappingContext = new NestedMappingContext(this);
 		}
 

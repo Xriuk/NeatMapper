@@ -1,4 +1,6 @@
-﻿namespace NeatMapper {
+﻿using System;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Contains informations about the current nested asynchronous mapping operation
 	/// </summary>
@@ -11,7 +13,7 @@
 #endif
 			parentContext = null) {
 
-			ParentMapper = parentMapper;
+			ParentMapper = parentMapper ?? throw new ArgumentNullException(nameof(parentMapper));
 			ParentContext = parentContext;
 		}
 

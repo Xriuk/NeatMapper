@@ -8,9 +8,11 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which creates a new <see cref="System.Collections.Generic.IEnumerable{T}"/>
 	/// (even nested) from a <see cref="System.Collections.Generic.IEnumerable{T}"/> asynchronously
-	/// and maps elements with another <see cref="IAsyncMapper"/> by trying new map first, then merge map
+	/// and maps elements with another <see cref="IAsyncMapper"/> by trying new map first, then merge map.
 	/// </summary>
 	public sealed class AsyncNewCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap {
+		/// <inheritdoc cref="AsyncNewCollectionMapper(IAsyncMapper, AsyncCollectionMappersOptions)"/>
+		[Obsolete("serviceProvider parameter is no longer used and will be removed in future versions, use other overloads.")]
 		public AsyncNewCollectionMapper(
 			IAsyncMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -18,14 +20,35 @@ namespace NeatMapper {
 #else
 			AsyncCollectionMappersOptions
 #endif
-			asyncCollectionMappersOptions = null,
+			asyncCollectionMappersOptions,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IServiceProvider?
 #else
 			IServiceProvider
 #endif
-			serviceProvider = null) :
-			base(elementsMapper, asyncCollectionMappersOptions, serviceProvider) { }
+			serviceProvider) :
+			base(elementsMapper, asyncCollectionMappersOptions) { }
+
+		/// <summary>
+		/// Creates a new instance of <see cref="AsyncNewCollectionMapper"/>.
+		/// </summary>
+		/// <param name="elementsMapper">
+		/// <see cref="IAsyncMapper"/> to use to map collection elements.<br/>
+		/// Can be overridden during mapping with <see cref="AsyncMapperOverrideMappingOptions"/>.
+		/// </param>
+		/// <param name="asyncCollectionMappersOptions">
+		/// Additional parallelization options to apply during mapping, null to use default.<br/>
+		/// Can be overridden during mapping with <see cref="AsyncCollectionMappersMappingOptions"/>.
+		/// </param>
+		public AsyncNewCollectionMapper(
+			IAsyncMapper elementsMapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			AsyncCollectionMappersOptions?
+#else
+			AsyncCollectionMappersOptions
+#endif
+			asyncCollectionMappersOptions = null) :
+			base(elementsMapper, asyncCollectionMappersOptions) { }
 
 
 		#region IAsyncMapper methods
@@ -71,8 +94,8 @@ namespace NeatMapper {
 
 				// Check if collection can be created
 				if (ObjectFactory.CanCreateCollection(types.To)) {
-					try {
-						if (source is IEnumerable sourceEnumerable) {
+					if (source is IEnumerable sourceEnumerable) {
+						try {
 							var destination = ObjectFactory.CreateCollection(types.To);
 							
 							var enumerable = sourceEnumerable.Cast<object>();
@@ -84,7 +107,7 @@ namespace NeatMapper {
 								var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 								var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
-									?? _asyncCollectionMappersOption.MaxParallelMappings;
+									?? _asyncCollectionMappersOptions.MaxParallelMappings;
 
 								// Check if we need to enable parallel mapping or not
 								if(parallelMappings > 1) { 
@@ -201,31 +224,34 @@ namespace NeatMapper {
 
 							return result;
 						}
-						else if (source == null) {
-							var elementsMapper = mappingOptions?.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
-
-							// Check if we can map elements
-							try {
-								if (await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
-									return null;
-							}
-							catch { }
-
-							try {
-								if (await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
-									return null;
-							}
-							catch { }
+						catch (MapNotFoundException) {
+							throw;
 						}
-						else
-							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
 					}
-					catch (MapNotFoundException) {
-						throw;
+					else if (source == null) {
+						var elementsMapper = mappingOptions?.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
+						// Check if we can map elements
+						try {
+							if (await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
+								return null;
+						}
+						catch { }
+
+						try {
+							if (await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
+								return null;
+						}
+						catch { }
 					}
-					catch (Exception e) {
-						throw new MappingException(e, types);
-					}
+					else
+						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 				}
 			}
 

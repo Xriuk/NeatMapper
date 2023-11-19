@@ -2,9 +2,21 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>
+	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>.
 	/// </summary>
 	public sealed class NewMapper : CustomMapper, IMapperCanMap {
+		/// <summary>
+		/// Creates a new instance of <see cref="NewMapper"/>.<br/>
+		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
+		/// should be specified.
+		/// </summary>
+		/// <param name="mapsOptions">Options to retrieve user-defined maps for the mapper, null to ignore.</param>
+		/// <param name="additionalMapsOptions">Additional user-defined maps for the mapper, null to ignore.</param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to the maps inside <see cref="MappingContext"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// </param>
 		public NewMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?

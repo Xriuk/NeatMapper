@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which creates a new <see cref="System.Collections.Generic.IEnumerable{T}"/>
 	/// (even nested) from a <see cref="System.Collections.Generic.IEnumerable{T}"/>
-	/// and maps elements with another <see cref="IMapper"/> by trying new map first, then merge map
+	/// and maps elements with another <see cref="IMapper"/> by trying new map first, then merge map.
 	/// </summary>
 	public sealed class NewCollectionMapper : CollectionMapper, IMapperCanMap {
+		/// <inheritdoc cref="NewCollectionMapper(IMapper)"/>
+		[Obsolete("serviceProvider parameter is no longer used and will be removed in future versions, use other overloads.")]
 		public NewCollectionMapper(
 			IMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -15,8 +18,18 @@ namespace NeatMapper {
 #else
 			IServiceProvider
 #endif
-			serviceProvider = null) :
-			base(elementsMapper, serviceProvider) { }
+			serviceProvider) :
+				base(elementsMapper) { }
+
+		/// <summary>
+		/// Creates a new instance of <see cref="NewCollectionMapper"/>.
+		/// </summary>
+		/// <param name="elementsMapper">
+		/// <see cref="IMapper"/> to use to map collection elements.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// </param>
+		public NewCollectionMapper(
+			IMapper elementsMapper) : base(elementsMapper) { }
 
 
 		#region IMapper methods
@@ -61,50 +74,60 @@ namespace NeatMapper {
 
 				// Check if collection can be created
 				if (ObjectFactory.CanCreateCollection(types.To)) {
-					try {
 						if (source is IEnumerable sourceEnumerable) {
-							var destination = ObjectFactory.CreateCollection(types.To);
-							var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
+							try {
+								var destination = ObjectFactory.CreateCollection(types.To);
+								var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
 
-							mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+								mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
 
-							var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+								var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-							var canCreateNew = true;
+								var canCreateNew = true;
 
-							foreach (var element in sourceEnumerable) {
-								object destinationElement;
+								foreach (var element in sourceEnumerable) {
+									object destinationElement;
 
-								// Try new map
-								if (canCreateNew) {
+									// Try new map
+									if (canCreateNew) {
+										try {
+											destinationElement = elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
+											addMethod.Invoke(destination, new object[] { destinationElement });
+											continue;
+										}
+										catch (MapNotFoundException) {
+											canCreateNew = false;
+										}
+									}
+
+									// Try merge map
 									try {
-										destinationElement = elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
-										addMethod.Invoke(destination, new object[] { destinationElement });
-										continue;
+										destinationElement = ObjectFactory.Create(elementTypes.To);
 									}
-									catch (MapNotFoundException) {
-										canCreateNew = false;
+									catch (ObjectCreationException) {
+										throw new MapNotFoundException(types);
 									}
+									destinationElement = elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
+									addMethod.Invoke(destination, new object[] { destinationElement });
 								}
 
-								// Try merge map
-								try {
-									destinationElement = ObjectFactory.Create(elementTypes.To);
-								}
-								catch (ObjectCreationException) {
-									throw new MapNotFoundException(types);
-								}
-								destinationElement = elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
-								addMethod.Invoke(destination, new object[] { destinationElement });
+								var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
+
+								// Should not happen
+								if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
+									throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
+
+								return result;
 							}
-
-							var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
-
-							// Should not happen
-							if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-								throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
-
-							return result;
+							catch (MapNotFoundException) {
+								throw;
+							}
+							catch (TaskCanceledException) {
+								throw;
+							}
+							catch (Exception e) {
+								throw new MappingException(e, types);
+							}
 						}
 						else if (source == null) {
 							var elementsMapper = mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
@@ -124,13 +147,6 @@ namespace NeatMapper {
 						}
 						else
 							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-					}
-					catch (MapNotFoundException) {
-						throw;
-					}
-					catch (Exception e) {
-						throw new MappingException(e, types);
-					}
 				}
 			}
 

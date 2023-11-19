@@ -1,9 +1,12 @@
-﻿namespace NeatMapper.Expressions {
-	public sealed class CustomAdditionalProjectionMapsOptions {
-		public CustomAdditionalProjectionMapsOptions() {
+﻿using System;
+using System.Collections.Generic;
+
+namespace NeatMapper {
+	public sealed class CustomProjectionAdditionalMapsOptions {
+		public CustomProjectionAdditionalMapsOptions() {
 			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>();
 		}
-		public CustomAdditionalProjectionMapsOptions(CustomAdditionalProjectionMapsOptions options) {
+		public CustomProjectionAdditionalMapsOptions(CustomProjectionAdditionalMapsOptions options) {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
 

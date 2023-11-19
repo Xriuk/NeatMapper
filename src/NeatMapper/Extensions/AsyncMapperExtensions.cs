@@ -1,8 +1,6 @@
-﻿using Microsoft.Extensions.Options;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,15 +8,7 @@ namespace NeatMapper {
 	public static class AsyncMapperExtensions {
 		#region AsyncNewMap
 		#region Runtime
-		/// <summary>
-		/// Maps an object to a new one asynchronously.<br/>
-		/// Can also map to collections automatically, will create the destination collection and map each element individually
-		/// </summary>
-		/// <param name="source">Object to map, may be null</param>
-		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object of type <paramref name="destinationType"/> type, which may be null</returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -49,16 +39,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to a new one asynchronously.<br/>
-		/// Can also map to collections automatically, will create the destination collection and map each element individually
-		/// </summary>
-		/// <param name="source">Object to map, may be null</param>
-		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object of type <paramref name="destinationType"/> type, which may be null</returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -97,17 +78,16 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit destination, inferred source
-		/// <summary>
-		/// Maps an object to a new one asynchronously
-		/// </summary>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
 		/// <param name="source">
-		/// Object to map, may NOT be null as the source type will be retrieved from it,
-		/// which will be used to retrieve the available maps
+		/// Object to map, CANNOT be null as the source type will be retrieved from it,
+		/// which will be used to retrieve the available maps.
 		/// </param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>The newly created object, may be null.</returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -139,16 +119,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to a new one asynchronously
-		/// </summary>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="source">
-		/// Object to map, may NOT be null as the source type will be retrieved from it,
-		/// which will be used to retrieve the available maps
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
+		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -174,17 +145,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to a new one asynchronously
-		/// </summary>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="source">
-		/// Object to map, may NOT be null as the source type will be retrieved from it,
-		/// which will be used to retrieve the available maps
-		/// </param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
+		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -218,22 +179,23 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <summary>
-		/// Maps an object to a new one asynchronously
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="source">Object to map, may be null</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object, MappingOptions, CancellationToken)" path="/typeparam[@name='TDestination']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>The newly created object, may be null.</returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
 #else
 			TDestination
 #endif
+#pragma warning disable CS1712
 			> MapAsync<TSource, TDestination>(this IAsyncMapper mapper,
+#pragma warning restore CS1712
 #if NET5_0_OR_GREATER
 			TSource?
 #else
@@ -261,14 +223,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to a new one asynchronously
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="source">Object to map, may be null</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
+		/// <inheritdoc cref="MapAsync{TSource, TDestination}(IAsyncMapper, TSource, MappingOptions, CancellationToken)" />
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -297,15 +252,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to a new one asynchronously
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="source">Object to map, may be null</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
+		/// <inheritdoc cref="MapAsync{TSource, TDestination}(IAsyncMapper, TSource, MappingOptions, CancellationToken)" />
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -344,20 +291,7 @@ namespace NeatMapper {
 
 		#region AsyncMergeMap
 		#region Runtime
-		/// <summary>
-		/// Maps an object to an existing one and returns the result.<br/>
-		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
-		/// (or the passed <see cref="MergeCollectionsMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
-		/// </summary>
-		/// <param name="source">Object to be mapped, may be null</param>
-		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
-		/// <param name="destination">Object to map to, may be null</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>
-		/// A task which when completed returns the resulting object of the mapping of type <paramref name="destinationType"/> type,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
-		/// </returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -394,21 +328,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to an existing one and returns the result.<br/>
-		/// Can also map to collections automatically, will try to match elements with <see cref="IMatchMap{TSource, TDestination}"/>
-		/// (or the passed <see cref="MergeCollectionsMappingOptions.Matcher"/>), will create the destination collection if it is null and map each element individually
-		/// </summary>
-		/// <param name="source">Object to be mapped, may be null</param>
-		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
-		/// <param name="destination">Object to map to, may be null</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>
-		/// A task which when completed returns the resulting object of the mapping of type <paramref name="destinationType"/> type,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
-		/// </returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -453,19 +373,18 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <summary>
-		/// Maps an object to an existing one and returns the result
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="source">Object to be mapped, may be null</param>
-		/// <param name="destination">Object to map to, may be null</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='destination']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns the resulting object of the mapping,
 		/// which can be the same as <paramref name="destination"/> or a new one, may be null
 		/// </returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -506,18 +425,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to an existing one and returns the result
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="source">Object to be mapped, may be null</param>
-		/// <param name="destination">Object to map to, may be null</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>
-		/// A task which when completed returns the resulting object of the mapping,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
-		/// </returns>
+		/// <inheritdoc cref="MapAsync{TSource, TDestination}(IAsyncMapper, TSource, TDestination, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -552,19 +460,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps an object to an existing one and returns the result
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="source">Object to be mapped, may be null</param>
-		/// <param name="destination">Object to map to, may be null</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>
-		/// A task which when completed returns the resulting object of the mapping,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
-		/// </returns>
+		/// <inheritdoc cref="MapAsync{TSource, TDestination}(IAsyncMapper, TSource, TDestination, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -615,8 +511,8 @@ namespace NeatMapper {
 		/// <param name="source">Collection to be mapped, may be null</param>
 		/// <param name="destination">Collection to map to, may be null</param>
 		/// <param name="matcher">Matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns the resulting collection of the mapping,
 		/// which can be the same as <paramref name="destination"/> or a new one, may be null
@@ -677,19 +573,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps a collection to an existing one by matching the elements and returns the result
-		/// </summary>
-		/// <typeparam name="TSourceElement">Type of the elements to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestinationElement">Type of the destination elements, used to retrieve the available maps</typeparam>
-		/// <param name="source">Collection to be mapped, may be null</param>
-		/// <param name="destination">Collection to map to, may be null</param>
-		/// <param name="matcher">Matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>
-		/// A task which when completed returns the resulting collection of the mapping,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
-		/// </returns>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TDestinationElement>?
@@ -723,20 +607,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Maps a collection to an existing one by matching the elements and returns the result
-		/// </summary>
-		/// <typeparam name="TSourceElement">Type of the elements to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestinationElement">Type of the destination elements, used to retrieve the available maps</typeparam>
-		/// <param name="source">Collection to be mapped, may be null</param>
-		/// <param name="destination">Collection to map to, may be null</param>
-		/// <param name="matcher">Matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
-		/// <param name="mappingOptions">Additional options passed to the context, support depends on the mapper and/or the maps</param>
-		/// <param name="cancellationToken">Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping</param>
-		/// <returns>
-		/// A task which when completed returns the resulting collection of the mapping,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
-		/// </returns>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TDestinationElement>?
@@ -773,18 +644,10 @@ namespace NeatMapper {
 		#region CanMapAsyncNew
 		#region Runtime
 		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object (cached) and try to map it
+		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper
+		/// supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source object (cached) and try to map it
 		/// </summary>
-		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
 		public static async Task<bool> CanMapAsyncNew(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -833,15 +696,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object (cached) and try to map it
-		/// </summary>
-		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncNew(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncNew(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -855,19 +710,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object (cached) and try to map it
-		/// </summary>
-		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object to create, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncNew(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncNew(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -884,19 +727,17 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object (cached) and try to map it
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A task which when completed returns <see langword="true"/> if an object of type
+		/// <typeparamref name="TDestination"/> can be created from a parameter of type
+		/// <typeparamref name="TSource"/>.
+		/// </returns>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -909,15 +750,7 @@ namespace NeatMapper {
 			return mapper.CanMapAsyncNew(typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken);
 		}
 
-		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object (cached) and try to map it
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncNew{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -931,19 +764,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source object (cached) and try to map it
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to map, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object to create, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created from a parameter of type <typeparamref name="TSource"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncNew{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -961,18 +782,11 @@ namespace NeatMapper {
 		#region CanMapAsyncMerge
 		#region Runtime
 		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source (cached) and destination (not cached) objects and try to map them
+		/// Checks if the mapper can merge an object into an existing one asynchronously, will check
+		/// if the given mapper supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source (cached)
+		/// and destination (not cached) objects and try to map them.
 		/// </summary>
-		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
 		public static async Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1024,15 +838,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source (cached) and destination (not cached) objects and try to map them
-		/// </summary>
-		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncMerge(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1046,19 +852,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source (cached) and destination (not cached) objects and try to map them
-		/// </summary>
-		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps</param>
-		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps</param>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncMerge(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1075,19 +869,17 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source (cached) and destination (not cached) objects and try to map them
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncMerge(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A task which when completed returns <see langword="true"/> if an object of type
+		/// <typeparamref name="TSource"/> can be merged into an object of type
+		/// <typeparamref name="TDestination"/>.
+		/// </returns>
+		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -1100,15 +892,7 @@ namespace NeatMapper {
 			return mapper.CanMapAsyncMerge(typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken);
 		}
 
-		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source (cached) and destination (not cached) objects and try to map them
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncMerge{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1122,19 +906,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check if the given mapper supports <see cref="IMapperCanMap"/> first
-		/// or will create a dummy source (cached) and destination (not cached) objects and try to map them
-		/// </summary>
-		/// <typeparam name="TSource">Type of the object to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestination">Type of the destination object, used to retrieve the available maps</typeparam>
-		/// <param name="mappingOptions">
-		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
-		/// since some mappers may depend on specific options to map or not two given types
-		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations</param>
-		/// <returns>A task which when completed returns <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object of type <typeparamref name="TDestination"/></returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types</exception>
+		/// <inheritdoc cref="CanMapAsyncMerge{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?

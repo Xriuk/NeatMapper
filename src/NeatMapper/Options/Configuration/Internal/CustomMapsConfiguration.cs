@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -139,6 +140,15 @@ namespace NeatMapper {
 								parameters
 							);
 						}
+						catch(TargetInvocationException e) {
+							if(e.InnerException is TaskCanceledException) 
+								throw e.InnerException;
+							else
+								throw new MappingException(e.InnerException, types);
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
 						catch (Exception e) {
 							throw new MappingException(e, types);
 						}
@@ -173,7 +183,6 @@ namespace NeatMapper {
 						.DistinctBy(a => a.OpenGenericArgument)
 #else
 						.GroupBy(a => a.OpenGenericArgument)
-						.Select(a => a.First())
 #endif
 						.Count() != genericArguments ||
 						classArguments.Distinct().Count() != genericArguments) {
@@ -209,6 +218,15 @@ namespace NeatMapper {
 									null :
 									ObjectFactory.GetOrCreateCached(concreteType),
 								parameters);
+						}
+						catch (TargetInvocationException e) {
+							if (e.InnerException is TaskCanceledException)
+								throw e.InnerException;
+							else
+								throw new MappingException(e.InnerException, types);
+						}
+						catch (TaskCanceledException) {
+							throw;
 						}
 						catch (Exception e) {
 							throw new MappingException(e, types);

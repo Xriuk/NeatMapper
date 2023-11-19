@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping {
 	public class NewCollectionMapperTests {
@@ -192,16 +193,32 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldCatchExceptionsInCollectionMaps() {
-			// Normal collections
-			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+			// Should wrap exceptions
+			{
+				// Normal collections
+				{ 
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<int>>(new[] { 2f }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+				}
 
-			// Nested collections
-			exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-			Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
-			Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+				// Nested collections
+				{ 
+					var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+				}
+			}
+
+			// Should not wrap TaskCanceledException
+			{
+				// Normal collections
+				Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map<IEnumerable<float>>(new[] { 2m }));
+
+				// Nested collections
+				Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map<IEnumerable<IEnumerable<float>>>(new[] { new[] { 2m } }));
+			}
 		}
 
 		[TestMethod]

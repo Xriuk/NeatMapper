@@ -9,6 +9,9 @@ namespace NeatMapper {
 	/// each mapper/map should try to retrieve its options and use them
 	/// </summary>
 	public sealed class MappingOptions {
+		/// <summary>
+		/// Empty instance with no options inside
+		/// </summary>
 		public static readonly MappingOptions Empty = new MappingOptions(null);
 
 

@@ -11,7 +11,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace NeatMapper.Expressions.Tests {
+namespace NeatMapper.Tests {
 	// https://referencesource.microsoft.com/#System.Core/Microsoft/Scripting/Ast/ExpressionStringBuilder.cs,240c0ae863272266
 	internal sealed class ExpressionStringBuilder : ExpressionVisitor {
 		private StringBuilder _out;

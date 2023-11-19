@@ -6,7 +6,8 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Base class for mappers which use user-defined maps to map types
+	/// Base class for mappers which use user-defined maps to map types.
+	/// Internal class.
 	/// </summary>
 	public abstract class CustomMapper : IMapper {
 		internal readonly CustomMapsConfiguration _configuration;

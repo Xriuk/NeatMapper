@@ -6,6 +6,18 @@ namespace NeatMapper {
 	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>
 	/// </summary>
 	public sealed class MergeMapper : CustomMapper, IMapperCanMap {
+		/// <summary>
+		/// Creates a new instance of <see cref="MergeMapper"/>.<br/>
+		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
+		/// should be specified.
+		/// </summary>
+		/// <param name="mapsOptions">Options to retrieve user-defined maps for the mapper, null to ignore.</param>
+		/// <param name="additionalMapsOptions">Additional user-defined maps for the mapper, null to ignore.</param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to the maps inside <see cref="MappingContext"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// </param>
 		public MergeMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
