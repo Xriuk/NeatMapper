@@ -153,6 +153,9 @@ namespace NeatMapper {
 			catch (MapNotFoundException) {
 				throw;
 			}
+			catch (TaskCanceledException) {
+				throw;
+			}
 			catch (Exception e) {
 				throw new MappingException(e, types);
 			}

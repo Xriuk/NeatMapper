@@ -201,32 +201,56 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldCatchExceptionsInCollectionMaps() {
-			// Not awaited
-			{ 
-				// Normal collections
-				var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<int>>(new[] { 2f }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+			// Should wrap exceptions
+			{
+				// Not awaited
+				{ 
+					// Normal collections
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<int>>(new[] { 2f }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
 
-				// Nested collections
-				exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+					// Nested collections
+					exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<int>>>(new[] { new[] { 2f } }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+				}
+
+				// Awaited
+				{
+					// Normal collections
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<decimal>>(new[] { 2f }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+
+					// Nested collections
+					exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<decimal>>>(new[] { new[] { 2f } }));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
+					Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+				}
 			}
 
-			// Awaited
+			// Should not wrap TaskCanceledException
 			{
-				// Normal collections
-				var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<decimal>>(new[] { 2f }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(NotImplementedException));
+				// Not awaited
+				{
+					// Normal collections
+					await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _mapper.MapAsync<IEnumerable<float>>(new[] { 2m }));
 
-				// Nested collections
-				exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<decimal>>>(new[] { new[] { 2f } }));
-				Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException, typeof(MappingException));
-				Assert.IsInstanceOfType(exc.InnerException?.InnerException?.InnerException, typeof(NotImplementedException));
+					// Nested collections
+					await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<float>>>(new[] { new[] { 2m } }));
+				}
+
+				// Awaited
+				{
+					// Normal collections
+					await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _mapper.MapAsync<IEnumerable<double>>(new[] { 2m }));
+
+					// Nested collections
+					await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _mapper.MapAsync<IEnumerable<IEnumerable<double>>>(new[] { new[] { 2m } }));
+				}
 			}
 		}
 

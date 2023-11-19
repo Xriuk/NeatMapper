@@ -30,7 +30,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMapStatic<decimal, string>,
 			IAsyncMergeMapStatic<int, float>,
 			IAsyncMergeMapStatic<int, char>,
-			IAsyncMergeMapStatic<char, float>
+			IAsyncMergeMapStatic<char, float>,
+			IAsyncMergeMapStatic<decimal, float>,
+			IAsyncMergeMapStatic<decimal, double>,
+			IAsyncMergeMapStatic<decimal, bool>,
+			IMatchMapStatic<decimal, bool>
 #else
 			IAsyncMergeMap<int, string>,
 			IAsyncMergeMap<Price, decimal>,
@@ -53,7 +57,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMap<decimal, string>,
 			IAsyncMergeMap<int, float>,
 			IAsyncMergeMap<int, char>,
-			IAsyncMergeMap<char, float>
+			IAsyncMergeMap<char, float>,
+			IAsyncMergeMap<decimal, float>,
+			IAsyncMergeMap<decimal, double>,
+			IAsyncMergeMap<decimal, bool>,
+			IMatchMap<decimal, bool>
 #endif
 			{
 
@@ -400,6 +408,62 @@ namespace NeatMapper.Tests.Mapping.Async {
 				.MapAsync(char source, float destination, AsyncMappingContext context) {
 				return Task.FromResult((float)source);
 			}
+
+			// Throws task canceled (not awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<decimal, float>
+#else
+				IAsyncMergeMap<decimal, float>
+#endif
+				.MapAsync(decimal source, float destination, AsyncMappingContext context) {
+				throw new TaskCanceledException();
+			}
+
+			// Throws task canceled (awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<double>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<decimal, double>
+#else
+				IAsyncMergeMap<decimal, double>
+#endif
+				.MapAsync(decimal source, double destination, AsyncMappingContext context) {
+				await Task.Delay(0);
+				throw new TaskCanceledException();
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<bool>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<decimal, bool>
+#else
+				IAsyncMergeMap<decimal, bool>
+#endif
+				.MapAsync(decimal source, bool destination, AsyncMappingContext context) {
+				return Task.FromResult(true);
+			}
+
+			// Throws task canceled
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				IMatchMapStatic<decimal, bool>
+#else
+				IMatchMap<decimal, bool>
+#endif
+				.Match(decimal source, bool destination, MatchingContext context) {
+				throw new TaskCanceledException();
+			}
 		}
 
 		IAsyncMapper _mapper = null;
@@ -734,13 +798,29 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldCatchExceptionsInMaps() {
-			// Not awaited
-			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(2f, 2));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+			// Should wrap exceptions
+			{
+				// Not awaited
+				{ 
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(2f, 2));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+				}
 
-			// Awaited
-			exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(2f, 2m));
-			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+				// Awaited
+				{ 
+					var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(2f, 2m));
+					Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
+				}
+			}
+
+			// Should not wrap TaskCanceledException
+			{
+				// Not awaited
+				await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _mapper.MapAsync(2m, 2f));
+
+				// Awaited
+				await Assert.ThrowsExceptionAsync<TaskCanceledException>(() => _mapper.MapAsync(2m, 2d));
+			}
 		}
 
 		[TestMethod]

@@ -353,7 +353,6 @@ namespace NeatMapper.Tests.Mapping {
 				return (char)source;
 			}
 
-
 #if NET7_0_OR_GREATER
 			static
 #endif

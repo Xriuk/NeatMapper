@@ -23,7 +23,8 @@ namespace NeatMapper {
 		public static IServiceCollection AddNeatMapper(this IServiceCollection services,
 			ServiceLifetime mappersLifetime = ServiceLifetime.Singleton,
 			ServiceLifetime asyncMappersLifetime = ServiceLifetime.Singleton,
-			ServiceLifetime matchersLifetime = ServiceLifetime.Singleton) {
+			ServiceLifetime matchersLifetime = ServiceLifetime.Singleton,
+			ServiceLifetime projectorsLifetime = ServiceLifetime.Singleton) {
 
 			if(services == null)
 				throw new ArgumentNullException(nameof(services));
@@ -71,6 +72,8 @@ namespace NeatMapper {
 				matchersLifetime));
 			#endregion
 
+			// DEV: add ProjectionMapper
+
 			#region IMapper
 			// Added to all options
 			services.AddTransient<IConfigureOptions<CompositeMapperOptions>>(
@@ -88,7 +91,7 @@ namespace NeatMapper {
 			services.AddTransient<IConfigureOptions<CompositeMapperOptions>, ConfigureCollectionsCompositeMapperOptions>();
 
 			// Add the projection mapper last to all options
-			services.AddTransient<IConfigureOptions<CompositeMapperOptions>>(
+			/*services.AddTransient<IConfigureOptions<CompositeMapperOptions>>(
 				s => new ConfigureNamedOptions<CompositeMapperOptions, ProjectionMapper>(
 					null,
 					s.GetRequiredService<ProjectionMapper>(),
@@ -96,7 +99,7 @@ namespace NeatMapper {
 						o.Mappers.Add(p);
 					}
 				)
-			);
+			);*/
 
 
 			// Register mapper services
@@ -116,10 +119,10 @@ namespace NeatMapper {
 					s.GetService<IOptions<CustomMergeAdditionalMapsOptions>>()?.Value,
 					s),
 				mappersLifetime));
-			services.Add(new ServiceDescriptor(
+			/*services.Add(new ServiceDescriptor(
 				typeof(ProjectionMapper),
 				s => new ProjectionMapper(s.GetRequiredService<IProjector>()),
-				mappersLifetime));
+				mappersLifetime));*/
 
 			// Collection mappers
 			services.Add(new ServiceDescriptor(
@@ -181,8 +184,7 @@ namespace NeatMapper {
 				typeof(AsyncNewCollectionMapper),
 				s => new AsyncNewCollectionMapper(
 					new AsyncCompositeMapper(s.GetService<IOptionsFactory<AsyncCompositeMapperOptions>>()?.Create(AsyncCompositeMapperOptions.Base).Mappers ?? Array.Empty<IAsyncMapper>()),
-					s.GetService<IOptions<AsyncCollectionMappersOptions>>()?.Value,
-					s),
+					s.GetService<IOptions<AsyncCollectionMappersOptions>>()?.Value),
 				asyncMappersLifetime));
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncMergeCollectionMapper),
