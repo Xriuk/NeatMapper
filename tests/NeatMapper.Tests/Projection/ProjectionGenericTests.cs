@@ -501,5 +501,319 @@ namespace NeatMapper.Tests.Projection {
 				}
 			}
 		}
+
+		[TestMethod]
+		public void ShouldNotProjectNotMatchingGenericTypes() {
+			// Types should be the same
+			Assert.IsFalse(_projector.CanProject<IEnumerable<string>, IList<int>>());
+
+			TestUtils.AssertMapNotFound(() => _projector.Project<IEnumerable<string>, IList<int>>());
+		}
+
+		[TestMethod]
+		public void ShouldNotProjectNotMatchingGenericConstraints() {
+			// struct
+			{
+				var projector = new CustomProjector(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
+				});
+
+				Assert.IsFalse(projector.CanProject<IList<Product>, int>());
+				Assert.IsTrue(projector.CanProject<IList<Guid>, int>());
+
+				TestUtils.AssertMapNotFound(() => projector.Project<IList<Product>, int>());
+				projector.Project<IList<Guid>, int>();
+				projector.Project<IList<ManagedTest>, int>();
+				projector.Project<IList<UnmanagedTest>, int>();
+			}
+
+			// class
+			{
+				var projector = new CustomProjector(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
+				});
+
+				Assert.IsFalse(projector.CanProject<IList<Guid>, int>());
+				Assert.IsTrue(projector.CanProject<IList<Product>, int>());
+
+				TestUtils.AssertMapNotFound(() => projector.Project<IList<Guid>, int>());
+				projector.Project<IList<Product>, int>();
+			}
+
+			// notnull (no runtime constraint)
+
+			// default (no runtime constraint)
+
+			// unmanaged
+			{
+				var projector = new CustomProjector(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
+				});
+
+				Assert.IsFalse(projector.CanProject<IList<Product>, int>());
+				Assert.IsFalse(projector.CanProject<IList<ManagedTest>, int>());
+				Assert.IsTrue(projector.CanProject<IList<UnmanagedTest>, int>());
+
+				TestUtils.AssertMapNotFound(() => projector.Project<IList<Product>, int>());
+				TestUtils.AssertMapNotFound(() => projector.Project<IList<ManagedTest>, int>());
+				projector.Project<IList<UnmanagedTest>, int>();
+				projector.Project<IList<Guid>, int>();
+				projector.Project<IList<int>, int>();
+			}
+
+			// new()
+			{
+				var projector = new CustomProjector(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
+				});
+
+				Assert.IsFalse(projector.CanProject<IList<ClassWithoutParameterlessConstructor>, int>());
+				Assert.IsTrue(projector.CanProject<IList<Product>, int>());
+
+				TestUtils.AssertMapNotFound(() => projector.Project<IList<ClassWithoutParameterlessConstructor>, int>());
+				projector.Project<IList<Product>, int>();
+			}
+
+			// base class
+			{
+				// Not generic
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
+					});
+
+					Assert.IsFalse(projector.CanProject<IList<Category>, int>());
+					Assert.IsTrue(projector.CanProject<IList<Product>, int>());
+
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Category>, int>());
+					TestUtils.AssertMapNotFound(() => projector.Project<List<Product>, int>());
+					projector.Project<IList<Product>, int>();
+					projector.Project<IList<LimitedProduct>, int>();
+				}
+
+				// Generic
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
+					});
+
+					Assert.IsFalse(projector.CanProject<Queue<Category>, Category>());
+					Assert.IsTrue(projector.CanProject<CustomCollection<Category>, Category>());
+					Assert.IsTrue(projector.CanProject<BaseClassTest, Category>());
+
+					TestUtils.AssertMapNotFound(() => projector.Project<Queue<Category>, Category>());
+					projector.Project<CustomCollection<Category>, Category>();
+					projector.Project<BaseClassTest, Category>();
+				}
+			}
+
+			// interface
+			{
+				// Not generic
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
+					});
+
+					Assert.IsFalse(projector.CanProject<IList<Category>, int>());
+					Assert.IsTrue(projector.CanProject<IList<DisposableTest>, int>());
+
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Category>, int>());
+					projector.Project<IList<DisposableTest>, int>();
+				}
+
+				// Generic
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
+					});
+
+					Assert.IsFalse(projector.CanProject<IList<CustomCollection<Category>>, Category>());
+					Assert.IsTrue(projector.CanProject<IList<EquatableTest>, Product>());
+
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<CustomCollection<Category>>, Category>());
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Queue<Category>>, Category>());
+					projector.Project<IList<EquatableTest>, Product>();
+				}
+			}
+
+			// generic type parameter
+			{
+				// Simple
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
+					});
+
+					Assert.IsFalse(projector.CanProject<IList<Category>, Product>());
+					Assert.IsTrue(projector.CanProject<IList<CustomCollection<int>>, List<int>>());
+
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Category>, Product>());
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Product>, LimitedProduct>());
+					projector.Project<IList<CustomCollection<int>>, List<int>>();
+					projector.Project<IList<BaseClassTest>, List<Category>>();
+					projector.Project<IList<LimitedProduct>, Product>();
+				}
+
+				// Complex
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
+					});
+
+					Assert.IsFalse(projector.CanProject<IList<Category>, Queue<Product>>());
+					Assert.IsTrue(projector.CanProject<IList<LimitedProduct>, Queue<Product>>());
+
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Category>, Queue<Product>>());
+					TestUtils.AssertMapNotFound(() => projector.Project<IList<Product>, Queue<LimitedProduct>>());
+					projector.Project<IList<LimitedProduct>, Queue<Product>>();
+					projector.Project<IList<LimitedProduct>, Queue<LimitedProduct>>();
+					projector.Project<IList<Product>, Queue<Product>>();
+				}
+			}
+		}
+
+		[TestMethod]
+		public void ShouldProjectSingleGenericType() {
+			// Generic source
+			{
+				Assert.IsTrue(_projector.CanProject<IEnumerable<int>, string>());
+
+				_projector.Project<IEnumerable<int>, string>();
+			}
+
+			// Generic destination
+			{
+				Assert.IsTrue(_projector.CanProject<int, IList<string>>());
+
+				_projector.Project<int, IList<string>>();
+			}
+		}
+
+		[TestMethod]
+		public void ShouldProjectDeepGenerics() {
+			Assert.IsTrue(_projector.CanProject<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>());
+
+			// Does not throw
+			_projector.Project<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>();
+		}
+
+		[TestMethod]
+		public void ShouldNotProjectNotMatchingDeepGenerics() {
+			// Types should be the same
+			Assert.IsFalse(_projector.CanProject<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>());
+
+			TestUtils.AssertMapNotFound(() => _projector.Project<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>());
+		}
+
+		[TestMethod]
+		public void ShouldRespectConstraints() {
+			var projector = new CustomProjector(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
+			});
+
+
+			{ 
+				Expression<Func<IList<Product>, int>> expr = source => 42;
+				TestUtils.AssertExpressionsEqual(expr, projector.Project<IList<Product>, int>());
+			}
+
+			{ 
+				Expression<Func<IList<Guid>, int>> expr = source => 36;
+				TestUtils.AssertExpressionsEqual(expr, projector.Project<IList<Guid>, int>());
+			}
+		}
+
+		[TestMethod]
+		public void ShouldPreferSpecificMaps() {
+			Expression<Func<IEnumerable<bool>, IList<bool>>> expr = source => new List<bool>(32);
+			TestUtils.AssertExpressionsEqual(expr, _projector.Project<IEnumerable<bool>, IList<bool>>());
+		}
+
+
+		/*
+		[TestMethod]
+		public void ShouldMapCollections() {
+			var mapper = new NewCollectionMapper(_mapper);
+
+			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], ValueTuple<int, string>[]>());
+
+				var tuples = mapper.Map<ValueTuple<int, string>[]>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
+
+				Assert.IsNotNull(tuples);
+				Assert.AreEqual(2, tuples.Length);
+				Assert.AreEqual(4, tuples[0].Item1);
+				Assert.AreEqual("Test1", tuples[0].Item2);
+				Assert.AreEqual(5, tuples[1].Item1);
+				Assert.AreEqual("Test2", tuples[1].Item2);
+			}
+
+			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], IList<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map<IList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
+
+				Assert.IsNotNull(tuples);
+				Assert.AreEqual(2, tuples.Count);
+				Assert.AreEqual(4, tuples[0].Item1);
+				Assert.AreEqual("Test1", tuples[0].Item2);
+				Assert.AreEqual(5, tuples[1].Item1);
+				Assert.AreEqual("Test2", tuples[1].Item2);
+			}
+
+			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], LinkedList<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map<LinkedList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
+
+				Assert.IsNotNull(tuples);
+				Assert.AreEqual(2, tuples.Count);
+				Assert.AreEqual(4, tuples.ElementAt(0).Item1);
+				Assert.AreEqual("Test1", tuples.ElementAt(0).Item2);
+				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
+				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
+			}
+
+			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], Queue<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map<Queue<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
+
+				Assert.IsNotNull(tuples);
+				Assert.AreEqual(2, tuples.Count);
+				Assert.AreEqual(4, tuples.ElementAt(0).Item1);
+				Assert.AreEqual("Test1", tuples.ElementAt(0).Item2);
+				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
+				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
+			}
+
+			{
+				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], Stack<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map<Stack<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
+
+				Assert.IsNotNull(tuples);
+				Assert.AreEqual(2, tuples.Count);
+				// Order is inverted
+				Assert.AreEqual(5, tuples.ElementAt(0).Item1);
+				Assert.AreEqual("Test2", tuples.ElementAt(0).Item2);
+				Assert.AreEqual(4, tuples.ElementAt(1).Item1);
+				Assert.AreEqual("Test1", tuples.ElementAt(1).Item2);
+			}
+
+			{
+				Assert.IsTrue(mapper.CanMapNew<IEnumerable<Tuple<string, int>>, CustomCollection<ValueTuple<int, string>>>());
+
+				var tuples = mapper.Map<CustomCollection<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
+
+				Assert.IsNotNull(tuples);
+				Assert.AreEqual(2, tuples.Count);
+				Assert.AreEqual(4, tuples.ElementAt(0).Item1);
+				Assert.AreEqual("Test1", tuples.ElementAt(0).Item2);
+				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
+				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
+			}
+		}*/
 	}
 }

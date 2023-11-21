@@ -400,19 +400,7 @@ namespace NeatMapper.Tests {
 			if (node.IsByRef) {
 				Out("ref ");
 			}
-			string name = node.Name;
-			if (String.IsNullOrEmpty(name)) {
-#if SILVERLIGHT
-                if (Expression.SilverlightQuirks) {
-                    Out(name ?? "<param>");
-                    return node;
-                }
-#endif
-				Out("Param_" + GetParamId(node));
-			}
-			else {
-				Out(name);
-			}
+			Out("Param_" + GetParamId(node));
 			return node;
 		}
 

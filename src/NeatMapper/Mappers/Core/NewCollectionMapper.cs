@@ -69,85 +69,87 @@ namespace NeatMapper {
 			(Type From, Type To) types = (sourceType, destinationType);
 
 			// If both types are collections try mapping the element types
-			if (types.From.IsEnumerable() && types.To.IsEnumerable()) {
+			if (types.From.IsEnumerable() && types.To.IsEnumerable() && ObjectFactory.CanCreateCollection(types.To)) {
 				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetEnumerableElementType());
 
-				// Check if collection can be created
-				if (ObjectFactory.CanCreateCollection(types.To)) {
-						if (source is IEnumerable sourceEnumerable) {
-							try {
-								var destination = ObjectFactory.CreateCollection(types.To);
-								var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
+				if (source is IEnumerable sourceEnumerable) {
+					try {
+						var destination = ObjectFactory.CreateCollection(types.To);
+						var addMethod = ObjectFactory.GetCollectionAddMethod(destination);
 
-								mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+						mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
 
-								var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+						var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-								var canCreateNew = true;
+						var canCreateNew = true;
 
-								foreach (var element in sourceEnumerable) {
-									object destinationElement;
+						foreach (var element in sourceEnumerable) {
+							object destinationElement;
 
-									// Try new map
-									if (canCreateNew) {
-										try {
-											destinationElement = elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
-											addMethod.Invoke(destination, new object[] { destinationElement });
-											continue;
-										}
-										catch (MapNotFoundException) {
-											canCreateNew = false;
-										}
-									}
-
-									// Try merge map
-									try {
-										destinationElement = ObjectFactory.Create(elementTypes.To);
-									}
-									catch (ObjectCreationException) {
-										throw new MapNotFoundException(types);
-									}
-									destinationElement = elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
+							// Try new map
+							if (canCreateNew) {
+								try {
+									destinationElement = elementsMapper.Map(element, elementTypes.From, elementTypes.To, mappingOptions);
 									addMethod.Invoke(destination, new object[] { destinationElement });
+									continue;
 								}
+								catch (MapNotFoundException) {
+									canCreateNew = false;
+								}
+							}
 
-								var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
-
-								// Should not happen
-								if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-									throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
-
-								return result;
+							// Try merge map
+							try {
+								destinationElement = ObjectFactory.Create(elementTypes.To);
+							}
+							catch (ObjectCreationException) {
+								throw new MapNotFoundException(types);
+							}
+							try { 
+								destinationElement = elementsMapper.Map(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions);
 							}
 							catch (MapNotFoundException) {
-								throw;
+								throw new MapNotFoundException(types);
 							}
-							catch (TaskCanceledException) {
-								throw;
-							}
-							catch (Exception e) {
-								throw new MappingException(e, types);
-							}
+							addMethod.Invoke(destination, new object[] { destinationElement });
 						}
-						else if (source == null) {
-							var elementsMapper = mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-							// Check if we can map elements
-							try {
-								if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
-									return null;
-							}
-							catch { }
+						var result = ObjectFactory.ConvertCollectionToType(destination, types.To);
 
-							try {
-								if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
-									return null;
-							}
-							catch { }
-						}
-						else
-							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+						// Should not happen
+						if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
+							throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
+
+						return result;
+					}
+					catch (MapNotFoundException) {
+						throw;
+					}
+					catch (TaskCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 				}
+				else if (source == null) {
+					var elementsMapper = mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
+					// Check if we can map elements
+					try {
+						if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
+							return null;
+					}
+					catch { }
+
+					try {
+						if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
+							return null;
+					}
+					catch { }
+				}
+				else
+					throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 			}
 
 			throw new MapNotFoundException(types);
@@ -213,7 +215,6 @@ namespace NeatMapper {
 				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
 
 				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
-
 				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 				bool cannotVerifyNew = false;

@@ -184,6 +184,7 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
+			// Source type null checked in CanMapAsyncMerge
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 

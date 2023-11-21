@@ -9,6 +9,7 @@ namespace NeatMapper.Tests.Mapping {
 	public class NewCollectionMapperTests {
 		protected IMapper _mapper = null;
 
+
 		[TestMethod]
 		public void ShouldMapCollections() {
 			// Should forward options except merge.matcher
@@ -314,6 +315,16 @@ namespace NeatMapper.Tests.Mapping {
 					{ 1, 2, 5 }
 				}));
 			}
+		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanMap returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_mapper.CanMapNew<float[], double[]>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double[]>(new[] { 1f }));
+			Assert.AreEqual(exc.From, typeof(float[]));
+			Assert.AreEqual(exc.To, typeof(double[]));
 		}
 	}
 

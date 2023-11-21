@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// </summary>
 	public interface IProjectorCanProject : IProjector {
 		/// <summary>
-		/// Checks if the projector can project a given object to another.
+		/// Checks if the projector could project a given object to another. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <param name="sourceType">Type of the object to project, used to retrieve the available maps.</param>
 		/// <param name="destinationType">

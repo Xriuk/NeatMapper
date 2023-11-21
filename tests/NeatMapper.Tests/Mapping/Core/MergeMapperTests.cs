@@ -31,7 +31,8 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMapStatic<char, float>,
 			IMergeMapStatic<decimal, float>,
 			IMergeMapStatic<decimal, bool>,
-			IMatchMapStatic<decimal, bool>
+			IMatchMapStatic<decimal, bool>,
+			IMergeMapStatic<float, double>
 #else
 			IMergeMap<int, string>,
 			IMergeMap<Price, decimal>,
@@ -55,7 +56,8 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMap<char, float>,
 			IMergeMap<decimal, float>,
 			IMergeMap<decimal, bool>,
-			IMatchMap<decimal, bool>
+			IMatchMap<decimal, bool>,
+			IMergeMap<float, double>
 #endif
 			{
 
@@ -405,6 +407,21 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Match(decimal source, bool destination, MatchingContext context) {
 				throw new TaskCanceledException();
+			}
+
+			// Rejects itself
+#if NET7_0_OR_GREATER
+			static
+#endif
+			double
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<float, double>
+#else
+				IMergeMap<float, double>
+#endif
+				.Map(float source, double destination, MappingContext context) {
+
+				throw new MapNotFoundException((typeof(float), typeof(double)));
 			}
 		}
 
@@ -759,6 +776,14 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsTrue(_mapper.CanMapMerge<string, int>());
 
 			Assert.AreEqual(4, mapper.Map("Test", 2));
+		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanMap returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_mapper.CanMapMerge<float, double>());
+
+			TestUtils.AssertMapNotFound(() => _mapper.Map(1f, 2d));
 		}
 	}
 }

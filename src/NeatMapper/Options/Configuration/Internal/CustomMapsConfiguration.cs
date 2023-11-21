@@ -141,10 +141,13 @@ namespace NeatMapper {
 							);
 						}
 						catch(TargetInvocationException e) {
-							if(e.InnerException is TaskCanceledException) 
+							if(e.InnerException is TaskCanceledException || e.InnerException is MapNotFoundException) 
 								throw e.InnerException;
 							else
 								throw new MappingException(e.InnerException, types);
+						}
+						catch (MapNotFoundException) {
+							throw;
 						}
 						catch (TaskCanceledException) {
 							throw;
@@ -220,10 +223,13 @@ namespace NeatMapper {
 								parameters);
 						}
 						catch (TargetInvocationException e) {
-							if (e.InnerException is TaskCanceledException)
+							if (e.InnerException is TaskCanceledException || e.InnerException is MapNotFoundException)
 								throw e.InnerException;
 							else
 								throw new MappingException(e.InnerException, types);
+						}
+						catch (MapNotFoundException) {
+							throw;
 						}
 						catch (TaskCanceledException) {
 							throw;
@@ -250,12 +256,14 @@ namespace NeatMapper {
 		static IEnumerable<Type> GetOpenGenericArgumentsRecursive(Type t) {
 			if (IsGenericTypeParameter(t))
 				return new[] { t };
+			if (t.IsArray)
+				return GetOpenGenericArgumentsRecursive(t.GetArrayElementType());
 			if (!t.IsGenericType)
 				return Enumerable.Empty<Type>();
 
 			var arguments = t.GetGenericArguments();
 			return arguments
-				.Where(a => IsGenericTypeParameter(a))
+				.Where(IsGenericTypeParameter)
 				.Concat(arguments.SelectMany(GetOpenGenericArgumentsRecursive));
 		}
 

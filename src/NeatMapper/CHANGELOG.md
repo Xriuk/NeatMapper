@@ -3,6 +3,7 @@
 ## [2.1.0] - Unreleased
 
 ### Changed
+- `MapNotFoundException` now inherits from `Exception` instead of `ArgumentException`
 - `NewCollectionMapper` and `AsyncNewCollectionMapper` constructors with `IServiceProvider`
 are now marked as obsolete, since the parameter was not used, and will be removed in the next major version
 
@@ -10,13 +11,23 @@ are now marked as obsolete, since the parameter was not used, and will be remove
 
 - `IProjectionMap` (and `IProjectionMapStatic` in .NET 7+), `IProjector`, `IProjectorCanProject`
 interfaces to create projections between types
-- `CustomProjector`, default `IProjector` implementation
+- Various `IProjector` default implementations:
+   - `CustomProjector`: projects using `IProjectionMap`
+   - `CollectionProjector`: projects collections by using another `IProjector`
+   - `CompositeProjector`: combines one or more `IProjector` of the above in a defined order and tries them all,
+the first one to succeeds projects the objects
 - Projection interfaces and options added to Dependency Injection (DI)
-- `ProjectionMapper`, an `IMapper` which uses an `IProjector` to map types
+- `ProjectionMapper`, an `IMapper` which uses an `IProjector` to map types by compiling and caching expressions into delegates
+- From and To properties to `MapNotFoundException`
 
 ### Fixed
 
 - All the mappers now should not wrap `TaskCanceledException` but throw it directly instead
+- Maps are now able to reject themselves (maybe based on their Mapping/Matching/ProjectionContext?)
+by throwing `MapNotFoundException` (`MatcherNotFound` for matchers), which won't be wrapped by
+the mapper/matcher/projector (it could be replaced by any parent mapper/matcher/projector with
+another exception of the same type)
+- Arrays, as generic maps type parameters, are now correctly recognized
 
 ## [2.0.0] - 2023-11-12
 

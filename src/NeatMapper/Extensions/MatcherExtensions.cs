@@ -94,9 +94,9 @@ namespace NeatMapper {
 		#region CanMatch
 		#region Runtime
 		/// <summary>
-		/// Checks if the matcher can match an object with another one, will check if the given matcher supports
+		/// Checks if the matcher could match an object with another one, will check if the given matcher supports
 		/// <see cref="IMatcherCanMatch"/> first otherwise will create a dummy source and a dummy destination objects
-		/// (cached) and try to match them
+		/// (cached) and try to match them. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <inheritdoc cref="IMatcherCanMatch.CanMatch(Type, Type, MappingOptions)"/>
 		public static bool CanMatch(this IMatcher matcher,

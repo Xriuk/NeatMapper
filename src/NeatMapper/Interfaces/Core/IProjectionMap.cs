@@ -7,6 +7,13 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type, can be an open generic.</typeparam>
 	/// <typeparam name="TDestination">Destination type, can be an open generic.</typeparam>
+	/// <remarks>
+	/// The constructed expression could be compiled into a delegate, if the expression is not suitable
+	/// for compilation (for example it uses fake methods which must be translated by an
+	/// <see cref="System.Linq.IQueryProvider"/>) it should check the <see cref="ProjectionContext"/>
+	/// for <see cref="ProjectionCompilationContext"/> options and throw a <see cref="MapNotFoundException"/>
+	/// exception to signal it.
+	/// </remarks>
 	public interface IProjectionMap<TSource, TDestination> {
 		/// <summary>
 		/// Projects an object to a new one.

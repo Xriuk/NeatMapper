@@ -6,7 +6,7 @@ namespace NeatMapper {
 	/// </summary>
 	public interface IMatcherCanMatch : IMatcher {
 		/// <summary>
-		/// Checks if the matcher can match an object with another one.
+		/// Checks if the matcher could match an object with another one. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <param name="sourceType">Type of the source object, used to retrieve the available maps.</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps.</param>

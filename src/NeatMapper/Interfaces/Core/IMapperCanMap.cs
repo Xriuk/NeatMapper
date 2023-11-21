@@ -6,7 +6,7 @@ namespace NeatMapper {
 	/// </summary>
 	public interface IMapperCanMap : IMapper {
 		/// <summary>
-		/// Checks if the mapper can create a new object from a given one.
+		/// Checks if the mapper could create a new object from a given one. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <param name="sourceType">Type of the source object, used to retrieve the available maps.</param>
 		/// <param name="destinationType">
@@ -32,7 +32,7 @@ namespace NeatMapper {
 			mappingOptions = null);
 
 		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one.
+		/// Checks if the mapper could merge an object into an existing one. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps.</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps.</param>

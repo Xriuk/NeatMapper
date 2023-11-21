@@ -31,9 +31,11 @@ namespace NeatMapper.Tests.Mapping {
 
 		public class Maps<T1, T2> :
 #if NET7_0_OR_GREATER
-			INewMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>
+			INewMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
+			INewMapStatic<T1[], T2[]>
 #else
-			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>
+			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
+			INewMap<T1[], T2[]>
 #endif
 			{
 
@@ -50,6 +52,21 @@ namespace NeatMapper.Tests.Mapping {
 				if(source == null)
 					return (default(T2), default(T1));
 				return (source.Item2, source.Item1);
+			}
+
+			// Rejects itself
+#if NET7_0_OR_GREATER
+			static
+#endif
+			T2[]
+#if NET7_0_OR_GREATER
+				INewMapStatic<T1[], T2[]>
+#else
+				INewMap<T1[], T2[]>
+#endif
+				.Map(T1[] source, MappingContext context) {
+				
+				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
 			}
 		}
 
@@ -722,6 +739,16 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreNotSame(boolArray, boolList);
 			Assert.AreEqual(0, boolList.Count);
 			Assert.AreEqual(32, (boolList as List<bool>)?.Capacity);
+		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanMap returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_mapper.CanMapNew<float[], double[]>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double[]>(new []{ 1f }));
+			Assert.AreEqual(exc.From, typeof(float[]));
+			Assert.AreEqual(exc.To, typeof(double[]));
 		}
 
 

@@ -644,8 +644,9 @@ namespace NeatMapper {
 		#region CanMapAsyncNew
 		#region Runtime
 		/// <summary>
-		/// Checks if the mapper can create a new object from a given one asynchronously, will check if the given mapper
-		/// supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source object (cached) and try to map it
+		/// Checks if the mapper could create a new object from a given one asynchronously, will check if the given mapper
+		/// supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source object (cached) and try to map it.
+		/// It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
 		public static async Task<bool> CanMapAsyncNew(this IAsyncMapper mapper,
@@ -782,9 +783,9 @@ namespace NeatMapper {
 		#region CanMapAsyncMerge
 		#region Runtime
 		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one asynchronously, will check
+		/// Checks if the mapper could merge an object into an existing one asynchronously, will check
 		/// if the given mapper supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source (cached)
-		/// and destination (not cached) objects and try to map them.
+		/// and destination (not cached) objects and try to map them. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
 		public static async Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper,

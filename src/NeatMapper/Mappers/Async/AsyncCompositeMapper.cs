@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IAsyncMapper"/> which delegates mapping to other <see cref="IAsyncMapper"/>s, this allows to combine different mapping capabilities.<br/>
-	/// Each mapper is invoked in order and the first one to succeed in mapping is returned
+	/// <see cref="IAsyncMapper"/> which delegates mapping to other <see cref="IAsyncMapper"/>s,
+	/// this allows to combine different mapping capabilities.<br/>
+	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.
 	/// </summary>
 	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -22,15 +23,15 @@ namespace NeatMapper {
 #endif
 
 		/// <summary>
-		/// Creates the mapper by using the provided mappers list
+		/// Creates the mapper by using the provided mappers list.
 		/// </summary>
-		/// <param name="mappers">Mappers to delegate the mapping to</param>
+		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public AsyncCompositeMapper(params IAsyncMapper[] mappers) : this((IList<IAsyncMapper>) mappers) { }
 
 		/// <summary>
-		/// Creates the mapper by using the provided mappers list
+		/// Creates the mapper by using the provided mappers list.
 		/// </summary>
-		/// <param name="mappers">Mappers to delegate the mapping to</param>
+		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public AsyncCompositeMapper(IList<IAsyncMapper> mappers) {
 			if (mappers == null)
 				throw new ArgumentNullException(nameof(mappers));

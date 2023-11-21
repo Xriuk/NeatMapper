@@ -104,5 +104,7 @@ namespace NeatMapper.Tests.Mapping {
 			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(2f));
 			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}
+
+		// DEV: should not map if map does not allow compilation
 	}
 }

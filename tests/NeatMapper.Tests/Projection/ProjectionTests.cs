@@ -16,7 +16,10 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMapStatic<LimitedProduct, LimitedProductDto>,
 			IProjectionMapStatic<Category, int?>,
 			IProjectionMapStatic<Category, CategoryDto>,
-			IProjectionMapStatic<float, int>
+			IProjectionMapStatic<float, int>,
+			IProjectionMapStatic<string, KeyValuePair<string, int>>,
+			IProjectionMapStatic<int, char>,
+			IProjectionMapStatic<char, float>
 #else
 			IProjectionMap<int, string>,
 			IProjectionMap<Price, decimal>,
@@ -24,7 +27,10 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMap<LimitedProduct, LimitedProductDto>,
 			IProjectionMap<Category, int?>,
 			IProjectionMap<Category, CategoryDto>,
-			IProjectionMap<float, int>
+			IProjectionMap<float, int>,
+			IProjectionMap<string, KeyValuePair<string, int>>,
+			IProjectionMap<int, char>,
+			IProjectionMap<char, float>
 #endif
 			{
 
@@ -39,6 +45,7 @@ namespace NeatMapper.Tests.Projection {
 #endif
 				.Project(ProjectionContext context) {
 
+				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				return source => (source * 2).ToString();
 			}
 
@@ -143,7 +150,6 @@ namespace NeatMapper.Tests.Projection {
 					};
 			}
 
-
 			// Throws exception
 #if NET7_0_OR_GREATER
 			static
@@ -157,6 +163,48 @@ namespace NeatMapper.Tests.Projection {
 				.Project(ProjectionContext context) {
 
 				throw new NotImplementedException();
+			}
+			
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<string, KeyValuePair<string, int>>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<string, KeyValuePair<string, int>>
+#else
+				IProjectionMap<string, KeyValuePair<string, int>>
+#endif
+				.Project(ProjectionContext context) {
+
+				return source => new KeyValuePair<string, int>(source, source.Length);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<int, char>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<int, char>
+#else
+				IProjectionMap<int, char>
+#endif
+				.Project(ProjectionContext context) {
+
+				return source => (char)source;
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<char, float>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<char, float>
+#else
+				IProjectionMap<char, float>
+#endif
+				.Project(ProjectionContext context) {
+
+				return source => (float)source;
 			}
 		}
 

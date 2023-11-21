@@ -5,8 +5,9 @@ using System.Linq.Expressions;
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using an <see cref="IProjector"/> to retrieve mapping expressions
-	/// which then get compiled and cached. Maps are created only once, so if the maps available inside the projector
-	/// change later they are ignored, any mapping options are forwarded to the projector the first time the map is created.
+	/// which then get compiled and cached into delegates. Maps are created only once, so if the maps
+	/// available inside the projector change later they are ignored, any mapping options are forwarded
+	/// to the projector the first time the map is created.
 	/// Supports only new maps and not merge maps.
 	/// </summary>
 	public sealed class ProjectionMapper : IMapper, IMapperCanMap {
@@ -184,7 +185,9 @@ namespace NeatMapper {
 
 		// Adds a nested mapping context, this allows projections not suited to be compiled to throw and be ignored
 		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			return (options ?? MappingOptions.Empty).ReplaceOrAdd<NestedMappingContext>(n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext);
+			return (options ?? MappingOptions.Empty).ReplaceOrAdd<NestedMappingContext, ProjectionCompilationContext>(
+				n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext,
+				p => p ?? ProjectionCompilationContext.Instance);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

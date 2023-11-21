@@ -11,11 +11,11 @@ namespace NeatMapper.Tests {
 			Assert.IsTrue(exc.Message.StartsWith("Duplicate interface") || exc.Message.StartsWith("Duplicate map"));
 		}
 
-		public static void AssertMapNotFound(Func<object> action) {
-			Assert.ThrowsException<MapNotFoundException>(action);
+		public static MapNotFoundException AssertMapNotFound(Func<object> action) {
+			return Assert.ThrowsException<MapNotFoundException>(action);
 		}
 
-		public static Task AssertMapNotFound(Func<Task> action) {
+		public static Task<MapNotFoundException> AssertMapNotFound(Func<Task> action) {
 			return Assert.ThrowsExceptionAsync<MapNotFoundException>(action);
 		}
 

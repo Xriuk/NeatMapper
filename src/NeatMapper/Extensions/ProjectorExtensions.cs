@@ -30,6 +30,22 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)"/>
+		public static LambdaExpression Project(this IProjector projector, Type sourceType, Type destinationType, params object[] mappingOptions) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (projector == null)
+				throw new ArgumentNullException(nameof(projector));
+			return projector.Project(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
 		#endregion
 
 		#region Explicit source and destination
@@ -112,14 +128,45 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+
+		/// <inheritdoc cref="Project{TSource, TDestination}(IProjector, MappingOptions)"/>
+		public static
+			Expression<Func<
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+				,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			>>
+			Project<TSource, TDestination>(this IProjector projector, params object[] mappingOptions) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (projector == null)
+				throw new ArgumentNullException(nameof(projector));
+			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
 		#endregion
 		#endregion
 
 		#region CanProject
 		#region Runtime
 		/// <summary>
-		/// Checks if the projector can project a given object to another, will check if the given projector
+		/// Checks if the projector could project a given object to another, will check if the given projector
 		/// supports <see cref="IProjectorCanProject"/> first otherwise will try to project the two types.
+		/// It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <inheritdoc cref="IProjectorCanProject.CanProject(Type, Type, MappingOptions)"/>
 		public static bool CanProject(this IProjector projector,
@@ -174,6 +221,11 @@ namespace NeatMapper {
 
 			return projector.CanProject(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
+
+		/// <inheritdoc cref="CanProject(IProjector, Type, Type, MappingOptions)"/>
+		public static bool CanProject(this IProjector projector, Type sourceType, Type destinationType, params object[] mappingOptions) {
+			return projector.CanProject(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
 		#endregion
 
 		#region Explicit source and destination
@@ -207,6 +259,11 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
+		public static bool CanProject<TSource, TDestination>(this IProjector projector, params object[] mappingOptions) {
+			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

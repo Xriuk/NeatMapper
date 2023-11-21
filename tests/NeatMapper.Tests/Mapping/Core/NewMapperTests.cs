@@ -28,7 +28,8 @@ namespace NeatMapper.Tests.Mapping {
 			INewMapStatic<int, char>,
 			INewMapStatic<char, float>,
 			INewMapStatic<decimal, float>,
-			INewMapStatic<decimal, bool>
+			INewMapStatic<decimal, bool>,
+			INewMapStatic<float, double>
 #else
 			INewMap<int, string>,
 			INewMap<Price, decimal>,
@@ -49,7 +50,8 @@ namespace NeatMapper.Tests.Mapping {
 			INewMap<int, char>,
 			INewMap<char, float>,
 			INewMap<decimal, float>,
-			INewMap<decimal, bool>
+			INewMap<decimal, bool>,
+			INewMap<float, double>
 #endif
 			{
 
@@ -362,6 +364,21 @@ namespace NeatMapper.Tests.Mapping {
 				.Map(decimal source, MappingContext context) {
 				return true;
 			}
+
+			// Rejects itself
+#if NET7_0_OR_GREATER
+			static
+#endif
+			double
+#if NET7_0_OR_GREATER
+				INewMapStatic<float, double>
+#else
+				INewMap<float, double>
+#endif
+				.Map(float source, MappingContext context) {
+				
+				throw new MapNotFoundException((typeof(float), typeof(double)));
+			}
 		}
 
 		IMapper _mapper = null;
@@ -490,6 +507,16 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsTrue(_mapper.CanMapNew<string, int>());
 
 			Assert.AreEqual(4, mapper.Map<int>("Test"));
+		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanMap returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_mapper.CanMapNew<float, double>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double>(1f));
+			Assert.AreEqual(exc.From, typeof(float));
+			Assert.AreEqual(exc.To, typeof(double));
 		}
 	}
 }

@@ -4,8 +4,9 @@ using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which delegates mapping to other <see cref="IMapper"/>s, this allows to combine different mapping capabilities.<br/>
-	/// Each mapper is invoked in order and the first one to succeed in mapping is returned
+	/// <see cref="IMapper"/> which delegates mapping to other <see cref="IMapper"/>s,
+	/// this allows to combine different mapping capabilities.<br/>
+	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.
 	/// </summary>
 	public sealed class CompositeMapper : IMapper, IMapperCanMap {
 		private readonly IList<IMapper> _mappers;

@@ -445,8 +445,9 @@ namespace NeatMapper {
 		#region CanMapNew
 		#region Runtime
 		/// <summary>
-		/// Checks if the mapper can create a new object from a given one, will check if the given mapper supports
+		/// Checks if the mapper could create a new object from a given one, will check if the given mapper supports
 		/// <see cref="IMapperCanMap"/> first otherwise will create a dummy source object (cached) and try to map it.
+		/// It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)"/>
 		public static bool CanMapNew(this IMapper mapper,
@@ -549,9 +550,9 @@ namespace NeatMapper {
 		#region CanMapMerge
 		#region Runtime
 		/// <summary>
-		/// Checks if the mapper can merge an object into an existing one, will check if the given mapper supports
+		/// Checks if the mapper could merge an object into an existing one, will check if the given mapper supports
 		/// <see cref="IMapperCanMap"/> first otherwise will create a dummy source (cached)
-		/// and destination (not cached) objects and try to map them.
+		/// and destination (not cached) objects and try to map them. It does not guarantee that the actual map will succeed.
 		/// </summary>
 		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)"/>
 		public static bool CanMapMerge(this IMapper mapper,

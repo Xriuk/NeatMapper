@@ -123,6 +123,18 @@ namespace NeatMapper {
 		internal readonly CustomMapsConfiguration _configuration;
 		private readonly IServiceProvider _serviceProvider;
 
+		/// <summary>
+		/// Creates a new instance of <see cref="CustomProjector"/>.<br/>
+		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
+		/// should be specified.
+		/// </summary>
+		/// <param name="mapsOptions">Options to retrieve user-defined maps for the projector, null to ignore.</param>
+		/// <param name="additionalMapsOptions">Additional user-defined maps for the projector, null to ignore.</param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to the maps inside <see cref="ProjectionContext"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during map creation with <see cref="ProjectorOverrideMappingOptions"/>.
+		/// </param>
 		public CustomProjector(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?

@@ -9,8 +9,17 @@ namespace NeatMapper {
 	/// <typeparam name="TSource">Source type, can be an open generic.</typeparam>
 	/// <typeparam name="TDestination">Destination type, can be an open generic.</typeparam>
 	/// <remarks>
+	/// <para>
+	/// The constructed expression could be compiled into a delegate, if the expression is not suitable
+	/// for compilation (for example it uses fake methods which must be translated by an
+	/// <see cref="System.Linq.IQueryProvider"/>) it should check the <see cref="ProjectionContext"/>
+	/// for <see cref="ProjectionCompilationContext"/> options and throw a <see cref="MapNotFoundException"/>
+	/// exception to signal it.
+	/// </para>
+	/// <para>
 	/// This interface is the same as <see cref="IProjectionMap{TSource, TDestination}"/>, but allows greater flexibility:
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).
+	/// </para>
 	/// </remarks>
 	public interface IProjectionMapStatic<TSource, TDestination> {
 		/// <summary>

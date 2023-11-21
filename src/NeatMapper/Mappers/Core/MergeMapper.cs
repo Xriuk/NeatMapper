@@ -164,6 +164,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+			// Source type null checked in CanMapMerge
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
