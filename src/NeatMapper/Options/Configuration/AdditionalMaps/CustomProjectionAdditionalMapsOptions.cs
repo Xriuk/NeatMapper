@@ -30,6 +30,9 @@ namespace NeatMapper {
 			if (mapDelegate == null)
 				throw new ArgumentNullException(nameof(mapDelegate));
 
+			if (_maps.ContainsKey((typeof(TSource), typeof(TDestination))))
+				throw new ArgumentException($"Duplicate map for types {typeof(TSource).FullName ?? typeof(TSource).Name} -> {typeof(TDestination).FullName ?? typeof(TDestination).Name}");
+
 			var map = new CustomAdditionalMap {
 				From = typeof(TSource),
 				To = typeof(TDestination),

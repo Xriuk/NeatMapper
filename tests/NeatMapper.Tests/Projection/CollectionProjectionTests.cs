@@ -212,5 +212,15 @@ namespace NeatMapper.Tests.Projection {
 
 			Assert.IsTrue(projector.CanProject<IEnumerable<string>, IEnumerable<int>>(new[] { new ProjectorOverrideMappingOptions(projector2) }));
 		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanProject returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_projector.CanProject<float[], double[]>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _projector.Project<float[], double[]>());
+			Assert.AreEqual(typeof(float[]), exc.From);
+			Assert.AreEqual(typeof(double[]), exc.To);
+		}
 	}
 }

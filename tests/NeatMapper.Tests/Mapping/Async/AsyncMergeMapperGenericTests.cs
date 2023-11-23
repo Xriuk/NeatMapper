@@ -35,11 +35,15 @@ namespace NeatMapper.Tests.Mapping.Async {
 #if NET7_0_OR_GREATER
 			IAsyncMergeMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IAsyncMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
-			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>
+			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
+			IAsyncMergeMapStatic<T1[], T2[]>,
+			IAsyncMergeMapStatic<List<T1>, List<T2>>
 #else
 			IAsyncMergeMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IAsyncMergeMap<GenericClass<T1>, GenericClassDto<T2>>,
-			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>
+			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>,
+			IAsyncMergeMap<T1[], T2[]>,
+			IAsyncMergeMap<List<T1>, List<T2>>
 #endif
 			{
 
@@ -88,6 +92,37 @@ namespace NeatMapper.Tests.Mapping.Async {
 #endif
 				.Match(GenericClass<T1> source, GenericClassDto<T2> destination, MatchingContext context) {
 				return source?.Id == destination?.Id;
+			}
+
+			// Rejects itself (not awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<T2[]>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<T1[], T2[]>
+#else
+				IAsyncMergeMap<T1[], T2[]>
+#endif
+				.MapAsync(T1[] source, T2[] destination, AsyncMappingContext context) {
+
+				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
+			}
+
+			// Rejects itself (awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<List<T2>>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<List<T1>, List<T2>>
+#else
+				IAsyncMergeMap<List<T1>, List<T2>>
+#endif
+				.MapAsync(List<T1> source, List<T2> destination, AsyncMappingContext context) {
+
+				await Task.Delay(0);
+				throw new MapNotFoundException((typeof(List<T1>), typeof(List<T2>)));
 			}
 		}
 
@@ -825,6 +860,29 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.AreNotSame(boolArray, boolList);
 			Assert.AreEqual(0, boolList.Count);
 			Assert.AreEqual(32, (boolList as List<bool>)?.Capacity);
+		}
+
+		[TestMethod]
+		public async Task ShouldNotMapIfMapRejectsItself() {
+			// Not awaited
+			{
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(await _mapper.CanMapAsyncMerge<float[], double[]>());
+
+				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { 1f }, new double[1]));
+				Assert.AreEqual(typeof(float[]), exc.From);
+				Assert.AreEqual(typeof(double[]), exc.To);
+			}
+
+			// Awaited
+			{
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(await _mapper.CanMapAsyncMerge<List<double>, List<float>>());
+
+				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new List<double> { 1d }, new List<float>()));
+				Assert.AreEqual(typeof(List<double>), exc.From);
+				Assert.AreEqual(typeof(List<float>), exc.To);
+			}
 		}
 
 

@@ -3,9 +3,11 @@
 ## [2.1.0] - Unreleased
 
 ### Changed
+
 - `MapNotFoundException` now inherits from `Exception` instead of `ArgumentException`
 - `NewCollectionMapper` and `AsyncNewCollectionMapper` constructors with `IServiceProvider`
 are now marked as obsolete, since the parameter was not used, and will be removed in the next major version
+- `MatcherNotFound` is now marked as obsolete since it was not used (correctly), and will be removed in the next major version
 
 ### Added
 
@@ -18,7 +20,8 @@ interfaces to create projections between types
 the first one to succeeds projects the objects
 - Projection interfaces and options added to Dependency Injection (DI)
 - `ProjectionMapper`, an `IMapper` which uses an `IProjector` to map types by compiling and caching expressions into delegates
-- From and To properties to `MapNotFoundException`
+- `From` and `To` properties on `MapNotFoundException`
+- `CompositeMapper` and `AsyncCompositeMapper` now forward new maps to merge maps if not found, by creating a destination object
 
 ### Fixed
 
@@ -28,6 +31,7 @@ by throwing `MapNotFoundException` (`MatcherNotFound` for matchers), which won't
 the mapper/matcher/projector (it could be replaced by any parent mapper/matcher/projector with
 another exception of the same type)
 - Arrays, as generic maps type parameters, are now correctly recognized
+- Collection mappers now throw correctly `MapNotFoundException` for their types and not element ones
 
 ## [2.0.0] - 2023-11-12
 

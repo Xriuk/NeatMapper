@@ -34,7 +34,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMapStatic<decimal, float>,
 			IAsyncMergeMapStatic<decimal, double>,
 			IAsyncMergeMapStatic<decimal, bool>,
-			IMatchMapStatic<decimal, bool>
+			IMatchMapStatic<decimal, bool>,
+			IAsyncMergeMapStatic<float, double>,
+			IAsyncMergeMapStatic<double, float>
 #else
 			IAsyncMergeMap<int, string>,
 			IAsyncMergeMap<Price, decimal>,
@@ -61,7 +63,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMap<decimal, float>,
 			IAsyncMergeMap<decimal, double>,
 			IAsyncMergeMap<decimal, bool>,
-			IMatchMap<decimal, bool>
+			IMatchMap<decimal, bool>,
+			IAsyncMergeMap<float, double>,
+			IAsyncMergeMap<double, float>
 #endif
 			{
 
@@ -464,6 +468,37 @@ namespace NeatMapper.Tests.Mapping.Async {
 				.Match(decimal source, bool destination, MatchingContext context) {
 				throw new TaskCanceledException();
 			}
+
+			// Rejects itself (not awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<double>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<float, double>
+#else
+				IAsyncMergeMap<float, double>
+#endif
+				.MapAsync(float source, double destination, AsyncMappingContext context) {
+
+				throw new MapNotFoundException((typeof(float), typeof(double)));
+			}
+
+			// Rejects itself (awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<double, float>
+#else
+				IAsyncMergeMap<double, float>
+#endif
+				.MapAsync(double source, float destination, AsyncMappingContext context) {
+
+				await Task.Delay(0);
+				throw new MapNotFoundException((typeof(double), typeof(float)));
+			}
 		}
 
 		IAsyncMapper _mapper = null;
@@ -832,6 +867,29 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.IsTrue(await mapper.CanMapAsyncMerge<string, int>());
 
 			Assert.AreEqual(4, await mapper.MapAsync("Test", 2));
+		}
+
+		[TestMethod]
+		public async Task ShouldNotMapIfMapRejectsItself() {
+			// Not awaited
+			{
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(await _mapper.CanMapAsyncMerge<float, double>());
+
+				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(1f, 2d));
+				Assert.AreEqual(typeof(float), exc.From);
+				Assert.AreEqual(typeof(double), exc.To);
+			}
+
+			// Awaited
+			{
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(await _mapper.CanMapAsyncMerge<double, float>());
+
+				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(1d, 2f));
+				Assert.AreEqual(typeof(double), exc.From);
+				Assert.AreEqual(typeof(float), exc.To);
+			}
 		}
 	}
 }

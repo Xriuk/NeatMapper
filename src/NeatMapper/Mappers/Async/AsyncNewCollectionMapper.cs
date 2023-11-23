@@ -162,7 +162,12 @@ namespace NeatMapper {
 											catch (ObjectCreationException) {
 												throw new MapNotFoundException(types);
 											}
-											return await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationSource.Token);
+											try { 
+												return await elementsMapper.MapAsync(sourceElement, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationSource.Token);
+											}
+											catch (MapNotFoundException) {
+												throw new MapNotFoundException(types);
+											}
 										}
 										finally {
 											semaphore.Release();
@@ -208,7 +213,12 @@ namespace NeatMapper {
 									catch (ObjectCreationException) {
 										throw new MapNotFoundException(types);
 									}
-									destinationElement = await elementsMapper.MapAsync(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationToken);
+									try { 
+										destinationElement = await elementsMapper.MapAsync(element, elementTypes.From, destinationElement, elementTypes.To, mappingOptions, cancellationToken);
+									}
+									catch (MapNotFoundException) {
+										throw new MapNotFoundException(types);
+									}
 									addMethod.Invoke(destination, new object[] { destinationElement });
 								}
 							}

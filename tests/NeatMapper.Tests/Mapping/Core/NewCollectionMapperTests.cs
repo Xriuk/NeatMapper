@@ -323,8 +323,8 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsTrue(_mapper.CanMapNew<float[], double[]>());
 
 			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double[]>(new[] { 1f }));
-			Assert.AreEqual(exc.From, typeof(float[]));
-			Assert.AreEqual(exc.To, typeof(double[]));
+			Assert.AreEqual(typeof(float[]), exc.From);
+			Assert.AreEqual(typeof(double[]), exc.To);
 		}
 	}
 

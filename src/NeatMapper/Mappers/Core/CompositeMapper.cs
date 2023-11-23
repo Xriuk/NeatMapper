@@ -6,7 +6,8 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which delegates mapping to other <see cref="IMapper"/>s,
 	/// this allows to combine different mapping capabilities.<br/>
-	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.
+	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.<br/>
+	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
 	public sealed class CompositeMapper : IMapper, IMapperCanMap {
 		private readonly IList<IMapper> _mappers;
@@ -60,6 +61,7 @@ namespace NeatMapper {
 
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
+			// Try new map
 			foreach (var mapper in _mappers) {
 				try {
 					return mapper.Map(source, sourceType, destinationType, mappingOptions);
@@ -67,7 +69,16 @@ namespace NeatMapper {
 				catch (MapNotFoundException) { }
 			}
 
-			throw new MapNotFoundException((sourceType, destinationType));
+			// Try creating a destination and forward to merge map
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return Map(source, sourceType, destination, destinationType, mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

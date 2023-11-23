@@ -154,31 +154,31 @@ namespace NeatMapper {
 				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetCollectionElementType());
 
 				if (source is IEnumerable sourceEnumerable) {
-					try {
-						// If we have to create the destination collection we know that we can always map to it
-						// Otherwise we must check that first
-						if (destination == null) {
-							try {
-								destination = ObjectFactory.CreateCollection(types.To);
-							}
-							catch (ObjectCreationException) {
+					// If we have to create the destination collection we know that we can always map to it
+					// Otherwise we must check that first
+					if (destination == null) {
+						try {
+							destination = ObjectFactory.CreateCollection(types.To);
+						}
+						catch (ObjectCreationException) {
+							throw new MapNotFoundException(types);
+						}
+					}
+					else {
+						// Check if the collection is not readonly recursively, if it throws it means that
+						// the element mapper will be responsible for mapping the object and not collection mapper recursively
+						try { 
+							if(!CanMapMerge(sourceType, destinationType, destination as IEnumerable, mappingOptions))
 								throw new MapNotFoundException(types);
-							}
 						}
-						else {
-							// Check if the collection is not readonly recursively, if it throws it means that
-							// the element mapper will be responsible for mapping the object and not collection mapper recursively
-							try { 
-								if(!CanMapMerge(sourceType, destinationType, destination as IEnumerable, mappingOptions))
-									throw new MapNotFoundException(types);
-							}
-							catch (MapNotFoundException) {
-								throw;
-							}
-							catch {}
+						catch (MapNotFoundException) {
+							throw;
 						}
+						catch {}
+					}
 
-						if (destination is IEnumerable destinationEnumerable) {
+					if (destination is IEnumerable destinationEnumerable) {
+						try {
 							var destinationInstanceType = destination.GetType();
 							if (destinationInstanceType.IsArray)
 								throw new MapNotFoundException(types);
@@ -290,7 +290,12 @@ namespace NeatMapper {
 									catch (ObjectCreationException) {
 										throw new MapNotFoundException(types);
 									}
-									elementsToAdd.Add(elementsMapper.Map(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions));
+									try { 
+										elementsToAdd.Add(elementsMapper.Map(sourceElement, elementTypes.From, destinationInstance, elementTypes.To, mappingOptions));
+									}
+									catch (MapNotFoundException) {
+										throw new MapNotFoundException(types);
+									}
 								}
 							}
 
@@ -310,18 +315,18 @@ namespace NeatMapper {
 
 							return result;
 						}
-						else
-							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+						catch (MapNotFoundException) {
+							throw;
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
 					}
-					catch (MapNotFoundException) {
-						throw;
-					}
-					catch (TaskCanceledException) {
-						throw;
-					}
-					catch (Exception e) {
-						throw new MappingException(e, types);
-					}
+					else
+						throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 				}
 				else if (source == null) {
 					var elementsMapper = mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;

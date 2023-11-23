@@ -783,7 +783,9 @@ namespace NeatMapper.Tests.Mapping {
 			// CanMap returns true because the map does exist, even if it will fail
 			Assert.IsTrue(_mapper.CanMapMerge<float, double>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map(1f, 2d));
+			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map(1f, 2d));
+			Assert.AreEqual(typeof(float), exc.From);
+			Assert.AreEqual(typeof(double), exc.To);
 		}
 	}
 }

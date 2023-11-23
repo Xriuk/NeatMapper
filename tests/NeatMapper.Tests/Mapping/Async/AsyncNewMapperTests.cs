@@ -31,7 +31,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncNewMapStatic<char, float>,
 			IAsyncNewMapStatic<decimal, float>,
 			IAsyncNewMapStatic<decimal, double>,
-			IAsyncNewMapStatic<decimal, bool>
+			IAsyncNewMapStatic<decimal, bool>,
+			IAsyncNewMapStatic<float, double>,
+			IAsyncNewMapStatic<double, float>
 #else
 			IAsyncNewMap<int, string>,
 			IAsyncNewMap<Price, decimal>,
@@ -55,7 +57,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncNewMap<char, float>,
 			IAsyncNewMap<decimal, float>,
 			IAsyncNewMap<decimal, double>,
-			IAsyncNewMap<decimal, bool>
+			IAsyncNewMap<decimal, bool>,
+			IAsyncNewMap<float, double>,
+			IAsyncNewMap<double, float>
 #endif
 			{
 
@@ -421,6 +425,37 @@ namespace NeatMapper.Tests.Mapping.Async {
 				.MapAsync(decimal source, AsyncMappingContext context) {
 				return Task.FromResult(true);
 			}
+
+			// Rejects itself (not awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Task<double>
+#if NET7_0_OR_GREATER
+				IAsyncNewMapStatic<float, double>
+#else
+				IAsyncNewMap<float, double>
+#endif
+				.MapAsync(float source, AsyncMappingContext context) {
+
+				throw new MapNotFoundException((typeof(float), typeof(double)));
+			}
+
+			// Rejects itself (awaited)
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<float>
+#if NET7_0_OR_GREATER
+				IAsyncNewMapStatic<double, float>
+#else
+				IAsyncNewMap<double, float>
+#endif
+				.MapAsync(double source, AsyncMappingContext context) {
+
+				await Task.Delay(0);
+				throw new MapNotFoundException((typeof(double), typeof(float)));
+			}
 		}
 
 		IAsyncMapper _mapper = null;
@@ -564,6 +599,29 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.IsTrue(await mapper.CanMapAsyncNew<string, int>());
 
 			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
+		}
+
+		[TestMethod]
+		public async Task ShouldNotMapIfMapRejectsItself() {
+			// Not awaited
+			{ 
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<float, double>());
+
+				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<double>(1f));
+				Assert.AreEqual(typeof(float), exc.From);
+				Assert.AreEqual(typeof(double), exc.To);
+			}
+
+			// Awaited
+			{
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<double, float>());
+
+				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<float>(1d));
+				Assert.AreEqual(typeof(double), exc.From);
+				Assert.AreEqual(typeof(float), exc.To);
+			}
 		}
 	}
 }

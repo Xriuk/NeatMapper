@@ -94,7 +94,13 @@ namespace NeatMapper {
 					mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 					var elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector ?? _elementsProjector;
 
-					Expression elementProjection = elementsProjector.Project(elementTypes.From, elementTypes.To, mappingOptions);
+					Expression elementProjection;
+					try { 
+						elementProjection = elementsProjector.Project(elementTypes.From, elementTypes.To, mappingOptions);
+					}
+					catch (MapNotFoundException) {
+						throw new MapNotFoundException(types);
+					}
 
 					// If we have an IQueryable we quote the element projection expression as it needs to stay an Expression<Func<...>>
 					if(isQueryable)

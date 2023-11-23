@@ -31,9 +31,11 @@ namespace NeatMapper.Tests.Projection {
 
 		public class Maps<T1, T2> :
 #if NET7_0_OR_GREATER
-			IProjectionMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>
+			IProjectionMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
+			IProjectionMapStatic<T1[], T2[]>
 #else
-			IProjectionMap<Tuple<T1, T2>, ValueTuple<T2, T1>>
+			IProjectionMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
+			IProjectionMap<T1[], T2[]>
 #endif
 			{
 
@@ -49,6 +51,21 @@ namespace NeatMapper.Tests.Projection {
 				.Project(ProjectionContext context) {
 
 				return source => source == null ? ValueTuple.Create(default(T2), default(T1)) : ValueTuple.Create(source.Item2, source.Item1);
+			}
+
+			// Rejects itself
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<T1[], T2[]>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<T1[], T2[]>
+#else
+				IProjectionMap<T1[], T2[]>
+#endif
+				.Project(ProjectionContext context) {
+
+				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
 			}
 		}
 
@@ -730,90 +747,14 @@ namespace NeatMapper.Tests.Projection {
 			TestUtils.AssertExpressionsEqual(expr, _projector.Project<IEnumerable<bool>, IList<bool>>());
 		}
 
-
-		/*
 		[TestMethod]
-		public void ShouldMapCollections() {
-			var mapper = new NewCollectionMapper(_mapper);
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanProject returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_projector.CanProject<float[], double[]>());
 
-			{
-				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], ValueTuple<int, string>[]>());
-
-				var tuples = mapper.Map<ValueTuple<int, string>[]>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
-
-				Assert.IsNotNull(tuples);
-				Assert.AreEqual(2, tuples.Length);
-				Assert.AreEqual(4, tuples[0].Item1);
-				Assert.AreEqual("Test1", tuples[0].Item2);
-				Assert.AreEqual(5, tuples[1].Item1);
-				Assert.AreEqual("Test2", tuples[1].Item2);
-			}
-
-			{
-				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], IList<ValueTuple<int, string>>>());
-
-				var tuples = mapper.Map<IList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
-
-				Assert.IsNotNull(tuples);
-				Assert.AreEqual(2, tuples.Count);
-				Assert.AreEqual(4, tuples[0].Item1);
-				Assert.AreEqual("Test1", tuples[0].Item2);
-				Assert.AreEqual(5, tuples[1].Item1);
-				Assert.AreEqual("Test2", tuples[1].Item2);
-			}
-
-			{
-				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], LinkedList<ValueTuple<int, string>>>());
-
-				var tuples = mapper.Map<LinkedList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
-
-				Assert.IsNotNull(tuples);
-				Assert.AreEqual(2, tuples.Count);
-				Assert.AreEqual(4, tuples.ElementAt(0).Item1);
-				Assert.AreEqual("Test1", tuples.ElementAt(0).Item2);
-				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
-				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
-			}
-
-			{
-				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], Queue<ValueTuple<int, string>>>());
-
-				var tuples = mapper.Map<Queue<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
-
-				Assert.IsNotNull(tuples);
-				Assert.AreEqual(2, tuples.Count);
-				Assert.AreEqual(4, tuples.ElementAt(0).Item1);
-				Assert.AreEqual("Test1", tuples.ElementAt(0).Item2);
-				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
-				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
-			}
-
-			{
-				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], Stack<ValueTuple<int, string>>>());
-
-				var tuples = mapper.Map<Stack<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
-
-				Assert.IsNotNull(tuples);
-				Assert.AreEqual(2, tuples.Count);
-				// Order is inverted
-				Assert.AreEqual(5, tuples.ElementAt(0).Item1);
-				Assert.AreEqual("Test2", tuples.ElementAt(0).Item2);
-				Assert.AreEqual(4, tuples.ElementAt(1).Item1);
-				Assert.AreEqual("Test1", tuples.ElementAt(1).Item2);
-			}
-
-			{
-				Assert.IsTrue(mapper.CanMapNew<IEnumerable<Tuple<string, int>>, CustomCollection<ValueTuple<int, string>>>());
-
-				var tuples = mapper.Map<CustomCollection<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
-
-				Assert.IsNotNull(tuples);
-				Assert.AreEqual(2, tuples.Count);
-				Assert.AreEqual(4, tuples.ElementAt(0).Item1);
-				Assert.AreEqual("Test1", tuples.ElementAt(0).Item2);
-				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
-				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
-			}
-		}*/
+			var exc = TestUtils.AssertMapNotFound(() => _projector.Project<float[], double[]>());
+			Assert.AreEqual(typeof(float[]), exc.From);
+			Assert.AreEqual(typeof(double[]), exc.To);
+		}
 	}
 }

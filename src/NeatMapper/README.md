@@ -1,6 +1,6 @@
 # .NEaT Mapper
 
-[![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper)
+[![NuGet](https://img.shields.io/nuget/v/NeatMapper.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper)
 
 ## What is this package
 

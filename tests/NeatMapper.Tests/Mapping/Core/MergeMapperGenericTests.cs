@@ -34,11 +34,13 @@ namespace NeatMapper.Tests.Mapping {
 #if NET7_0_OR_GREATER
 			IMergeMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
-			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>
+			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
+			IMergeMapStatic<T1[], T2[]>
 #else
 			IMergeMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IMergeMap<GenericClass<T1>, GenericClassDto<T2>>,
-			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>
+			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>,
+			IMergeMap<T1[], T2[]>
 #endif
 			{
 
@@ -87,6 +89,21 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Match(GenericClass<T1> source, GenericClassDto<T2> destination, MatchingContext context) {
 				return source?.Id == destination?.Id;
+			}
+
+			// Rejects itself
+#if NET7_0_OR_GREATER
+			static
+#endif
+			T2[]
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<T1[], T2[]>
+#else
+				IMergeMap<T1[], T2[]>
+#endif
+				.Map(T1[] source, T2[] destination, MappingContext context) {
+
+				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
 			}
 		}
 
@@ -824,6 +841,16 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreNotSame(boolArray, boolList);
 			Assert.AreEqual(0, boolList.Count);
 			Assert.AreEqual(32, (boolList as List<bool>)?.Capacity);
+		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanMap returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_mapper.CanMapMerge<float[], double[]>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 1f }, new double[0]));
+			Assert.AreEqual(typeof(float[]), exc.From);
+			Assert.AreEqual(typeof(double[]), exc.To);
 		}
 
 

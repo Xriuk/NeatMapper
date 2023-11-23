@@ -19,7 +19,8 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMapStatic<float, int>,
 			IProjectionMapStatic<string, KeyValuePair<string, int>>,
 			IProjectionMapStatic<int, char>,
-			IProjectionMapStatic<char, float>
+			IProjectionMapStatic<char, float>,
+			IProjectionMapStatic<float, double>
 #else
 			IProjectionMap<int, string>,
 			IProjectionMap<Price, decimal>,
@@ -30,7 +31,8 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMap<float, int>,
 			IProjectionMap<string, KeyValuePair<string, int>>,
 			IProjectionMap<int, char>,
-			IProjectionMap<char, float>
+			IProjectionMap<char, float>,
+			IProjectionMap<float, double>
 #endif
 			{
 
@@ -206,6 +208,21 @@ namespace NeatMapper.Tests.Projection {
 
 				return source => (float)source;
 			}
+
+			// Rejects itself
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<float, double>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<float, double>
+#else
+				IProjectionMap<float, double>
+#endif
+				.Project(ProjectionContext context) {
+
+				throw new MapNotFoundException((typeof(float), typeof(double)));
+			}
 		}
 
 		IProjector _projector = null;
@@ -296,6 +313,16 @@ namespace NeatMapper.Tests.Projection {
 
 			Expression<Func<string, int>> expr = s => s != null ? s.Length : 0;
 			TestUtils.AssertExpressionsEqual(expr, projector.Project<string, int>());
+		}
+
+		[TestMethod]
+		public void ShouldNotProjectIfMapRejectsItself() {
+			// CanProject returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_projector.CanProject<float, double>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _projector.Project<float, double>());
+			Assert.AreEqual(typeof(float), exc.From);
+			Assert.AreEqual(typeof(double), exc.To);
 		}
 	}
 }

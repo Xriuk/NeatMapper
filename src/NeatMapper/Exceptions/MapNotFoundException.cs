@@ -1,4 +1,7 @@
 ﻿using System;
+#if !NET47_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
+#endif
 
 namespace NeatMapper {
 	/// <summary>
@@ -16,5 +19,13 @@ namespace NeatMapper {
 		public Type From { get; }
 
 		public Type To { get; }
+
+
+#if !NET47_OR_GREATER
+		[DoesNotReturn] 
+#endif
+		public static void Throw<TSource, TDestination>() {
+			throw new MapNotFoundException((typeof(TSource), typeof(TDestination)));
+		}
 	}
 }

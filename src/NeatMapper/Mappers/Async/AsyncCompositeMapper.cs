@@ -8,7 +8,8 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which delegates mapping to other <see cref="IAsyncMapper"/>s,
 	/// this allows to combine different mapping capabilities.<br/>
-	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.
+	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.<br/>
+	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
 	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -71,6 +72,7 @@ namespace NeatMapper {
 
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
+			// Try new map
 			foreach (var mapper in _mappers) {
 				try {
 					return await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
@@ -78,7 +80,16 @@ namespace NeatMapper {
 				catch (MapNotFoundException) { }
 			}
 
-			throw new MapNotFoundException((sourceType, destinationType));
+			// Try creating a destination and forward to merge map
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return await MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

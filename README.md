@@ -2,9 +2,9 @@
 
 ## Nuget
 
-[![NeatMapper](https://img.shields.io/nuget/vpre/NeatMapper.svg?label=NeatMapper)](https://www.nuget.org/packages/NeatMapper)
+[![NeatMapper](https://img.shields.io/nuget/v/NeatMapper.svg?label=NeatMapper)](https://www.nuget.org/packages/NeatMapper)
 
-[![NeatMapper.EntityFrameworkCore](https://img.shields.io/nuget/vpre/NeatMapper.EntityFrameworkCore.svg?label=NeatMapper.EntityFrameworkCore)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
+[![NeatMapper.EntityFrameworkCore](https://img.shields.io/nuget/v/NeatMapper.EntityFrameworkCore.svg?label=NeatMapper.EntityFrameworkCore)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
 
 ## What is this project
 

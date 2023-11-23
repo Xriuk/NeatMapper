@@ -11,9 +11,16 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
+			var additionalMaps = new CustomProjectionAdditionalMapsOptions();
+			additionalMaps.AddMap<double, float>(c => {
+				if(c.MappingOptions.GetOptions<ProjectionCompilationContext>() != null)
+					MapNotFoundException.Throw<double, float>();
+
+				throw new Exception();
+			});
 			var projector = new CustomProjector(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(ProjectionTests.Maps) }
-			});
+			}, additionalMaps);
 			_mapper = new ProjectionMapper(projector);
 		}
 
@@ -105,6 +112,25 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}
 
-		// DEV: should not map if map does not allow compilation
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			{ 
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(_mapper.CanMapNew<float, double>());
+
+				var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double>(1f));
+				Assert.AreEqual(typeof(float), exc.From);
+				Assert.AreEqual(typeof(double), exc.To);
+			}
+
+			{
+				// CanMap returns true because the map does exist, even if it will fail
+				Assert.IsTrue(_mapper.CanMapNew<double, float>());
+
+				var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<float>(1d));
+				Assert.AreEqual(typeof(double), exc.From);
+				Assert.AreEqual(typeof(float), exc.To);
+			}
+		}
 	}
 }

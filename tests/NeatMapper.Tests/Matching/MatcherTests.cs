@@ -13,12 +13,14 @@ namespace NeatMapper.Tests.Matching {
 			IMatchMapStatic<int, string>,
 			IMatchMapStatic<float, string>,
 			IMatchMapStatic<Category, CategoryDto>,
-			IHierarchyMatchMapStatic<Product, ProductDto>
+			IHierarchyMatchMapStatic<Product, ProductDto>,
+			IMatchMapStatic<float, double>
 #else
 			IMatchMap<int, string>,
 			IMatchMap<float, string>,
 			IMatchMap<Category, CategoryDto>,
-			IHierarchyMatchMap<Product, ProductDto>
+			IHierarchyMatchMap<Product, ProductDto>,
+			IMatchMap<float, double>
 #endif
 		{
 #if NET7_0_OR_GREATER
@@ -74,6 +76,20 @@ namespace NeatMapper.Tests.Matching {
 #endif
 				.Match(Product source, ProductDto destination, MatchingContext context) {
 				return source.Code == destination.Code;
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				IMatchMapStatic<float, double>
+#else
+				IMatchMap<float, double>
+#endif
+				.Match(float source, double destination, MatchingContext context) {
+
+				throw new MapNotFoundException((typeof(float), typeof(double)));
 			}
 		}
 
@@ -214,6 +230,16 @@ namespace NeatMapper.Tests.Matching {
 
 			Assert.IsTrue(matcher.Match("Test", 4));
 			Assert.IsFalse(matcher.Match("Test", 2));
+		}
+
+		[TestMethod]
+		public void ShouldNotMatchIfMapRejectsItself() {
+			// CanMatch returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_matcher.CanMatch<float, double>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _matcher.Match(1f, 2d));
+			Assert.AreEqual(typeof(float), exc.From);
+			Assert.AreEqual(typeof(double), exc.To);
 		}
 	}
 }

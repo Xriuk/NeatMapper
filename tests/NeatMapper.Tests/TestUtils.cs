@@ -19,14 +19,6 @@ namespace NeatMapper.Tests {
 			return Assert.ThrowsExceptionAsync<MapNotFoundException>(action);
 		}
 
-		public static void AssertMatcherNotFound(Func<object> action) {
-			Assert.ThrowsException<MatcherNotFound>(action);
-		}
-
-		public static Task AssertMatcherNotFound(Func<Task> action) {
-			return Assert.ThrowsExceptionAsync<MatcherNotFound>(action);
-		}
-
 		public static void AssertExpressionsEqual(LambdaExpression expected, LambdaExpression actual, string message = "Expressions are not equal") {
 			var expectedString = ExpressionStringBuilder.ExpressionToString(expected);
 			var actualString = ExpressionStringBuilder.ExpressionToString(actual);

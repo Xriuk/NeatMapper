@@ -495,6 +495,16 @@ namespace NeatMapper.Tests.Mapping {
 				}
 			}
 		}
+
+		[TestMethod]
+		public void ShouldNotMapIfMapRejectsItself() {
+			// CanMap returns true because the map does exist, even if it will fail
+			Assert.IsTrue(_mapper.CanMapMerge<float[], List<double>>());
+
+			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 1f }, new List<double>()));
+			Assert.AreEqual(typeof(float[]), exc.From);
+			Assert.AreEqual(typeof(List<double>), exc.To);
+		}
 	}
 
 	public abstract class MergeMapperMergeCollectionMapperTests : MergeCollectionMapperTests {

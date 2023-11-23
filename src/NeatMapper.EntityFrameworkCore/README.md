@@ -1,6 +1,6 @@
 # .NEaT Mapper - Entity Framework Core
 
-[![NuGet](https://img.shields.io/nuget/vpre/NeatMapper.EntityFrameworkCore.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
+[![NuGet](https://img.shields.io/nuget/v/NeatMapper.EntityFrameworkCore.svg?label=NuGet)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
 
 ## What is this package
 

@@ -297,17 +297,17 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			{
 				// Tuple
 				{
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<Tuple<Guid, int>, CompositePrimitiveKey>(Tuple.Create(new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<Tuple<string, int>, CompositeClassKey>(Tuple.Create("Test", 2), new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<Tuple<Guid, int>, CompositePrimitiveKey>(Tuple.Create(new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<Tuple<string, int>, CompositeClassKey>(Tuple.Create("Test", 2), new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
 				}
 
 				// ValueTuple
 				{
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<(Guid, int), CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<(string, int), CompositeClassKey>(("Test", 2), new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<(Guid, int), CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<(string, int), CompositeClassKey>(("Test", 2), new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
 
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<(Guid, int)?, CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<(string, int)?, CompositeClassKey>(("Test", 2), new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<(Guid, int)?, CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<(string, int)?, CompositeClassKey>(("Test", 2), new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
 				}
 			}
 
@@ -315,17 +315,17 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			{
 				// Tuple
 				{
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositePrimitiveKey, Tuple<Guid, int>>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, Tuple.Create(new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositeClassKey, Tuple<string, int>>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, Tuple.Create("Test", 2)));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<CompositePrimitiveKey, Tuple<Guid, int>>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, Tuple.Create(new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<CompositeClassKey, Tuple<string, int>>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, Tuple.Create("Test", 2)));
 				}
 
 				// ValueTuple
 				{
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositePrimitiveKey, (Guid, int)>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, (new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositeClassKey, (string, int)>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, ("Test", 2)));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<CompositePrimitiveKey, (Guid, int)>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, (new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<CompositeClassKey, (string, int)>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, ("Test", 2)));
 
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositePrimitiveKey, (Guid, int)?>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, (new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
-					TestUtils.AssertMatcherNotFound(() => _matcher.Match<CompositeClassKey, (string, int)?>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, ("Test", 2)));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<CompositePrimitiveKey, (Guid, int)?>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, (new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2)));
+					TestUtils.AssertMapNotFound(() => _matcher.Match<CompositeClassKey, (string, int)?>(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, ("Test", 2)));
 				}
 			}
 		}

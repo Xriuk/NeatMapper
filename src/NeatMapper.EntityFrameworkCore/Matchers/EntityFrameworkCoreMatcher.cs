@@ -61,7 +61,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
 
 			if (!CanMatch(sourceType, destinationType, mappingOptions))
-				throw new MatcherNotFound((sourceType, destinationType));
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			try { 
 				// Check if we are matching an entity with its key or two entities
