@@ -13,7 +13,7 @@ using System.Linq;
 namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 	public abstract class KeyToEntityBase {
 		private SqliteConnection _connection = null;
-		private ServiceProvider _serviceProvider = null;
+		protected ServiceProvider _serviceProvider = null;
 		protected Mock<DbCommandInterceptor> _interceptorMock = null;
 		protected IMapper _mapper = null;
 		protected TestContext _db = null;
@@ -34,7 +34,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			_connection.Open();
 			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection).AddInterceptors(_interceptorMock.Object), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
 			serviceCollection.ConfigureAll<EntityFrameworkCoreOptions>(Configure);
 			_serviceProvider = serviceCollection.BuildServiceProvider();
 			_mapper = _serviceProvider.GetRequiredService<IMapper>();
@@ -61,6 +61,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			_db.Add(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") });
 			_db.Add(new CompositeClassKey { Id1 = 2, Id2 = "Test" });
+			_db.Add(new ShadowIntKey());
 
 			_db.SaveChanges();
 #if NET5_0_OR_GREATER
@@ -221,10 +222,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldNotMapEntitiesWithShadowKeys() {
-			Assert.IsFalse(_mapper.CanMapNew<int, ShadowIntKey>());
+		public void ShouldMapEntitiesWithShadowKeys() {
+			Assert.IsTrue(_mapper.CanMapNew<int, ShadowIntKey>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<ShadowIntKey>(2));
+			Assert.IsNotNull(_mapper.Map<ShadowIntKey>(1));
 		}
 
 		[TestMethod]

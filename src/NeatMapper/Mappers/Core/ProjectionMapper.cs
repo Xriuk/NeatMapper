@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -68,24 +70,41 @@ namespace NeatMapper {
 					try {
 						projection = _projector.Project(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
 					}
+					catch (ProjectionException e) {
+						throw new MappingException(e.InnerException, (sourceType, destinationType));
+					}
 					catch (MapNotFoundException){
 						_mapsCache.Add((sourceType, destinationType), null);
 						throw;
 					}
-					catch(ProjectionException e) {
-						throw new MappingException(e.InnerException, (sourceType, destinationType));
+					catch (TaskCanceledException) {
+						throw;
 					}
 
-					// Compile the expression and wrap it to catch exceptions
+					// Compile the expression and wrap it to catch exceptions, we also cache it
 					var deleg = projection.Compile();
 					map = s => {
 						try {
 							return deleg.DynamicInvoke(s);
 						}
+						catch (TargetInvocationException e) {
+							if (e.InnerException is TaskCanceledException || e.InnerException is MapNotFoundException)
+								throw e.InnerException;
+							else if(e.InnerException is ProjectionException pe)
+								throw new MappingException(pe.InnerException, (sourceType, destinationType));
+							else
+								throw new MappingException(e.InnerException, (sourceType, destinationType));
+						}
 						catch (ProjectionException e){
 							throw new MappingException(e.InnerException, (sourceType, destinationType));
 						}
-						catch(Exception e) {
+						catch (MapNotFoundException) {
+							throw;
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
 							throw new MappingException(e, (sourceType, destinationType));
 						}
 					};

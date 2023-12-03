@@ -38,6 +38,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			modelBuilder.Entity<ShadowStringKey>()
 				.HasKey("StringId");
 
+			modelBuilder.Entity<ShadowCompositeKey>()
+				.Property(typeof(string), "Id2");
+			modelBuilder.Entity<ShadowCompositeKey>()
+				.HasKey("Id1", "Id2");
+
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 			modelBuilder.Entity<Keyless>()
 				.HasNoKey();

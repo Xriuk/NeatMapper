@@ -8,6 +8,9 @@ using System.Reflection;
 
 namespace NeatMapper.EntityFrameworkCore {
 	internal static class TypeUtils {
+		/// <summary>
+		/// <see cref="IsDefaultValue{T}(T)"/>
+		/// </summary>
 		private static readonly MethodInfo TypeUtils_IsDefaultValue = typeof(TypeUtils).GetMethods().First(m => m.Name == nameof(TypeUtils.IsDefaultValue) && m.IsGenericMethod);
 
 

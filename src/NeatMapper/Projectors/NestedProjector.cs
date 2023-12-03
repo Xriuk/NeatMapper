@@ -22,7 +22,7 @@ namespace NeatMapper {
 		public IProjector Projector { get; }
 
 
-		public NestedProjector(IProjector projector) {
+		internal NestedProjector(IProjector projector) {
 			Projector = projector ?? throw new ArgumentNullException(nameof(projector));
 		}
 
@@ -49,7 +49,9 @@ namespace NeatMapper {
 		/// </code>
 		/// </param>
 		/// <param name="mappingOptions">
-		/// Additional options passed to the context, support depends on the projector and/or the maps, null to ignore.
+		/// Additional options passed to the context, support depends on the projector and/or the maps, null to ignore.<br/>
+		/// The passed options should NOT come from the <paramref name="source"/> object as they are replaced before the final map is run,
+		/// you can access members from the context of the nested map or externally.
 		/// </param>
 		/// <returns>The projected object</returns>
 		public TDestination Project<TDestination>(
@@ -83,6 +85,19 @@ namespace NeatMapper {
 			IEnumerable
 #endif
 			mappingOptions) {
+
+			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		}
+
+		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)"/>
+		public TDestination Project<TDestination>(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			params object[] mappingOptions) {
 
 			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
 		}
@@ -131,6 +146,19 @@ namespace NeatMapper {
 			IEnumerable
 #endif
 			mappingOptions) {
+
+			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		}
+
+		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions)"/>
+		public TDestination Project<TSource, TDestination>(
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			source,
+			params object[] mappingOptions) {
 
 			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
 		}

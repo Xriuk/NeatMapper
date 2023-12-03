@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -29,7 +28,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapper(asyncMappersLifetime: ServiceLifetime.Singleton, matchersLifetime: ServiceLifetime.Singleton);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
@@ -61,7 +60,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void ShouldRespectLifetime_Scoped() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Scoped, ServiceLifetime.Scoped);
+			serviceCollection.AddNeatMapper(asyncMappersLifetime: ServiceLifetime.Scoped, matchersLifetime: ServiceLifetime.Scoped);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			// Not throwing?
@@ -83,7 +82,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void ShouldRespectLifetime_Transient() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Transient, ServiceLifetime.Transient);
+			serviceCollection.AddNeatMapper(asyncMappersLifetime: ServiceLifetime.Transient, matchersLifetime: ServiceLifetime.Transient);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();

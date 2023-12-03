@@ -2,13 +2,17 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which tries to match the given types using another <see cref="IMatcher"/>
+	/// <see cref="IMatcher"/> which wraps another <see cref="IMatcher"/>
 	/// and returns false in case it throws <see cref="MapNotFoundException"/>
 	/// </summary>
 	public sealed class SafeMatcher : IMatcher, IMatcherCanMatch {
 		private readonly IMatcher _matcher;
 		private readonly NestedMatchingContext _nestedMatchingContext;
 
+		/// <summary>
+		/// Creates a new instance of <see cref="SafeMatcher"/>.
+		/// </summary>
+		/// <param name="matcher">Matcher to wrap.</param>
 		public SafeMatcher(IMatcher matcher) {
 			_matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
 			_nestedMatchingContext = new NestedMatchingContext(this);

@@ -21,8 +21,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			_connection = new SqliteConnection("Filename=:memory:");
 			_connection.Open();
 			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>(ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
 			_serviceProvider = serviceCollection.BuildServiceProvider();
 			_mapper = _serviceProvider.GetRequiredService<IMapper>();
 		}
@@ -195,10 +195,42 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldNotMapEntitiesWithShadowKeys() {
+		public void ShouldNotMapEntitiesWithShadowKeysWithoutContext() {
 			Assert.IsFalse(_mapper.CanMapNew<ShadowIntKey, int>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new ShadowIntKey()));
+		}
+
+		[TestMethod]
+		public void ShouldMapEntitiesWithShadowKeysWithContextIfTracked() {
+			var db = _serviceProvider.GetRequiredService<TestContext>();
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+			var entity = new ShadowIntKey();
+			db.Add(entity);
+			db.SaveChanges();
+
+			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
+
+			Assert.IsTrue(_mapper.CanMapNew<ShadowIntKey, int>(options));
+
+			Assert.AreEqual(1, _mapper.Map<int>(entity, options));
+		}
+
+		[TestMethod]
+		public void ShouldNotMapEntitiesWithShadowKeysWithContextIfNotTracked() {
+			var db = _serviceProvider.GetRequiredService<TestContext>();
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+			var entity = new ShadowIntKey();
+
+			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
+
+			Assert.IsTrue(_mapper.CanMapNew<ShadowIntKey, int>(options));
+
+			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(entity, options));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
+			Assert.AreEqual($"The entity of type {typeof(ShadowIntKey).FullName} is not being tracked by the provided context, so its shadow key(s) cannot be retrieved locally.", exc.InnerException.Message);
 		}
 
 		[TestMethod]
@@ -361,13 +393,6 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				TestUtils.AssertMapNotFound(() => _mapper.Map<(Guid, int)?[]>(new[] { new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") } }));
 				TestUtils.AssertMapNotFound(() => _mapper.Map<(string, int)?[]>(new[] { new CompositeClassKey { Id1 = 2, Id2 = "Test" } }));
 			}
-		}
-
-		[TestMethod]
-		public void ShouldNotMapMergeCollections() {
-			Assert.IsFalse(_mapper.CanMapMerge<IEnumerable<StringKey>, List<string>>());
-
-			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { new StringKey { Id = "Test" } }, new List<string>()));
 		}
 	}
 }

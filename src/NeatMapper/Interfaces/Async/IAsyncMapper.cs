@@ -14,9 +14,7 @@ namespace NeatMapper {
 	/// </remarks>
 	public interface IAsyncMapper {
 		/// <summary>
-		/// Maps an object to a new one asynchronously.<br/>
-		/// Can also map to collections automatically, will create the destination collection
-		/// and map each element individually.
+		/// Maps an object to a new one asynchronously.
 		/// </summary>
 		/// <param name="source">Object to map, may be null.</param>
 		/// <param name="sourceType">Type of the object to map, used to retrieve the available maps.</param>
@@ -61,11 +59,7 @@ namespace NeatMapper {
 			CancellationToken cancellationToken = default);
 
 		/// <summary>
-		/// Maps an object to an existing one and returns the result.<br/>
-		/// Can also map to collections automatically, will try to match elements with
-		/// <see cref="IMatchMap{TSource, TDestination}"/> (or the passed
-		/// <see cref="MergeCollectionsMappingOptions.Matcher"/>), will create the destination collection
-		/// if it is null and map each element individually.
+		/// Maps an object to an existing one and returns the result.
 		/// </summary>
 		/// <param name="source">Object to be mapped, may be null.</param>
 		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps.</param>

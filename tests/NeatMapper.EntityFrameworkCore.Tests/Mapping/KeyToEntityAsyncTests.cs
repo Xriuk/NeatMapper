@@ -35,7 +35,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			_connection.Open();
 			serviceCollection.AddDbContext<TestContext>(o => o.UseSqlite(_connection).AddInterceptors(_interceptorMock.Object), ServiceLifetime.Singleton, ServiceLifetime.Singleton);
 			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton);
-			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapperEntityFrameworkCore<TestContext>();
 			serviceCollection.ConfigureAll<EntityFrameworkCoreOptions>(Configure);
 			_serviceProvider = serviceCollection.BuildServiceProvider();
 			_mapper = _serviceProvider.GetRequiredService<IAsyncMapper>();

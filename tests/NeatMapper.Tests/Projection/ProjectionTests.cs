@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Options;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -65,7 +64,11 @@ namespace NeatMapper.Tests.Projection {
 				return source => source != null ? source.Amount : 0m;
 			}
 
-			// Nested NewMap
+			public static int? GetCategoryId(CategoryDto cat) {
+				return cat?.Id;
+			}
+
+			// Nested map + method
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -83,7 +86,7 @@ namespace NeatMapper.Tests.Projection {
 						Code = source.Code,
 						Categories = source.Categories != null ?
 							source.Categories
-								.Select(c => context.Projector.Project<int?>(c, context.MappingOptions))
+								.Select(c => GetCategoryId(context.Projector.Project<CategoryDto>(c, context.MappingOptions)))
 								.Where(i => i != null)
 								.Cast<int>()
 								.ToList() :
@@ -132,7 +135,7 @@ namespace NeatMapper.Tests.Projection {
 				return source => source != null ? (int?)source.Id : null;
 			}
 
-			// Nested NewMap
+			// Nested map
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -144,11 +147,12 @@ namespace NeatMapper.Tests.Projection {
 #endif
 				.Project(ProjectionContext context) {
 
+				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				return source => source == null ?
 					null :
 					new CategoryDto {
 						Id = source.Id,
-						Parent = context.Projector.Project<int?>(source.Parent)
+						Parent = context.Projector.Project<int?>(source.Parent, MappingOptionsUtils.options)
 					};
 			}
 
@@ -266,20 +270,26 @@ namespace NeatMapper.Tests.Projection {
 				// Should forward options to nested map
 				MappingOptionsUtils.options = null;
 
+				var value = new Maps();
 				Expression<Func<Product, ProductDto>> expr = source => source == null ?
 					null :
 					new ProductDto {
 						Code = source.Code,
 						Categories = source.Categories != null ?
-							source.Categories
-								.Select(c => c != null ? (int?)c.Id : null)
+						source.Categories
+								.Select(c => Maps.GetCategoryId(c == null ?
+									null :
+									new CategoryDto {
+										Id = c.Id,
+										Parent = c.Parent != null ? (int?)c.Parent.Id : null
+									}))
 								.Where(i => i != null)
 								.Cast<int>()
 								.ToList() :
 							new List<int>()
 					};
 				var options = new TestOptions();
-				TestUtils.AssertExpressionsEqual(expr, _projector.Project<Product, ProductDto>(new[] { options }));
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<Product, ProductDto>(options));
 
 				Assert.AreSame(MappingOptionsUtils.options, options);
 			}

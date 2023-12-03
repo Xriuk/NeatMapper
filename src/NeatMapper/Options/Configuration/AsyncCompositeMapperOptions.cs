@@ -5,15 +5,8 @@ namespace NeatMapper {
 	/// <summary>
 	/// Options used to define a list of <see cref="IAsyncMapper"/>s to use for <see cref="AsyncCompositeMapper"/>
 	/// </summary>
-	/// <remarks>
-	/// Configuration should be done by using <see cref="Microsoft.Extensions.DependencyInjection.OptionsServiceCollectionExtensions.ConfigureAll{TOptions}"/>
-	/// or <see cref="Microsoft.Extensions.DependencyInjection.OptionsServiceCollectionExtensions.PostConfigureAll{TOptions}"/>
-	/// </remarks>
 	public sealed class AsyncCompositeMapperOptions {
-		/// <summary>
-		/// Named <see cref="Microsoft.Extensions.Options.IOptions{TOptions}"/> which is used to configure any mapper
-		/// which requires an <see cref="IAsyncMapper"/> itself, these do not include <see cref="AsyncCollectionMapper"/>s
-		/// </summary>
+		[Obsolete("This constant is no longer used and will be removed in future versions.")]
 		public const string Base = "Base";
 
 

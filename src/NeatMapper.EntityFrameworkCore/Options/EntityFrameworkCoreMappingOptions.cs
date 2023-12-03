@@ -3,10 +3,11 @@
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// Options for <see cref="EntityFrameworkCoreMapper"/> and <see cref="AsyncEntityFrameworkCoreMapper"/>,
-	/// these will override any configuration options defined in <see cref="EntityFrameworkCoreOptions"/>
+	/// these will override any configuration options defined in <see cref="EntityFrameworkCoreOptions"/>.
 	/// </summary>
 	public sealed class EntityFrameworkCoreMappingOptions {
-		public EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode? entitiesRetrievalMode = null,
+		public EntityFrameworkCoreMappingOptions(
+			EntitiesRetrievalMode? entitiesRetrievalMode = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			DbContext?
 #else
@@ -32,9 +33,13 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		/// <summary>
 		/// Overrides the db instance to use for the mapping, the type must be correct, the mapper will pick it up
-		/// only if it matches the type passed in the constructor
+		/// only if it matches the type passed in the constructor.<br/>
+		/// Will be also used to retrieve shadow keys for tracked entities.
 		/// </summary>
-		/// <remarks><see langword="null"/> to inject the context from the <see cref="System.IServiceProvider"/> of the mapper</remarks>
+		/// <remarks>
+		/// <see langword="null"/> to inject the context from the <see cref="System.IServiceProvider"/>of the mapper
+		/// (shadow keys won't be retrieved).
+		/// </remarks>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			DbContext?
@@ -50,9 +55,9 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		/// <summary>
 		/// If <see langword="true"/> will throw a <see cref="DuplicateEntityException"/> when a duplicate entity is found
-		/// for the same key while merging, otherwise will return the entity from the <see cref="DbContext"/>
+		/// for the same key while merging, otherwise will return the entity from the <see cref="DbContext"/>.
 		/// </summary>
-		/// <remarks><see langword="null"/> to use global setting</remarks>
+		/// <remarks><see langword="null"/> to use global setting.</remarks>
 		public bool? ThrowOnDuplicateEntity {
 			get;
 #if NET5_0_OR_GREATER

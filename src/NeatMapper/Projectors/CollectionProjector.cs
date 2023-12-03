@@ -12,6 +12,9 @@ namespace NeatMapper {
 	/// Also supports mapping <see cref="IQueryable{T}"/>s between them.
 	/// </summary>
 	public sealed class CollectionProjector : IProjector, IProjectorCanProject {
+		/// <summary>
+		/// <see cref="Queryable.Select{TSource, TResult}(IQueryable{TSource}, Expression{Func{TSource, TResult}})"/>
+		/// </summary>
 		private static readonly MethodInfo Queryable_Select = typeof(Queryable).GetMethods().Single(m => {
 			if(m.Name != nameof(Queryable.Select))
 				return false;
@@ -21,6 +24,9 @@ namespace NeatMapper {
 			var genericArguments = parameters[1].ParameterType.GetGenericArguments();
 			return genericArguments.Length == 1 && genericArguments[0].IsGenericType && genericArguments[0].GetGenericTypeDefinition() == typeof(Func<,>);
 		});
+		/// <summary>
+		/// <see cref="Enumerable.Select{TSource, TResult}(IEnumerable{TSource}, Func{TSource, TResult})"/>
+		/// </summary>
 		private static readonly MethodInfo Enumerable_Select = typeof(Enumerable).GetMethods().Single(m => {
 			if (m.Name != nameof(Enumerable.Select))
 				return false;
@@ -28,10 +34,19 @@ namespace NeatMapper {
 			return parameters.Length == 2 && parameters[1].ParameterType.IsGenericType &&
 				parameters[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>);
 		});
+		/// <summary>
+		/// <see cref="Enumerable.ToArray{TSource}(IEnumerable{TSource})"/>
+		/// </summary>
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException("Could not find Enumerable.ToArray<T>()");
+		/// <summary>
+		/// <see cref="Enumerable.ToList{TSource}(IEnumerable{TSource})"/>
+		/// </summary>
 		private static readonly MethodInfo Enumerable_ToList = typeof(Enumerable).GetMethod(nameof(Enumerable.ToList))
 			?? throw new InvalidOperationException("Could not find Enumerable.ToList<T>()");
+		/// <summary>
+		/// <see cref="Enumerable.ToDictionary{TSource, TKey, TElement}(IEnumerable{TSource}, Func{TSource, TKey}, Func{TSource, TElement})"/>
+		/// </summary>
 		private static readonly MethodInfo Enumerable_ToDictionary = typeof(Enumerable).GetMethods().Single(m => {
 			if (m.Name != nameof(Enumerable.ToDictionary))
 				return false;
@@ -41,6 +56,9 @@ namespace NeatMapper {
 				parameters[2].ParameterType.IsGenericType &&
 				parameters[2].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>);
 		});
+		/// <summary>
+		/// <see cref="string.String(char[])"/>
+		/// </summary>
 		private static readonly ConstructorInfo string_charArray = typeof(string).GetConstructor(new[] { typeof(char[]) })
 			?? throw new InvalidOperationException("Could not find new string(char[])");
 

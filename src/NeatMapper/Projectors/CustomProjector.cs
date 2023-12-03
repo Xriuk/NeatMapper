@@ -63,6 +63,15 @@ namespace NeatMapper {
 				throw new InvalidOperationException("The provided expression is not a member access or constant expression");
 			}
 
+			protected object CompileAndRunExpression(Expression body) {
+				try { 
+					return Expression.Lambda(body).Compile().DynamicInvoke();
+				}
+				catch(Exception e){
+					throw new InvalidOperationException("Error during expression evaluation, check the inner exception for details. Parameters of the projection expression cannot be referenced in nested projections.", e);
+				}
+			}
+
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
 				// Expand mapper.Project into the corresponding expressions
 				if (node.Method.DeclaringType == typeof(NestedProjector) &&
@@ -75,16 +84,21 @@ namespace NeatMapper {
 					if(node.Arguments.Count == 2) {
 						var mappingOptionsType = node.Arguments[1].Type;
 						if(mappingOptionsType == typeof(MappingOptions))
-							mappingOptions = RetrieveValueRecursively(node.Arguments[1]) as MappingOptions;
+							mappingOptions = CompileAndRunExpression(node.Arguments[1]) as MappingOptions;
 						else if(mappingOptionsType == typeof(IEnumerable)) {
-							var ienumerable = RetrieveValueRecursively(node.Arguments[1]) as IEnumerable;
-							if(ienumerable?.Cast<object>().Any() == true)
+							var ienumerable = CompileAndRunExpression(node.Arguments[1]) as IEnumerable;
+							if(ienumerable?.Cast<object>().Any(o => o != null) == true)
 								mappingOptions = new MappingOptions(ienumerable);
 							else
 								mappingOptions = null;
 						}
-						else if(mappingOptionsType == typeof(object) && RetrieveValueRecursively(node.Arguments[1]) == null)
-							mappingOptions = null;
+						else if(mappingOptionsType == typeof(object[])) {
+							var objects = CompileAndRunExpression(node.Arguments[1]) as object[];
+							if(objects?.Any(o => o != null) == true)
+								mappingOptions = new MappingOptions(objects);
+							else
+								mappingOptions = null;
+						}
 						else
 							throw new InvalidOperationException($"Invalid mapping options type {mappingOptionsType.FullName ?? mappingOptionsType.Name} in nested map");
 					}

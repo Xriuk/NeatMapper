@@ -1,5 +1,4 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
@@ -28,7 +27,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Singleton, matchersLifetime: ServiceLifetime.Singleton);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
@@ -60,7 +59,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void ShouldRespectLifetime_Scoped() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Scoped, ServiceLifetime.Singleton, ServiceLifetime.Scoped);
+			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Scoped, matchersLifetime: ServiceLifetime.Scoped);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			// Not throwing?
@@ -82,7 +81,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void ShouldRespectLifetime_Transient() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Transient, ServiceLifetime.Singleton, ServiceLifetime.Transient);
+			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Transient, matchersLifetime: ServiceLifetime.Transient);
 			IServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
@@ -145,7 +144,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		[TestMethod]
 		public void NestedMapperShouldBeEqualToIMapper() {
 			var serviceCollection = new ServiceCollection();
-			serviceCollection.AddNeatMapper(ServiceLifetime.Singleton, ServiceLifetime.Singleton, ServiceLifetime.Singleton);
+			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Singleton, matchersLifetime: ServiceLifetime.Singleton);
 			serviceCollection.Configure<CustomMapsOptions>(o => {
 				o.TypesToScan.Add(typeof(Maps));
 			});

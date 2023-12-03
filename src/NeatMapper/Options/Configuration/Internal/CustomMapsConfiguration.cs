@@ -322,6 +322,9 @@ namespace NeatMapper {
 #if NET47 || NET48
 		static readonly IDictionary<Type, bool> isUnmanagedCache = new ConcurrentDictionary<Type, bool>();
 #else
+		/// <summary>
+		/// <see cref="RuntimeHelpers.IsReferenceOrContainsReferences{T}"/>
+		/// </summary>
         static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference =
             typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!
                 ?? throw new InvalidOperationException("Could not find RuntimeHelpers.IsReferenceOrContainsReferences");

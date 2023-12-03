@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 namespace NeatMapper {
 	/// <summary>
 	/// Interface which allows projecting an object to a new one, can be used in LINQ
-	/// (and be translated to external providers like Entity Framework).
+	/// (and be translated to external providers like Entity Framework), or can be compiled into delegates.
 	/// </summary>
 	public interface IProjector {
 		/// <summary>

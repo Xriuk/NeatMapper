@@ -26,9 +26,10 @@ namespace NeatMapper {
 #endif
 			options) {
 
-			if(options != null) { 
-				if(options.Cast<object>().GroupBy(o => o?.GetType()).Any(g => g.Count() > 1))
-					throw new ArgumentException("Options of the same type must be grouped together, null options are not allowed");
+			if(options != null) {
+				options = options.Cast<object>().Where(o => o != null);
+				if(options.Cast<object>().GroupBy(o => o.GetType()).Any(g => g.Count() > 1))
+					throw new ArgumentException("Options of the same type must be grouped together");
 
 				this.options = options.Cast<object>().ToDictionary(o => o.GetType(), o => o);
 			}

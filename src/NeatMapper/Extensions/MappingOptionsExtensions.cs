@@ -21,7 +21,7 @@ namespace NeatMapper {
 			return options.GetOptions(typeof(TOptions)) as TOptions;
 		}
 
-
+		#region Replace
 		/// <summary>
 		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
 		/// and replaces (or removes) options of type <typeparamref name="TOptions"/> (if found) with a new option from the specified factory.
@@ -57,24 +57,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) options of type <typeparamref name="TOptions1"/> and <typeparamref name="TOptions2"/>
-		/// (if found) with new options from the specified factories.
-		/// </summary>
-		/// <typeparam name="TOptions1">Type of the first options to replace.</typeparam>
-		/// <typeparam name="TOptions2">Type of the second options to replace.</typeparam>
-		/// <param name="factory1">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions1"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <param name="factory2">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions2"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
 		public static MappingOptions Replace<TOptions1, TOptions2>(this MappingOptions options,
 			Func<TOptions1,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -91,7 +74,7 @@ namespace NeatMapper {
 #endif
 				> factory2)
 				where TOptions1 : class
-				where TOptions2 : class{
+				where TOptions2 : class {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -110,30 +93,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) options of type <typeparamref name="TOptions1"/>, <typeparamref name="TOptions2"/>
-		/// and <typeparamref name="TOptions3"/> (if found) with new options from the specified factories.
-		/// </summary>
-		/// <typeparam name="TOptions1">Type of the first options to replace.</typeparam>
-		/// <typeparam name="TOptions2">Type of the second options to replace.</typeparam>
-		/// <typeparam name="TOptions3">Type of the third options to replace.</typeparam>
-		/// <param name="factory1">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions1"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <param name="factory2">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions2"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <param name="factory3">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions3"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3>(this MappingOptions options,
 			Func<TOptions1,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -178,37 +138,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <summary>
-		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) options of type <typeparamref name="TOptions1"/>, <typeparamref name="TOptions2"/>,
-		/// <typeparamref name="TOptions3"/> and <typeparamref name="TOptions4"/> (if found) with new options
-		/// from the specified factories.
-		/// </summary>
-		/// <typeparam name="TOptions1">Type of the first options to replace.</typeparam>
-		/// <typeparam name="TOptions2">Type of the second options to replace.</typeparam>
-		/// <typeparam name="TOptions3">Type of the third options to replace.</typeparam>
-		/// <typeparam name="TOptions4">Type of the fourth options to replace.</typeparam>
-		/// <param name="factory1">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions1"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <param name="factory2">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions2"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <param name="factory3">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions3"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <param name="factory4">
-		/// Factory used to create the new options, will be invoked only if an option of type
-		/// <typeparamref name="TOptions4"/> exists in the current mapping options, will receive it as a parameter.<br/>
-		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
-		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3, TOptions4>(this MappingOptions options,
 			Func<TOptions1,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -264,15 +194,13 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) options of type <typeparamref name="TOptions1"/>, <typeparamref name="TOptions2"/>,
-		/// <typeparamref name="TOptions3"/>, <typeparamref name="TOptions4" and <typeparamref name="TOptions5"/>
-		/// (if found) with new options from the specified factories.
+		/// and replaces (or removes) the specified option types (if found) with new options from the specified factories.
 		/// </summary>
 		/// <typeparam name="TOptions1">Type of the first options to replace.</typeparam>
 		/// <typeparam name="TOptions2">Type of the second options to replace.</typeparam>
 		/// <typeparam name="TOptions3">Type of the third options to replace.</typeparam>
 		/// <typeparam name="TOptions4">Type of the fourth options to replace.</typeparam>
-		/// <typeparam name="TOptions4">Type of the fifth options to replace.</typeparam>
+		/// <typeparam name="TOptions5">Type of the fifth options to replace.</typeparam>
 		/// <param name="factory1">
 		/// Factory used to create the new options, will be invoked only if an option of type
 		/// <typeparamref name="TOptions1"/> exists in the current mapping options, will receive it as a parameter.<br/>
@@ -360,8 +288,20 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+		#endregion
 
-
+		#region ReplaceOrAdd
+		/// <summary>
+		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
+		/// and replaces (or removes) or adds the specified option types with new options from the specified factories.
+		/// </summary>
+		/// <typeparam name="TOptions">Type of the first options to replace or add.</typeparam>
+		/// <param name="factory">
+		/// Factory used to create the new options, will receive as a parameter the options of type
+		/// <typeparamref name="TOptions"/> if they exists in the current mapping options.<br/>
+		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <returns>The new generated options.</returns>
 		public static MappingOptions ReplaceOrAdd<TOptions>(this MappingOptions options, Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 				TOptions?
@@ -392,6 +332,7 @@ namespace NeatMapper {
 #endif
 		}
 
+		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -439,6 +380,7 @@ namespace NeatMapper {
 #endif
 		}
 
+		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -501,6 +443,7 @@ namespace NeatMapper {
 #endif
 		}
 
+		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -578,6 +521,41 @@ namespace NeatMapper {
 #endif
 		}
 
+		/// <summary>
+		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
+		/// and replaces (or removes) or adds the specified option types with new options from the specified factories.
+		/// </summary>
+		/// <typeparam name="TOptions1">Type of the first options to replace or add.</typeparam>
+		/// <typeparam name="TOptions2">Type of the second options to replace or add.</typeparam>
+		/// <typeparam name="TOptions3">Type of the third options to replace or add.</typeparam>
+		/// <typeparam name="TOptions4">Type of the fourth options to replace or add.</typeparam>
+		/// <typeparam name="TOptions5">Type of the fifth options to replace or add.</typeparam>
+		/// <param name="factory1">
+		/// Factory used to create the new options, will receive as a parameter the options of type
+		/// <typeparamref name="TOptions1"/> if they exists in the current mapping options.<br/>
+		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <param name="factory2">
+		/// Factory used to create the new options, will receive as a parameter the options of type
+		/// <typeparamref name="TOptions2"/> if they exists in the current mapping options.<br/>
+		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <param name="factory3">
+		/// Factory used to create the new options, will receive as a parameter the options of type
+		/// <typeparamref name="TOptions3"/> if they exists in the current mapping options.<br/>
+		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <param name="factory4">
+		/// Factory used to create the new options, will receive as a parameter the options of type
+		/// <typeparamref name="TOptions4"/> if they exists in the current mapping options.<br/>
+		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <param name="factory5">
+		/// Factory used to create the new options, will receive as a parameter the options of type
+		/// <typeparamref name="TOptions5"/> if they exists in the current mapping options.<br/>
+		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <returns>The new generated options.</returns>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -668,6 +646,7 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
-		}
+		} 
+		#endregion
 	}
 }

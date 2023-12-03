@@ -12,8 +12,14 @@ using System.Text;
 
 namespace NeatMapper {
 	internal sealed class ObjectFactory {
+		/// <summary>
+		/// <see cref="StringBuilder.Append(char)"/>
+		/// </summary>
 		private static readonly MethodInfo StringBuilder_Append_Char = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new[] { typeof(char) })
 			?? throw new InvalidOperationException($"Could not find method {nameof(StringBuilder)}.{nameof(StringBuilder.Append)}({nameof(Char)})");
+		/// <summary>
+		/// <see cref="Enumerable.ToArray{TSource}(IEnumerable{TSource})"/>
+		/// </summary>
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
 

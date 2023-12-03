@@ -3,7 +3,7 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Options applied to mappers with user-defined mappings
+	/// Options applied to mappers/matchers/projectors with user-defined mappings
 	/// </summary>
 	public sealed class CustomMapsOptions {
 		/// <summary>

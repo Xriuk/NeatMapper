@@ -12,9 +12,17 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.Collections;
 using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace NeatMapper.EntityFrameworkCore {
+	/// <summary>
+	/// Base class for Entity Framework Core mappers.
+	/// Internal class.
+	/// </summary>
 	public abstract class EntityFrameworkCoreBaseMapper {
+		/// <summary>
+		/// <see cref="Queryable.Where{TSource}(IQueryable{TSource}, Expression{Func{TSource, bool}})"/>
+		/// </summary>
 		protected static readonly MethodInfo Queryable_Where = typeof(Queryable).GetMethods().First(m => {
 			if (m.Name != nameof(Queryable.Where))
 				return false;
@@ -35,10 +43,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		protected readonly EntityFrameworkCoreOptions _entityFrameworkCoreOptions;
 		protected readonly IMatcher _elementsMatcher;
 		protected readonly MergeCollectionsOptions _mergeCollectionOptions;
-		// entity: (entity) => key
-		protected readonly IDictionary<Type, Delegate> _entityToKeyCache = new Dictionary<Type, Delegate>();
-		protected readonly IDictionary<Type, Delegate> _valueTupleToTupleCache = new Dictionary<Type, Delegate>();
-		// entity: (key) => [...values]
+		// entity: (key) => [...values] (composite keys are ValueTuples)
 		protected readonly IDictionary<Type, Delegate> _keyToValuesCache = new Dictionary<Type, Delegate>();
 		protected readonly IDictionary<Type, Delegate> _tupleToValueTupleCache = new Dictionary<Type, Delegate>();
 
@@ -116,7 +121,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			else
 				elementTypes = (sourceType, destinationType);
 
-			// MergeMap can only map from key to entity so we check source and destination types
+			// We can only map from key to entity so we check source and destination types
 			if (!elementTypes.From.IsKeyType() && !elementTypes.From.IsCompositeKeyType())
 				return false;
 
@@ -147,7 +152,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Check that the entity has a key and that it matches the key type
 			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1 || !key.Properties.All(p => p.PropertyInfo != null))
+			if (key == null || key.Properties.Count < 1)
 				return false;
 			if (keyType.IsCompositeKeyType()) {
 				var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
@@ -166,37 +171,6 @@ namespace NeatMapper.EntityFrameworkCore {
 				key.Properties[i].PropertyInfo?.SetValue(entity, keyValues[i]);
 			}
 			db.Entry(entity).State = EntityState.Unchanged;
-		}
-
-		protected Delegate GetOrCreateEntityToKeyMap(Type entityType, Type keyType) {
-			lock (_entityToKeyCache) {
-				if (!_entityToKeyCache.TryGetValue(entityType, out var entityToKeyMap)) {
-					var entityParam = Expression.Parameter(entityType, "entity");
-					var modelEntity = _model.FindEntityType(entityType);
-					var key = modelEntity.FindPrimaryKey();
-					Expression body;
-					if (key.Properties.Count == 1) {
-						// entity.Id
-						body = Expression.Property(entityParam, key.Properties[0].PropertyInfo);
-					}
-					else {
-						// new ValueTuple<...>(entity.Key1, ...)
-						body = Expression.New(
-							TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()),
-							key.Properties.Select(p => Expression.Property(entityParam, p.PropertyInfo)));
-					}
-
-					// entity != null ? KEY : default(KEY)
-					body = Expression.Condition(
-						Expression.NotEqual(entityParam, Expression.Constant(null, entityParam.Type)),
-						body,
-						Expression.Default(body.Type));
-					entityToKeyMap = Expression.Lambda(typeof(Func<,>).MakeGenericType(entityParam.Type, body.Type), body, entityParam).Compile();
-					_entityToKeyCache.Add(entityType, entityToKeyMap);
-				}
-
-				return entityToKeyMap;
-			}
 		}
 
 		protected Delegate GetOrCreateKeyToValuesMap(Type entityType, Type keyType) {
@@ -224,31 +198,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 		}
 
-		protected Delegate GetOrCreateValueTupleToTupleMap(Type entityType, Type tupleOrValueTupleType) {
-			if (!tupleOrValueTupleType.IsTuple() && !tupleOrValueTupleType.IsValueTuple() && !tupleOrValueTupleType.IsNullableValueTuple())
-				throw new ArgumentException("Type is not a Tuple or ValueTuple", nameof(tupleOrValueTupleType));
-
-			lock (_valueTupleToTupleCache) {
-				if (!_valueTupleToTupleCache.TryGetValue(entityType, out var valueTupleToTuple)) {
-					var keyParam = Expression.Parameter(TupleUtils.GetValueTupleConstructor(tupleOrValueTupleType.UnwrapNullable().GetGenericArguments()).DeclaringType
-						?? throw new InvalidOperationException(), "key");
-					// new Tuple<...>(key.Item1, ...)
-					Expression body = Expression.New(
-						TupleUtils.GetTupleConstructor(keyParam.Type.GetGenericArguments()),
-						Enumerable.Range(1, keyParam.Type.GetGenericArguments().Count()).Select(n => Expression.Field(keyParam, "Item" + n)));
-					// key == default(KEY) ? null : KEY
-					body = Expression.Condition(
-						Expression.Call(keyParam, keyParam.Type.GetMethod(nameof(ValueTuple.Equals), new[] { keyParam.Type }), Expression.Default(keyParam.Type)),
-						Expression.Constant(null, body.Type),
-						body);
-					valueTupleToTuple = Expression.Lambda(typeof(Func<,>).MakeGenericType(keyParam.Type, body.Type), body, keyParam).Compile();
-					_valueTupleToTupleCache.Add(entityType, valueTupleToTuple);
-				}
-
-				return valueTupleToTuple;
-			}
-		}
-
 		protected Delegate GetOrCreateTupleToValueTupleMap(Type entityType, Type tupleType) {
 			if (!tupleType.IsTuple())
 				throw new ArgumentException("Type is not a Tuple", nameof(tupleType));
@@ -273,28 +222,17 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (db != null && db.GetType() != _dbContextType)
 				db = null;
 			if (db == null) {
-				var overrideOptions = mappingOptions?.GetOptions<MapperOverrideMappingOptions>();
-				if (overrideOptions?.ServiceProvider != null) {
-					try {
-						db = overrideOptions?.ServiceProvider.GetRequiredService(_dbContextType) as DbContext;
-					}
-					catch {
-						db = null;
-					}
+				try {
+					db = (mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
+						.GetRequiredService(_dbContextType) as DbContext;
 				}
-				else
+				catch {
 					db = null;
-				if (db == null) {
-					try {
-						db = _serviceProvider.GetRequiredService(_dbContextType) as DbContext;
-					}
-					catch {
-						db = null;
-					}
-					if (db == null)
-						throw new InvalidOperationException($"Could not retrieve a DbContext of type {_dbContextType.FullName ?? _dbContextType.Name}");
 				}
 			}
+
+			if (db == null)
+				throw new InvalidOperationException($"Could not retrieve a DbContext of type {_dbContextType.FullName ?? _dbContextType.Name}");
 
 			return db;
 		}
@@ -411,6 +349,56 @@ namespace NeatMapper.EntityFrameworkCore {
 			foreach (var element in elementsToAdd) {
 				addMethod.Invoke(destinationEnumerable, new object[] { element });
 			}
+		}
+
+		protected LambdaExpression GetEntityPredicate(Type entityType, object[] keyValues, IKey key) {
+			var entityParam = Expression.Parameter(entityType, "entity");
+			Expression body = key.Properties
+				.Select((p, i) => Expression.Equal(Expression.Property(entityParam, p.PropertyInfo), Expression.Constant(keyValues[i])))
+				.Aggregate(Expression.AndAlso);
+			return Expression.Lambda(body, entityParam);
+		}
+
+		internal EntityMappingInfo[] RetrieveLocalsAndPredicates(
+			IEnumerable sourceEnumerable, Type keyType, Type entityType,
+			IKey key, EntitiesRetrievalMode retrievalMode, IEnumerable local, DbContext db) {
+
+			Delegate tupleToValueTuple = keyType.IsTuple() ? GetOrCreateTupleToValueTupleMap(entityType, keyType) : null;
+			Delegate keyToValuesMap = GetOrCreateKeyToValuesMap(entityType, keyType);
+			return sourceEnumerable
+				.Cast<object>()
+				.Select(sourceElement => {
+					if (sourceElement == null || TypeUtils.IsDefaultValue(keyType.UnwrapNullable(), sourceElement))
+						return new EntityMappingInfo();
+
+					if (keyType.IsTuple()) 
+						sourceElement = tupleToValueTuple.DynamicInvoke(sourceElement);
+
+					var keyValues = keyToValuesMap.DynamicInvoke(sourceElement) as object[]
+						?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {entityType.FullName ?? entityType.Name}");
+
+					var expr = GetEntityPredicate(entityType, keyValues, key);
+					var deleg = expr.Compile();
+
+					object localEntity;
+					if (retrievalMode != EntitiesRetrievalMode.Remote) {
+						localEntity = local
+							.Cast<object>()
+							.FirstOrDefault(e => (bool)deleg.DynamicInvoke(e));
+
+						if (localEntity == null && retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
+							AttachEntity(entityType, db, ref localEntity, keyValues, key);
+					}
+					else
+						localEntity = null;
+
+					return new EntityMappingInfo {
+						LocalEntity = localEntity,
+						Expression = localEntity != null ? null : expr,
+						Delegate = deleg
+					};
+				})
+				.ToArray();
 		}
 	}
 }
