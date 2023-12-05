@@ -124,12 +124,6 @@ namespace NeatMapper.EntityFrameworkCore {
 				((Type From, Type To)?)(sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType()) :
 				null;
 
-			bool entityToKey;
-			if (collectionElementTypes != null)
-				entityToKey = collectionElementTypes.Value.To.IsKeyType() || collectionElementTypes.Value.To.IsCompositeKeyType();
-			else
-				entityToKey = destinationType.IsKeyType() || destinationType.IsCompositeKeyType();
-
 			(Type From, Type To) types = collectionElementTypes ?? (sourceType, destinationType);
 
 			try {

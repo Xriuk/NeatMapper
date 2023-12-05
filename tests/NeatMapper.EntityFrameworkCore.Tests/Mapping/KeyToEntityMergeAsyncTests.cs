@@ -218,10 +218,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public async Task ShouldNotMapEntitiesWithShadowKeys() {
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<int, ShadowIntKey>());
+		public async Task ShouldMapEntitiesWithShadowKeys() {
+			Assert.IsTrue(await _mapper.CanMapAsyncMerge<int, ShadowIntKey>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(2, (ShadowIntKey)null));
+			Assert.IsNotNull(await _mapper.MapAsync(1, (ShadowIntKey)null));
 		}
 
 		[TestMethod]

@@ -6,7 +6,7 @@
 
 Entity Framework Core maps for [NeatMapper](https://www.nuget.org/packages/NeatMapper).
 
-Creates automatic maps between entities and their keys, supports normal maps and asynchronous ones, also supports collections (not nested).
+Creates automatic maps and projections between entities and their keys (even composite and shadow keys), supports normal maps and asynchronous ones, also supports collections (not nested).
 
 ## How to install
 
@@ -21,25 +21,38 @@ While configuring your services simply add
 ```csharp
 services.AddDbContext<TestContext>();
 services.AddNeatMapper();
+
 services.AddNeatMapperEntityFrameworkCore<TestContext>();
 ```
 
 And you are ready to map your entities
 
 ```csharp
-// Map a key to an entity
-var entity = mapper.Map<MyEntity>(2);
-var entity = await mapper.MapAsync<MyEntity>(2);
+var mapper = serviceProvider.GetRequiredService<IMapper>();
+var asyncMapper = serviceProvider.GetRequiredService<IMapper>();
+var projector = serviceProvider.GetRequiredService<IProjector>();
 
-// Map a composite key to an entity with tuples (System.Tuple or System.ValueTuple)
-var entity = await mapper.MapAsync<MyEntityWithCompositeKey>((2, "StringKey"));
+
+// Map a key to its entity
+var entity = mapper.Map<MyEntity>(2);
+var entity = await asyncMapper.MapAsync<MyEntity>(2);
+
+// Map a composite key to an entity with tuples (System.Tuple or System.ValueTuple),
+// notice the double parentheses
+var entity = await asyncMapper.MapAsync<MyEntityWithCompositeKey>((2, "StringKey"));
 
 // Map multiple keys to their respective entities
-var entities = await mapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
+var entities = await asyncMapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 
 
-// Map entity to key(s)
+// Map an entity to its key(s)
 (int MyIntKey, string MyStringKey) = mapper.Map<(int, string)>(myEntity);
+
+
+// Project an entity into its key
+var myEntitiesKeys = db.Set<MyEntity>()
+    .Select(projector.Project<IQueryable<MyEntity>, IQueryable<int>>())
+    .ToArray();
 ```
 
 ## Advanced options

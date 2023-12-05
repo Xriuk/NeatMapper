@@ -221,7 +221,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldMapEntitiesWithShadowKeys() {
 			Assert.IsTrue(_mapper.CanMapMerge<int, ShadowIntKey>());
 
-			Assert.IsNotNull(_mapper.Map(2, (ShadowIntKey)null));
+			Assert.IsNotNull(_mapper.Map(1, (ShadowIntKey)null));
 		}
 
 		[TestMethod]

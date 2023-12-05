@@ -12,7 +12,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System.Collections.ObjectModel;
 using System.Collections;
 using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>

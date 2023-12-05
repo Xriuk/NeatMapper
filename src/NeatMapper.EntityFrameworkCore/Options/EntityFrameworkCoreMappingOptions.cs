@@ -37,8 +37,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// Will be also used to retrieve shadow keys for tracked entities.
 		/// </summary>
 		/// <remarks>
-		/// <see langword="null"/> to inject the context from the <see cref="System.IServiceProvider"/>of the mapper
-		/// (shadow keys won't be retrieved).
+		/// <see langword="null"/> to inject the context from the <see cref="System.IServiceProvider"/> of the mapper.
 		/// </remarks>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

@@ -24,7 +24,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Singleton);
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var projector = services.GetRequiredService<IProjector>();
 
@@ -43,13 +43,15 @@ namespace NeatMapper.Tests.DependencyInjection {
 
 				Assert.AreSame(projector, projector2);
 			}
+
+			services.Dispose();
 		}
 
 		[TestMethod]
 		public void ShouldRespectLifetime_Scoped() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Scoped);
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			// Not throwing?
 			//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IProjector>());
@@ -61,13 +63,15 @@ namespace NeatMapper.Tests.DependencyInjection {
 
 				Assert.AreSame(projector2, projector3);
 			}
+
+			services.Dispose();
 		}
 
 		[TestMethod]
 		public void ShouldRespectLifetime_Transient() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Transient);
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var projector = services.GetRequiredService<IProjector>();
 
@@ -86,6 +90,8 @@ namespace NeatMapper.Tests.DependencyInjection {
 
 				Assert.AreNotSame(projector, projector2);
 			}
+
+			services.Dispose();
 		}
 
 		[TestMethod]

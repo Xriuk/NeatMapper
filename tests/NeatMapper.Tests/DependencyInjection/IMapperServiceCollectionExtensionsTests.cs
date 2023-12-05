@@ -28,7 +28,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Singleton, matchersLifetime: ServiceLifetime.Singleton);
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
 			var mapper = services.GetRequiredService<IMapper>();
@@ -54,13 +54,15 @@ namespace NeatMapper.Tests.DependencyInjection {
 				Assert.AreSame(matcher, matcher2);
 				Assert.AreSame(mapper, mapper2);
 			}
+
+			services.Dispose();
 		}
 
 		[TestMethod]
 		public void ShouldRespectLifetime_Scoped() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Scoped, matchersLifetime: ServiceLifetime.Scoped);
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			// Not throwing?
 			//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IMatcher>());
@@ -76,13 +78,15 @@ namespace NeatMapper.Tests.DependencyInjection {
 				Assert.AreSame(matcher2, matcher3);
 				Assert.AreSame(mapper2, mapper3);
 			}
+
+			services.Dispose();
 		}
 
 		[TestMethod]
 		public void ShouldRespectLifetime_Transient() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Transient, matchersLifetime: ServiceLifetime.Transient);
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var matcher = services.GetRequiredService<IMatcher>();
 			var mapper = services.GetRequiredService<IMapper>();
@@ -108,6 +112,8 @@ namespace NeatMapper.Tests.DependencyInjection {
 				Assert.AreNotSame(matcher, matcher2);
 				Assert.AreNotSame(mapper, mapper2);
 			}
+
+			services.Dispose();
 		}
 
 		[TestMethod]
@@ -117,11 +123,13 @@ namespace NeatMapper.Tests.DependencyInjection {
 			serviceCollection.Configure<CustomMapsOptions>(o => {
 				o.TypesToScan.Add(typeof(Maps));
 			});
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var mapper = services.GetRequiredService<IMapper>();
 			mapper.Map<string, int>("AAA");
 			mapper.Map<IEnumerable<string>, List<int>>(new[] { "AAA" });
+
+			services.Dispose();
 		}
 
 		[TestMethod]
@@ -134,11 +142,13 @@ namespace NeatMapper.Tests.DependencyInjection {
 			serviceCollection.Configure<CustomMergeAdditionalMapsOptions>(o => {
 				o.AddMap<string, float>((s, d, _) => s?.Length ?? 0);
 			});
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var mapper = services.GetRequiredService<IMapper>();
 			mapper.Map<string, int>("AAA");
 			mapper.Map<string, float>("BBB", 42f);
+
+			services.Dispose();
 		}
 
 		[TestMethod]
@@ -148,7 +158,7 @@ namespace NeatMapper.Tests.DependencyInjection {
 			serviceCollection.Configure<CustomMapsOptions>(o => {
 				o.TypesToScan.Add(typeof(Maps));
 			});
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			ServiceProvider services = serviceCollection.BuildServiceProvider();
 
 			var mapper = services.GetRequiredService<IMapper>();
 
@@ -181,6 +191,8 @@ namespace NeatMapper.Tests.DependencyInjection {
 				Assert.IsNotNull(Maps.Mapper);
 				Assert.AreSame(mapper, Maps.Mapper);
 			}
+
+			services.Dispose();
 		}
 	}
 }

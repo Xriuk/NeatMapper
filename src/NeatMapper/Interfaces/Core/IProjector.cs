@@ -18,7 +18,7 @@ namespace NeatMapper {
 		/// Additional options passed to the context, support depends on the projector and/or the maps, null to ignore.
 		/// </param>
 		/// <returns>
-		/// An <see cref="Expression{TDelegate}"/> with a delegate of <see cref="Func{T, TResult}"/>
+		/// An <see cref="Expression{TDelegate}"/> with a delegate of <see cref="Func{T, TResult}"/> type
 		/// which has a parameter of type <paramref name="sourceType"/> (which may be null) and a returned value of
 		/// <paramref name="destinationType"/> (which may be null).
 		/// </returns>
