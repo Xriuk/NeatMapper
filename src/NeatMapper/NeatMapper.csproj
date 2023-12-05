@@ -7,14 +7,14 @@
 	  <Version>2.1.0</Version>
     <Authors>Xriuk</Authors>
     <Title>.NEaT Mapper</Title>
-    <Description>Object mapper, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings.</Description>
+    <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
     <RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/CHANGELOG.md#200---2023-11-12</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/CHANGELOG.md#210---2023-12-05</PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <IncludeSymbols>True</IncludeSymbols>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>mapper;mapping</PackageTags>
+    <PackageTags>mapper;mapping;projector;projection</PackageTags>
     <Copyright>Xriuk</Copyright>
     <PackageIcon>icon.png</PackageIcon>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
