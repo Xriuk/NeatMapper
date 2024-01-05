@@ -3,7 +3,7 @@
 namespace NeatMapper {
 	/// <summary>
 	/// Options for <see cref="IMatcher"/> which allow to override matcher and service provider
-	/// inside the created <see cref="MatchingContext"/>
+	/// inside the created <see cref="MatchingContext"/>.
 	/// </summary>
 	public sealed class MatcherOverrideMappingOptions {
 		public MatcherOverrideMappingOptions(

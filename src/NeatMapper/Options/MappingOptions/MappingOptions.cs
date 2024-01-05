@@ -63,7 +63,9 @@ namespace NeatMapper {
 #endif
 			>> factories) {
 
-			if(factories == null)
+			// DEV: run factories, and if all options are the same do not create new object
+
+			if (factories == null)
 				throw new ArgumentNullException(nameof(factories));
 			if(factories.Count == 0)
 				return Empty;
@@ -94,6 +96,8 @@ namespace NeatMapper {
 			object
 #endif
 			>> factories) {
+
+			// DEV: run factories, and if all options are the same do not create new object
 
 			if (factories == null)
 				throw new ArgumentNullException(nameof(factories));

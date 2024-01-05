@@ -6,9 +6,9 @@ using System.Reflection;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which matches objects by using <see cref="IHierarchyMatchMap{TSource, TDestination}"/>
+	/// <see cref="IMatcher"/> which matches objects by using <see cref="IHierarchyMatchMap{TSource, TDestination}"/>.
 	/// </summary>
-	public sealed class HierarchyCustomMatcher : IMatcher, IMatcherCanMatch {
+	public sealed class HierarchyCustomMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
 		private readonly CustomMapsConfiguration _configuration;
 		private readonly IServiceProvider _serviceProvider;
 
@@ -73,54 +73,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
-				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
-
-			(Type From, Type To) types = (sourceType, destinationType);
-
-			KeyValuePair<(Type From, Type To), CustomMap> map;
-			try {
-				map = _configuration.Maps.First(m =>
-					m.Key.From.IsAssignableFrom(types.From) &&
-					m.Key.To.IsAssignableFrom(types.To));
-			}
-			catch {
-				throw new MapNotFoundException(types);
-			}
-			try {
-				return (bool)map.Value.Method.Invoke(
-					map.Value.Method.IsStatic ?
-						null :
-						(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType)),
-					new object[] { source, destination, CreateMatchingContext(mappingOptions) }
-				);
-			}
-			catch (TargetInvocationException e) {
-				if (e.InnerException is TaskCanceledException)
-					throw e.InnerException;
-				else
-					throw new MatcherException(e.InnerException, types);
-			}
-			catch (TaskCanceledException) {
-				throw;
-			}
-			catch (Exception e) {
-				throw new MatcherException(e, types);
-			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return MatchFactory(sourceType, destinationType, mappingOptions).Invoke(source, destination);
 		}
 
 		public bool CanMatch(
@@ -141,22 +94,82 @@ namespace NeatMapper {
 			return _configuration.Maps.Any(m => m.Key.From.IsAssignableFrom(sourceType) && m.Key.To.IsAssignableFrom(destinationType));
 		}
 
+		public Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, bool
+#else
+			object, object, bool
+#endif
+			> MatchFactory(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-		MatchingContext CreateMatchingContext(MappingOptions options) {
-			var overrideOptions = options?.GetOptions<MatcherOverrideMappingOptions>();
-			return new MatchingContext(
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			(Type From, Type To) types = (sourceType, destinationType);
+
+			KeyValuePair<(Type From, Type To), CustomMap> map;
+			try {
+				map = _configuration.Maps.First(m =>
+					m.Key.From.IsAssignableFrom(types.From) &&
+					m.Key.To.IsAssignableFrom(types.To));
+			}
+			catch {
+				throw new MapNotFoundException(types);
+			}
+
+			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
+			var parameters = new object[] { null, null, new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
 				overrideOptions?.Matcher ?? this,
-				options ?? MappingOptions.Empty
-			);
-		}
+				mappingOptions ?? MappingOptions.Empty
+			) };
+			var instance = map.Value.Method.IsStatic ?
+				null :
+				(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType));
+
+			return (source, destination) => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+				parameters[0] = source;
+				parameters[1] = destination;
+				try {
+					return (bool)map.Value.Method.Invoke(instance, parameters);
+				}
+				catch (TargetInvocationException e) {
+					if (e.InnerException is TaskCanceledException)
+						throw e.InnerException;
+					else
+						throw new MatcherException(e.InnerException, types);
+				}
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch (TaskCanceledException) {
+					throw;
+				}
+				catch (Exception e) {
+					throw new MatcherException(e, types);
+				}
+			};
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
 	}
 }

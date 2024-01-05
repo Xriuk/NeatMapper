@@ -5,7 +5,83 @@ using System.Collections.Generic;
 namespace NeatMapper {
 	public static class MapperExtensions {
 		#region NewMap
-		#region Runtime
+		#region Runtime destination
+		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/summary"/>
+		/// <param name="source">
+		/// Object to map, CANNOT be null as the source type will be retrieved from it at runtime,
+		/// which will be used to retrieve the available maps.
+		/// </param>
+		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/param[@name='destinationType']"/>
+		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/returns"/>
+		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/exception"/>
+		public static
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			Map(this IMapper mapper,
+			object source,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return mapper.Map(source, source.GetType(), destinationType, mappingOptions);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="Map(IMapper, object, Type, MappingOptions)"/>
+		public static
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			Map(this IMapper mapper,
+			object source,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return mapper.Map(source, source.GetType(), destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+		#endregion
+
+		#region Runtime source and destination
 		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -76,6 +152,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(mapper));
 			if (source == null)
 				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
 			return (TDestination)mapper.Map(source, source.GetType(), typeof(TDestination), mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -195,7 +272,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region MergeMap
-		#region Runtime
+		#region Runtime source and destination
 		/// <inheritdoc cref="IMapper.Map(object, Type, object, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -393,9 +470,15 @@ namespace NeatMapper {
 
 			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
 				m?.RemoveNotMatchedDestinationElements,
-				(s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
-					(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
-					matcher((TSourceElement)s, (TDestinationElement)d, c)));
+				(s, d, c) => {
+					if((!(s is TSourceElement) && !object.Equals(s, default(TSourceElement))) ||
+						(!(d is TDestinationElement) && !object.Equals(d, default(TDestinationElement)))) {
+
+						throw new MapNotFoundException((typeof(TSourceElement), typeof(TDestinationElement)));
+					}
+
+					return matcher((TSourceElement)s, (TDestinationElement)d, c);
+			}));
 
 			return mapper.Map(
 				source,
@@ -441,6 +524,7 @@ namespace NeatMapper {
 		}
 		#endregion
 		#endregion
+
 
 		#region CanMapNew
 		#region Runtime
@@ -651,6 +735,293 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+		#endregion
+
+
+		#region MapNewFactory
+		#region Runtime
+		/// <summary>
+		/// Creates a factory which can be used to map objects to new ones, will check if the given mapper supports
+		/// <see cref="IMapperFactory"/> first otherwise will return
+		/// <see cref="IMapper.Map(object, Type, Type, MappingOptions)"/> wrapped in a delegate.
+		/// </summary>
+		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="MappingContext"/>.</remarks>
+		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?
+#else
+			object, object
+#endif
+			> MapNewFactory(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Check if the mapper implements IMapperFactory
+			if (mapper is IMapperFactory mapperFactory)
+				return mapperFactory.MapNewFactory(sourceType, destinationType, mappingOptions);
+
+			// Check if the mapper can map the types (we don't do it via the extension method above because
+			// it may require actually mapping the two types if the interface is not implemented,
+			// and as the returned factory may still throw MapNotFoundException we are still compliant)
+			if (mapper is IMapperCanMap mapperCanMap) {
+				try {
+					if(!mapperCanMap.CanMapNew(sourceType, destinationType))
+						throw new MapNotFoundException((sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch { }
+			}
+
+			// Return the default map wrapped
+			return source => mapper.Map(source, sourceType, destinationType, mappingOptions);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+
+		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?
+#else
+			object, object
+#endif
+			> MapNewFactory(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.MapNewFactory(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)" path="/summary"/>
+		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)" path="/remarks"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <returns>
+		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into new objects
+		/// of type <typeparamref name="TDestination"/>.<br/>
+		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// </returns>
+		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/exception"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?
+#else
+			TSource, TDestination
+#endif
+			> MapNewFactory<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			var factory = mapper.MapNewFactory(typeof(TSource), typeof(TDestination), mappingOptions);
+
+			return source => (TDestination)factory.Invoke(source);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapNewFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?
+#else
+			TSource, TDestination
+#endif
+			> MapNewFactory<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.MapNewFactory<TSource, TDestination>(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+		#endregion
+
+		#region MapMergeFactory
+		#region Runtime
+		/// <summary>
+		/// Creates a factory which can be used to map objects to existing ones, will check if the given mapper supports
+		/// <see cref="IMapperFactory"/> first otherwise will return
+		/// <see cref="IMapper.Map(object, Type, object, Type, MappingOptions)"/> wrapped in a delegate.
+		/// </summary>
+		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="MappingContext"/>.</remarks>
+		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, object?
+#else
+			object, object, object
+#endif
+			> MapMergeFactory(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Check if the mapper implements IMapperFactory
+			if (mapper is IMapperFactory mapperFactory)
+				return mapperFactory.MapMergeFactory(sourceType, destinationType, mappingOptions);
+
+			// Check if the mapper can map the types (we don't do it via the extension method above because
+			// it may require actually mapping the two types if the interface is not implemented,
+			// and as the returned factory may still throw MapNotFoundException we are still compliant)
+			if (mapper is IMapperCanMap mapperCanMap) {
+				try {
+					if (!mapperCanMap.CanMapMerge(sourceType, destinationType))
+						throw new MapNotFoundException((sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch { }
+			}
+
+			// Return the default map wrapped
+			return (source, destination) => mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+
+		/// <inheritdoc cref="MapMergeFactory(IMapper, Type, Type, MappingOptions)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, object?
+#else
+			object, object, object
+#endif
+			> MapMergeFactory(this IMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.MapMergeFactory(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MapMergeFactory(IMapper, Type, Type, MappingOptions)" path="/summary"/>
+		/// <inheritdoc cref="MapMergeFactory(IMapper, Type, Type, MappingOptions)" path="/remarks"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <returns>
+		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into existing objects
+		/// of type <typeparamref name="TDestination"/>.<br/>
+		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// </returns>
+		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/exception"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, TDestination?
+#else
+			TSource, TDestination, TDestination
+#endif
+			> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			var factory = mapper.MapMergeFactory(typeof(TSource), typeof(TDestination), mappingOptions);
+
+			return (source, destination) => (TDestination)factory.Invoke(source, destination);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapMergeFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, TDestination?
+#else
+			TSource, TDestination, TDestination
+#endif
+			> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return mapper.MapMergeFactory<TSource, TDestination>(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

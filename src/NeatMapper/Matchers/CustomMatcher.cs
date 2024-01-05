@@ -1,16 +1,26 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
+﻿using Microsoft.Extensions.Options;
+using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which matches objects by using <see cref="IMatchMap{TSource, TDestination}"/>
+	/// <see cref="IMatcher"/> which matches objects by using <see cref="IMatchMap{TSource, TDestination}"/>.
 	/// </summary>
-	public sealed class CustomMatcher : IMatcher, IMatcherCanMatch {
+	public sealed class CustomMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
 		readonly CustomMapsConfiguration _configuration;
 		readonly IServiceProvider _serviceProvider;
 
+		/// <summary>
+		/// Creates a new instance of <see cref="CustomMatcher"/>.<br/>
+		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
+		/// should be specified.
+		/// </summary>
+		/// <param name="mapsOptions">Options to retrieve user-defined maps for the matcher, null to ignore.</param>
+		/// <param name="additionalMapsOptions">Additional user-defined maps for the matcher, null to ignore.</param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to the maps inside <see cref="MatchingContext"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during matching with <see cref="MatcherOverrideMappingOptions"/>.
+		/// </param>
 		public CustomMatcher(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
@@ -71,32 +81,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
-				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
-
-			(Type From, Type To) types = (sourceType, destinationType);
-
-			var comparer = _configuration.GetMap(types);
-			try {
-				return (bool)comparer.Invoke(new object[] { source, destination, CreateMatchingContext(mappingOptions) });
-			}
-			catch (MappingException e) {
-				throw new MatcherException(e.InnerException, types);
-			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return MatchFactory(sourceType, destinationType, mappingOptions).Invoke(source, destination);
 		}
 
 		public bool CanMatch(
@@ -124,22 +109,58 @@ namespace NeatMapper {
 			}
 		}
 
+		public Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, bool
+#else
+			object, object, bool
+#endif
+			> MatchFactory(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-		MatchingContext CreateMatchingContext(MappingOptions options) {
-			var overrideOptions = options?.GetOptions<MatcherOverrideMappingOptions>();
-			return new MatchingContext (
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+			
+			(Type From, Type To) types = (sourceType, destinationType);
+
+			var comparer = _configuration.GetMap(types);
+			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
+			var parameters = new object[] { null, null, new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
 				overrideOptions?.Matcher ?? this,
-				options ?? MappingOptions.Empty
-			);
-		}
+				mappingOptions ?? MappingOptions.Empty
+			) };
+
+			return (source, destination) => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+				parameters[0] = source;
+				parameters[1] = destination;
+				try {
+					return (bool)comparer.Invoke(parameters);
+				}
+				catch (MappingException e) {
+					throw new MatcherException(e.InnerException, types);
+				}
+			};
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
 	}
 }

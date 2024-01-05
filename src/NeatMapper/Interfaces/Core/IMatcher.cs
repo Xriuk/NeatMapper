@@ -13,7 +13,7 @@ namespace NeatMapper {
 		/// <param name="destination">Object to be compared to, may be null.</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps.</param>
 		/// <param name="mappingOptions">
-		/// Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore.
+		/// Additional options passed to the context, support depends on the matcher and/or the maps, null to ignore.
 		/// </param>
 		/// <returns><see langword="true"/> if the two objects match.</returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>

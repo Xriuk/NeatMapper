@@ -3,7 +3,7 @@
 namespace NeatMapper {
 	/// <summary>
 	/// Options for <see cref="IProjector"/> which allow to override projector and service provider
-	/// inside the created <see cref="ProjectionContext"/>
+	/// inside the created <see cref="ProjectionContext"/>.
 	/// </summary>
 	public sealed class ProjectorOverrideMappingOptions {
 		public ProjectorOverrideMappingOptions(

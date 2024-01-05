@@ -2,7 +2,7 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Contains informations about the current nested mapping operation
+	/// Contains informations about the current nested mapping operation.
 	/// </summary>
 	public sealed class NestedMappingContext {
 		public NestedMappingContext(IMapper parentMapper,
@@ -19,12 +19,13 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Mapper which initiated the current nested mapping
+		/// Mapper which initiated the current nested mapping.
 		/// </summary>
 		public IMapper ParentMapper { get; }
 
 		/// <summary>
-		/// <see cref="NestedMappingContext"/> of the parent mapper, if it was part of another nested mapping operation too
+		/// <see cref="NestedMappingContext"/> of the parent mapper, if it was part of another
+		/// nested mapping operation too.
 		/// </summary>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

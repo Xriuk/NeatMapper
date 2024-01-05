@@ -3,7 +3,7 @@
 namespace NeatMapper {
 	/// <summary>
 	/// Options for <see cref="IAsyncMapper"/> which allow to override mapper and service provider
-	/// inside the created <see cref="AsyncMappingContext"/>
+	/// inside the created <see cref="AsyncMappingContext"/>.
 	/// </summary>
 	public sealed class AsyncMapperOverrideMappingOptions {
 		public AsyncMapperOverrideMappingOptions(

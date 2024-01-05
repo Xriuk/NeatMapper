@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Collections;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>
+	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>.<br/>
+	/// Supports both merge and new maps.
 	/// </summary>
-	public sealed class MergeMapper : CustomMapper, IMapperCanMap {
+	public sealed class MergeMapper : CustomMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
 		/// Creates a new instance of <see cref="MergeMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -58,6 +58,60 @@ namespace NeatMapper {
 				),
 				serviceProvider) {}
 
+
+		private Func<object, object> CreateNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, bool isRealFactory) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Forward new map to merge by creating a destination
+			if (!ObjectFactory.CanCreate(destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			var mergeFactory = CreateMergeFactory(sourceType, destinationType, mappingOptions, isRealFactory);
+			var destinationFactory = ObjectFactory.CreateFactory(destinationType);
+			return source => {
+				object destination;
+				try {
+					destination = destinationFactory.Invoke();
+				}
+				catch (ObjectCreationException e) {
+					throw new MappingException(e, (sourceType, destinationType));
+				}
+
+				return mergeFactory.Invoke(source, destination);
+			};
+		}
+
+		private Func<object, object, object> CreateMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, bool isRealFactory) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// DEV: replace below with TryAdd (which should not alter options if nothing changes)
+			if (isRealFactory)
+				mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<FactoryContext>(_ => FactoryContext.Instance);
+
+			var map = _configuration.GetMap((sourceType, destinationType));
+			var parameters = new object[] { null, null, CreateMappingContext(mappingOptions) };
+
+			return (source, destination) => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+				parameters[0] = source;
+				parameters[1] = destination;
+				var result = map.Invoke(parameters);
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			};
+		}
+
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -86,16 +140,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			// Forward new map to merge by creating a destination
-			object destination;
-			try {
-				destination = ObjectFactory.Create(destinationType);
-			}
-			catch (ObjectCreationException) {
-				throw new MapNotFoundException((sourceType, destinationType));
-			}
-
-			return Map(source, sourceType, destination, destinationType, mappingOptions);
+			return CreateNewFactory(sourceType, destinationType, mappingOptions, false).Invoke(source);
 		}
 
 		override public
@@ -126,30 +171,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (source != null && !sourceType.IsAssignableFrom(source.GetType()))
-				throw new ArgumentException($"Object of type {source.GetType().FullName ?? source.GetType().Name} is not assignable to type {sourceType.FullName ?? sourceType.Name}", nameof(source));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-			if (destination != null && !destinationType.IsAssignableFrom(destination.GetType()))
-				throw new ArgumentException($"Object of type {destination.GetType().FullName ?? destination.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}", nameof(destination));
-
-			var result = _configuration.GetMap((sourceType, destinationType)).Invoke(new object[] { source, destination, CreateMappingContext(mappingOptions) });
-
-			// Should not happen
-			if (result != null && !destinationType.IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {destinationType.FullName ?? destinationType.Name}");
-
-			return result;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return CreateMergeFactory(sourceType, destinationType, mappingOptions, false).Invoke(source, destination);
 		}
 		#endregion
 
@@ -193,6 +215,46 @@ namespace NeatMapper {
 			catch (MapNotFoundException) {
 				return false;
 			}
+		}
+		#endregion
+
+		#region IMapperFactory methods
+		public Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?
+#else
+			object, object
+#endif
+			> MapNewFactory(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CreateNewFactory(sourceType, destinationType, mappingOptions, true);
+		}
+
+		public Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, object?
+#else
+			object, object, object
+#endif
+			> MapMergeFactory(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CreateMergeFactory(sourceType, destinationType, mappingOptions, true);
 		}
 		#endregion
 	}

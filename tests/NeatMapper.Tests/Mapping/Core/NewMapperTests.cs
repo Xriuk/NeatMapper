@@ -65,6 +65,9 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<int, string>
 #endif
 				.Map(int source, MappingContext context) {
+
+				MappingOptionsUtils.context = context;
+				MappingOptionsUtils.contexts.Add(context);
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return (source * 2).ToString();
@@ -104,6 +107,7 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			// Nested NewMap
+			public static MappingOptions productOptions;
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -114,6 +118,8 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<Product, ProductDto>
 #endif
 				.Map(Product source, MappingContext context) {
+
+				productOptions = context.MappingOptions;
 				if (source == null)
 					return null;
 				else {
@@ -134,17 +140,19 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<LimitedProduct, LimitedProductDto>
 #endif
 				.Map(LimitedProduct source, MappingContext context) {
+
 				if (source == null)
 					return null;
 				else {
 					return new LimitedProductDto {
 						Code = source.Code,
-						Categories = source.Categories?.Select((s, d) => context.Mapper.Map<int?>(s)).Where(i => i != null).Cast<int>().ToList() ?? new List<int>(),
+						Categories = source.Categories?.Select(s => context.Mapper.Map<int?>(s)).Where(i => i != null).Cast<int>().ToList() ?? new List<int>(),
 						Copies = source.Copies
 					};
 				}
 			}
 
+			public static List<MappingOptions> categoryOptions = new List<MappingOptions>();
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -155,6 +163,8 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<Category, int?>
 #endif
 			.Map(Category source, MappingContext context) {
+
+				categoryOptions.Add(context.MappingOptions);
 				return source?.Id;
 			}
 
@@ -169,8 +179,10 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<Category, CategoryDto>
 #endif
 				.Map(Category source, MappingContext context) {
+
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+
 				if (source == null)
 					return null;
 				else {
@@ -395,9 +407,23 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldMapPrimitives() {
 			Assert.IsTrue(_mapper.CanMapNew<int, string>());
 
+			MappingOptionsUtils.context = null;
 			Assert.AreEqual("4", _mapper.Map<string>(2));
+			Assert.IsNull(MappingOptionsUtils.context.MappingOptions.GetOptions<NestedMappingContext>());
 			Assert.AreEqual("-6", _mapper.Map<string>(-3));
 			Assert.AreEqual("0", _mapper.Map<string>(0));
+
+			// Factories should share the same context
+			var factory = _mapper.MapNewFactory<int, string>();
+			MappingOptionsUtils.context = null;
+			Assert.AreEqual("4", factory.Invoke(2));
+			var context1 = MappingOptionsUtils.context;
+			Assert.IsNotNull(context1);
+			MappingOptionsUtils.context = null;
+			Assert.AreEqual("-6", factory.Invoke(-3));
+			var context2 = MappingOptionsUtils.context;
+			Assert.IsNotNull(context2);
+			Assert.AreSame(context1, context2);
 		}
 
 		[TestMethod]
@@ -406,6 +432,11 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsTrue(_mapper.CanMapNew<Price, decimal>());
 
 				Assert.AreEqual(20.00m, _mapper.Map<decimal>(new Price {
+					Amount = 20.00m,
+					Currency = "EUR"
+				}));
+
+				Assert.AreEqual(20.00m, _mapper.MapNewFactory<Price, decimal>().Invoke(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}));
@@ -421,6 +452,15 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsNotNull(result);
 				Assert.AreEqual(40f, result.Amount);
 				Assert.AreEqual("EUR", result.Currency);
+
+
+				var result2 = _mapper.MapNewFactory<Price, PriceFloat>().Invoke(new Price {
+					Amount = 40.00m,
+					Currency = "EUR"
+				});
+				Assert.IsNotNull(result2);
+				Assert.AreEqual(40f, result2.Amount);
+				Assert.AreEqual("EUR", result2.Currency);
 			}
 		}
 
@@ -446,24 +486,66 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsFalse(_mapper.CanMapNew<bool, int>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(false));
+
+			TestUtils.AssertMapNotFound(() => _mapper.MapNewFactory<bool, int>());
 		}
 
 		[TestMethod]
 		public void ShouldMapNested() {
 			{ 
+				Maps.productOptions = null;
+				Maps.categoryOptions.Clear();
 				var result = _mapper.Map<Product, ProductDto>(new Product {
 					Code = "Test",
 					Categories = new List<Category> {
 						new Category {
 							Id = 2
+						},
+						new Category {
+							Id = 3
 						}
 					}
 				});
+
 				Assert.IsNotNull(result);
 				Assert.AreEqual("Test", result.Code);
 				Assert.IsNotNull(result.Categories);
-				Assert.AreEqual(1, result.Categories.Count());
-				Assert.AreEqual(2, result.Categories.Single());
+				Assert.AreEqual(2, result.Categories.Count());
+				Assert.AreEqual(2, result.Categories.First());
+				Assert.AreEqual(3, result.Categories.Last());
+
+				Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
+				// Should not use same context for nested maps
+				Assert.AreEqual(2, Maps.categoryOptions.Count);
+				Assert.AreEqual(2, Maps.categoryOptions.Distinct().Count());
+				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<NestedMappingContext>() != null));
+
+				Maps.productOptions = null;
+				Maps.categoryOptions.Clear();
+				var result2 = _mapper.MapNewFactory<Product, ProductDto>().Invoke(new Product {
+					Code = "Test",
+					Categories = new List<Category> {
+						new Category {
+							Id = 2
+						},
+						new Category {
+							Id = 3
+						}
+					}
+				});
+
+				Assert.IsNotNull(result);
+				Assert.AreEqual("Test", result.Code);
+				Assert.IsNotNull(result.Categories);
+				Assert.AreEqual(2, result.Categories.Count());
+				Assert.AreEqual(2, result.Categories.First());
+				Assert.AreEqual(3, result.Categories.Last());
+
+				Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
+				// Should use same context for nested maps
+				Assert.AreEqual(2, Maps.categoryOptions.Count);
+				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
+				Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<NestedMappingContext>());
 			}
 
 			{ 

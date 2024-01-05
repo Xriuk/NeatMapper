@@ -1,6 +1,7 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Mapping options applied to merge mappings, these will override any configuration options defined in <see cref="MergeCollectionsOptions"/>
+	/// Mapping options applied to merge mappings, these will override any configuration options defined in
+	/// <see cref="MergeCollectionsOptions"/>.
 	/// </summary>
 	public sealed class MergeCollectionsMappingOptions{
 		public MergeCollectionsMappingOptions(bool? removeNotMatchedDestinationElements = null,
@@ -31,7 +32,8 @@
 		/// <summary>
 		/// Provides (or overrides) <see cref="IMatchMap{TSource, TDestination}"/> for the outermost collection types.<br/>
 		/// You should use the type-safe extensions for <see cref="MapperExtensions"/> or <see cref="AsyncMapperExtensions"/>
-		/// instead of setting this directly.
+		/// instead of setting this directly.<br/>
+		/// The provided method should throw <see cref="MapNotFoundException"/> if the passed objects are not of expected types.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the defined <see cref="IMatchMap{TSource, TDestination}"/> (if any)</remarks>
 		public

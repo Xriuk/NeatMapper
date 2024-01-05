@@ -1,7 +1,7 @@
 ﻿namespace NeatMapper {
 	/// <summary>
 	/// Options applied to automatic asynchronous collections mapping, these will override
-	/// any configuration options defined in <see cref="AsyncCollectionMappersOptions"/>
+	/// any configuration options defined in <see cref="AsyncCollectionMappersOptions"/>.
 	/// </summary>
 	public sealed class AsyncCollectionMappersMappingOptions {
 		public AsyncCollectionMappersMappingOptions(int? maxParallelMappings = null) {

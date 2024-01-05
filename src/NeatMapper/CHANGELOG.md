@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.2.0] - Unreleased
+
+### Changed
+
+- `MappingContext` now automatically enforces `NestedMappingContext` on nested maps with `NestedMapper` and has now an additional constructor which allows to specify the parent mapper too. It also allows automatic optimization for nested maps by wrapping the nested mapper in `CachedFactoryMapper`. It also automatically forwards `FactoryContext` if present
+- `DelegateMatcher.CanMatch()` is now marked as obsolete, and will be removed in the next major version
+- `DelegateMatcher` should now throw `MapNotFoundException` when matching two incompatible types
+
+### Added
+
+- Extension methods for `IMapper` and `IAsyncMapper` which allow to new map by only specifying the runtime destination type (System.Type) while inferring the source type from the source object (which cannot be null)
+- Projectors `IQueryable`/`IEnumerable` extension methods `Project`, which create a lazy projection (by using `Select()`)
+- New optional interface `IMapperFactory` which allows to create mapping factories instead of mapping directly, to map multiple elements of two given types faster
+- Extension methods `MapNewFactory` and `MapMergeFactory` for any `IMapper` which will fallback to default `Map()` if `IMapperFactory` is not implemented
+- New options `FactoryContext` which allows to discover if a given map will be part of a factory
+- All core mappers now implement `IMapperFactory`
+- New optional interface `IMatcherFactory` which allows to create matching factories instead of matching directly, to match multiple elements of two given types faster
+- Extension method `MatchFactory` for any `IMatcher` which will fallback to default `Match()` if `IMatcherFactory` is not implemented
+- All core matchers now implement `IMatcherFactory`
+- New mapper `NestedMapper` which allows wrapping another `IMapper` and overriding `MappingOptions` before forwarding all the calls
+- New mapper `CachedFactoryMapper` which creates and caches mapping factories
+
 ## [2.1.0] - 2023-12-05
 
 ### Changed

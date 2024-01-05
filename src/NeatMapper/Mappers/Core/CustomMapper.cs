@@ -28,6 +28,7 @@ namespace NeatMapper {
 			return new MappingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
 				overrideOptions?.Mapper ?? this,
+				this,
 				options ?? MappingOptions.Empty
 			);
 		}

@@ -1,6 +1,7 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Options applied to automatic asynchronous collections mapping
+	/// Options applied to automatic asynchronous collections mapping.<br/>
+	/// Can be overridden during mapping with <see cref="AsyncCollectionMappersMappingOptions"/>.
 	/// </summary>
 	public sealed class AsyncCollectionMappersOptions {
 		public AsyncCollectionMappersOptions() { }
@@ -21,7 +22,7 @@
 		/// </para>
 		/// <para>
 		/// You can also override this option for single mappings by using
-		/// <see cref="AsyncCollectionMappersMappingOptions"/>
+		/// <see cref="AsyncCollectionMappersMappingOptions"/>.
 		/// </para>
 		/// </summary>
 		/// <remarks>Defaults to <see langword="1"/></remarks>

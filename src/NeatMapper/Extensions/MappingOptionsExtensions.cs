@@ -24,7 +24,7 @@ namespace NeatMapper {
 		#region Replace
 		/// <summary>
 		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) options of type <typeparamref name="TOptions"/> (if found) with a new option from the specified factory.
+		/// and replaces (or removes) options of type <typeparamref name="TOptions"/> (only if found) with a new option from the specified factory.
 		/// </summary>
 		/// <typeparam name="TOptions">Type of the options to replace.</typeparam>
 		/// <param name="factory">
@@ -194,7 +194,7 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) the specified option types (if found) with new options from the specified factories.
+		/// and replaces (or removes) the specified option types (only if found) with new options from the specified factories.
 		/// </summary>
 		/// <typeparam name="TOptions1">Type of the first options to replace.</typeparam>
 		/// <typeparam name="TOptions2">Type of the second options to replace.</typeparam>

@@ -49,5 +49,13 @@ namespace NeatMapper {
 		public static Type GetCollectionElementType(this Type type) {
 			return type.GetInterfaceElementType(typeof(ICollection<>));
 		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static void CheckObjectType(object obj, Type type, string argument = null) {
+			if(obj != null ? !type.IsAssignableFrom(obj.GetType()) : (type.IsValueType && Nullable.GetUnderlyingType(type) == null)) {
+				var message = (obj != null ? $"Object of type {obj.GetType().FullName ?? obj.GetType().Name}" : "null") + $" is not assignable to type {type.FullName ?? type.Name}";
+				throw argument != null ? (Exception)new ArgumentException(message) : new InvalidOperationException(message);
+			}
+		}
 	}
 }

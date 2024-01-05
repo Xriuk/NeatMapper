@@ -120,7 +120,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
+			// Check if the matcher implements IMatcherCanMap, if it throws it means that the map can be checked only when mapping
 			if (matcher is IMatcherCanMatch matcherCanMatch)
 				return matcherCanMatch.CanMatch(sourceType, destinationType, mappingOptions);
 
@@ -194,6 +194,144 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return matcher.CanMatch(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+		#endregion
+
+		#region MatchFactory
+		#region Runtime
+		/// <summary>
+		/// Creates a factory which can be used to check if two objects are equivalent,
+		/// will check if the given matcher supports <see cref="IMatcherFactory"/> first otherwise will return
+		/// <see cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/> wrapped in a delegate.
+		/// </summary>
+		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="MappingContext"/>.</remarks>
+		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, bool
+#else
+			object, object, bool
+#endif
+			> MatchFactory(this IMatcher matcher,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (matcher == null)
+				throw new ArgumentNullException(nameof(matcher));
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Check if the matcher implements IMatcherFactory
+			if (matcher is IMatcherFactory matcherFactory)
+				return matcherFactory.MatchFactory(sourceType, destinationType, mappingOptions);
+
+			// Check if the matcher can match the types (we don't do it via the extension method above because
+			// it may require actually mapping the two types if the interface is not implemented,
+			// and as the returned factory may still throw MapNotFoundException we are still compliant)
+			if (matcher is IMatcherCanMatch matcherCanMatch) {
+				try {
+					if (!matcherCanMatch.CanMatch(sourceType, destinationType))
+						throw new MapNotFoundException((sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch { }
+			}
+
+			// Return the default match wrapped
+			return (source, destination) => matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+
+		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, bool
+#else
+			object, object, bool
+#endif
+			> MatchFactory(this IMatcher matcher,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return matcher.MatchFactory(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions)" path="/summary"/>
+		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions)" path="/remarks"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/returns"/>
+		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/exception"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, bool
+#else
+			TSource, TDestination, bool
+#endif
+			> MatchFactory<TSource, TDestination>(this IMatcher matcher,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			var factory = matcher.MatchFactory(typeof(TSource), typeof(TDestination), mappingOptions);
+			return (source, destination) => factory.Invoke(source, destination);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MatchFactory{TSource, TDestination}(IMatcher, MappingOptions)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, bool
+#else
+			TSource, TDestination, bool
+#endif
+			> MatchFactory<TSource, TDestination>(this IMatcher matcher,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return matcher.MatchFactory<TSource, TDestination>(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

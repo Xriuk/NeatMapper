@@ -19,6 +19,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.IsTrue(_mapper.CanMapNew<int[], string[]>());
 
 				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.contexts.Clear();
 				MappingOptionsUtils.mergeOptions = null;
 				var strings = _mapper.Map<string[]>(new[] { 2, -3, 0 });
 
@@ -29,6 +30,9 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual("0", strings[2]);
 
 				Assert.IsNull(MappingOptionsUtils.options);
+				// Elements should share the same context
+				Assert.AreEqual(3, MappingOptionsUtils.contexts.Count);
+				Assert.AreEqual(1, MappingOptionsUtils.contexts.Distinct().Count());
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
 

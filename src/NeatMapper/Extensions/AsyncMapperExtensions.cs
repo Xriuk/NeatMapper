@@ -7,7 +7,114 @@ using System.Threading.Tasks;
 namespace NeatMapper {
 	public static class AsyncMapperExtensions {
 		#region AsyncNewMap
-		#region Runtime
+		#region Runtime destination
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <param name="source">
+		/// Object to map, CANNOT be null as the source type will be retrieved from it at runtime,
+		/// which will be used to retrieve the available maps.
+		/// </param>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/returns"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		public static Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> MapAsync(this IAsyncMapper mapper,
+			object source,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return mapper.MapAsync(source, source.GetType(), destinationType, mappingOptions, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsync(IAsyncMapper, object, Type, MappingOptions, CancellationToken)"/>
+		public static Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> MapAsync(this IAsyncMapper mapper,
+			object source,
+			Type destinationType,
+			CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return mapper.MapAsync(source, source.GetType(), destinationType, null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsync(IAsyncMapper, object, Type, MappingOptions, CancellationToken)"/>
+		public static Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> MapAsync(this IAsyncMapper mapper,
+			object source,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return mapper.MapAsync(source, source.GetType(), destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+		#endregion
+
+		#region Runtime source and destination
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -290,7 +397,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region AsyncMergeMap
-		#region Runtime
+		#region Runtime source and destination
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -556,9 +663,15 @@ namespace NeatMapper {
 
 			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
 				m?.RemoveNotMatchedDestinationElements,
-				(s, d, c) => (s is TSourceElement || object.Equals(s, default(TSourceElement))) &&
-					(d is TDestinationElement || object.Equals(d, default(TDestinationElement))) &&
-					matcher((TSourceElement)s, (TDestinationElement)d, c)));
+				(s, d, c) => {
+					if ((!(s is TSourceElement) && !object.Equals(s, default(TSourceElement))) ||
+						(!(d is TDestinationElement) && !object.Equals(d, default(TDestinationElement)))) {
+
+						throw new MapNotFoundException((typeof(TSourceElement), typeof(TDestinationElement)));
+					}
+
+					return matcher((TSourceElement)s, (TDestinationElement)d, c);
+				}));
 
 			return TaskUtils.AwaitTask<ICollection<TDestinationElement>>(mapper.MapAsync(
 				source,
