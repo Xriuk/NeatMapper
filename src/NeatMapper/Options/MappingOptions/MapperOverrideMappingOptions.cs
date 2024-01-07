@@ -26,7 +26,7 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Mapper to be used for nested maps, null to use the one provided by the mapper
+		/// Mapper to be used for nested maps, null to use the one provided by the mapper.
 		/// </summary>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -41,7 +41,7 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Service provider to use for the maps, null to use the one provided by the mapper
+		/// Service provider to use for the maps, null to use the one provided by the mapper.
 		/// </summary>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

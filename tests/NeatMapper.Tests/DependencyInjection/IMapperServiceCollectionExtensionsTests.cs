@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace NeatMapper.Tests.DependencyInjection {
 	[TestClass]
@@ -13,12 +14,16 @@ namespace NeatMapper.Tests.DependencyInjection {
 			public static IMapper Mapper;
 
 			int INewMap<string, int>.Map(string source, MappingContext context) {
-				Mapper = context.Mapper;
+				Mapper = (IMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
+				if(context.MappingOptions.GetOptions<FactoryContext>() != null)
+					Mapper = (IMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return source?.Length ?? 0;
 			}
 
 			float IMergeMap<string, float>.Map(string source, float destination, MappingContext context) {
-				Mapper = context.Mapper;
+				Mapper = (IMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
+				if (context.MappingOptions.GetOptions<FactoryContext>() != null)
+					Mapper = (IMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return source?.Length ?? 0;
 			}
 		}

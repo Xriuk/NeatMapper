@@ -26,13 +26,13 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="elementsMapper">
 		/// <see cref="IMapper"/> to use to map collection elements.<br/>
-		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.Mapper"/>.
 		/// </param>
 		/// <param name="elementsMatcher">
 		/// <see cref="IMatcher"/> used to match elements between collections to merge them,
 		/// if null the elements won't be matched (this will effectively be the same as using
 		/// <see cref="NewCollectionMapper"/>).<br/>
-		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions.Matcher"/>.
 		/// </param>
 		/// <param name="mergeCollectionsOptions">
 		/// Additional merging options to apply during mapping, null to use default.<br/>
@@ -41,7 +41,7 @@ namespace NeatMapper {
 		/// <param name="serviceProvider">
 		/// Service provider to be passed to <see cref="MergeCollectionsMappingOptions.Matcher"/>, 
 		/// null to pass an empty service provider.<br/>
-		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.ServiceProvider"/>.
 		/// </param>
 		public MergeCollectionMapper(
 			IMapper elementsMapper,
@@ -117,8 +117,13 @@ namespace NeatMapper {
 					newElementsFactory = null;
 				}
 				Func<object, object, object> mergeElementsFactory;
+				Func<object> destinationFactory = null;
 				try {
 					mergeElementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
+					try { 
+						destinationFactory = ObjectFactory.CreateFactory(elementTypes.To);
+					}
+					catch (ObjectCreationException) { }
 				}
 				catch (MapNotFoundException) {
 					// At least one map is required
@@ -144,8 +149,9 @@ namespace NeatMapper {
 				}
 				catch (ObjectCreationException) {
 					collectionFactory = null;
+					actualCollectionType = null;
 				}
-				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(types.To);
+				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To);
 
 				var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
 					?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
@@ -158,12 +164,10 @@ namespace NeatMapper {
 						// If we have to create the destination collection we know that we can always map to it
 						// Otherwise we must check that first
 						if (destination == null) {
-							try {
-								destination = ObjectFactory.CreateCollection(types.To);
-							}
-							catch (ObjectCreationException) {
+							if(collectionFactory == null)
 								throw new MapNotFoundException(types);
-							}
+
+							destination = collectionFactory.Invoke();
 						}
 						else {
 							// Check if the collection is not readonly recursively, if it throws it means that
@@ -185,8 +189,6 @@ namespace NeatMapper {
 
 							var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
 								.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-							// Any element that is not mappable will fail on the first mapping
 
 							var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 							var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
@@ -244,7 +246,6 @@ namespace NeatMapper {
 										// Try new map
 										if (newElementsFactory == null)
 											throw new MapNotFoundException(types);
-
 										try { 
 											elementsToRemove.Add(matchingDestinationElement);
 											elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
@@ -266,19 +267,10 @@ namespace NeatMapper {
 										}
 
 										// Try merge map
-										if (mergeElementsFactory == null)
+										if (mergeElementsFactory == null || destinationFactory == null)
 											throw new MapNotFoundException(types);
-
-										object destinationInstance;
 										try {
-											destinationInstance = ObjectFactory.Create(elementTypes.To);
-										}
-										catch (ObjectCreationException) {
-											throw new MapNotFoundException(types);
-										}
-
-										try {
-											elementsToAdd.Add(mergeElementsFactory.Invoke(sourceElement, destinationInstance));
+											elementsToAdd.Add(mergeElementsFactory.Invoke(sourceElement, destinationFactory.Invoke()));
 										}
 										catch (MapNotFoundException) {
 											throw new MapNotFoundException(types);

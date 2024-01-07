@@ -785,7 +785,7 @@ namespace NeatMapper {
 			// and as the returned factory may still throw MapNotFoundException we are still compliant)
 			if (mapper is IMapperCanMap mapperCanMap) {
 				try {
-					if(!mapperCanMap.CanMapNew(sourceType, destinationType))
+					if(!mapperCanMap.CanMapNew(sourceType, destinationType, mappingOptions))
 						throw new MapNotFoundException((sourceType, destinationType));
 				}
 				catch (MapNotFoundException) {
@@ -801,7 +801,6 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
-
 
 		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)"/>
 		public static Func<
@@ -928,7 +927,7 @@ namespace NeatMapper {
 			// and as the returned factory may still throw MapNotFoundException we are still compliant)
 			if (mapper is IMapperCanMap mapperCanMap) {
 				try {
-					if (!mapperCanMap.CanMapMerge(sourceType, destinationType))
+					if (!mapperCanMap.CanMapMerge(sourceType, destinationType, mappingOptions))
 						throw new MapNotFoundException((sourceType, destinationType));
 				}
 				catch (MapNotFoundException) {

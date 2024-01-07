@@ -79,6 +79,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncMergeMap<int, string>
 #endif
 				.MapAsync(int source, string destination, AsyncMappingContext context) {
+
+				MappingOptionsUtils.asyncContext = context;
+				MappingOptionsUtils.asyncContexts.Add(context);
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return Task.FromResult((source * 2).ToString());
@@ -116,7 +119,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 				return Task.FromResult(destination);
 			}
 
-			// Nested NewMap
+			// Nested NewMap (fallbacks to MergeMap)
+			public static MappingOptions productOptions;
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -127,11 +131,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncMergeMap<Product, ProductDto>
 #endif
 				.MapAsync(Product source, ProductDto destination, AsyncMappingContext context) {
+
+				productOptions = context.MappingOptions;
 				if (source != null) {
 					if (destination == null)
 						destination = new ProductDto();
 					destination.Code = source.Code;
-					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<int?>(s));
+					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<int?>(s)).ToArray();
 					if(tasks != null)
 						await Task.WhenAll(tasks);
 					destination.Categories = tasks?.Select(t => t.Result).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
@@ -153,7 +159,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 					if (destination == null)
 						destination = new LimitedProductDto();
 					destination.Code = source.Code;
-					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<int?>(s));
+					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<int?>(s)).ToArray();
 					if(tasks != null)
 						await Task.WhenAll(tasks);
 					destination.Categories = tasks?.Select(t => t.Result).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
@@ -162,6 +168,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				return destination;
 			}
 
+			public static List<MappingOptions> categoryOptions = new List<MappingOptions>();
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -172,6 +179,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncMergeMap<Category, int?>
 #endif
 				.MapAsync(Category source, int? destination, AsyncMappingContext context) {
+
+				categoryOptions.Add(context.MappingOptions);
 				return Task.FromResult(source?.Id ?? destination);
 			}
 
@@ -518,6 +527,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.AreEqual("4", await _mapper.MapAsync(2, ""));
 			Assert.AreEqual("-6", await _mapper.MapAsync(-3, ""));
 			Assert.AreEqual("0", await _mapper.MapAsync(0, ""));
+
+			// Factories should share the same context
+			var factory = _mapper.MapAsyncMergeFactory<int, string>();
+			MappingOptionsUtils.context = null;
+			Assert.AreEqual("4", await factory.Invoke(2, ""));
+			var context1 = MappingOptionsUtils.asyncContext;
+			Assert.IsNotNull(context1);
+			MappingOptionsUtils.context = null;
+			Assert.AreEqual("-6", await factory.Invoke(-3, ""));
+			var context2 = MappingOptionsUtils.asyncContext;
+			Assert.IsNotNull(context2);
+			Assert.AreSame(context1, context2);
 		}
 
 		[TestMethod]
@@ -526,6 +547,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.IsTrue(await _mapper.CanMapAsyncMerge<Price, decimal>());
 
 				Assert.AreEqual(20.00m, await _mapper.MapAsync(new Price {
+					Amount = 20.00m,
+					Currency = "EUR"
+				}, 21m));
+
+				Assert.AreEqual(20.00m, await _mapper.MapAsyncMergeFactory<Price, decimal>().Invoke(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}, 21m));
@@ -542,6 +568,14 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.IsNotNull(result);
 				Assert.AreEqual(40f, result.Amount);
 				Assert.AreEqual("EUR", result.Currency);
+
+				var result2 = await _mapper.MapAsyncMergeFactory<Price, PriceFloat>().Invoke(new Price {
+					Amount = 40.00m,
+					Currency = "EUR"
+				}, null);
+				Assert.IsNotNull(result2);
+				Assert.AreEqual(40f, result2.Amount);
+				Assert.AreEqual("EUR", result2.Currency);
 			}
 
 			// Not null destination
@@ -555,6 +589,16 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreSame(destination, result);
 				Assert.AreEqual(40f, result.Amount);
 				Assert.AreEqual("EUR", result.Currency);
+
+				var destination2 = new PriceFloat();
+				var result2 = await _mapper.MapAsyncMergeFactory<Price, PriceFloat>().Invoke(new Price {
+					Amount = 40.00m,
+					Currency = "EUR"
+				}, destination2);
+				Assert.IsNotNull(result2);
+				Assert.AreSame(destination2, result2);
+				Assert.AreEqual(40f, result2.Amount);
+				Assert.AreEqual("EUR", result2.Currency);
 			}
 		}
 
@@ -676,12 +720,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldMapNested() {
 			{
+				// Normal
+				Maps.productOptions = null;
+				Maps.categoryOptions.Clear();
 				var destination = new ProductDto();
 				var result = await _mapper.MapAsync(new Product {
 					Code = "Test",
 					Categories = new List<Category> {
 						new Category {
 							Id = 2
+						},
+						new Category {
+							Id = 3
 						}
 					}
 				}, destination);
@@ -689,8 +739,45 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreSame(destination, result);
 				Assert.AreEqual("Test", result.Code);
 				Assert.IsNotNull(result.Categories);
-				Assert.AreEqual(1, result.Categories.Count());
-				Assert.AreEqual(2, result.Categories.Single());
+				Assert.AreEqual(2, result.Categories.Count());
+				Assert.AreEqual(2, result.Categories.First());
+				Assert.AreEqual(3, result.Categories.Last());
+
+				Assert.IsNull(Maps.productOptions.GetOptions<AsyncNestedMappingContext>());
+				// Should not use same context for nested maps
+				Assert.AreEqual(2, Maps.categoryOptions.Count);
+				Assert.AreEqual(2, Maps.categoryOptions.Distinct().Count());
+				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<AsyncNestedMappingContext>() != null));
+
+
+				// Factory
+				Maps.productOptions = null;
+				Maps.categoryOptions.Clear();
+				var destination2 = new ProductDto();
+				var result2 = await _mapper.MapAsyncMergeFactory<Product, ProductDto>().Invoke(new Product {
+					Code = "Test",
+					Categories = new List<Category> {
+						new Category {
+							Id = 2
+						},
+						new Category {
+							Id = 3
+						}
+					}
+				}, destination2);
+				Assert.IsNotNull(result2);
+				Assert.AreSame(destination2, result2);
+				Assert.AreEqual("Test", result2.Code);
+				Assert.IsNotNull(result2.Categories);
+				Assert.AreEqual(2, result2.Categories.Count());
+				Assert.AreEqual(2, result2.Categories.First());
+				Assert.AreEqual(3, result2.Categories.Last());
+
+				Assert.IsNull(Maps.productOptions.GetOptions<AsyncNestedMappingContext>());
+				// Should use same context for nested maps
+				Assert.AreEqual(2, Maps.categoryOptions.Count);
+				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
+				Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<AsyncNestedMappingContext>());
 			}
 
 			{

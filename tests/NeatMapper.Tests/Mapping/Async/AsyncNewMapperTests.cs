@@ -73,6 +73,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncNewMap<int, string>
 #endif
 				.MapAsync(int source, AsyncMappingContext context) {
+
+				MappingOptionsUtils.asyncContext = context;
+				MappingOptionsUtils.asyncContexts.Add(context);
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return Task.FromResult((source * 2).ToString());
@@ -112,6 +115,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			// Nested NewMap
+			public static MappingOptions productOptions;
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -122,10 +126,12 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncNewMap<Product, ProductDto>
 #endif
 				.MapAsync(Product source, AsyncMappingContext context) {
+
+				productOptions = context.MappingOptions;
 				if (source == null)
 					return null;
 				else {
-					var tasks = source.Categories?.Select(c => context.Mapper.MapAsync<int?>(c));
+					var tasks = source.Categories?.Select(c => context.Mapper.MapAsync<int?>(c)).ToArray();
 					if(tasks != null)
 						await Task.WhenAll(tasks);
 					return new ProductDto {
@@ -148,7 +154,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				if (source == null)
 					return null;
 				else {
-					var tasks = source.Categories?.Select((s, d) => context.Mapper.MapAsync<int?>(s));
+					var tasks = source.Categories?.Select((s, d) => context.Mapper.MapAsync<int?>(s)).ToArray();
 					if(tasks != null)
 						await Task.WhenAll(tasks);
 					return new LimitedProductDto {
@@ -159,6 +165,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				}
 			}
 
+			public static List<MappingOptions> categoryOptions = new List<MappingOptions>();
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -169,6 +176,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncNewMap<Category, int?>
 #endif
 			.MapAsync(Category source, AsyncMappingContext context) {
+
+				categoryOptions.Add(context.MappingOptions);
 				return Task.FromResult(source?.Id);
 			}
 
@@ -475,6 +484,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.AreEqual("4", await _mapper.MapAsync<string>(2));
 			Assert.AreEqual("-6", await _mapper.MapAsync<string>(-3));
 			Assert.AreEqual("0", await _mapper.MapAsync<string>(0));
+
+			// Factories should share the same context
+			var factory = _mapper.MapAsyncNewFactory<int, string>();
+			MappingOptionsUtils.asyncContext = null;
+			Assert.AreEqual("4", await factory.Invoke(2));
+			var context1 = MappingOptionsUtils.asyncContext;
+			Assert.IsNotNull(context1);
+			MappingOptionsUtils.asyncContext = null;
+			Assert.AreEqual("-6", await factory.Invoke(-3));
+			var context2 = MappingOptionsUtils.asyncContext;
+			Assert.IsNotNull(context2);
+			Assert.AreSame(context1, context2);
 		}
 
 		[TestMethod]
@@ -483,6 +504,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.IsTrue(await _mapper.CanMapAsyncNew<Price, decimal>());
 
 				Assert.AreEqual(20.00m, await _mapper.MapAsync<decimal>(new Price {
+					Amount = 20.00m,
+					Currency = "EUR"
+				}));
+
+				Assert.AreEqual(20.00m, await _mapper.MapAsyncNewFactory<Price, decimal>().Invoke(new Price {
 					Amount = 20.00m,
 					Currency = "EUR"
 				}));
@@ -498,6 +524,14 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.IsNotNull(result);
 				Assert.AreEqual(40f, result.Amount);
 				Assert.AreEqual("EUR", result.Currency);
+
+				var result2 = await _mapper.MapAsyncNewFactory<Price, PriceFloat>().Invoke(new Price {
+					Amount = 40.00m,
+					Currency = "EUR"
+				});
+				Assert.IsNotNull(result2);
+				Assert.AreEqual(40f, result2.Amount);
+				Assert.AreEqual("EUR", result2.Currency);
 			}
 		}
 
@@ -527,20 +561,61 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapNested() {
-			{ 
+			{
+				// Normal
+				Maps.productOptions = null;
+				Maps.categoryOptions.Clear();
 				var result = await _mapper.MapAsync<Product, ProductDto>(new Product {
 					Code = "Test",
 					Categories = new List<Category> {
 						new Category {
 							Id = 2
+						},
+						new Category {
+							Id = 3
 						}
 					}
 				});
 				Assert.IsNotNull(result);
 				Assert.AreEqual("Test", result.Code);
 				Assert.IsNotNull(result.Categories);
-				Assert.AreEqual(1, result.Categories.Count());
-				Assert.AreEqual(2, result.Categories.Single());
+				Assert.AreEqual(2, result.Categories.Count());
+				Assert.AreEqual(2, result.Categories.First());
+				Assert.AreEqual(3, result.Categories.Last());
+
+				Assert.IsNull(Maps.productOptions.GetOptions<AsyncNestedMappingContext>());
+				// Should not use same context for nested maps
+				Assert.AreEqual(2, Maps.categoryOptions.Count);
+				Assert.AreEqual(2, Maps.categoryOptions.Distinct().Count());
+				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<AsyncNestedMappingContext>() != null));
+				
+
+				// Factory
+				Maps.productOptions = null;
+				Maps.categoryOptions.Clear();
+				var result2 = await _mapper.MapAsyncNewFactory<Product, ProductDto>().Invoke(new Product {
+					Code = "Test",
+					Categories = new List<Category> {
+						new Category {
+							Id = 2
+						},
+						new Category {
+							Id = 3
+						}
+					}
+				});
+				Assert.IsNotNull(result2);
+				Assert.AreEqual("Test", result2.Code);
+				Assert.IsNotNull(result2.Categories);
+				Assert.AreEqual(2, result2.Categories.Count());
+				Assert.AreEqual(2, result2.Categories.First());
+				Assert.AreEqual(3, result2.Categories.Last());
+
+				Assert.IsNull(Maps.productOptions.GetOptions<AsyncNestedMappingContext>());
+				// Should use same context for nested maps
+				Assert.AreEqual(2, Maps.categoryOptions.Count);
+				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
+				Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<AsyncNestedMappingContext>());
 			}
 
 			{ 

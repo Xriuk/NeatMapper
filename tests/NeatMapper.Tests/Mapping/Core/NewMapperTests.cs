@@ -453,7 +453,6 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(40f, result.Amount);
 				Assert.AreEqual("EUR", result.Currency);
 
-
 				var result2 = _mapper.MapNewFactory<Price, PriceFloat>().Invoke(new Price {
 					Amount = 40.00m,
 					Currency = "EUR"
@@ -493,6 +492,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldMapNested() {
 			{ 
+				// Normal
 				Maps.productOptions = null;
 				Maps.categoryOptions.Clear();
 				var result = _mapper.Map<Product, ProductDto>(new Product {
@@ -520,6 +520,8 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(2, Maps.categoryOptions.Distinct().Count());
 				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<NestedMappingContext>() != null));
 
+
+				// Factory
 				Maps.productOptions = null;
 				Maps.categoryOptions.Clear();
 				var result2 = _mapper.MapNewFactory<Product, ProductDto>().Invoke(new Product {
@@ -534,12 +536,12 @@ namespace NeatMapper.Tests.Mapping {
 					}
 				});
 
-				Assert.IsNotNull(result);
-				Assert.AreEqual("Test", result.Code);
-				Assert.IsNotNull(result.Categories);
-				Assert.AreEqual(2, result.Categories.Count());
-				Assert.AreEqual(2, result.Categories.First());
-				Assert.AreEqual(3, result.Categories.Last());
+				Assert.IsNotNull(result2);
+				Assert.AreEqual("Test", result2.Code);
+				Assert.IsNotNull(result2.Categories);
+				Assert.AreEqual(2, result2.Categories.Count());
+				Assert.AreEqual(2, result2.Categories.First());
+				Assert.AreEqual(3, result2.Categories.Last());
 
 				Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
 				// Should use same context for nested maps

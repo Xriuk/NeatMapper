@@ -88,6 +88,16 @@ namespace NeatMapper.Tests.Mapping {
 
 				Assert.IsNull(MappingOptionsUtils.options);
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
+
+				var a2 = new Price();
+				var b2 = new Price();
+				var c2 = new Price();
+				var destination2 = new List<Price> { a2, b2, c2 };
+				var result2 = _mapper.MapMergeFactory<decimal[], List<Price>>().Invoke(new[] { 20m, 15.25m, 0m }, destination2);
+				Assert.IsNotNull(result);
+				Assert.AreSame(destination, result);
+				Assert.AreEqual(3, result.Count());
+				Assert.IsTrue(result.All(v => v != a && v != b && v != c));
 			}
 
 			// Options (no merge)

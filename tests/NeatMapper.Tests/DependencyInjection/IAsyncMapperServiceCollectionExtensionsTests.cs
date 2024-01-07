@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.DependencyInjection {
@@ -14,12 +15,16 @@ namespace NeatMapper.Tests.DependencyInjection {
 			public static IAsyncMapper Mapper;
 
 			Task<int> IAsyncNewMap<string, int>.MapAsync(string source, AsyncMappingContext context) {
-				Mapper = context.Mapper;
+				Mapper = (IAsyncMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
+				if (context.MappingOptions.GetOptions<FactoryContext>() != null)
+					Mapper = (IAsyncMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return Task.FromResult(source?.Length ?? 0);
 			}
 
 			Task<float> IAsyncMergeMap<string, float>.MapAsync(string source, float destination, AsyncMappingContext context) {
-				Mapper = context.Mapper;
+				Mapper = (IAsyncMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
+				if (context.MappingOptions.GetOptions<FactoryContext>() != null)
+					Mapper = (IAsyncMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return Task.FromResult((float)(source?.Length ?? 0));
 			}
 		}

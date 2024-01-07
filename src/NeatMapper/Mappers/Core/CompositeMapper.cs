@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace NeatMapper {
 	/// <summary>
@@ -55,34 +57,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions, false);
-
-			// Try new map
-			foreach (var mapper in _mappers) {
-				try {
-					return mapper.Map(source, sourceType, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			// Try creating a destination and forward to merge map
-			object destination;
-			try {
-				destination = ObjectFactory.Create(destinationType);
-			}
-			catch (ObjectCreationException) {
-				throw new MapNotFoundException((sourceType, destinationType));
-			}
-
-			return Map(source, sourceType, destination, destinationType, mappingOptions);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return MapInternal(_mappers, source, sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions, false));
 		}
 
 		public
@@ -113,24 +88,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions, false);
-
-			foreach (var mapper in _mappers) {
-				try {
-					return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			throw new MapNotFoundException((sourceType, destinationType));
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return MapInternal(_mappers, source, sourceType, destination, destinationType, MergeOrCreateMappingOptions(mappingOptions, false));
 		}
 		#endregion
 
@@ -298,7 +256,7 @@ namespace NeatMapper {
 			// Check if any mapper can map the types
 			foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
 				try {
-					if (!mapper.CanMapNew(sourceType, destinationType))
+					if (!mapper.CanMapNew(sourceType, destinationType, mappingOptions))
 						unavailableMappers.Add(mapper);
 				}
 				catch { }
@@ -308,34 +266,8 @@ namespace NeatMapper {
 			var mappersLeft = _mappers.Except(unavailableMappers).ToArray();
 			if(mappersLeft.Length == 0)
 				throw new MapNotFoundException((sourceType, destinationType));
-			else { 
-				return source => {
-					foreach(var mapper in mappersLeft) {
-						try {
-							return mapper.Map(source, sourceType, destinationType, mappingOptions);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Try creating a destination and forward to merge map
-					object destination;
-					try {
-						destination = ObjectFactory.Create(destinationType);
-					}
-					catch (ObjectCreationException) {
-						throw new MapNotFoundException((sourceType, destinationType));
-					}
-
-					foreach (var mapper in mappersLeft) {
-						try {
-							return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					throw new MapNotFoundException((sourceType, destinationType));
-				};
-			}
+			else 
+				return source => MapInternal(mappersLeft, source, sourceType, destinationType, mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -394,16 +326,7 @@ namespace NeatMapper {
 			if (mappersLeft.Length == 0)
 				throw new MapNotFoundException((sourceType, destinationType));
 			else
-				return (source, destination) => {
-					foreach (var mapper in mappersLeft) {
-						try {
-							return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					throw new MapNotFoundException((sourceType, destinationType));
-				};
+				return (source, destination) => MapInternal(mappersLeft, source, sourceType, destination, destinationType, mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -422,6 +345,44 @@ namespace NeatMapper {
 				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
 				n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext,
 				f => isRealFactory ? FactoryContext.Instance : f);
+		}
+
+		public object MapInternal(IEnumerable<IMapper> mappers,
+			object source, Type sourceType, Type destinationType,
+			MappingOptions mappingOptions) {
+
+			// Try new map
+			foreach (var mapper in mappers) {
+				try {
+					return mapper.Map(source, sourceType, destinationType, mappingOptions);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			// Try creating a destination and forward to merge map
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions);
+		}
+
+		public object MapInternal(IEnumerable<IMapper> mappers,
+			object source, Type sourceType, object destination, Type destinationType,
+			MappingOptions mappingOptions) {
+
+			foreach (var mapper in mappers) {
+				try {
+					return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

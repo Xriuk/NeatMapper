@@ -1,15 +1,17 @@
-﻿using System;
+﻿using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which wraps another <see cref="IMapper"/> and overrides some <see cref="MappingOptions"/>.
+	/// <see cref="IAsyncMapper"/> which wraps another <see cref="IAsyncMapper"/> and overrides some <see cref="MappingOptions"/>.
 	/// </summary>
-	public sealed class NestedMapper : IMapper, IMapperCanMap, IMapperFactory {
+	internal sealed class AsyncNestedMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-		private readonly IMapper _mapper;
+		private readonly IAsyncMapper _mapper;
 		private readonly Func<MappingOptions, MappingOptions> _mappingOptionsEditor;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -17,15 +19,15 @@ namespace NeatMapper {
 #endif
 
 		/// <summary>
-		/// Creates a new instance of <see cref="NestedMapper"/>.
+		/// Creates a new instance of <see cref="AsyncNestedMapper"/>.
 		/// </summary>
 		/// <param name="mapper">Mapper to forward the actual mapping to.</param>
 		/// <param name="mappingOptionsEditor">
 		/// Method to invoke to alter the <see cref="MappingOptions"/> passed to the mapper,
 		/// both the passed parameter and the returned value may be null.
 		/// </param>
-		public NestedMapper(
-			IMapper mapper,
+		public AsyncNestedMapper(
+			IAsyncMapper mapper,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 				MappingOptions?, MappingOptions?
@@ -39,14 +41,14 @@ namespace NeatMapper {
 		}
 
 
-		#region IMapper methods
-		public
+		#region IAsyncMapper methods
+		public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
 			object
 #endif
-			Map(
+			> MapAsync(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -60,18 +62,19 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
-			return _mapper.Map(source, sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _mapper.MapAsync(source, sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions), cancellationToken);
 		}
 
-		public
+		public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
 			object
 #endif
-			Map(
+			> MapAsync(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -91,14 +94,15 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
-			return _mapper.Map(source, sourceType, destination, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _mapper.MapAsync(source, sourceType, destination, destinationType, _mappingOptionsEditor.Invoke(mappingOptions), cancellationToken);
 		}
 		#endregion
 
-		#region IMapperCanMap methods
-		public bool CanMapNew(
+		#region IAsyncMapperCanMap methods
+		public Task<bool> CanMapAsyncNew(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -106,12 +110,13 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
-			return _mapper.CanMapNew(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _mapper.CanMapAsyncNew(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions), cancellationToken);
 		}
 
-		public bool CanMapMerge(
+		public Task<bool> CanMapAsyncMerge(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -119,20 +124,21 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
-			return _mapper.CanMapMerge(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _mapper.CanMapAsyncMerge(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions), cancellationToken);
 		}
 		#endregion
 
-		#region IMapperFactory methods
+		#region IAsyncMapperFactory methods
 		public Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
+			object?, Task<object?>
 #else
-			object, object
+			object, Task<object>
 #endif
-			> MapNewFactory(
+			> MapAsyncNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -140,18 +146,19 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
-			return _mapper.MapNewFactory(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _mapper.MapAsyncNewFactory(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions), cancellationToken);
 		}
 
 		public Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
+			object?, object?, Task<object?>
 #else
-			object, object, object
+			object, object, Task<object>
 #endif
-			> MapMergeFactory(
+			> MapAsyncMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -159,9 +166,10 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null) {
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
 
-			return _mapper.MapMergeFactory(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _mapper.MapAsyncMergeFactory(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions), cancellationToken);
 		}
 		#endregion
 	}

@@ -34,6 +34,14 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(3, MappingOptionsUtils.contexts.Count);
 				Assert.AreEqual(1, MappingOptionsUtils.contexts.Distinct().Count());
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
+
+				var strings2 = _mapper.MapNewFactory<int[], string[]>().Invoke(new[] { 2, -3, 0 });
+
+				Assert.IsNotNull(strings);
+				Assert.AreEqual(3, strings.Length);
+				Assert.AreEqual("4", strings[0]);
+				Assert.AreEqual("-6", strings[1]);
+				Assert.AreEqual("0", strings[2]);
 			}
 
 			// Options (no merge)

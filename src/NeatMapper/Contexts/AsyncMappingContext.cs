@@ -7,35 +7,49 @@ using System.Threading;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Contains informations and services for the current asynchronous mapping operation
+	/// Contains informations and services for the current asynchronous mapping operation.
 	/// </summary>
 	public sealed class AsyncMappingContext {
-		public AsyncMappingContext(IServiceProvider serviceProvider, IAsyncMapper mapper, MappingOptions mappingOptions, CancellationToken cancellationToken) {
+		private readonly Lazy<IAsyncMapper> _mapper;
+
+		public AsyncMappingContext(IServiceProvider serviceProvider, IAsyncMapper mapper, MappingOptions mappingOptions, CancellationToken cancellationToken) :
+			this(serviceProvider, mapper, mapper, mappingOptions, cancellationToken) { }
+		public AsyncMappingContext(IServiceProvider serviceProvider, IAsyncMapper nestedMapper, IAsyncMapper parentMapper, MappingOptions mappingOptions, CancellationToken cancellationToken) {
 			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-			Mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+
+			var nestedMappingContext = new AsyncNestedMappingContext(parentMapper ?? throw new ArgumentNullException(nameof(parentMapper)));
+			var nestedMapperInstance = new AsyncNestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
+				.ReplaceOrAdd<AsyncNestedMappingContext, FactoryContext>(
+					n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext,
+					_ => FactoryContext.Instance));
+			_mapper = new Lazy<IAsyncMapper>(() => MappingOptions.GetOptions<FactoryContext>() != null ?
+				(IAsyncMapper)new AsyncCachedFactoryMapper(nestedMapperInstance) :
+				nestedMapperInstance);
+
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
 			CancellationToken = cancellationToken;
 		}
 
 
 		/// <summary>
-		/// Service provider which can be used to retrieve additional services
+		/// Service provider which can be used to retrieve additional services.
 		/// </summary>
 		public IServiceProvider ServiceProvider { get; }
 
 		/// <summary>
-		/// Mapper which can be used for nested mappings
+		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
+		/// The only options forwarded automatically are <see cref="AsyncNestedMappingContext"/> and <see cref="FactoryContext"/>.
 		/// </summary>
-		public IAsyncMapper Mapper { get; }
+		public IAsyncMapper Mapper => _mapper.Value;
 
 		/// <summary>
 		/// Additional mapping options, contains multiple options of different types,
-		/// each mapper/map should try to retrieve its options and use them
+		/// each mapper/map should try to retrieve its options and use them.
 		/// </summary>
 		public MappingOptions MappingOptions { get; }
 
 		/// <summary>
-		/// Cancellation token of the mapping which should be passed to all the async methods inside the maps
+		/// Cancellation token of the mapping which should be passed to all the async methods inside the maps.
 		/// </summary>
 		public CancellationToken CancellationToken { get; }
 	}

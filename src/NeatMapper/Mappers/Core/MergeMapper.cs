@@ -16,7 +16,7 @@ namespace NeatMapper {
 		/// <param name="serviceProvider">
 		/// Service provider to be passed to the maps inside <see cref="MappingContext"/>, 
 		/// null to pass an empty service provider.<br/>
-		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.ServiceProvider"/>.
 		/// </param>
 		public MergeMapper(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

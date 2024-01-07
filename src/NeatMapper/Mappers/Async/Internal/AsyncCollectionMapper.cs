@@ -31,13 +31,14 @@ namespace NeatMapper {
 
 
 		// Will override a mapper if not already overridden
-		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
+		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, bool isRealFactory, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
 			mergeCollectionsMappingOptions = options?.GetOptions<MergeCollectionsMappingOptions>();
 			return (options ?? MappingOptions.Empty)
 				.Replace<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(m.RemoveNotMatchedDestinationElements, null))
-				.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
+				.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext, FactoryContext>(
 					m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
-					n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext);
+					n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext,
+					f => isRealFactory ? FactoryContext.Instance : f);
 		}
 	}
 }

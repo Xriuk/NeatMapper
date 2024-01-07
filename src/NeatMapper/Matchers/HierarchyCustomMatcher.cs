@@ -135,6 +135,7 @@ namespace NeatMapper {
 			var parameters = new object[] { null, null, new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
 				overrideOptions?.Matcher ?? this,
+				this,
 				mappingOptions ?? MappingOptions.Empty
 			) };
 			var instance = map.Value.Method.IsStatic ?

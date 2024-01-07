@@ -129,6 +129,7 @@ namespace NeatMapper {
 			var context = new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
 				overrideOptions?.Matcher ?? _nestedMatcher,
+				this,
 				mappingOptions ?? MappingOptions.Empty
 			);
 

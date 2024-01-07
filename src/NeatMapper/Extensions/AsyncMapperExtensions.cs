@@ -754,6 +754,7 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 
+
 		#region CanMapAsyncNew
 		#region Runtime
 		/// <summary>
@@ -784,7 +785,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
+			// Check if the mapper implements IAsyncMapperCanMap, if it throws it means that the map can be checked only when mapping
 			if (mapper is IAsyncMapperCanMap mapperCanMap)
 				return await mapperCanMap.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken);
 
@@ -923,7 +924,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
+			// Check if the mapper implements IAsyncMapperCanMap, if it throws it means that the map can be checked only when mapping
 			if (mapper is IAsyncMapperCanMap mapperCanMap)
 				return await mapperCanMap.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken);
 
@@ -1031,7 +1032,382 @@ namespace NeatMapper {
 			CancellationToken cancellationToken = default) {
 
 			return mapper.CanMapAsyncMerge(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
-		} 
+		}
+		#endregion
+		#endregion
+
+
+		#region MapAsyncNewFactory
+		#region Runtime
+		/// <summary>
+		/// Creates a factory which can be used to map objects to new ones asynchronously, will check
+		/// if the given mapper supports <see cref="IAsyncMapperFactory"/> first otherwise will return
+		/// <see cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)"/> wrapped in a delegate.
+		/// </summary>
+		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, Task<object?>
+#else
+			object, Task<object>
+#endif
+			> MapAsyncNewFactory(this IAsyncMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Check if the mapper implements IAsyncMapperFactory
+			if (mapper is IAsyncMapperFactory mapperFactory)
+				return mapperFactory.MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+
+			// Check if the mapper can map the types (we don't do it via the extension method above because
+			// it may require actually mapping the two types if the interface is not implemented,
+			// and as the returned factory may still throw MapNotFoundException we are still compliant)
+			if (mapper is IAsyncMapperCanMap mapperCanMap) {
+				try {
+					if (!mapperCanMap.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken).Result)
+						throw new MapNotFoundException((sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch { }
+			}
+
+			// Return the default map wrapped
+			return source => mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, Task<object?>
+#else
+			object, Task<object>
+#endif
+			> MapAsyncNewFactory(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			return mapper.MapAsyncNewFactory(sourceType, destinationType, (MappingOptions)null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, Task<object?>
+#else
+			object, Task<object>
+#endif
+			> MapAsyncNewFactory(this IAsyncMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			return mapper.MapAsyncNewFactory(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)" path="/remarks"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into new objects
+		/// of type <typeparamref name="TDestination"/> asynchronously.<br/>
+		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// </returns>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, Task<TDestination?>
+#else
+			TSource, Task<TDestination>
+#endif
+			> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			var factory = mapper.MapAsyncNewFactory(typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken);
+
+			return source => TaskUtils.AwaitTask<TDestination>(factory.Invoke(source));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncNewFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, Task<TDestination?>
+#else
+			TSource, Task<TDestination>
+#endif
+			> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			return mapper.MapAsyncNewFactory<TSource, TDestination>((MappingOptions)null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncNewFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, Task<TDestination?>
+#else
+			TSource, Task<TDestination>
+#endif
+			> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			return mapper.MapAsyncNewFactory<TSource, TDestination>(mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+		}
+		#endregion
+		#endregion
+
+		#region MapAsyncMergeFactory
+		#region Runtime
+		/// <summary>
+		/// Creates a factory which can be used to map objects to existing ones asynchronously, will check
+		/// if the given mapper supports <see cref="IAsyncMapperFactory"/> first otherwise will return
+		/// <see cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/> wrapped in a delegate.
+		/// </summary>
+		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, Task<object?>
+#else
+			object, object, Task<object>
+#endif
+			> MapAsyncMergeFactory(this IAsyncMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Check if the mapper implements IAsyncMapperFactory
+			if (mapper is IAsyncMapperFactory mapperFactory)
+				return mapperFactory.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+
+			// Check if the mapper can map the types (we don't do it via the extension method above because
+			// it may require actually mapping the two types if the interface is not implemented,
+			// and as the returned factory may still throw MapNotFoundException we are still compliant)
+			if (mapper is IAsyncMapperCanMap mapperCanMap) {
+				try {
+					if (!mapperCanMap.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken).Result)
+						throw new MapNotFoundException((sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					throw;
+				}
+				catch { }
+			}
+
+			// Return the default map wrapped
+			return (source, destination) => mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, Task<object?>
+#else
+			object, object, Task<object>
+#endif
+			> MapAsyncMergeFactory(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			return mapper.MapAsyncMergeFactory(sourceType, destinationType, (MappingOptions)null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, Task<object?>
+#else
+			object, object, Task<object>
+#endif
+			> MapAsyncMergeFactory(this IAsyncMapper mapper,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)" path="/remarks"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into existing objects
+		/// of type <typeparamref name="TDestination"/> asynchronously.<br/>
+		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// </returns>
+		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, Task<TDestination?>
+#else
+			TSource, TDestination, Task<TDestination>
+#endif
+			> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			var factory = mapper.MapAsyncMergeFactory(typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken);
+
+			return (source, destination) => TaskUtils.AwaitTask<TDestination>(factory.Invoke(source, destination));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, Task<TDestination?>
+#else
+			TSource, TDestination, Task<TDestination>
+#endif
+			> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			return mapper.MapAsyncMergeFactory<TSource, TDestination>((MappingOptions)null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		public static Func<
+#if NET5_0_OR_GREATER
+			TSource?, TDestination?, Task<TDestination?>
+#else
+			TSource, TDestination, Task<TDestination>
+#endif
+			> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			return mapper.MapAsyncMergeFactory<TSource, TDestination>(mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+		}
 		#endregion
 		#endregion
 	}

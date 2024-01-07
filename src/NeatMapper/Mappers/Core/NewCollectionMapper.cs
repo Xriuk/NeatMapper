@@ -27,7 +27,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="elementsMapper">
 		/// <see cref="IMapper"/> to use to map collection elements.<br/>
-		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.Mapper"/>.
 		/// </param>
 		public NewCollectionMapper(
 			IMapper elementsMapper) : base(elementsMapper) { }
@@ -90,10 +90,12 @@ namespace NeatMapper {
 				}
 				var addMethod = ObjectFactory.GetCollectionAddMethod(actualCollectionType);
 				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(types.To);
+
 				return source => {
 					TypeUtils.CheckObjectType(source, types.From, nameof(source));
 
 					if (source is IEnumerable sourceEnumerable) {
+						object result;
 						try {
 							var destination = collectionFactory.Invoke();
 
@@ -107,12 +109,7 @@ namespace NeatMapper {
 								}
 							}
 
-							var result = collectionConversion.Invoke(destination);
-
-							// Should not happen
-							TypeUtils.CheckObjectType(result, types.To);
-
-							return result;
+							result = collectionConversion.Invoke(destination);
 						}
 						catch (MapNotFoundException) {
 							throw;
@@ -123,6 +120,11 @@ namespace NeatMapper {
 						catch (Exception e) {
 							throw new MappingException(e, types);
 						}
+
+						// Should not happen
+						TypeUtils.CheckObjectType(result, types.To);
+
+						return result;
 					}
 					else if (source == null) {
 						// Check if we can map elements

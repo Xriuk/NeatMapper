@@ -22,7 +22,7 @@
 		/// </para>
 		/// <para>
 		/// You can also override this option for single mappings by using
-		/// <see cref="AsyncCollectionMappersMappingOptions"/>.
+		/// <see cref="AsyncCollectionMappersMappingOptions.MaxParallelMappings"/>.
 		/// </para>
 		/// </summary>
 		/// <remarks>Defaults to <see langword="1"/></remarks>

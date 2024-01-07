@@ -6,7 +6,7 @@ namespace NeatMapper{
 	/// <summary>
 	/// Singleton <see cref="IAsyncMapper"/> which cannot map any type
 	/// </summary>
-	public sealed class AsyncEmptyMapper : IAsyncMapper, IAsyncMapperCanMap {
+	public sealed class AsyncEmptyMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper
 		/// </summary>
@@ -103,6 +103,48 @@ namespace NeatMapper{
 			CancellationToken cancellationToken = default) {
 
 			return Task.FromResult(false);
+		}
+		#endregion
+
+		#region IAsyncMapperFactory methods
+		public Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, Task<object?>
+#else
+			object, Task<object>
+#endif
+			> MapAsyncNewFactory(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			throw new MapNotFoundException((sourceType, destinationType));
+		}
+
+		public Func<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?, object?, Task<object?>
+#else
+			object, object, Task<object>
+#endif
+			> MapAsyncMergeFactory(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			throw new MapNotFoundException((sourceType, destinationType));
 		}
 		#endregion
 	}
