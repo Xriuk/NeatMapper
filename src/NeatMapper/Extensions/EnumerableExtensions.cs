@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 
 namespace NeatMapper {
@@ -16,23 +15,15 @@ namespace NeatMapper {
 			var parameters = m.GetParameters();
 			return (parameters.Length == 2 && parameters[1].ParameterType.IsGenericType && parameters[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>));
 		});
-
+		/// <summary>
+		/// <see cref="MapperExtensions.MapNewFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		/// </summary>
 		private static readonly MethodInfo MapperExtensions_MapNewFactory = typeof(MapperExtensions).GetMethod(nameof(MapperExtensions.MapNewFactory), new[] { typeof(IMapper), typeof(MappingOptions) })
 			?? throw new InvalidOperationException("Could not find MapperExtensions.MapNewFactory method");
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-		private static Func<TSource, TDestination> GetFactory<TSource, TDestination>(IMapper mapper, MappingOptions mappingOptions = null) {
-			return mapper.MapNewFactory<TSource, TDestination>(mappingOptions);
-		}
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-
 
 		#region Project
-		#region Runtime destination
+		#region Runtime destination, inferred source
 		/// <summary>
 		/// Projects an enumerable into another one lazily. The source type will be inferred from the enumerable itself
 		/// (so it CANNOT be null, if it implements <see cref="IEnumerable{T}"/> it will be the type argument,

@@ -1,16 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿#if !NET6_0_OR_GREATER
+using Microsoft.EntityFrameworkCore; 
+#endif
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches entities with their keys, even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>. Allows also to match entities with other entities
+	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>. Allows also to match entities with other entities.
 	/// </summary>
 	public sealed class EntityFrameworkCoreMatcher : IMatcher, IMatcherCanMatch {
 		private readonly IModel _model;
@@ -120,7 +120,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								// new ValueTuple<...>(key.Item1, ...)
 								Expression body = Expression.New(
 									TupleUtils.GetValueTupleConstructor(keyParam.Type.GetGenericArguments()),
-									Enumerable.Range(1, keyParam.Type.GetGenericArguments().Count()).Select(n => Expression.Property(keyParam, "Item" + n)));
+									Enumerable.Range(1, keyParam.Type.GetGenericArguments().Length).Select(n => Expression.Property(keyParam, "Item" + n)));
 								tupleToValueTuple = Expression.Lambda(typeof(Func<,>).MakeGenericType(keyParam.Type, body.Type), body, keyParam).Compile();
 								_tupleToValueTupleCache.Add(entityType, tupleToValueTuple);
 							}
@@ -176,6 +176,10 @@ namespace NeatMapper.EntityFrameworkCore {
 #endif
 			mappingOptions = null) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -223,6 +227,10 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			return true;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 	}
 }

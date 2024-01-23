@@ -10,7 +10,6 @@
 
 ### Added
 
-- Extension methods for `IMapper`/`IAsyncMapper` which allow to new map by only specifying the runtime destination type (System.Type) while inferring the source type from the source object (which cannot be null)
 - Projectors `IQueryable`/`IEnumerable` extension methods `Project`, which create a lazy projection (by using `Select()`)
 - New optional interfaces `IMapperFactory`/`IAsyncMapperFactory`/`IMatcherFactory` which allows to create mapping/matching factories instead of mapping/matching directly, to map/match multiple elements of two given types faster
 - Extension methods `MapNewFactory` and `MapMergeFactory` for any `IMapper` which will fallback to default `Map()` if `IMapperFactory` is not implemented

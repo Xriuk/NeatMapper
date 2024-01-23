@@ -480,10 +480,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldMapPrimitives() {
 			Assert.IsTrue(await _mapper.CanMapAsyncNew<int, string>());
+			Assert.IsTrue(await _mapper.CanMapAsyncNew(typeof(int), typeof(string)));
 
 			Assert.AreEqual("4", await _mapper.MapAsync<string>(2));
-			Assert.AreEqual("-6", await _mapper.MapAsync<string>(-3));
-			Assert.AreEqual("0", await _mapper.MapAsync<string>(0));
+			Assert.AreEqual("-6", (string)await _mapper.MapAsync(-3, typeof(int), typeof(string)));
+			Assert.AreEqual("0", await _mapper.MapAsync<int, string>(0));
 
 			// Factories should share the same context
 			var factory = _mapper.MapAsyncNewFactory<int, string>();

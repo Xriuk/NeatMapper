@@ -21,7 +21,7 @@ namespace NeatMapper {
 
 
 		#region Project
-		#region Runtime destination
+		#region Runtime destination, inferred source
 		/// <summary>
 		/// Projects a queryable into another one. The source type is <see cref="IQueryable.ElementType"/>.
 		/// </summary>

@@ -5,83 +5,7 @@ using System.Collections.Generic;
 namespace NeatMapper {
 	public static class MapperExtensions {
 		#region NewMap
-		#region Runtime destination
-		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/summary"/>
-		/// <param name="source">
-		/// Object to map, CANNOT be null as the source type will be retrieved from it at runtime,
-		/// which will be used to retrieve the available maps.
-		/// </param>
-		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/param[@name='destinationType']"/>
-		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
-		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/returns"/>
-		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/exception"/>
-		public static
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(this IMapper mapper,
-			object source,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (source == null)
-				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
-
-			return mapper.Map(source, source.GetType(), destinationType, mappingOptions);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		/// <inheritdoc cref="Map(IMapper, object, Type, MappingOptions)"/>
-		public static
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(this IMapper mapper,
-			object source,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (source == null)
-				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
-
-			return mapper.Map(source, source.GetType(), destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-		#endregion
-
-		#region Runtime source and destination
+		#region Runtime
 		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -272,7 +196,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region MergeMap
-		#region Runtime source and destination
+		#region Runtime
 		/// <inheritdoc cref="IMapper.Map(object, Type, object, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

@@ -1,8 +1,6 @@
 <#@ template hostspecific="true" language="C#" #>
-<#@ assembly name="System.Core" #>
 <#@ import namespace="System" #>
 <#@ import namespace="System.IO" #>
-<#@ output extension=".cs" #>
 <#
 	string[] names = new []{
 		"New", "Merge",

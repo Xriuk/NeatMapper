@@ -406,12 +406,13 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldMapPrimitives() {
 			Assert.IsTrue(_mapper.CanMapNew<int, string>());
+			Assert.IsTrue(_mapper.CanMapNew(typeof(int), typeof(string)));
 
 			MappingOptionsUtils.context = null;
 			Assert.AreEqual("4", _mapper.Map<string>(2));
 			Assert.IsNull(MappingOptionsUtils.context.MappingOptions.GetOptions<NestedMappingContext>());
-			Assert.AreEqual("-6", _mapper.Map<string>(-3));
-			Assert.AreEqual("0", _mapper.Map<string>(0));
+			Assert.AreEqual("-6", (string)_mapper.Map(-3, typeof(int), typeof(string)));
+			Assert.AreEqual("0", _mapper.Map<int, string>(0));
 
 			// Factories should share the same context
 			var factory = _mapper.MapNewFactory<int, string>();

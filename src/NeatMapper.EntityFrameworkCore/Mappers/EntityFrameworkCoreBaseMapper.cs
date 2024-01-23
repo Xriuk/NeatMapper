@@ -244,6 +244,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? throw new InvalidOperationException($"Invalid key(s) returned for entity of type {entityType.FullName ?? entityType.Name}");
 		}
 
+		// DEV: convert to factory
 		protected void MergeCollection(
 			IEnumerable destinationEnumerable, IEnumerable sourceEnumerable, IEnumerable sourceEntitiesEnumerable,
 			(Type From, Type To) types, DbContext db, IKey key, EntitiesRetrievalMode entitiesRetrievalMode,
