@@ -12,5 +12,7 @@ namespace NeatMapper.Tests {
 
 		public static TestOptions options;
 		public static MergeCollectionsMappingOptions mergeOptions;
+
+		public static MatchingContext matchingContext;
 	}
 }

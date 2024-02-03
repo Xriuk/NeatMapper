@@ -33,6 +33,8 @@ namespace NeatMapper.Tests.Matching {
 				IMatchMap<int, string>
 #endif
 				.Match(int source, string destination, MatchingContext context) {
+
+				MappingOptionsUtils.matchingContext = context;
 				return (source * 2).ToString() == destination;
 			}
 			
@@ -130,13 +132,24 @@ namespace NeatMapper.Tests.Matching {
 
 
 		[TestMethod]
-		[DataRow(2, "4", true)]
-		[DataRow(-3, "-5", false)]
-		[DataRow(0, "0", true)]
-		public void ShouldMatchPrimitives(int num, string str, bool result) {
+		public void ShouldMatchPrimitives() {
 			Assert.IsTrue(_matcher.CanMatch<int, string>());
 
-			Assert.AreEqual(result, _matcher.Match(num, str));
+			Assert.IsTrue(_matcher.Match(2, "4"));
+			Assert.IsFalse(_matcher.Match(-3, "-5"));
+			Assert.IsTrue(_matcher.Match(0, "0"));
+
+			// Factories should share the same context
+			var factory = _matcher.MatchFactory<int, string>();
+			MappingOptionsUtils.matchingContext = null;
+			Assert.IsTrue(factory.Invoke(2, "4"));
+			var context1 = MappingOptionsUtils.matchingContext;
+			Assert.IsNotNull(context1);
+			MappingOptionsUtils.matchingContext = null;
+			Assert.IsTrue(factory.Invoke(-3, "-6"));
+			var context2 = MappingOptionsUtils.matchingContext;
+			Assert.IsNotNull(context2);
+			Assert.AreSame(context1, context2);
 		}
 
 		[TestMethod]
@@ -148,8 +161,18 @@ namespace NeatMapper.Tests.Matching {
 			}, new ProductDto {
 				Code = "Test1"
 			}));
-
 			Assert.IsFalse(_matcher.Match(new Product {
+				Code = "Test1"
+			}, new ProductDto {
+				Code = "Test2"
+			}));
+
+			Assert.IsTrue(_matcher.MatchFactory<Product, ProductDto>().Invoke(new Product {
+				Code = "Test1"
+			}, new ProductDto {
+				Code = "Test1"
+			}));
+			Assert.IsFalse(_matcher.MatchFactory<Product, ProductDto>().Invoke(new Product {
 				Code = "Test1"
 			}, new ProductDto {
 				Code = "Test2"

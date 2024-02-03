@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.2.0] - Unreleased
+## [2.2.0] - 2024-02-03
 
 ### Changed
 
@@ -9,6 +9,7 @@
 ### Added
 
 - `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` now implement respectively `IMapperFactory` and `IAsyncMapperFactory`
+- `EntityFrameworkCoreMatcher` now implements `IMatcherFactory`
 
 ## [2.1.0] - 2023-12-05
 

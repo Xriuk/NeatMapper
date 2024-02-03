@@ -31,7 +31,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		public static bool IsDefaultValue(Type type, object value) {
-			return (bool)TypeUtils_IsDefaultValue.MakeGenericMethod(type).Invoke(null, new object[] { value });
+			return !type.IsValueType ? (value == null) : (bool)TypeUtils_IsDefaultValue.MakeGenericMethod(type).Invoke(null, new object[] { value });
 		}
 	}
 }

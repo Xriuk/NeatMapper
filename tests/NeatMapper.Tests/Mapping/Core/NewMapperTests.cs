@@ -231,6 +231,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<decimal, Price>
 #endif
 				.Map(decimal source, MappingContext context) {
+
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				return new Price {
@@ -249,6 +250,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<float, Price>
 #endif
 				.Map(float source, MappingContext context) {
+
 				return new Price {
 					Amount = (decimal)source,
 					Currency = "EUR"
@@ -266,6 +268,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<float, int>
 #endif
 				.Map(float source, MappingContext context) {
+
 				throw new NotImplementedException();
 			}
 
@@ -279,6 +282,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<string, KeyValuePair<string, int>>
 #endif
 				.Map(string source, MappingContext context) {
+
 				return new KeyValuePair<string, int>(source, source.Length);
 			}
 
@@ -292,6 +296,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<string, int>
 #endif
 				.Map(string source, MappingContext context) {
+
 				return source?.Length ?? -1;
 			}
 
@@ -306,6 +311,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<decimal, int>
 #endif
 				.Map(decimal source, MappingContext context) {
+
 				throw new NotImplementedException();
 			}
 
@@ -320,6 +326,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<decimal, string>
 #endif
 				.Map(decimal source, MappingContext context) {
+
 				return "NewMap";
 			}
 
@@ -333,6 +340,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<int, char>
 #endif
 				.Map(int source, MappingContext context) {
+
 				return (char)source;
 			}
 
@@ -347,6 +355,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<char, float>
 #endif
 				.Map(char source, MappingContext context) {
+
 				return (float)source;
 			}
 
@@ -361,6 +370,7 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<decimal, float>
 #endif
 				.Map(decimal source, MappingContext context) {
+
 				throw new TaskCanceledException();
 			}
 

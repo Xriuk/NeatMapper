@@ -1,6 +1,6 @@
 # Changelog
 
-## [2.2.0] - Unreleased
+## [2.2.0] - 2024-02-03
 
 ### Changed
 
@@ -18,7 +18,7 @@
 - Extension methods `MapAsyncNewFactory` and `MapAsyncMergeFactory` for any `IAsyncMapper` which will fallback to default `MapAsync()` if `IAsyncMapperFactory` is not implemented
 - All async mappers now implement `IAsyncMapperFactory`
 - Extension method `MatchFactory` for any `IMatcher` which will fallback to default `Match()` if `IMatcherFactory` is not implemented
-- All core matchers now implement `IMatcherFactory`
+- All matchers now implement `IMatcherFactory`
 
 ## [2.1.0] - 2023-12-05
 
