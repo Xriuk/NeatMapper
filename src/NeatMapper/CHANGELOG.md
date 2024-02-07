@@ -27,7 +27,7 @@
 - `MapNotFoundException` now inherits from `Exception` instead of `ArgumentException`
 - `NewCollectionMapper` and `AsyncNewCollectionMapper` constructors with `IServiceProvider` are now marked as obsolete, since the parameter was not used, and will be removed in the next major version
 - `MatcherNotFound` is now marked as obsolete since it was not used (correctly), and will be removed in the next major version
-- Fixed DI creation for collection mappers and marked some public constants as obsolete, now `(Async)CompositeMapperOptions` can be configures in any way (and not just with ConfigureAll or PostConfigureAll)
+- Fixed DI creation for collection mappers and marked some public constants as obsolete, now `(Async)CompositeMapperOptions` can be configured in any way (and not just with `ConfigureAll` or `PostConfigureAll`)
 
 ### Added
 
