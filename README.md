@@ -8,7 +8,7 @@
 
 ## What is this project
 
-.NEaT Mapper is an object mapper, with configurable and reusable mappings.
+.NEaT Mapper is an object mapper and projector, with configurable and reusable mappings.
 
 This allows you to create mappings between different types (even generic ones),
 combine them, nest them and reuse them, making your code DRY. Map once, use everywhere.
