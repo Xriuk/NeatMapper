@@ -10,7 +10,7 @@
 
 ### Added
 
-- Projectors `IQueryable`/`IEnumerable` extension methods `Project`, which create a lazy projection (by using `Select()`)
+- Projectors/Mappers `IQueryable`/`IEnumerable` extension methods `Project`, which create a lazy projection (by using `Select()`)
 - New optional interfaces `IMapperFactory`/`IAsyncMapperFactory`/`IMatcherFactory` which allows to create mapping/matching factories instead of mapping/matching directly, to map/match multiple elements of two given types faster
 - Extension methods `MapNewFactory` and `MapMergeFactory` for any `IMapper` which will fallback to default `Map()` if `IMapperFactory` is not implemented
 - New options `FactoryContext` which allows to discover if a given map will be part of a factory
