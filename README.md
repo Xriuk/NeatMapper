@@ -24,12 +24,10 @@ If you are using Entity Framework Core you may want to install [NeatMapper.Entit
 
 ## How to use
 
-Find specific instructions in the README of every package
+Find specific instructions in the README of every package:
 
 - [NeatMapper](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md)
 - [NeatMapper.EntityFrameworkCore](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.EntityFrameworkCore/README.md)
-
-Core package instructions excerpt below:
 
 ### 1. Create mapping classes
 
@@ -116,6 +114,10 @@ var myBookDtos = db.Set<Book>()
     .Project<BookDto>(projector)
     .ToArray();
 ```
+
+## Advanced options
+
+Find more advanced use cases in the [wiki](https://github.com/Xriuk/NeatMapper/wiki) or in the extended [tests project](https://github.com/Xriuk/NeatMapper/tree/main/tests/NeatMapper.Tests).
 
 ## License
 
