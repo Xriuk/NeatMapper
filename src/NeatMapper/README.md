@@ -100,7 +100,7 @@ await asyncMapper.MapAsync(myCategory, myCategoryDto);
 
 // Create a projection to use in a LINQ query
 var myBookDtos = db.Set<Book>()
-    .Select(projector.Project<IQueryable<Book>, IQueryable<BookDto>>())
+    .Project<BookDto>(projector)
     .ToArray();
 ```
 
