@@ -51,7 +51,7 @@ var entities = await asyncMapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 
 // Project an entity into its key
 var myEntitiesKeys = db.Set<MyEntity>()
-    .Select(projector.Project<IQueryable<MyEntity>, IQueryable<int>>())
+    .Project<int>(projector)
     .ToArray();
 ```
 
