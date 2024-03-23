@@ -7,7 +7,8 @@ namespace NeatMapper {
 	/// <typeparam name="TDestination">Destination type, can be an open generic.</typeparam>
 	/// <remarks>
 	/// This interface is the same as <see cref="IMergeMap{TSource, TDestination}"/>, but allows greater flexibility:
-	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).
+	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).<br/>
+	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
 	public interface IMergeMapStatic<TSource, TDestination> {
 		/// <summary>

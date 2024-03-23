@@ -16,7 +16,7 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class NestedProjector {
 		/// <summary>
-		/// Actual underlying projector to be used to retrieve maps.
+		/// Actual underlying projector to use to retrieve maps.
 		/// </summary>
 		[EditorBrowsable(EditorBrowsableState.Never)]
 		public IProjector Projector { get; }

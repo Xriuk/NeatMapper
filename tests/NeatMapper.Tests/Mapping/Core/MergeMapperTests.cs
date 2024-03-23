@@ -676,9 +676,9 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(3, result.Categories.Last());
 
 				Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
-				// Should not use same context for nested maps
+				// Should use same context for nested maps
 				Assert.AreEqual(2, Maps.categoryOptions.Count);
-				Assert.AreEqual(2, Maps.categoryOptions.Distinct().Count());
+				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
 				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<NestedMappingContext>() != null));
 
 

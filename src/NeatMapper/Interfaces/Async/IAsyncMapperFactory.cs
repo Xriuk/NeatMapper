@@ -10,6 +10,7 @@ namespace NeatMapper {
 	/// The implementation should be more efficient than calling IAsyncMapper.MapAsync() multiple times,
 	/// and thus can be used for collections.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe, this includes the returned factories too.</remarks>
 	public interface IAsyncMapperFactory : IAsyncMapper {
 		/// <summary>
 		/// Creates a factory to map an object to a new one asynchronously.

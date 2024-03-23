@@ -161,8 +161,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		// This is mostly to check times
 		[TestMethod]
-		public Task ShouldMapBigCollections() {
-			return _mapper.MapAsync<float[]>(Enumerable.Repeat(0, 100));
+		public async Task ShouldMapBigCollections() {
+			var start = DateTime.UtcNow;
+			await _mapper.MapAsync<float[]>(Enumerable.Repeat(0, 100));
+			var duration = DateTime.UtcNow - start;
+			Console.WriteLine("Duration: " + duration.ToString("ss\\.fff"));
 		}
 
 		[TestMethod]

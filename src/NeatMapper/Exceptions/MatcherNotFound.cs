@@ -1,7 +1,7 @@
 ﻿using System;
 
 namespace NeatMapper {
-	[Obsolete("MatcherNotFound is no longer used and will be removed in future versions.")]
+	[Obsolete("MatcherNotFound is no longer used and will be removed in future versions, you should catch MapNotFoundException instead.")]
 	public sealed class MatcherNotFound : Exception {
 		public MatcherNotFound((Type From, Type To) types) :
 			base($"No collection element comparer could be found for the given types: {types.From.Name} -> {types.To.Name}\n" +

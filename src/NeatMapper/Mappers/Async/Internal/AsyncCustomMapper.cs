@@ -12,8 +12,16 @@ namespace NeatMapper {
 	/// Internal class.
 	/// </summary>
 	public abstract class AsyncCustomMapper : IAsyncMapper {
+		/// <summary>
+		/// Configuration for class and additional maps for the mapper.
+		/// </summary>
 		internal readonly CustomMapsConfiguration _configuration;
+
+		/// <summary>
+		/// Service provider available in the created <see cref="AsyncMappingContext"/>s.
+		/// </summary>
 		protected readonly IServiceProvider _serviceProvider;
+
 
 		internal AsyncCustomMapper(CustomMapsConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -25,6 +33,7 @@ namespace NeatMapper {
 		public abstract Task<object> MapAsync(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken  = default);
 
 
+		// DEV: Cannot cache because of CancellationToken
 		protected AsyncMappingContext CreateMappingContext(MappingOptions options, CancellationToken cancellationToken) {
 			var overrideOptions = options?.GetOptions<AsyncMapperOverrideMappingOptions>();
 			return new AsyncMappingContext(

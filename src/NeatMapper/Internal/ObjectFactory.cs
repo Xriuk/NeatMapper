@@ -4,27 +4,30 @@
 
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
 namespace NeatMapper {
-	internal sealed class ObjectFactory {
-		/// <summary>
-		/// <see cref="StringBuilder.Append(char)"/>
-		/// </summary>
-		private static readonly MethodInfo StringBuilder_Append_Char = typeof(StringBuilder).GetMethod(nameof(StringBuilder.Append), new[] { typeof(char) })
-			?? throw new InvalidOperationException($"Could not find method {nameof(StringBuilder)}.{nameof(StringBuilder.Append)}({nameof(Char)})");
+	internal static class ObjectFactory {
 		/// <summary>
 		/// <see cref="Enumerable.ToArray{TSource}(IEnumerable{TSource})"/>
 		/// </summary>
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
 
-		private static readonly IDictionary<Type, string> typeCreationErrorsCache = new Dictionary<Type, string>();
-		private static readonly IDictionary<Type, object> typeInstancesCache = new Dictionary<Type, object>();
+		private static readonly ConcurrentDictionary<Type, object> typeInstancesCache = new ConcurrentDictionary<Type, object>();
+
+		private static readonly ConcurrentDictionary<Type, (Func<object>, Type)> factoriesCache = new ConcurrentDictionary<Type, (Func<object>, Type)>();
+
+		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsCustomAddMethodsCache = new ConcurrentDictionary<Type, Action<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsAddMethodsCache = new ConcurrentDictionary<Type, Action<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, object, bool>> collectionsRemoveMethodsCache = new ConcurrentDictionary<Type, Func<object, object, bool>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, object>> collectionsConversionCache = new ConcurrentDictionary<Type, Func<object, object>>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -35,55 +38,43 @@ namespace NeatMapper {
 				actualType = typeof(string);
 				return CreateStringFactory;
 			}
-			else if (objectType.IsInterface && objectType.IsGenericType) {
-				var interfaceDefinition = objectType.GetGenericTypeDefinition();
-				if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
-					interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>)) {
 
-					var type = typeof(List<>).MakeGenericType(objectType.GetGenericArguments().Single());
-					actualType = type;
-					return () => Activator.CreateInstance(type);
-				}
-				else if (interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>)) {
-					var type = typeof(Dictionary<,>).MakeGenericType(objectType.GetGenericArguments());
-					actualType = type;
-					return () => Activator.CreateInstance(type);
-				}
-				else if (interfaceDefinition == typeof(ISet<>)
+			Func<object> factory;
+			(factory, actualType) = factoriesCache.GetOrAdd(objectType, type => {
+				if (type.IsInterface && type.IsGenericType) {
+					var interfaceDefinition = type.GetGenericTypeDefinition();
+					if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
+						interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>)) {
+
+						type = typeof(List<>).MakeGenericType(type.GetGenericArguments().Single());
+					}
+					else if (interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>)) {
+						type = typeof(Dictionary<,>).MakeGenericType(type.GetGenericArguments());
+					}
+					else if (interfaceDefinition == typeof(ISet<>)
 #if NET5_0_OR_GREATER
-					|| interfaceDefinition == typeof(IReadOnlySet<>)
+						|| interfaceDefinition == typeof(IReadOnlySet<>)
 #endif
-					) {
+						) {
 
-					var type = typeof(HashSet<>).MakeGenericType(objectType.GetGenericArguments().Single());
-					actualType = type;
-					return () => Activator.CreateInstance(type);
+						type = typeof(HashSet<>).MakeGenericType(type.GetGenericArguments().Single());
+					}
 				}
-			}
 
-			lock (typeCreationErrorsCache) { 
-				if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
-					if (error == null) { 
-						actualType = objectType;
-						return () => Activator.CreateInstance(objectType);
-					}
-					else
-						throw new ObjectCreationException(objectType, new Exception(error));
+				// Check if the type has a parameterless constructor
+				if(type.IsValueType || type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null) { 
+					// new ValueType() or new Constr()
+					var body = Expression.New(type);
+					return (Expression.Lambda<Func<object>>(Expression.Convert(body, typeof(object))).Compile(), type);
 				}
-				else {
-					// Try creating an instance
-					try {
-						Activator.CreateInstance(objectType);
-						typeCreationErrorsCache.Add(objectType, null);
-						actualType = objectType;
-						return () => Activator.CreateInstance(objectType);
-					}
-					catch (Exception e) {
-						typeCreationErrorsCache.Add(objectType, e.Message);
-						throw new ObjectCreationException(objectType, e);
-					}
-				}
-			}
+
+				return (null, null);
+			});
+
+			if(factory == null || actualType == null)
+				throw new ObjectCreationException(objectType, new Exception("No default constructor found for type"));
+
+			return factory;
 		}
 
 		private static string CreateStringFactory() {
@@ -111,39 +102,12 @@ namespace NeatMapper {
 				}
 			}
 
-			lock (typeCreationErrorsCache) {
-				if (typeCreationErrorsCache.TryGetValue(objectType, out var error)) {
-					if (error == null)
-						return true;
-					else
-						return false;
-				}
-				else {
-					// Try creating an instance
-					try {
-						Activator.CreateInstance(objectType);
-						typeCreationErrorsCache.Add(objectType, null);
-						return true;
-					}
-					catch (Exception e) {
-						typeCreationErrorsCache.Add(objectType, e.Message);
-						return false;
-					}
-				}
-			}
+			return objectType.IsValueType || objectType.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null;
 		}
 
 
 		public static object GetOrCreateCached(Type objectType) {
-			lock (typeInstancesCache) { 
-				if(typeInstancesCache.TryGetValue(objectType, out var obj))
-					return obj;
-				else {
-					obj = Create(objectType);
-					typeInstancesCache.Add(objectType, obj);
-					return obj;
-				}
-			}
+			return typeInstancesCache.GetOrAdd(objectType, Create);
 		}
 
 
@@ -165,6 +129,7 @@ namespace NeatMapper {
 			return CanCreate(objectType);
 		}
 
+		// Creates a non-readonly collection which could be later converted to the given type
 		public static Func<object> CreateCollectionFactory(Type objectType, out Type actualType) {
 			if (objectType == typeof(string))
 				objectType = typeof(StringBuilder);
@@ -183,77 +148,113 @@ namespace NeatMapper {
 			return CreateFactory(objectType, out actualType);
 		}
 
-		// Create a non-readonly collection which could be later converted to the given type
-		public static object CreateCollection(Type objectType) {
-			return CreateCollectionFactory(objectType, out _).Invoke();
-		}
-
-
 		// Returns an instance method which can be invoked with a single parameter to be added to the collection
-		public static MethodInfo GetCollectionAddMethod(object collection) {
-			return GetCollectionAddMethod(collection.GetType());
-		}
-		public static MethodInfo GetCollectionAddMethod(Type collectionType) {
+		public static Action<object, object> GetCollectionCustomAddDelegate(Type collectionType) {
 			if (collectionType == typeof(StringBuilder))
-				return StringBuilder_Append_Char;
+				return (collection, element) => ((StringBuilder)collection).Append((char)element);
 
-			var collectionInterface = collectionType.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
-			if (collectionInterface != null)
-				return collectionType.GetInterfaceMap(collectionInterface).TargetMethods.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
-			else if (collectionType.IsGenericType) {
-				var collectionGenericType = collectionType.GetGenericTypeDefinition();
-				if (collectionGenericType == typeof(Queue<>)) {
-					return collectionType.GetMethod(nameof(Queue<object>.Enqueue))
-						?? throw new InvalidOperationException($"Cannot find method {nameof(Queue)}.{nameof(Queue<object>.Enqueue)}");
+			return collectionsCustomAddMethodsCache.GetOrAdd(collectionType, collection => {
+				var collectionInterface = collection.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
+				MethodInfo method = null;
+				if (collectionInterface != null)
+					method = collection.GetInterfaceMap(collectionInterface).TargetMethods.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
+				else if (collection.IsGenericType) {
+					var collectionGenericType = collection.GetGenericTypeDefinition();
+					if (collectionGenericType == typeof(Queue<>)) {
+						method = collection.GetMethod(nameof(Queue<object>.Enqueue))
+							?? throw new InvalidOperationException($"Cannot find method {nameof(Queue)}.{nameof(Queue<object>.Enqueue)}");
+					}
+					else if (collectionGenericType == typeof(Stack<>)) {
+						method = collection.GetMethod(nameof(Stack<object>.Push))
+							?? throw new InvalidOperationException($"Cannot find method {nameof(Stack)}.{nameof(Stack<object>.Push)}");
+					}
 				}
-				else if (collectionGenericType == typeof(Stack<>)) {
-					return collectionType.GetMethod(nameof(Stack<object>.Push))
-						?? throw new InvalidOperationException($"Cannot find method {nameof(Stack)}.{nameof(Stack<object>.Push)}");
-				}
-			}
 
-			throw new InvalidOperationException("Invalid collection"); // Should not happen
+				if(method != null) {
+					var collectionParam = Expression.Parameter(typeof(object), "collection");
+					var elementParam = Expression.Parameter(typeof(object), "element");
+					// ((Type)collection).Add((Type)element)
+					var body = Expression.Call(Expression.Convert(collectionParam, method.DeclaringType), method, Expression.Convert(elementParam, method.GetParameters()[0].ParameterType));
+					return Expression.Lambda<Action<object, object>>(body, collectionParam, elementParam).Compile();
+				}
+
+				throw new InvalidOperationException("Invalid collection"); // Should not happen
+			});
+		}
+		public static Action<object, object> GetCollectionAddDelegate(Type elementType) {
+			return collectionsAddMethodsCache.GetOrAdd(elementType, element => {
+				var collectionType = typeof(ICollection<>).MakeGenericType(elementType);
+				var collectionParam = Expression.Parameter(typeof(object), "collection");
+				var elementParam = Expression.Parameter(typeof(object), "element");
+				// ((ICollection<Type>)collection).Add((Type)element)
+				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Add)), Expression.Convert(elementParam, elementType));
+				return Expression.Lambda<Action<object, object>>(body, collectionParam, elementParam).Compile();
+			});
 		}
 
-		public static object ConvertCollectionToType(object collection, Type destination) {
-			return CreateCollectionConversionFactory(destination).Invoke(collection);
+		public static Func<object, object, bool> GetCollectionRemoveDelegate(Type elementType) {
+			return collectionsRemoveMethodsCache.GetOrAdd(elementType, element => {
+				var collectionType = typeof(ICollection<>).MakeGenericType(elementType);
+				var collectionParam = Expression.Parameter(typeof(object), "collection");
+				var elementParam = Expression.Parameter(typeof(object), "element");
+				// ((ICollection<Type>)collection).Remove((Type)element)
+				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Remove)), Expression.Convert(elementParam, elementType));
+				return Expression.Lambda<Func<object, object, bool>>(body, collectionParam, elementParam).Compile();
+			});
 		}
 
-		public static Func<object, object> CreateCollectionConversionFactory(Type destination) {
-			if (destination == typeof(string))
-				return collection => ((StringBuilder)collection).ToString();
-			if (destination.IsArray) {
-				var toArray = Enumerable_ToArray.MakeGenericMethod(destination.GetElementType());
-				return collection => toArray.Invoke(null, new object[] { collection });
-			}
-			else if (destination.IsGenericType) {
-				var collectionDefinition = destination.GetGenericTypeDefinition();
-				if (collectionDefinition == typeof(ReadOnlyCollection<>)) {
-					var constr = typeof(ReadOnlyCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
-						.First(c => {
-							var param = c.GetParameters().Single();
-							return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IList<>);
-						});
-					return collection => constr.Invoke(new object[] { collection });
-				}
-				else if (collectionDefinition == typeof(ReadOnlyDictionary<,>)) {
-					var constr = typeof(ReadOnlyDictionary<,>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
-						.First(c => {
-							var param = c.GetParameters().Single();
-							return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>);
-						});
-					return collection => constr.Invoke(new object[] { collection });
-				}
-				else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
-					var constr = typeof(ReadOnlyObservableCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
-						.First(c => {
-							var param = c.GetParameters().Single();
-							return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(ObservableCollection<>);
-						});
-					return collection => constr.Invoke(new object[] { collection });
-				}
-			}
+		public static Func<object, object> CreateCollectionConversionFactory(Type actualType, Type destinationType) {
+			if(actualType != destinationType) { 
+				if (destinationType == typeof(string))
+					return collection => ((StringBuilder)collection).ToString();
+				else if(destinationType.IsArray || destinationType.IsGenericType) { 
+					return collectionsConversionCache.GetOrAdd(destinationType, destination => {
+						if (destination.IsArray) {
+							var toArray = Enumerable_ToArray.MakeGenericMethod(destination.GetElementType());
+							var collectionParam = Expression.Parameter(typeof(object), "collection");
+							// ((Type)collection).ToArray()
+							var body = Expression.Call(toArray, Expression.Convert(collectionParam, actualType));
+							return Expression.Lambda<Func<object, object>>(Expression.Convert(body, typeof(object)), collectionParam).Compile();
+						}
+						else if (destination.IsGenericType){
+							var collectionDefinition = destination.GetGenericTypeDefinition();
+							ConstructorInfo constr = null;
+							if (collectionDefinition == typeof(ReadOnlyCollection<>)) {
+								constr = typeof(ReadOnlyCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
+									.First(c => {
+										var param = c.GetParameters().Single();
+										return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IList<>);
+									});
+							}
+							else if (collectionDefinition == typeof(ReadOnlyDictionary<,>)) {
+								constr = typeof(ReadOnlyDictionary<,>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
+									.First(c => {
+										var param = c.GetParameters().Single();
+										return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>);
+									});
+							}
+							else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+								constr = typeof(ReadOnlyObservableCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
+									.First(c => {
+										var param = c.GetParameters().Single();
+										return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(ObservableCollection<>);
+									});
 
+							}
+
+							if(constr != null) {
+								var collectionParam = Expression.Parameter(typeof(object), "collection");
+								// new Constr((Type)collection)
+								var body = Expression.New(constr, Expression.Convert(collectionParam, actualType));
+								return Expression.Lambda<Func<object, object>>(Expression.Convert(body, typeof(object)), collectionParam).Compile();
+							}
+						}
+
+						return collection => collection;
+					});
+				}
+			}
+			
 			return collection => collection;
 		}
 	}

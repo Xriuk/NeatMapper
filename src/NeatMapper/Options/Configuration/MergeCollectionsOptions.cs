@@ -1,10 +1,16 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Options applied to automatic collections mapping.<br/>
+	/// Options applied to automatic collections mapping (async and normal).<br/>
 	/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
 	/// </summary>
 	public sealed class MergeCollectionsOptions {
-		public MergeCollectionsOptions() { }
+		/// <summary>
+		/// Creates a new instance of <see cref="MergeCollectionsOptions"/>.
+		/// </summary>
+		public MergeCollectionsOptions() {}
+		/// <summary>
+		/// Creates a new instance of <see cref="MergeCollectionsOptions"/> by copying options from another instance.
+		/// </summary>
 		public MergeCollectionsOptions(MergeCollectionsOptions options) {
 			RemoveNotMatchedDestinationElements = options.RemoveNotMatchedDestinationElements;
 		}

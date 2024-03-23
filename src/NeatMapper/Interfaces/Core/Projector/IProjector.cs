@@ -3,9 +3,10 @@ using System.Linq.Expressions;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Interface which allows projecting an object to a new one, can be used in LINQ
+	/// Interface which allows projecting an object to a new one, created expressions can be used in LINQ
 	/// (and be translated to external providers like Entity Framework), or can be compiled into delegates.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IProjector {
 		/// <summary>
 		/// Projects an object to a new one.

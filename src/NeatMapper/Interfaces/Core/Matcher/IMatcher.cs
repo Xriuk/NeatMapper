@@ -4,6 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// Interface which allows matching two objects.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMatcher {
 		/// <summary>
 		/// Checks if two objects are equivalent.

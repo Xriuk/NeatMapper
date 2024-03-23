@@ -109,7 +109,7 @@ namespace NeatMapper {
 
 				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, isRealFactory, out var mergeMappingOptions);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);
 
 				// Create parallel cancellation source and semaphore
 				var parallelMappings = mappingOptions.GetOptions<AsyncCollectionMappersMappingOptions>()?.MaxParallelMappings
@@ -177,7 +177,7 @@ namespace NeatMapper {
 					collectionFactory = null;
 					actualCollectionType = null;
 				}
-				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To);
+				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
 				var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
 					?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
@@ -663,7 +663,7 @@ namespace NeatMapper {
 
 				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, false, out _);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
 
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
 

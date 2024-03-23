@@ -12,19 +12,29 @@ namespace NeatMapper {
 	public sealed class AsyncMappingContext {
 		private readonly Lazy<IAsyncMapper> _mapper;
 
-		public AsyncMappingContext(IServiceProvider serviceProvider, IAsyncMapper mapper, MappingOptions mappingOptions, CancellationToken cancellationToken) :
-			this(serviceProvider, mapper, mapper, mappingOptions, cancellationToken) { }
-		public AsyncMappingContext(IServiceProvider serviceProvider, IAsyncMapper nestedMapper, IAsyncMapper parentMapper, MappingOptions mappingOptions, CancellationToken cancellationToken) {
+		public AsyncMappingContext(
+			IServiceProvider serviceProvider,
+			IAsyncMapper mapper,
+			MappingOptions mappingOptions,
+			CancellationToken cancellationToken) :
+				this(serviceProvider, mapper, mapper, mappingOptions, cancellationToken) { }
+		public AsyncMappingContext(
+			IServiceProvider serviceProvider,
+			IAsyncMapper nestedMapper,
+			IAsyncMapper parentMapper,
+			MappingOptions mappingOptions,
+			CancellationToken cancellationToken) {
+
 			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-			var nestedMappingContext = new AsyncNestedMappingContext(parentMapper ?? throw new ArgumentNullException(nameof(parentMapper)));
-			var nestedMapperInstance = new AsyncNestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
-				.ReplaceOrAdd<AsyncNestedMappingContext, FactoryContext>(
-					n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext,
-					_ => FactoryContext.Instance));
-			_mapper = new Lazy<IAsyncMapper>(() => MappingOptions.GetOptions<FactoryContext>() != null ?
-				(IAsyncMapper)new AsyncCachedFactoryMapper(nestedMapperInstance) :
-				nestedMapperInstance);
+			if (parentMapper == null)
+				throw new ArgumentNullException(nameof(parentMapper));
+			_mapper = new Lazy<IAsyncMapper>(() => {
+				var nestedMappingContext = new AsyncNestedMappingContext(parentMapper);
+				return new AsyncNestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
+					.ReplaceOrAdd<AsyncNestedMappingContext>(
+						n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext));
+			}, true);
 
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
 			CancellationToken = cancellationToken;

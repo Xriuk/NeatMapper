@@ -1,17 +1,48 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System;
-using System.Threading.Tasks;
-using System.Reflection;
+using System.Collections.Concurrent;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches objects by using <see cref="IHierarchyMatchMap{TSource, TDestination}"/>.
 	/// </summary>
 	public sealed class HierarchyCustomMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+		/// <summary>
+		/// Configuration for class and additional maps for the matcher.
+		/// </summary>
 		private readonly CustomMapsConfiguration _configuration;
+
+		/// <summary>
+		/// Service provider available in the created <see cref="MatchingContext"/>s.
+		/// </summary>
 		private readonly IServiceProvider _serviceProvider;
 
+		/// <summary>
+		/// Cached input <see cref="MappingOptions"/> and output <see cref="MatchingContext"/>.
+		/// </summary>
+		private readonly ConcurrentDictionary<MappingOptions, MatchingContext> _contextsCache
+			= new ConcurrentDictionary<MappingOptions, MatchingContext>();
+
+		/// <summary>
+		/// Cached output <see cref="MatchingContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
+		/// for thread-safety.
+		/// </summary>
+		private readonly MatchingContext _contextsCacheNull;
+
+
+		/// <summary>
+		/// Creates a new instance of <see cref="CustomMatcher"/>.<br/>
+		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
+		/// should be specified.
+		/// </summary>
+		/// <param name="mapsOptions">Options to retrieve user-defined maps for the matcher, null to ignore.</param>
+		/// <param name="additionalMapsOptions">Additional user-defined maps for the matcher, null to ignore.</param>
+		/// <param name="serviceProvider">
+		/// Service provider to be passed to the maps inside <see cref="MatchingContext"/>, 
+		/// null to pass an empty service provider.<br/>
+		/// Can be overridden during matching with <see cref="MatcherOverrideMappingOptions"/>.
+		/// </param>
 		public HierarchyCustomMatcher(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			CustomMapsOptions?
@@ -48,6 +79,7 @@ namespace NeatMapper {
 				additionalMapsOptions?._maps.Values
 			);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
+			_contextsCacheNull = new MatchingContext(_serviceProvider, this, this, MappingOptions.Empty);
 		}
 
 
@@ -119,52 +151,33 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			(Type From, Type To) types = (sourceType, destinationType);
-
-			KeyValuePair<(Type From, Type To), CustomMap> map;
-			try {
-				map = _configuration.Maps.First(m =>
-					m.Key.From.IsAssignableFrom(types.From) &&
-					m.Key.To.IsAssignableFrom(types.To));
+			var comparer = _configuration.GetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), m =>
+				m.Key.From.IsAssignableFrom(sourceType) &&
+				m.Key.To.IsAssignableFrom(destinationType));
+			MatchingContext context;
+			if (mappingOptions == null)
+				context = _contextsCacheNull;
+			else {
+				context = _contextsCache.GetOrAdd(mappingOptions, opts => {
+					var overrideOptions = mappingOptions.GetOptions<MatcherOverrideMappingOptions>();
+					return new MatchingContext(
+						overrideOptions?.ServiceProvider ?? _serviceProvider,
+						overrideOptions?.Matcher ?? this,
+						this,
+						mappingOptions
+					);
+				});
 			}
-			catch {
-				throw new MapNotFoundException(types);
-			}
-
-			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
-			var parameters = new object[] { null, null, new MatchingContext(
-				overrideOptions?.ServiceProvider ?? _serviceProvider,
-				overrideOptions?.Matcher ?? this,
-				this,
-				mappingOptions ?? MappingOptions.Empty
-			) };
-			var instance = map.Value.Method.IsStatic ?
-				null :
-				(map.Value.Instance ?? ObjectFactory.GetOrCreateCached(map.Value.Method.DeclaringType));
 
 			return (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-				parameters[0] = source;
-				parameters[1] = destination;
 				try {
-					return (bool)map.Value.Method.Invoke(instance, parameters);
+					return (bool)comparer.Invoke(source, destination, context);
 				}
-				catch (TargetInvocationException e) {
-					if (e.InnerException is TaskCanceledException)
-						throw e.InnerException;
-					else
-						throw new MatcherException(e.InnerException, types);
-				}
-				catch (MapNotFoundException) {
-					throw;
-				}
-				catch (TaskCanceledException) {
-					throw;
-				}
-				catch (Exception e) {
-					throw new MatcherException(e, types);
+				catch (MappingException e) {
+					throw new MatcherException(e.InnerException, (sourceType, destinationType));
 				}
 			};
 

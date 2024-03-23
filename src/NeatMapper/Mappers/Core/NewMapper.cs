@@ -2,7 +2,10 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>.
+	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>.<br/>
+	/// Supports only new maps.<br/>
+	/// Caches <see cref="MappingContext"/> for each provided <see cref="MappingOptions"/>, so that same options
+	/// will reuse the same context.
 	/// </summary>
 	public sealed class NewMapper : CustomMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
@@ -57,33 +60,6 @@ namespace NeatMapper {
 				),
 				serviceProvider) {}
 
-
-		private Func<object, object> CreateNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, bool isRealFactory) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// DEV: replace below with TryAdd (which should not alter options if nothing changes)
-			if(isRealFactory)
-				mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<FactoryContext>(_ => FactoryContext.Instance);
-
-			var map = _configuration.GetMap((sourceType, destinationType));
-			var parameters = new object[] { null, CreateMappingContext(mappingOptions) };
-
-			return source => {
-				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
-				parameters[0] = source;
-				var result = map.Invoke(parameters);
-
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
-
-				return result;
-			};
-		}
-
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -112,7 +88,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateNewFactory(sourceType, destinationType, mappingOptions, false).Invoke(source);
+			return MapNewFactory(sourceType, destinationType, mappingOptions).Invoke(source);
 		}
 
 		override public
@@ -165,7 +141,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			try {
-				_configuration.GetMap((sourceType, destinationType));
+				_configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
 				return true;
 			}
 			catch (MapNotFoundException) {
@@ -203,7 +179,32 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateNewFactory(sourceType, destinationType, mappingOptions, true);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
+			var context = CreateMappingContext(mappingOptions);
+
+			return source => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+				var result = map.Invoke(source, context);
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			};
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public Func<

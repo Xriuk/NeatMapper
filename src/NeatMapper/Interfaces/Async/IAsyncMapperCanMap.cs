@@ -7,6 +7,7 @@ namespace NeatMapper {
 	/// Optional interface to be implemented by asynchronous mappers, which allows to discover
 	/// if two given types can be mapped or not.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IAsyncMapperCanMap : IAsyncMapper {
 		/// <summary>
 		/// Checks if the mapper can create a new object from a given one asynchronously.

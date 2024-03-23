@@ -15,33 +15,6 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		private class LambdaParameterReplacer : ExpressionVisitor {
-			private ParameterExpression[] parameters;
-			private readonly Expression[] replacements;
-
-			public LambdaParameterReplacer(params Expression[] replacements) {
-				this.parameters = Array.Empty<ParameterExpression>();
-				this.replacements = replacements;
-			}
-
-
-			override protected Expression VisitParameter(ParameterExpression node) {
-				var parameter = Array.IndexOf(parameters, node);
-				if (parameter < 0 || parameter >= parameters.Length)
-					return base.VisitParameter(node);
-
-				if(replacements[parameter].Type != parameters[parameter].Type)
-					return Expression.Convert(replacements[parameter], parameters[parameter].Type);
-				else
-					return replacements[parameter];
-			}
-
-			public Expression SetupAndVisit(LambdaExpression lambda) {
-				parameters = lambda.Parameters.ToArray();
-				return Visit(lambda.Body);
-			}
-		}
-
 		private class NestedProjectionExpander : ExpressionVisitor {
 			protected object RetrieveValueRecursively(Expression expr) {
 				// Navigate up recursively until ConstantExpression and retrieve the projector from it down again
@@ -122,7 +95,7 @@ namespace NeatMapper {
 							$"and retrieved map for types {nestedExpression.Parameters[0].Type.FullName ?? nestedExpression.Parameters[0].Type.Name} -> " +
 							$"{nestedExpression.Parameters[1].Type.FullName ?? nestedExpression.Parameters[1].Type.Name}");
 					}
-					return new LambdaParameterReplacer(node.Arguments[0]).SetupAndVisit(nestedExpression);
+					return new LambdaParameterReplacer(node.Arguments[0]).SetupAndVisitBody(nestedExpression);
 				}
 
 				return base.VisitMethodCall(node);
@@ -206,7 +179,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var map = _configuration.GetMap((sourceType, destinationType));
+			var map = _configuration.GetContextMap<ProjectionContext>((sourceType, destinationType));
 
 			var overrideOptions = mappingOptions?.GetOptions<ProjectorOverrideMappingOptions>();
 			var context = new ProjectionContext(
@@ -216,7 +189,7 @@ namespace NeatMapper {
 
 			object result;
 			try {
-				result = map.Invoke(new object[] { context });
+				result = map.Invoke(context);
 			}
 			catch (MapNotFoundException) {
 				throw;
@@ -265,7 +238,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			try {
-				_configuration.GetMap((sourceType, destinationType));
+				_configuration.GetContextMap<ProjectionContext>((sourceType, destinationType));
 				return true;
 			}
 			catch (MapNotFoundException) {

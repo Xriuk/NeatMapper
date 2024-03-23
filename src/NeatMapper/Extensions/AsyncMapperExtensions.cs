@@ -86,7 +86,10 @@ namespace NeatMapper {
 		/// </param>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
-		/// <returns>The newly created object, may be null.</returns>
+		/// <returns>
+		/// A task which when completed returns the newly created object of type <typeparamref name="TDestination"/>,
+		/// which may be null.
+		/// </returns>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<
 #if NET5_0_OR_GREATER
@@ -185,7 +188,10 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='source']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
-		/// <returns>The newly created object, may be null.</returns>
+		/// <returns>
+		/// A task which when completed returns the newly created object of type <typeparamref name="TDestination"/>,
+		/// which may be null.
+		/// </returns>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<
 #if NET5_0_OR_GREATER
@@ -381,8 +387,9 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
-		/// A task which when completed returns the resulting object of the mapping,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
+		/// A task which when completed returns the resulting object of the mapping of type
+		/// <typeparamref name="TDestination"/>, which can be the same as <paramref name="destination"/>
+		/// or a new one, may be null.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<
@@ -514,8 +521,9 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
-		/// A task which when completed returns the resulting collection of the mapping,
-		/// which can be the same as <paramref name="destination"/> or a new one, may be null
+		/// A task which when completed returns the resulting collection of the mapping of type
+		/// <typeparamref name="TDestinationElement"/>, which can be the same as <paramref name="destination"/>
+		/// or a new one, may be null.
 		/// </returns>
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

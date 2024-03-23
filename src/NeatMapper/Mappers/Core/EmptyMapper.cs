@@ -2,7 +2,7 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Singleton <see cref="IMapper"/> which cannot map any type
+	/// Singleton <see cref="IMapper"/> which cannot map any type.
 	/// </summary>
 	public sealed class EmptyMapper : IMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>

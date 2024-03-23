@@ -59,6 +59,7 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual("-6", strings[1]);
 				Assert.AreEqual("0", strings[2]);
 
+				Assert.IsNotNull(MappingOptionsUtils.options);
 				Assert.AreSame(opts, MappingOptionsUtils.options);
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}
@@ -275,6 +276,7 @@ namespace NeatMapper.Tests.Mapping {
 					new[]{ 1, 2 }
 				}, new[] { opts });
 
+				Assert.IsNotNull(MappingOptionsUtils.options);
 				Assert.AreSame(opts, MappingOptionsUtils.options);
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 			}

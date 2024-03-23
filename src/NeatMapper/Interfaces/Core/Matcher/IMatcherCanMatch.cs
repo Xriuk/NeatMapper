@@ -4,6 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// Optional interface to be implemented by matchers, which allows to discover if two given types can be matched or not.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMatcherCanMatch : IMatcher {
 		/// <summary>
 		/// Checks if the matcher could match an object with another one. It does not guarantee that the actual map will succeed.

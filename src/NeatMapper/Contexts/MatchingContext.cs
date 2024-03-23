@@ -16,14 +16,14 @@ namespace NeatMapper {
 		public MatchingContext(IServiceProvider serviceProvider, IMatcher nestedMatcher, IMatcher parentMatcher, MappingOptions mappingOptions) {
 			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-			var nestedMatchingContext = new NestedMatchingContext(parentMatcher ?? throw new ArgumentNullException(nameof(parentMatcher)));
-			var nestedMatcherInstance = new NestedMatcher(nestedMatcher, o => (o ?? MappingOptions.Empty)
-				.ReplaceOrAdd<NestedMatchingContext, FactoryContext>(
-					n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext,
-					_ => FactoryContext.Instance));
-			_matcher = new Lazy<IMatcher>(() => MappingOptions.GetOptions<FactoryContext>() != null ?
-				(IMatcher)new CachedFactoryMatcher(nestedMatcherInstance) :
-				nestedMatcherInstance);
+			if(parentMatcher == null)
+				throw new ArgumentNullException(nameof(parentMatcher));
+			_matcher = new Lazy<IMatcher>(() => {
+				var nestedMatchingContext = new NestedMatchingContext(parentMatcher);
+				return new NestedMatcher(nestedMatcher, o => (o ?? MappingOptions.Empty)
+					.ReplaceOrAdd<NestedMatchingContext>(
+						n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext));
+			}, true);
 
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
 		}

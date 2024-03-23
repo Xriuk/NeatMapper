@@ -3,7 +3,9 @@
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>.<br/>
-	/// Supports both merge and new maps.
+	/// Supports both merge and new maps (by creating a destination object and forwarding the calls to merge map).<br/>
+	/// Caches <see cref="MappingContext"/> for each provided <see cref="MappingOptions"/>, so that same options
+	/// will share the same context.
 	/// </summary>
 	public sealed class MergeMapper : CustomMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
@@ -58,60 +60,6 @@ namespace NeatMapper {
 				),
 				serviceProvider) {}
 
-
-		private Func<object, object> CreateNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, bool isRealFactory) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Forward new map to merge by creating a destination
-			if (!ObjectFactory.CanCreate(destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			var mergeFactory = CreateMergeFactory(sourceType, destinationType, mappingOptions, isRealFactory);
-			var destinationFactory = ObjectFactory.CreateFactory(destinationType);
-			return source => {
-				object destination;
-				try {
-					destination = destinationFactory.Invoke();
-				}
-				catch (ObjectCreationException e) {
-					throw new MappingException(e, (sourceType, destinationType));
-				}
-
-				return mergeFactory.Invoke(source, destination);
-			};
-		}
-
-		private Func<object, object, object> CreateMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, bool isRealFactory) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// DEV: replace below with TryAdd (which should not alter options if nothing changes)
-			if (isRealFactory)
-				mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<FactoryContext>(_ => FactoryContext.Instance);
-
-			var map = _configuration.GetMap((sourceType, destinationType));
-			var parameters = new object[] { null, null, CreateMappingContext(mappingOptions) };
-
-			return (source, destination) => {
-				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-				parameters[0] = source;
-				parameters[1] = destination;
-				var result = map.Invoke(parameters);
-
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
-
-				return result;
-			};
-		}
-
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -140,7 +88,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateNewFactory(sourceType, destinationType, mappingOptions, false).Invoke(source);
+			return MapNewFactory(sourceType, destinationType, mappingOptions).Invoke(source);
 		}
 
 		override public
@@ -171,7 +119,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateMergeFactory(sourceType, destinationType, mappingOptions, false).Invoke(source, destination);
+			return MapMergeFactory(sourceType, destinationType, mappingOptions).Invoke(source, destination);
 		}
 		#endregion
 
@@ -209,7 +157,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			try {
-				_configuration.GetMap((sourceType, destinationType));
+				_configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
 				return true;
 			}
 			catch (MapNotFoundException) {
@@ -235,7 +183,33 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateNewFactory(sourceType, destinationType, mappingOptions, true);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Forward new map to merge by creating a destination
+			Func<object> destinationFactory;
+			try {
+				destinationFactory = ObjectFactory.CreateFactory(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			var mergeFactory = MapMergeFactory(sourceType, destinationType, mappingOptions);
+
+			return source => {
+				object destination;
+				try {
+					destination = destinationFactory.Invoke();
+				}
+				catch (ObjectCreationException e) {
+					throw new MappingException(e, (sourceType, destinationType));
+				}
+
+				return mergeFactory.Invoke(source, destination);
+			};
 		}
 
 		public Func<
@@ -254,7 +228,25 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateMergeFactory(sourceType, destinationType, mappingOptions, true);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
+			var context = CreateMappingContext(mappingOptions);
+
+			return (source, destination) => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+				var result = map.Invoke(source, destination, context);
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			};
 		}
 		#endregion
 	}

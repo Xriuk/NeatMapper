@@ -362,7 +362,7 @@ namespace NeatMapper {
 				f => isRealFactory ? FactoryContext.Instance : f);
 		}
 
-		public async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
+		private async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
 			object source, Type sourceType, Type destinationType,
 			MappingOptions mappingOptions, CancellationToken cancellationToken) {
 
@@ -386,7 +386,7 @@ namespace NeatMapper {
 			return await MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 		}
 
-		public async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
+		private async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
 			object source, Type sourceType, object destination, Type destinationType,
 			MappingOptions mappingOptions, CancellationToken cancellationToken) {
 

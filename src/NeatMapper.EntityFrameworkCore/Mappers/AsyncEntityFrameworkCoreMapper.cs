@@ -275,8 +275,8 @@ namespace NeatMapper.EntityFrameworkCore {
 				catch (ObjectCreationException) {
 					throw new MapNotFoundException(types);
 				}
-				var addMethod = ObjectFactory.GetCollectionAddMethod(actualCollectionType);
-				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(destinationType);
+				var addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
+				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, destinationType);
 
 				return async source => {
 					NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -323,10 +323,10 @@ namespace NeatMapper.EntityFrameworkCore {
 							var destination = collectionFactory.Invoke();
 
 							foreach (var localAndPredicate in localsAndPredicates) {
-								addMethod.Invoke(destination, new object[] { localAndPredicate.LocalEntity });
+								addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 							}
 
-							result = ObjectFactory.ConvertCollectionToType(destination, destinationType);
+							result = collectionConversion.Invoke(destination);
 						}
 						catch (TaskCanceledException) {
 							throw;

@@ -6,6 +6,7 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type, can be an open generic</typeparam>
 	/// <typeparam name="TDestination">Destination type, can be an open generic</typeparam>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IAsyncMergeMap<TSource, TDestination> {
 		/// <summary>
 		/// Maps an object to an existing one asynchronously and returns the result

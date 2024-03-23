@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace NeatMapper {
 	/// Contains informations about custom defined maps (both in classes and outside, both specific and generic)
 	/// </summary>
 	internal sealed class CustomMapsConfiguration {
-		readonly IDictionary<(Type From, Type To), Func<object[], object>> _genericCache = new Dictionary<(Type From, Type To), Func<object[], object>>();
+		readonly ConcurrentDictionary<(Type From, Type To), Delegate> _mapsCache = new ConcurrentDictionary<(Type From, Type To), Delegate>();
 
 		/// <param name="interfaceFilter">
 		/// Filter used to retrieve interface(s) for the maps, will receive the declaring type 
@@ -52,15 +53,29 @@ namespace NeatMapper {
 							.SelectMany(GetOpenGenericArgumentsRecursive)
 							.Distinct()
 							.ToArray();
-						if (!typeArguments.All(t => interfaceOpenGenericArguments.Contains(t)))
-							throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the generic arguments of the interface do not fully cover the generic arguments of the class, so they cannot be inferred");
+						if (!typeArguments.All(t => interfaceOpenGenericArguments.Contains(t))) { 
+							throw new InvalidOperationException(
+								$"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated " +
+								$"because the generic arguments of the interface do not fully cover the generic arguments of the class, " +
+								$"so they cannot be inferred.");
+						}
 						else {
-							var duplicate = genericMaps.FirstOrDefault(m => MatchOpenGenericsRecursive(m.From, interfaceArguments[0]) && MatchOpenGenericsRecursive(m.To, interfaceArguments[1]));
-							if (duplicate != null)
-								throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in generic class {type.Name}, an interface with matching parameters is already defined in class {duplicate.Class.Name}. If the class has generic constraints check that they do not overlap");
+							var duplicate = genericMaps.FirstOrDefault(m => MatchOpenGenericsRecursive(m.From, interfaceArguments[0]) && 
+								MatchOpenGenericsRecursive(m.To, interfaceArguments[1]));
+							if (duplicate != null) { 
+								throw new InvalidOperationException(
+									$"Duplicate interface {interf.FullName ?? interf.Name} in generic class {type.Name}, " +
+									$"an interface with matching parameters is already defined in class {duplicate.Class.Name}. " +
+									$"If the class has generic constraints check that they do not overlap.");
+							}
 							var method = type.GetInterfaceMap(interf).TargetMethods.First();
-							if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null)
-								throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static version of the interface (available in .NET 7 version or greater)");
+							if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null) { 
+								throw new InvalidOperationException(
+									$"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated " +
+									$"because the class which implements the non-static interface has no parameterless constructor. " +
+									$"Either add a parameterless constructor to the class or implement the static version of the interface " +
+									$"(available in .NET 7 version or greater).");
+							}
 
 							genericMaps.Add(new CustomGenericMap {
 								From = interfaceArguments[0],
@@ -75,18 +90,29 @@ namespace NeatMapper {
 					foreach (var interf in interfaces) {
 						var arguments = interf.GetGenericArguments();
 						var method = type.GetInterfaceMap(interf).TargetMethods.First();
-						if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null)
-							throw new InvalidOperationException($"Interface {interf.FullName ?? interf.Name} in class {type.Name} cannot be instantiated because the class which implements the non-static interface has no parameterless constructor. Either add a parameterless constructor to the class or implement the static interface (available in .NET 7)");
+						if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null) { 
+							throw new InvalidOperationException(
+								$"Interface {interf.FullName ?? interf.Name} in class {type.Name} cannot be instantiated " +
+								$"because the class which implements the non-static interface has no parameterless constructor. " +
+								$"Either add a parameterless constructor to the class or implement the static interface " +
+								$"(available in .NET 7).");
+						}
 
 						var types = (From: arguments[0], To: arguments[1]);
-						if (maps.ContainsKey(types))
-							throw new InvalidOperationException($"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, an interface with matching parameters is already defined in class {maps[types].Method.DeclaringType.Name}");
-						else
+						if (maps.ContainsKey(types)) { 
+							throw new InvalidOperationException(
+								$"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, " +
+								$"an interface with matching parameters is already defined" +
+								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType.Name}" : "") +
+								".");
+						}
+						else { 
 							maps.Add(types, new CustomMap {
 								From = types.From,
 								To = types.To,
 								Method = method
 							});
+						}
 					}
 				}
 			}
@@ -95,21 +121,36 @@ namespace NeatMapper {
 				foreach (var map in additionalMaps) {
 					if (map.From.IsGenericType && !map.From.IsConstructedGenericType ||
 						map.To.IsGenericType && !map.To.IsConstructedGenericType ||
-						map.Method.IsGenericMethod ||
-						map.Method.DeclaringType != null && map.Method.DeclaringType.IsGenericType && !map.Method.DeclaringType.IsConstructedGenericType) {
+						IsGenericMethod(map.Method)) {
 
-						throw new InvalidOperationException("Additional map methods cannot be generic or specified in an open generic class");
+						throw new InvalidOperationException("Additional map methods cannot be generic or specified in an open generic class.");
 					}
 
 					// DEV: maybe validate Method against From and To types?
 
-					if (!map.Method.IsStatic && map.Method.DeclaringType.GetConstructor(Type.EmptyTypes) == null && map.Instance == null)
-						throw new InvalidOperationException($"Map {map.Method.Name} in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name} cannot be instantiated because the class has no parameterless constructor. Either add a parameterless constructor to the class or provide an instance or move the map method to another class");
+					// Check method (delegates do not need to be checked as they are self-contained)
+					if (map.Method != null && !map.Method.IsStatic &&
+						map.Method.DeclaringType.GetConstructor(Type.EmptyTypes) == null && map.Instance == null) { 
+
+						throw new InvalidOperationException(
+							$"Map {map.Method.Name} in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name} " +
+							$"cannot be instantiated because the class has no parameterless constructor. " +
+							$"Either add a parameterless constructor to the class or provide an instance " +
+							$"or move the map method to another class.");
+					}
 
 					var types = (map.From, map.To);
 					if (maps.ContainsKey(types)) {
-						if (map.ThrowOnDuplicate)
-							throw new InvalidOperationException($"Duplicate map {map.Method.Name} in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name}, an map with matching parameters is already defined in class {maps[types].Method.DeclaringType.FullName ?? maps[types].Method.DeclaringType.Name}");
+						if (map.ThrowOnDuplicate) { 
+							throw new InvalidOperationException(
+								$"Duplicate map {map.Method.Name}" +
+								(map.Method != null ? $" in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name}" : "") +
+								", " +
+								$"a map with matching parameters is already defined" +
+								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType.FullName ?? maps[types].Method.DeclaringType.Name}" : "") +
+								".");
+					
+						}
 					}
 					else
 						maps.Add(types, map);
@@ -118,6 +159,12 @@ namespace NeatMapper {
 
 			Maps = maps;
 			GenericMaps = genericMaps;
+
+
+			bool IsGenericMethod(MethodInfo method) {
+				return method.IsGenericMethod ||
+					method.DeclaringType != null && method.DeclaringType.IsGenericType && !method.DeclaringType.IsConstructedGenericType;
+			}
 		}
 
 
@@ -125,111 +172,21 @@ namespace NeatMapper {
 
 		internal IEnumerable<CustomGenericMap> GenericMaps { get; }
 
-		// (...params) => result
-		internal Func<object[], object> GetMap((Type From, Type To) types) {
-			// Try retrieving a regular map
-			// or try matching to a generic one
-			lock (Maps) { 
-				if (Maps.TryGetValue(types, out var map)) {
-					return (parameters) => {
-						try {
-							return map.Method.Invoke(
-								map.Method.IsStatic ?
-									null :
-									(map.Instance ?? ObjectFactory.GetOrCreateCached(map.Method.DeclaringType)),
-								parameters
-							);
-						}
-						catch(TargetInvocationException e) {
-							if(e.InnerException is TaskCanceledException || e.InnerException is MapNotFoundException) 
-								throw e.InnerException;
-							else
-								throw new MappingException(e.InnerException, types);
-						}
-						catch (MapNotFoundException) {
-							throw;
-						}
-						catch (TaskCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, types);
-						}
-					};
-				}
-			}
 
-			// Try retrieving from cache
-			lock (_genericCache) { 
-				if (_genericCache.TryGetValue(types, out var method))
-					return method;
-			}
-
-			lock (GenericMaps) { 
-				foreach (var map in GenericMaps) {
-					// Check if the two types are compatible (we'll check constraints when instantiating)
-					if (!MatchOpenAndClosedGenericsRecursive(map.From, types.From) ||
-						!MatchOpenAndClosedGenericsRecursive(map.To, types.To)) {
-
-						continue;
-					}
-
-					// Try inferring the types
-					var classArguments = InferOpenGenericArgumentsRecursive(map.From, types.From)
-						.Concat(InferOpenGenericArgumentsRecursive(map.To, types.To))
-						.ToArray();
-
-					// We may have different closed types matching for the same open type argument, in this case the map should not match
-					var genericArguments = map.Class.GetGenericArguments().Length;
-					if (classArguments
-#if NET6_0_OR_GREATER
-						.DistinctBy(a => a.OpenGenericArgument)
-#else
-						.GroupBy(a => a.OpenGenericArgument)
-#endif
-						.Count() != genericArguments ||
-						classArguments.Distinct().Count() != genericArguments) {
-
-						continue;
-					}
-
-					// Check unmanaged constraints because the CLR seems to not enforce it
-					if (classArguments.Any(a => a.OpenGenericArgument.GetCustomAttributes().Any(ca => ca.GetType().Name == "IsUnmanagedAttribute") &&
-						!IsUnmanaged(a.ClosedType))) {
-
-						continue;
-					}
-
-					// Try creating the type, this will verify any other constraints too
-					Type concreteType;
-					try {
-						concreteType = MakeGenericTypeWithInferredArguments(map.Class, classArguments);
-					}
-					catch {
-						continue;
-					}
-
-					var mapMethod = MethodBase.GetMethodFromHandle(map.Method, concreteType.TypeHandle);
-					if (mapMethod == null)
-						continue;
-
+		internal Func<TContext, object> GetContextMap<TContext>((Type From, Type To) types) {
+			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<TContext, object>>(types, "context");
+				if (mapDeleg != null) {
 #pragma warning disable IDE0039 // Use local function
-					Func<object[], object> func = (parameters) => {
+					Func<TContext, object> deleg = context => {
 						try {
-							return mapMethod.Invoke(
-								mapMethod.IsStatic ?
-									null :
-									ObjectFactory.GetOrCreateCached(concreteType),
-								parameters);
+							return mapDeleg.Invoke(context);
 						}
-						catch (TargetInvocationException e) {
-							if (e.InnerException is TaskCanceledException || e.InnerException is MapNotFoundException)
-								throw e.InnerException;
+						catch (MapNotFoundException e) {
+							if (e.From == types.From && e.To == types.To)
+								throw;
 							else
-								throw new MappingException(e.InnerException, types);
-						}
-						catch (MapNotFoundException) {
-							throw;
+								throw new MappingException(e, types);
 						}
 						catch (TaskCanceledException) {
 							throw;
@@ -240,16 +197,300 @@ namespace NeatMapper {
 					};
 #pragma warning restore IDE0039 // Use local function
 
-					// Cache the method
-					lock (_genericCache) { 
-						_genericCache.Add(types, func);
-					}
-
-					return func;
+					return deleg;
 				}
+
+				return null;
+			});
+			if (cacheDeleg == null)
+				throw new MapNotFoundException(types);
+			else
+				return (Func<TContext, object>)cacheDeleg;
+		}
+
+		internal Func<object, TContext, object> GetSingleMap<TContext>((Type From, Type To) types) {
+			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object, TContext, object>>(types, "source", "context");
+				if(mapDeleg != null) {
+#pragma warning disable IDE0039 // Use local function
+					Func<object, TContext, object> deleg = (source, context) => {
+						try {
+							return mapDeleg.Invoke(source, context);
+						}
+						catch (MapNotFoundException e) {
+							if (e.From == types.From && e.To == types.To)
+								throw;
+							else
+								throw new MappingException(e, types);
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+					};
+#pragma warning restore IDE0039 // Use local function
+
+					return deleg;
+				}
+
+				return null;
+			});
+			if (cacheDeleg == null)
+				throw new MapNotFoundException(types);
+			else
+				return (Func<object, TContext, object>)cacheDeleg;
+		}
+		internal Func<object, AsyncMappingContext, Task<object>> GetSingleMapAsync((Type From, Type To) types) {
+			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object, AsyncMappingContext, Task<object>>>(types, "source", "context");
+				if (mapDeleg != null) {
+#pragma warning disable IDE0039 // Use local function
+					Func<object, AsyncMappingContext, Task<object>> deleg = async (source, context) => {
+						try {
+							return await mapDeleg.Invoke(source, context);
+						}
+						catch (MapNotFoundException e) {
+							if (e.From == types.From && e.To == types.To)
+								throw;
+							else
+								throw new MappingException(e, types);
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+					};
+#pragma warning restore IDE0039 // Use local function
+
+					return deleg;
+				}
+
+				return null;
+			});
+			if (cacheDeleg == null)
+				throw new MapNotFoundException(types);
+			else
+				return (Func<object, AsyncMappingContext, Task<object>>)cacheDeleg;
+		}
+
+		internal Func<object, object, TContext, object> GetDoubleMap<TContext>((Type From, Type To) types) {
+			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object, object, TContext, object>>(types, "source", "destination", "context");
+				if (mapDeleg != null) {
+#pragma warning disable IDE0039 // Use local function
+					Func<object, object, TContext, object> deleg = (source, destination, context) => {
+						try {
+							return mapDeleg.Invoke(source, destination, context);
+						}
+						catch (MapNotFoundException e) {
+							if (e.From == types.From && e.To == types.To)
+								throw;
+							else
+								throw new MappingException(e, types);
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+					};
+#pragma warning restore IDE0039 // Use local function
+
+					return deleg;
+				}
+
+				return null;
+			});
+			if (cacheDeleg == null)
+				throw new MapNotFoundException(types);
+			else
+				return (Func<object, object, TContext, object>)cacheDeleg;
+		}
+		internal Func<object, object, TContext, object> GetDoubleMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate) {
+			if(_mapsCache.TryGetValue(types, out var cacheDeleg)){
+				if (cacheDeleg == null)
+					throw new MapNotFoundException(types);
+				else
+					return (Func<object, object, TContext, object>)cacheDeleg;
 			}
 
-			throw new MapNotFoundException(types);
+			KeyValuePair<(Type From, Type To), CustomMap> map;
+			try {
+				map = Maps.First(predicate);
+			}
+			catch {
+				cacheDeleg = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => (Delegate)null);
+				if(cacheDeleg == null)
+					throw new MapNotFoundException(types);
+				else
+					return (Func<object, object, TContext, object>)cacheDeleg;
+			}
+
+			var mapDeleg = MethodToDelegate<Func<object, object, TContext, object>>(map.Value.Method, "source", "destination", "context");
+#pragma warning disable IDE0039 // Use local function
+			Func<object, object, TContext, object> deleg = (source, destination, context) => {
+				try {
+					return mapDeleg.Invoke(source, destination, context);
+				}
+				catch (MapNotFoundException e) {
+					if (e.From == types.From && e.To == types.To)
+						throw;
+					else
+						throw new MappingException(e, types);
+				}
+				catch (TaskCanceledException) {
+					throw;
+				}
+				catch (Exception e) {
+					throw new MappingException(e, types);
+				}
+			};
+#pragma warning restore IDE0039 // Use local function
+
+			cacheDeleg = _mapsCache.GetOrAdd(types, _ => deleg);
+			if (cacheDeleg == null)
+				throw new MapNotFoundException(types);
+			else
+				return (Func<object, object, TContext, object>)cacheDeleg;
+		}
+		internal Func<object, object, AsyncMappingContext, Task<object>> GetDoubleMapAsync((Type From, Type To) types) {
+			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object, object, AsyncMappingContext, Task<object>>>(types, "source", "destination", "context");
+				if (mapDeleg != null) {
+#pragma warning disable IDE0039 // Use local function
+					Func<object, object, AsyncMappingContext, Task<object>> deleg = async (source, destination, context) => {
+						try {
+							return await mapDeleg.Invoke(source, destination, context);
+						}
+						catch (MapNotFoundException e) {
+							if (e.From == types.From && e.To == types.To)
+								throw;
+							else
+								throw new MappingException(e, types);
+						}
+						catch (TaskCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+					};
+#pragma warning restore IDE0039 // Use local function
+
+					return deleg;
+				}
+
+				return null;
+			});
+			if (cacheDeleg == null)
+				throw new MapNotFoundException(types);
+			else
+				return (Func<object, object, AsyncMappingContext, Task<object>>)cacheDeleg;
+		}
+
+
+		private TDelegate RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) {
+			// Try retrieving a regular map
+			{
+				if (Maps.TryGetValue(types, out var map))
+					return MethodToDelegate<TDelegate>(map.Method, parameterNames);
+			}
+
+			// Try matching to a generic map
+			foreach (var map in GenericMaps) {
+				// Check if the two types are compatible (we'll check constraints when instantiating)
+				if (!MatchOpenAndClosedGenericsRecursive(map.From, types.From) ||
+					!MatchOpenAndClosedGenericsRecursive(map.To, types.To)) {
+
+					continue;
+				}
+
+				// Try inferring the types
+				var classArguments = InferOpenGenericArgumentsRecursive(map.From, types.From)
+					.Concat(InferOpenGenericArgumentsRecursive(map.To, types.To))
+					.ToArray();
+
+				// We may have different closed types matching for the same open type argument, in this case the map should not match
+				var genericArguments = map.Class.GetGenericArguments().Length;
+				if (classArguments
+#if NET6_0_OR_GREATER
+						.DistinctBy(a => a.OpenGenericArgument)
+#else
+					.GroupBy(a => a.OpenGenericArgument)
+#endif
+					.Count() != genericArguments ||
+					classArguments.Distinct().Count() != genericArguments) {
+
+					continue;
+				}
+
+				// Check unmanaged constraints because the CLR seems to not enforce it
+				if (classArguments.Any(a => a.OpenGenericArgument.GetCustomAttributes().Any(ca => ca.GetType().Name == "IsUnmanagedAttribute") &&
+					!IsUnmanaged(a.ClosedType))) {
+
+					continue;
+				}
+
+				// Try creating the type, this will verify any other constraints too
+				Type concreteType;
+				try {
+					concreteType = MakeGenericTypeWithInferredArguments(map.Class, classArguments);
+				}
+				catch {
+					continue;
+				}
+
+				var mapMethod = MethodBase.GetMethodFromHandle(map.Method, concreteType.TypeHandle) as MethodInfo;
+				if (mapMethod == null)
+					continue;
+
+				return MethodToDelegate<TDelegate>(mapMethod, parameterNames);
+			}
+
+			return default;
+		}
+
+		private static readonly MethodInfo this_ConvertTask = typeof(CustomMapsConfiguration).GetMethod(nameof(ConvertTask), BindingFlags.Static | BindingFlags.NonPublic)
+			?? throw new InvalidOperationException("Could not find ConvertTask<TSource, TDestination>(task)");
+		private static async Task<TDestination> ConvertTask<TSource, TDestination>(Task<TSource> task) where TSource : TDestination {
+			var result = await task;
+			return result;
+		}
+		private static TDelegate MethodToDelegate<TDelegate>(MethodInfo method, params string[] parameterNames) {
+			var delegateArguments = typeof(TDelegate).GetGenericArguments();
+			var parameterExpressions = delegateArguments
+				.Zip(parameterNames, (p1, p2) => (p1, p2))
+				.Select(parameters => Expression.Parameter(parameters.p1, parameters.p2))
+				.ToArray();
+			var parametersList = parameterExpressions
+				.Zip(method.GetParameters(), (p1, p2) => (p1, p2))
+				.Select(parameters => {
+					if(parameters.p1.Type == parameters.p2.ParameterType)
+						return parameters.p1;
+					else
+						return (Expression)Expression.Convert(parameters.p1, parameters.p2.ParameterType);
+				});
+			Expression body;
+			if (method.IsStatic)
+				body = Expression.Call(method, parametersList);
+			else {
+				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType)),
+					method, parametersList);
+			}
+			if(method.ReturnType != delegateArguments[delegateArguments.Length - 1]) { 
+				// (Destination)(await task) or
+				// (Destination)result
+				if(method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+					body = Expression.Call(this_ConvertTask.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0], delegateArguments[delegateArguments.Length - 1].GetGenericArguments()[0]), body);
+				else
+					body = Expression.Convert(body, delegateArguments[delegateArguments.Length - 1]);
+			}
+			return Expression.Lambda<TDelegate>(body, parameterExpressions).Compile();
 		}
 
 

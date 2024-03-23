@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -14,9 +15,17 @@ namespace NeatMapper {
 	/// Supports only new maps and not merge maps.
 	/// </summary>
 	public sealed class ProjectionMapper : IMapper, IMapperCanMap, IMapperFactory {
+		/// <summary>
+		/// <see cref="IProjector"/> which is used to create expressions to compile into delegates.
+		/// </summary>
 		private readonly IProjector _projector;
-		// (From, To): (source) => destination (can be null if no map exists)
-		private readonly IDictionary<(Type From, Type To), Func<object, object>> _mapsCache = new Dictionary<(Type, Type), Func<object, object>>();
+
+		/// <summary>
+		/// Compiled delegates cache, delegate can be null if no map exists.
+		/// </summary>
+		private readonly ConcurrentDictionary<(Type From, Type To), Func<object, object>> _mapsCache =
+			new ConcurrentDictionary<(Type, Type), Func<object, object>>();
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="ProjectionMapper"/>.
@@ -102,12 +111,10 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			lock (_mapsCache) {
-				if (_mapsCache.TryGetValue((sourceType, destinationType), out var map))
-					return map != null;
-				else
-					return _projector.CanProject(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
-			}
+			if (_mapsCache.TryGetValue((sourceType, destinationType), out var map))
+				return map != null;
+			else
+				return _projector.CanProject(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
 		}
 
 		public bool CanMapMerge(
@@ -119,6 +126,7 @@ namespace NeatMapper {
 			MappingOptions
 #endif
 			mappingOptions = null) {
+
 			return false;
 		}
 		#endregion
@@ -149,64 +157,59 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			Func<object, object> map;
-			lock (_mapsCache) {
-				if (!_mapsCache.TryGetValue((sourceType, destinationType), out map)) {
-					// Retrieve the projection from the projector
-					LambdaExpression projection;
+			var map = _mapsCache.GetOrAdd((sourceType, destinationType), types => {
+				// Retrieve the projection from the projector
+				LambdaExpression projection;
+				try {
+					projection = _projector.Project(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+				}
+				catch (ProjectionException e) {
+					throw new MappingException(e.InnerException, (sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					return null;
+				}
+				catch (TaskCanceledException) {
+					throw;
+				}
+
+				// Convert the expression to accept and return object types
+				var param = Expression.Parameter(typeof(object), "source");
+				projection = Expression.Lambda(
+					Expression.Convert(new LambdaParameterReplacer(Expression.Convert(param, projection.Parameters.Single().Type)).SetupAndVisitBody(projection), typeof(object)),
+					param);
+
+				// Compile the expression and wrap it to catch exceptions
+				var deleg = (Func<object, object>)projection.Compile();
+				return source => {
+					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+					object result;
 					try {
-						projection = _projector.Project(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+						result = deleg.Invoke(source);
 					}
 					catch (ProjectionException e) {
 						throw new MappingException(e.InnerException, (sourceType, destinationType));
 					}
-					catch (MapNotFoundException) {
-						_mapsCache.Add((sourceType, destinationType), null);
-						throw;
+					catch (MapNotFoundException e) {
+						if (e.From == types.From && e.To == types.To)
+							throw;
+						else
+							throw new MappingException(e, types);
 					}
 					catch (TaskCanceledException) {
 						throw;
 					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 
-					// Compile the expression and wrap it to catch exceptions, we also cache it
-					var deleg = projection.Compile();
-					map = source => {
-						TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+					// Should not happen
+					TypeUtils.CheckObjectType(result, destinationType);
 
-						object result;
-						try {
-							result = deleg.DynamicInvoke(source);
-						}
-						catch (TargetInvocationException e) {
-							if (e.InnerException is TaskCanceledException || e.InnerException is MapNotFoundException)
-								throw e.InnerException;
-							else if (e.InnerException is ProjectionException pe)
-								throw new MappingException(pe.InnerException, (sourceType, destinationType));
-							else
-								throw new MappingException(e.InnerException, (sourceType, destinationType));
-						}
-						catch (ProjectionException e) {
-							throw new MappingException(e.InnerException, (sourceType, destinationType));
-						}
-						catch (MapNotFoundException) {
-							throw;
-						}
-						catch (TaskCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, (sourceType, destinationType));
-						}
-
-						// Should not happen
-						TypeUtils.CheckObjectType(result, destinationType);
-
-						return result;
-					};
-					_mapsCache.Add((sourceType, destinationType), map);
-				}
-			}
-
+					return result;
+				};
+			});
 			if (map == null)
 				throw new MapNotFoundException((sourceType, destinationType));
 

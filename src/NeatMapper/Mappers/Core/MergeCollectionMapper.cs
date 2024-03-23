@@ -8,18 +8,37 @@ using System.Threading.Tasks;
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which merges a <see cref="IEnumerable{T}"/> (even nested) with an existing
-	/// <see cref="ICollection{T}"/> (not readonly), will create a new <see cref="ICollection{T}"/> if destination is null.<br/>
-	/// Will try to match elements of the source collection with the destination by using an <see cref="IMatcher"/> if provided:<br/>
-	/// - If a match is found will try to merge the two elements or will replace with a new one by using a <see cref="IMapper"/>.<br/>
-	/// - If a match is not found a new element will be added by mapping them with a <see cref="IMapper"/> by trying new map, then merge map.<br/>
-	/// Not matched elements from the destination collection are treated according to <see cref="MergeCollectionsOptions"/> (and overrides).<br/>
-	/// Collections are NOT mapped lazily, all elements are evaluated during the map.
+	/// <see cref="ICollection{T}"/> (not readonly), will create a new <see cref="ICollection{T}"/>
+	/// if destination is null.<br/>
+	/// Will try to match elements of the source collection with the destination by using an
+	/// <see cref="IMatcher"/> if provided:<br/>
+	/// - If a match is found will try to merge the two elements or will replace with a new one by using
+	/// a <see cref="IMapper"/>.<br/>
+	/// - If a match is not found a new element will be added by mapping them with a <see cref="IMapper"/>
+	/// by trying new map, then merge map.<br/>
+	/// Not matched elements from the destination collection are treated according to
+	/// <see cref="MergeCollectionsOptions"/> (and overrides).<br/>
+	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
 	/// </summary>
 	public sealed class MergeCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
+		// DEV: what is it used for? Try to remove
 		private readonly IMapper _originalElementMapper;
+
+		/// <summary>
+		/// <see cref="IMatcher"/> which is used to match source elements with destination elements to try merging them together.
+		/// </summary>
 		private readonly IMatcher _elementsMatcher;
+
+		/// <summary>
+		/// Options to apply when merging elements in the collections.
+		/// </summary>
 		private readonly MergeCollectionsOptions _mergeCollectionOptions;
+
+		/// <summary>
+		/// Service provider to be passed to <see cref="MergeCollectionsMappingOptions.Matcher"/>.
+		/// </summary>
 		private readonly IServiceProvider _serviceProvider;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="MergeCollectionMapper"/>.
@@ -70,269 +89,6 @@ namespace NeatMapper {
 			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private Func<object, object, object> CreateMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, bool isRealFactory) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			(Type From, Type To) types = (sourceType, destinationType);
-
-			// If both types are collections try mapping the element types
-			if (types.From.IsEnumerable() && types.To.IsCollection() && !types.To.IsArray) {
-				// If the destination type is not an interface, check if it is not readonly
-				if (!destinationType.IsInterface && destinationType.IsGenericType) {
-					var collectionDefinition = destinationType.GetGenericTypeDefinition();
-					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
-						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
-						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
-
-						throw new MapNotFoundException(types);
-					}
-				}
-
-				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetCollectionElementType());
-
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, isRealFactory, out var mergeMappingOptions);
-
-				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
-
-				// At least one of New or Merge mapper is required to map elements
-				// If both are found they will be used in the following order:
-				// - elements to update will use MergeMap first (on the existing element),
-				//   then NewMap (by removing the existing element and adding the new one)
-				// - elements to add will use NewMap first,
-				//   then MergeMap (by creating a new element and merging to it)
-				Func<object, object> newElementsFactory;
-				try {
-					newElementsFactory = elementsMapper.MapNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
-				}
-				catch (MapNotFoundException) {
-					newElementsFactory = null;
-				}
-				Func<object, object, object> mergeElementsFactory;
-				Func<object> destinationFactory = null;
-				try {
-					mergeElementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
-					try { 
-						destinationFactory = ObjectFactory.CreateFactory(elementTypes.To);
-					}
-					catch (ObjectCreationException) { }
-				}
-				catch (MapNotFoundException) {
-					// At least one map is required
-					if(newElementsFactory == null)
-						throw new MapNotFoundException(types);
-
-					mergeElementsFactory = null;
-				}
-
-				// Create the matcher factory (it will always be created because of SafeMatcher)
-				IMatcher elementsMatcher;
-				if (mergeMappingOptions?.Matcher != null)
-					elementsMatcher = new SafeMatcher(new DelegateMatcher(mergeMappingOptions.Matcher, _elementsMatcher, _serviceProvider));
-				else
-					elementsMatcher = _elementsMatcher;
-				var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
-
-				// Create the collection factories (in case we will map null destination collections)
-				Func<object> collectionFactory;
-				Type actualCollectionType;
-				try {
-					collectionFactory = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType);
-				}
-				catch (ObjectCreationException) {
-					collectionFactory = null;
-					actualCollectionType = null;
-				}
-				var collectionConversion = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To);
-
-				var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
-					?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
-
-				return (source, destination) => {
-					TypeUtils.CheckObjectType(source, types.From, nameof(source));
-					TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
-
-					if (source is IEnumerable sourceEnumerable) {
-						// If we have to create the destination collection we know that we can always map to it
-						// Otherwise we must check that first
-						if (destination == null) {
-							if(collectionFactory == null)
-								throw new MapNotFoundException(types);
-
-							destination = collectionFactory.Invoke();
-						}
-						else {
-							// Check if the collection is not readonly recursively, if it throws it means that
-							// the element mapper will be responsible for mapping the object and not collection mapper recursively
-							try {
-								if (!CanMapMerge(sourceType, destinationType, destination as IEnumerable, mappingOptions))
-									throw new MapNotFoundException(types);
-							}
-							catch (MapNotFoundException) {
-								throw;
-							}
-							catch { }
-						}
-
-						if (destination is IEnumerable destinationEnumerable) {
-							var destinationInstanceType = destination.GetType();
-							if (destinationInstanceType.IsArray)
-								throw new MapNotFoundException(types);
-
-							var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
-								.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-							var addMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
-							var removeMethod = interfaceMap.First(m => m.Name.EndsWith(nameof(ICollection<object>.Remove)));
-
-							var elementsToRemove = new List<object>();
-							var elementsToAdd = new List<object>();
-
-							try {
-								// Deleted elements
-								if (removeNotMatchedDestinationElements) {
-									foreach (var destinationElement in destinationEnumerable) {
-										bool found = false;
-										foreach (var sourceElement in sourceEnumerable) {
-											if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
-												found = true;
-												break;
-											}
-										}
-
-										if (!found)
-											elementsToRemove.Add(destinationElement);
-									}
-								}
-
-								// Added/updated elements
-								foreach (var sourceElement in sourceEnumerable) {
-									bool found = false;
-									object matchingDestinationElement = null;
-									foreach (var destinationElement in destinationEnumerable) {
-										if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-											!elementsToRemove.Contains(destinationElement)) {
-
-											matchingDestinationElement = destinationElement;
-											found = true;
-											break;
-										}
-									}
-
-									if (found) {
-										// Try merge map
-										if (mergeElementsFactory != null) {
-											try {
-												var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
-												if (mergeResult != matchingDestinationElement) {
-													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(mergeResult);
-												}
-												continue;
-											}
-											catch (MapNotFoundException) {
-												mergeElementsFactory = null;
-											}
-										}
-
-										// Try new map
-										if (newElementsFactory == null)
-											throw new MapNotFoundException(types);
-										try { 
-											elementsToRemove.Add(matchingDestinationElement);
-											elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-										}
-										catch (MapNotFoundException) {
-											throw new MapNotFoundException(types);
-										}
-									}
-									else {
-										// Try new map
-										if (newElementsFactory != null) {
-											try {
-												elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-												continue;
-											}
-											catch (MapNotFoundException) {
-												newElementsFactory = null;
-											}
-										}
-
-										// Try merge map
-										if (mergeElementsFactory == null || destinationFactory == null)
-											throw new MapNotFoundException(types);
-										try {
-											elementsToAdd.Add(mergeElementsFactory.Invoke(sourceElement, destinationFactory.Invoke()));
-										}
-										catch (MapNotFoundException) {
-											throw new MapNotFoundException(types);
-										}
-									}
-								}
-
-								foreach (var element in elementsToRemove) {
-									if (!(bool)removeMethod.Invoke(destination, new object[] { element }))
-										throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
-								}
-								foreach (var element in elementsToAdd) {
-									addMethod.Invoke(destination, new object[] { element });
-								}
-
-								var result = collectionConversion.Invoke(destination);
-
-								// Should not happen
-								TypeUtils.CheckObjectType(result, types.To);
-
-								return result;
-							}
-							catch (MapNotFoundException) {
-								throw;
-							}
-							catch (TaskCanceledException) {
-								throw;
-							}
-							catch (Exception e) {
-								throw new MappingException(e, types);
-							}
-						}
-						else
-							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
-					}
-					else if (source == null) {
-						// Check if we can map elements
-						try {
-							if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
-								return null;
-						}
-						catch { }
-
-						try {
-							if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
-								return null;
-						}
-						catch { }
-
-						throw new MapNotFoundException(types);
-					}
-					else
-						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-				};
-			}
-
-			throw new MapNotFoundException(types);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 
 
 		#region IMapper methods
@@ -390,7 +146,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateMergeFactory(sourceType, destinationType, mappingOptions, false).Invoke(source, destination);
+			return MapMergeFactory(sourceType, destinationType, mappingOptions).Invoke(source, destination);
 		}
 		#endregion
 
@@ -458,7 +214,262 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return CreateMergeFactory(sourceType, destinationType, mappingOptions, true);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			(Type From, Type To) types = (sourceType, destinationType);
+
+			// If both types are collections try mapping the element types
+			if (types.From.IsEnumerable() && types.To.IsCollection() && !types.To.IsArray) {
+				// If the destination type is not an interface, check if it is not readonly
+				if (!destinationType.IsInterface && destinationType.IsGenericType) {
+					var collectionDefinition = destinationType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						throw new MapNotFoundException(types);
+					}
+				}
+
+				var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetCollectionElementType());
+
+				// Create the collection factories (in case we will map null destination collections)
+				Func<object> collectionFactory;
+				Type actualCollectionType;
+				try {
+					collectionFactory = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType);
+				}
+				catch (ObjectCreationException) {
+					collectionFactory = null;
+					actualCollectionType = null;
+				}
+
+				var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
+				var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
+
+				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
+
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);
+				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
+				// At least one of New or Merge mapper is required to map elements
+				// If both are found they will be used in the following order:
+				// - elements to update will use MergeMap first (on the existing element),
+				//   then NewMap (by removing the existing element and adding the new one)
+				// - elements to add will use NewMap first,
+				//   then MergeMap (by creating a new element and merging to it)
+				Func<object, object> newElementsFactory;
+				try {
+					newElementsFactory = elementsMapper.MapNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
+				}
+				catch (MapNotFoundException) {
+					newElementsFactory = null;
+				}
+				Func<object, object, object> mergeElementsFactory;
+				Func<object> destinationFactory = null;
+				try {
+					mergeElementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
+					try {
+						destinationFactory = ObjectFactory.CreateFactory(elementTypes.To);
+					}
+					catch (ObjectCreationException) { }
+				}
+				catch (MapNotFoundException) {
+					// At least one map is required
+					if (newElementsFactory == null)
+						throw new MapNotFoundException(types);
+
+					mergeElementsFactory = null;
+				}
+
+				// Create the matcher (it will never throw because of SafeMatcher)
+				IMatcher elementsMatcher;
+				if (mergeMappingOptions?.Matcher != null)
+					elementsMatcher = new SafeMatcher(new DelegateMatcher(mergeMappingOptions.Matcher, _elementsMatcher, _serviceProvider));
+				else
+					elementsMatcher = _elementsMatcher;
+				var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
+
+				var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
+					?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
+
+				return (source, destination) => {
+					TypeUtils.CheckObjectType(source, types.From, nameof(source));
+					TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
+
+					if (source is IEnumerable sourceEnumerable) {
+						// If we have to create the destination collection we know that we can always map to it
+						// Otherwise we must check that first
+						if (destination == null) {
+							if (collectionFactory == null)
+								throw new MapNotFoundException(types);
+
+							destination = collectionFactory.Invoke();
+						}
+						else {
+							// Check if the collection is not readonly recursively, if it throws it means that
+							// the element mapper will be responsible for mapping the object and not collection mapper recursively
+							try {
+								if (!CanMapMerge(types.From, types.To, destination as IEnumerable, mappingOptions))
+									throw new MapNotFoundException(types);
+							}
+							catch (MapNotFoundException) {
+								throw;
+							}
+							catch { }
+						}
+
+						if (destination is IEnumerable destinationEnumerable) {
+							var elementsToRemove = new List<object>();
+							var elementsToAdd = new List<object>();
+
+							var canNew = newElementsFactory != null;
+							var canMerge = mergeElementsFactory != null;
+
+							object result;
+							try {
+								// Deleted elements
+								if (removeNotMatchedDestinationElements) {
+									foreach (var destinationElement in destinationEnumerable) {
+										bool found = false;
+										foreach (var sourceElement in sourceEnumerable) {
+											if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
+												found = true;
+												break;
+											}
+										}
+
+										if (!found)
+											elementsToRemove.Add(destinationElement);
+									}
+								}
+
+								// Added/updated elements
+								foreach (var sourceElement in sourceEnumerable) {
+									bool found = false;
+									object matchingDestinationElement = null;
+									foreach (var destinationElement in destinationEnumerable) {
+										if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+											!elementsToRemove.Contains(destinationElement)) {
+
+											matchingDestinationElement = destinationElement;
+											found = true;
+											break;
+										}
+									}
+
+									if (found) {
+										// Try merge map
+										if (canMerge) {
+											try {
+												var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
+												if (mergeResult != matchingDestinationElement) {
+													elementsToRemove.Add(matchingDestinationElement);
+													elementsToAdd.Add(mergeResult);
+												}
+												continue;
+											}
+											catch (MapNotFoundException) {
+												canMerge = false;
+											}
+										}
+
+										// Try new map
+										if (!canNew)
+											throw new MapNotFoundException(types);
+										try {
+											elementsToRemove.Add(matchingDestinationElement);
+											elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+										}
+										catch (MapNotFoundException) {
+											throw new MapNotFoundException(types);
+										}
+									}
+									else {
+										// Try new map
+										if (canNew) {
+											try {
+												elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+												continue;
+											}
+											catch (MapNotFoundException) {
+												canNew = false;
+											}
+										}
+
+										// Try merge map
+										if (!canMerge || destinationFactory == null)
+											throw new MapNotFoundException(types);
+										try {
+											elementsToAdd.Add(mergeElementsFactory.Invoke(sourceElement, destinationFactory.Invoke()));
+										}
+										catch (MapNotFoundException) {
+											throw new MapNotFoundException(types);
+										}
+									}
+								}
+
+								// Update destination collection
+								foreach (var element in elementsToRemove) {
+									if (!removeDelegate.Invoke(destination, element))
+										throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+								}
+								foreach (var element in elementsToAdd) {
+									addDelegate.Invoke(destination, element);
+								}
+
+								result = collectionConversionDelegate.Invoke(destination);
+							}
+							catch (MapNotFoundException) {
+								throw;
+							}
+							catch (TaskCanceledException) {
+								throw;
+							}
+							catch (Exception e) {
+								throw new MappingException(e, types);
+							}
+
+							// Should not happen
+							TypeUtils.CheckObjectType(result, types.To);
+
+							return result;
+						}
+						else
+							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+					}
+					else if (source == null) {
+						try {
+							if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
+								return null;
+						}
+						catch { }
+
+						try {
+							if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions) && ObjectFactory.CanCreate(elementTypes.To))
+								return null;
+						}
+						catch { }
+
+						throw new MapNotFoundException(types);
+					}
+					else
+						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+				};
+			}
+
+			throw new MapNotFoundException(types);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 		#endregion
 
@@ -505,7 +516,7 @@ namespace NeatMapper {
 
 				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, false, out _);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
 
 				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
 

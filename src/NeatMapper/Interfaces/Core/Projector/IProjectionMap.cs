@@ -12,7 +12,8 @@ namespace NeatMapper {
 	/// for compilation (for example it uses fake methods which must be translated by an
 	/// <see cref="System.Linq.IQueryProvider"/>) it should check the <see cref="ProjectionContext"/>
 	/// for <see cref="ProjectionCompilationContext"/> options and throw a <see cref="MapNotFoundException"/>
-	/// exception to signal it.
+	/// exception to signal it.<br/>
+	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
 	public interface IProjectionMap<TSource, TDestination> {
 		/// <summary>

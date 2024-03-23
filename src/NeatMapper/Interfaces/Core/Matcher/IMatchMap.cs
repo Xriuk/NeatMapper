@@ -4,6 +4,7 @@
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMatchMap<TSource, TDestination> {
 		/// <summary>
 		/// Checks if two objects are equivalent (usually by comparing the keys of the two).

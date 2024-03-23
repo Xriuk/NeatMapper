@@ -1,13 +1,34 @@
-﻿using Microsoft.Extensions.Options;
-using System;
+﻿using System;
+using System.Collections.Concurrent;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches objects by using <see cref="IMatchMap{TSource, TDestination}"/>.
 	/// </summary>
 	public sealed class CustomMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
-		readonly CustomMapsConfiguration _configuration;
-		readonly IServiceProvider _serviceProvider;
+		/// <summary>
+		/// Configuration for class and additional maps for the matcher.
+		/// </summary>
+		private readonly CustomMapsConfiguration _configuration;
+
+		/// <summary>
+		/// Service provider available in the created <see cref="MatchingContext"/>s.
+		/// </summary>
+		private readonly IServiceProvider _serviceProvider;
+
+		/// <summary>
+		/// Cached input <see cref="MappingOptions"/> and output <see cref="MatchingContext"/>.
+		/// </summary>
+		private readonly ConcurrentDictionary<MappingOptions, MatchingContext> _contextsCache
+			= new ConcurrentDictionary<MappingOptions, MatchingContext>();
+
+		/// <summary>
+		/// Cached output <see cref="MatchingContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
+		/// for thread-safety.
+		/// </summary>
+		private readonly MatchingContext _contextsCacheNull;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CustomMatcher"/>.<br/>
@@ -56,6 +77,7 @@ namespace NeatMapper {
 				additionalMapsOptions?._maps.Values
 			);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
+			_contextsCacheNull = new MatchingContext(_serviceProvider, this, this, MappingOptions.Empty);
 		}
 
 
@@ -101,7 +123,7 @@ namespace NeatMapper {
 
 			try {
 				// Try retrieving a regular map
-				_configuration.GetMap((sourceType, destinationType));
+				_configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
 				return true;
 			}
 			catch (MapNotFoundException) {
@@ -133,29 +155,32 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
-			
-			(Type From, Type To) types = (sourceType, destinationType);
 
-			var comparer = _configuration.GetMap(types);
-			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
-			var parameters = new object[] { null, null, new MatchingContext(
-				overrideOptions?.ServiceProvider ?? _serviceProvider,
-				overrideOptions?.Matcher ?? this,
-				this,
-				mappingOptions ?? MappingOptions.Empty
-			) };
+			var comparer = _configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
+			MatchingContext context;
+			if(mappingOptions == null)
+				context = _contextsCacheNull;
+			else {
+				context = _contextsCache.GetOrAdd(mappingOptions, opts => {
+					var overrideOptions = mappingOptions.GetOptions<MatcherOverrideMappingOptions>();
+					return new MatchingContext(
+						overrideOptions?.ServiceProvider ?? _serviceProvider,
+						overrideOptions?.Matcher ?? this,
+						this,
+						mappingOptions
+					);
+				});
+			}
 
 			return (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-				parameters[0] = source;
-				parameters[1] = destination;
 				try {
-					return (bool)comparer.Invoke(parameters);
+					return (bool)comparer.Invoke(source, destination, context);
 				}
 				catch (MappingException e) {
-					throw new MatcherException(e.InnerException, types);
+					throw new MatcherException(e.InnerException, (sourceType, destinationType));
 				}
 			};
 

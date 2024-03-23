@@ -8,6 +8,7 @@ namespace NeatMapper {
 	/// The implementation should be more efficient than calling IMapper.Map() multiple times,
 	/// and thus can be used for collections.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMapperFactory : IMapper {
 		/// <summary>
 		/// Creates a factory to map an object to a new one.

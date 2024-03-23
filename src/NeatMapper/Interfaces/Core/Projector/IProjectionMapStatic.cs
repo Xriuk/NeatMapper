@@ -20,6 +20,7 @@ namespace NeatMapper {
 	/// This interface is the same as <see cref="IProjectionMap{TSource, TDestination}"/>, but allows greater flexibility:
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).
 	/// </para>
+	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
 	public interface IProjectionMapStatic<TSource, TDestination> {
 		/// <summary>

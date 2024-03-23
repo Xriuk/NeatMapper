@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 
 namespace NeatMapper {
 	/// <summary>
@@ -9,12 +10,31 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
+		/// <summary>
+		/// <see cref="IMatcher"/> to wrap.
+		/// </summary>
 		private readonly IMatcher _matcher;
-		private readonly Func<MappingOptions, MappingOptions> _mappingOptionsEditor;
+
+		/// <summary>
+		/// Factory used to edit (or create) <see cref="MappingOptions"/> and apply them to <see cref="_matcher"/>.
+		/// </summary>
+		private readonly Func<MappingOptions, MappingOptions> _optionsFactory;
+
+		/// <summary>
+		/// Cached input and output <see cref="MappingOptions"/> from <see cref="_optionsFactory"/>.
+		/// </summary>
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+
+		/// <summary>
+		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
+		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// </summary>
+		private readonly MappingOptions _optionsCacheNull;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="NestedMatcher"/>.
@@ -35,7 +55,8 @@ namespace NeatMapper {
 			> mappingOptionsEditor) {
 
 			_matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
-			_mappingOptionsEditor = mappingOptionsEditor ?? throw new ArgumentNullException(nameof(mappingOptionsEditor));
+			_optionsFactory = mappingOptionsEditor ?? throw new ArgumentNullException(nameof(mappingOptionsEditor));
+			_optionsCacheNull = _optionsFactory.Invoke(null);
 		}
 
 
@@ -61,7 +82,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return _matcher.Match(source, sourceType, destination, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _matcher.Match(source, sourceType, destination, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 
 		public bool CanMatch(
@@ -74,7 +95,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return _matcher.CanMatch(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _matcher.CanMatch(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 
 		public Func<
@@ -93,7 +114,28 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return _matcher.MatchFactory(sourceType, destinationType, _mappingOptionsEditor.Invoke(mappingOptions));
+			return _matcher.MatchFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		/// <summary>
+		/// Retrieves cached cached options or apples <see cref="_optionsFactory"/> on them.
+		/// </summary>
+		/// <param name="mappingOptions">Input options to check.</param>
+		/// <returns>Cached or created and cached resulting options.</returns>
+		private MappingOptions GetOrCreateOptions(MappingOptions mappingOptions) {
+			if (mappingOptions == null)
+				return _optionsCacheNull;
+			else
+				return _optionsCache.GetOrAdd(mappingOptions, _optionsFactory);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

@@ -5,9 +5,11 @@ namespace NeatMapper{
 	/// Optional interface to be implemented by matchers, which allows to create a factory to match objects
 	/// of given types, instead of matching them directly. The created factories should share the same
 	/// <see cref="MappingContext"/>.<br/>
-	/// The implementation should be more efficient than calling <see cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/> multiple times,
+	/// The implementation should be more efficient than calling
+	/// <see cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/> multiple times,
 	/// and thus can be used for collections.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe, this includes the returned factories too.</remarks>
 	public interface IMatcherFactory : IMatcher {
 		/// <summary>
 		/// Creates a factory to check if two objects are equivalent.

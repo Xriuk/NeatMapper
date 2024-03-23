@@ -60,49 +60,6 @@ namespace NeatMapper {
 				),
 				serviceProvider) { }
 
-
-		private Func<object, Task<object>> CreateNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions, CancellationToken cancellationToken, bool isRealFactory) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// DEV: replace below with TryAdd (which should not alter options if nothing changes)
-			if (isRealFactory)
-				mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<FactoryContext>(_ => FactoryContext.Instance);
-
-			var types = (sourceType, destinationType);
-
-			var map = _configuration.GetMap(types);
-			var parameters = new object[] { null, CreateMappingContext(mappingOptions, cancellationToken) };
-
-			return async source => {
-				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
-				parameters[0] = source;
-				var task = (Task)map.Invoke(parameters);
-
-				object result;
-				try {
-					result = await TaskUtils.AwaitTask<object>(task);
-				}
-				catch (MapNotFoundException) {
-					throw;
-				}
-				catch (TaskCanceledException) {
-					throw;
-				}
-				catch (Exception e) {
-					throw new MappingException(e, types);
-				}
-
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
-
-				return result;
-			};
-		}
-
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #pragma warning restore CA1068
 #nullable enable
@@ -133,7 +90,7 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			return CreateNewFactory(sourceType, destinationType, mappingOptions, cancellationToken, false).Invoke(source);
+			return MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken).Invoke(source);
 		}
 
 		override public Task<
@@ -187,7 +144,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			try {
-				_configuration.GetMap((sourceType, destinationType));
+				_configuration.GetSingleMapAsync((sourceType, destinationType));
 				return Task.FromResult(true);
 			}
 			catch (MapNotFoundException) {
@@ -205,6 +162,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
+
 			return Task.FromResult(false);
 		}
 		#endregion
@@ -227,7 +185,24 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			return CreateNewFactory(sourceType, destinationType, mappingOptions, cancellationToken, true);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			var map = _configuration.GetSingleMapAsync((sourceType, destinationType));
+			var context = CreateMappingContext(mappingOptions, cancellationToken);
+
+			return async source => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+				var result = await map.Invoke(source, context);
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			};
 		}
 
 		public Func<

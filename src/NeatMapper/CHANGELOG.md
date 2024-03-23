@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.3.0] - Unreleased
+
+### Changed
+
+- (Async)Mappers/matchers/projectors are now 40 to 90% faster as they cache various data, from maps to `MappingOptions` and others
+- `AsyncCompositeMapper`/`CompositeMapper`'s `MapInternal` methods visibility has been changed from public (mistakenly) to private
+- All interfaces (async and not) now require their implementing classes to be thread-safe (including returned factories), core types were adjusted to be compliant
+- All options passed as `MappingOptions` are now required to be (and assumed to be) immutable, for performance reasons
+- Improved performances for nested mappings/matchings/projections
+
+### Fixed
+
+- `MappingContext` nested Mapper creation fixes
+- Custom maps now correctly throw `MapNotFoundException` if the types matches the current mapped types or wraps it in `MappingException`/`MatcherException`/`ProjectionException`
+
+
 ## [2.2.0] - 2024-02-03
 
 ### Changed
@@ -10,7 +26,7 @@
 
 ### Added
 
-- Projectors/Mappers `IQueryable`/`IEnumerable` extension methods `Project`, which create a lazy projection (by using `Select()`)
+- Projectors/Mappers `IQueryable`/`IEnumerable` extension methods `Project`, which creates a lazy projection (by using `Select()`)
 - New optional interfaces `IMapperFactory`/`IAsyncMapperFactory`/`IMatcherFactory` which allows to create mapping/matching factories instead of mapping/matching directly, to map/match multiple elements of two given types faster
 - Extension methods `MapNewFactory` and `MapMergeFactory` for any `IMapper` which will fallback to default `Map()` if `IMapperFactory` is not implemented
 - New options `FactoryContext` which allows to discover if a given map will be part of a factory
@@ -19,6 +35,7 @@
 - All async mappers now implement `IAsyncMapperFactory`
 - Extension method `MatchFactory` for any `IMatcher` which will fallback to default `Match()` if `IMatcherFactory` is not implemented
 - All matchers now implement `IMatcherFactory`
+
 
 ## [2.1.0] - 2023-12-05
 
@@ -47,6 +64,7 @@
 - Maps are now able to reject themselves (maybe based on their Mapping/Matching/ProjectionContext?) by throwing `MapNotFoundException`, which won't be wrapped by the mapper/matcher/projector (it could be replaced by any parent mapper/matcher/projector with another exception of the same type)
 - Arrays, as generic maps type parameters, are now correctly recognized
 - Collection mappers now throw correctly `MapNotFoundException` for their collection types and not element ones
+
 
 ## [2.0.0] - 2023-11-12
 
@@ -84,6 +102,7 @@
 - `MatcherOverrideMappingOptions`, used to override `IServiceProvider` and/or `IMatcher` in the `MatchingContext` created by the mapper, implementation depends on the matcher itself
 - `AsyncCollectionMappersOptions` (and override `AsyncCollectionMappersMappingOptions`) which allows to specify settings for parallel async maps in collections
 
+
 ## [1.1.0] - 2023-10-02
 
 ### Deprecated
@@ -98,6 +117,7 @@
   - .NET Core 3.1
   - .NET 5.0
 
+
 ## [1.0.2] - 2023-10-02
 
 ### Changed
@@ -108,11 +128,13 @@
 
 - Dependencies versions
 
+
 ## [1.0.1] - 2023-10-02
 
 ### Fixed
 
 - Dependencies versions
+
 
 ## [1.0.0] - 2023-10-01
 

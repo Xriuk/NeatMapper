@@ -28,7 +28,9 @@ namespace NeatMapper {
 		public Type Class { get; set; }
 
 		/// <summary>
-		/// Handle of the generic method to be invoked, used with <see cref="System.Reflection.MethodBase.GetMethodFromHandle(RuntimeMethodHandle)"/> with generated concrete type during mapping
+		/// Handle of the generic method to be invoked, used with
+		/// <see cref="System.Reflection.MethodBase.GetMethodFromHandle(RuntimeMethodHandle)"/> with generated
+		/// concrete type during mapping
 		/// </summary>
 		/// <remarks>May be instance or static</remarks>
 		public RuntimeMethodHandle Method { get; set; }

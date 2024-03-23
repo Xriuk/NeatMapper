@@ -1,8 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Threading;
 
 namespace NeatMapper {
 	/// <summary>
@@ -12,8 +11,27 @@ namespace NeatMapper {
 	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
 	public sealed class CompositeMapper : IMapper, IMapperCanMap, IMapperFactory {
-		private readonly IList<IMapper> _mappers;
+		/// <summary>
+		/// List of <see cref="IMapper"/>s to be tried in order when mapping types.
+		/// </summary>
+		private readonly IReadOnlyList<IMapper> _mappers;
+
+		/// <summary>
+		/// Cached <see cref="NestedMappingContext"/> to provide, if not already provided in <see cref="MappingOptions"/>
+		/// </summary>
 		private readonly NestedMappingContext _nestedMappingContext;
+
+		/// <summary>
+		/// Cached input and output <see cref="MappingOptions"/>.
+		/// </summary>
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+
+		/// <summary>
+		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
+		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// </summary>
+		private readonly MappingOptions _optionsCacheNull;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CompositeMapper"/>.
@@ -31,6 +49,7 @@ namespace NeatMapper {
 
 			_mappers = new List<IMapper>(mappers);
 			_nestedMappingContext = new NestedMappingContext(this);
+			_optionsCacheNull = MergeOrCreateMappingOptions(MappingOptions.Empty);
 		}
 
 
@@ -57,7 +76,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return MapInternal(_mappers, source, sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions, false));
+			return MapInternal(_mappers, source, sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
 		}
 
 		public
@@ -88,7 +107,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return MapInternal(_mappers, source, sourceType, destination, destinationType, MergeOrCreateMappingOptions(mappingOptions, false));
+			return MapInternal(_mappers, source, sourceType, destination, destinationType, MergeOrCreateMappingOptions(mappingOptions));
 		}
 		#endregion
 
@@ -112,7 +131,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions, false);
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMappers = new List<IMapper>();
@@ -171,7 +190,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions, false);
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMappers = new List<IMapper>();
@@ -240,34 +259,71 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions, true);
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
-			// Check if any mapper implements IMapperFactory
-			var unavailableMappers = new List<IMapper>();
-			foreach (var mapper in _mappers.OfType<IMapperFactory>()) {
-				try {
-					return mapper.MapNewFactory(sourceType, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) {
-					unavailableMappers.Add(mapper);
-				}
-			}
+			var unavailableMappers = new ConcurrentBag<IMapper>();
+			var factoriesCache = new ConcurrentBag<Func<object, object>>();
+			var enumerator = _mappers.OfType<IMapperFactory>().GetEnumerator();
 
-			// Check if any mapper can map the types
-			foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
-				try {
-					if (!mapper.CanMapNew(sourceType, destinationType, mappingOptions))
-						unavailableMappers.Add(mapper);
+			return source => {
+				// Try using cached factories, if any
+				foreach(var factory in factoriesCache) {
+					try {
+						return factory.Invoke(source);
+					}
+					catch (MapNotFoundException) { }
 				}
-				catch { }
-			}
 
-			// Return the default map wrapped
-			var mappersLeft = _mappers.Except(unavailableMappers).ToArray();
-			if(mappersLeft.Length == 0)
-				throw new MapNotFoundException((sourceType, destinationType));
-			else 
-				return source => MapInternal(mappersLeft, source, sourceType, destinationType, mappingOptions);
+				// Retrieve and cache new factories, if the mappers throw while retrieving the factory
+				// they can never map the given types (we assume that if it cannot provide a factory for two types,
+				// it cannot even map them), otherwise they might map them or fail (and we'll retry later)
+				lock (enumerator) { 
+					if (enumerator.MoveNext()) { 
+						while (true) {
+							Func<object, object> factory;
+							try {
+								factory = enumerator.Current.MapNewFactory(sourceType, destinationType, mappingOptions);
+							}
+							catch (MapNotFoundException) {
+								unavailableMappers.Add(enumerator.Current);
+								if(enumerator.MoveNext())
+									continue;
+								else
+									break;
+							}
+
+							factoriesCache.Add(factory);
+
+							try {
+								return factory.Invoke(source);
+							}
+							catch (MapNotFoundException) { }
+
+							// Since we finished the mappers, we check if any mapper left can map the types
+							if (!enumerator.MoveNext()) {
+								foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
+									if(mapper is IMapperFactory)
+										continue;
+
+									try {
+										if (!mapper.CanMapNew(sourceType, destinationType, mappingOptions))
+											unavailableMappers.Add(mapper);
+									}
+									catch { }
+								}
+
+								break;
+							}
+						}
+					}
+				}
+
+				// Return the default map wrapped if there are any mappers left
+				if (unavailableMappers.Count != _mappers.Count)
+					return MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destinationType, mappingOptions);
+				else
+					throw new MapNotFoundException((sourceType, destinationType));
+			};
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -299,7 +355,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions, true);
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 			// Check if any mapper implements IMapperFactory
 			var unavailableMappers = new List<IMapper>();
@@ -339,15 +395,17 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		// Will override a mapper if not already overridden
-		MappingOptions MergeOrCreateMappingOptions(MappingOptions options, bool isRealFactory) {
-			return (options ?? MappingOptions.Empty).ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext, FactoryContext>(
-				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
-				n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext,
-				f => isRealFactory ? FactoryContext.Instance : f);
+		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
+			if (options == null)
+				return _optionsCacheNull;
+			else {
+				return _optionsCache.GetOrAdd(options, opts => opts.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
+					m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
+					n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext));
+			}
 		}
 
-		public object MapInternal(IEnumerable<IMapper> mappers,
+		private object MapInternal(IEnumerable<IMapper> mappers,
 			object source, Type sourceType, Type destinationType,
 			MappingOptions mappingOptions) {
 
@@ -371,7 +429,7 @@ namespace NeatMapper {
 			return MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions);
 		}
 
-		public object MapInternal(IEnumerable<IMapper> mappers,
+		private object MapInternal(IEnumerable<IMapper> mappers,
 			object source, Type sourceType, object destination, Type destinationType,
 			MappingOptions mappingOptions) {
 

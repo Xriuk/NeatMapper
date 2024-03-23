@@ -8,7 +8,8 @@ namespace NeatMapper {
 	/// Note to implementers: if a mapper does not support one of the methods
 	/// (<see cref="Map(object, Type, Type, MappingOptions)"/> or
 	/// <see cref="Map(object, Type, object, Type, MappingOptions)"/>) it should throw
-	/// <see cref="MapNotFoundException"/> inside.
+	/// <see cref="MapNotFoundException"/> inside.<br/>
+	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
 	public interface IMapper {
 		/// <summary>

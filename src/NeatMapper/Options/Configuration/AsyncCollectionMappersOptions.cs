@@ -25,7 +25,7 @@
 		/// <see cref="AsyncCollectionMappersMappingOptions.MaxParallelMappings"/>.
 		/// </para>
 		/// </summary>
-		/// <remarks>Defaults to <see langword="1"/></remarks>
+		/// <remarks>Defaults to <see langword="1"/>.</remarks>
 		public int MaxParallelMappings { get; set; } = 1;
 	}
 }

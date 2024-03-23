@@ -7,9 +7,21 @@ namespace NeatMapper {
 	/// for incompatible types.
 	/// </summary>
 	public sealed class DelegateMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+		/// <summary>
+		/// Delegate to use for matching.
+		/// </summary>
 		readonly MatchMapDelegate<object, object> _matchDelegate;
+
+		/// <summary>
+		/// Nested matcher available in the created <see cref="MatchingContext"/>s.
+		/// </summary>
 		readonly IMatcher _nestedMatcher;
+
+		/// <summary>
+		/// Service provider available in the created <see cref="MatchingContext"/>s.
+		/// </summary>
 		readonly IServiceProvider _serviceProvider;
+
 
 		/// <summary>
 		/// Creates the matcher by using the provided delegate.
@@ -125,6 +137,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			// Not caching context (for now), because DelegateMatcher is pretty short-lived and created when needed (or at least it should be)
 			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
 			var context = new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,
@@ -140,8 +153,11 @@ namespace NeatMapper {
 				try {
 					return _matchDelegate.Invoke(source, destination, context);
 				}
-				catch (MapNotFoundException) {
-					throw;
+				catch (MapNotFoundException e) {
+					if (e.From == sourceType && e.To == destinationType)
+						throw;
+					else
+						throw new MappingException(e, (sourceType, destinationType));
 				}
 				catch (TaskCanceledException) {
 					throw;

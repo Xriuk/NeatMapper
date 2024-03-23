@@ -11,19 +11,27 @@ namespace NeatMapper {
 	public sealed class MappingContext {
 		private readonly Lazy<IMapper> _mapper;
 
-		public MappingContext(IServiceProvider serviceProvider, IMapper mapper, MappingOptions mappingOptions) :
-			this(serviceProvider, mapper, mapper, mappingOptions) {}
-		public MappingContext(IServiceProvider serviceProvider, IMapper nestedMapper, IMapper parentMapper, MappingOptions mappingOptions) {
+		public MappingContext(
+			IServiceProvider serviceProvider,
+			IMapper mapper,
+			MappingOptions mappingOptions) :
+				this(serviceProvider, mapper, mapper, mappingOptions) {}
+		public MappingContext(
+			IServiceProvider serviceProvider,
+			IMapper nestedMapper,
+			IMapper parentMapper,
+			MappingOptions mappingOptions) {
+
 			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 
-			var nestedMappingContext = new NestedMappingContext(parentMapper ?? throw new ArgumentNullException(nameof(parentMapper)));
-			var nestedMapperInstance = new NestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
-				.ReplaceOrAdd<NestedMappingContext, FactoryContext>(
-					n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext,
-					_ => FactoryContext.Instance));
-			_mapper = new Lazy<IMapper>(() => MappingOptions.GetOptions<FactoryContext>() != null ?
-				(IMapper)new CachedFactoryMapper(nestedMapperInstance) :
-				nestedMapperInstance);
+			if(parentMapper == null)
+				throw new ArgumentNullException(nameof(parentMapper));
+			_mapper = new Lazy<IMapper>(() => {
+				var nestedMappingContext = new NestedMappingContext(parentMapper);
+				return new NestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
+					.ReplaceOrAdd<NestedMappingContext>(
+						n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext));
+			}, true);
 
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
 		}

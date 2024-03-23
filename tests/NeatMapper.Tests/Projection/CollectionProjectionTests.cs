@@ -103,6 +103,23 @@ namespace NeatMapper.Tests.Projection {
 			}
 
 			{
+				Assert.IsTrue(_projector.CanProject<string[], Dictionary<string, int>>());
+
+				Expression<Func<string[], Dictionary<string, int>>> expr = source => source == null ? null : 
+#if NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+					new Dictionary<string, int>(
+#endif
+					source.Select(s => new KeyValuePair<string, int>(s, s.Length))
+#if NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
+					)
+#else
+					.ToDictionary(p => p.Key, p => p.Value)
+#endif
+					;
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<string[], Dictionary<string, int>>());
+			}
+
+			{
 				Assert.IsTrue(_projector.CanProject<int[], CustomCollectionWithEnumerableConstructor<string>>());
 
 				Expression<Func<int[], CustomCollectionWithEnumerableConstructor<string>>> expr = source => source == null ? null : new CustomCollectionWithEnumerableConstructor<string>(source.Select(s => (s * 2).ToString()));

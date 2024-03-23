@@ -4,6 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// Optional interface to be implemented by mappers, which allows to discover if two given types can be mapped or not.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMapperCanMap : IMapper {
 		/// <summary>
 		/// Checks if the mapper could create a new object from a given one. It does not guarantee that the actual map will succeed.

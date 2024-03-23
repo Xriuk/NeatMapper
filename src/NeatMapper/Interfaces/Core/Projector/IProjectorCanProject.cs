@@ -5,6 +5,7 @@ namespace NeatMapper {
 	/// Optional interface to be implemented by projectors, which allows to discover if two given types
 	/// can be projected or not.
 	/// </summary>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IProjectorCanProject : IProjector {
 		/// <summary>
 		/// Checks if the projector could project a given object to another. It does not guarantee that the actual map will succeed.

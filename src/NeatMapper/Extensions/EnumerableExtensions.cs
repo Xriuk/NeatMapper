@@ -21,6 +21,7 @@ namespace NeatMapper {
 		private static readonly MethodInfo MapperExtensions_MapNewFactory = typeof(MapperExtensions).GetMethod(nameof(MapperExtensions.MapNewFactory), new[] { typeof(IMapper), typeof(MappingOptions) })
 			?? throw new InvalidOperationException("Could not find MapperExtensions.MapNewFactory method");
 
+		// DEV: maybe add (optional?) cache to save lazy results and avoid multiple iterations
 
 		#region Project
 		#region Runtime destination, inferred source
