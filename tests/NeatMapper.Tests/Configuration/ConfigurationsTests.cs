@@ -559,7 +559,7 @@ namespace NeatMapper.Tests.Configuration {
 					?? throw new InvalidOperationException(),
 				ThrowOnDuplicate = false
 			} }));
-			Assert.AreEqual("Additional map methods cannot be generic or specified in an open generic class", exc.Message);
+			Assert.AreEqual("Additional map methods cannot be generic or specified in an open generic class.", exc.Message);
 		}
 	}
 }

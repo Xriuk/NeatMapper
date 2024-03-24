@@ -52,13 +52,7 @@ namespace NeatMapper {
 			return false;
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, bool
-#else
-			object, object, bool
-#endif
-			> MatchFactory(
+		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -72,7 +66,12 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			return (source, destination) => false;
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return new MatchMapFactory(sourceType, destinationType, (source, destination) => false);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

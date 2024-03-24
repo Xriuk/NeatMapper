@@ -13,11 +13,11 @@ namespace NeatMapper.Tests.Mapping {
 				throw new NotImplementedException();
 			}
 
-			public Func<object, object> MapNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
-				return source => throw new MapNotFoundException((sourceType, destinationType));
+			public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				return new NewMapFactory(sourceType, destinationType, source => throw new MapNotFoundException((sourceType, destinationType)));
 			}
 
-			public Func<object, object, object> MapMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+			public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
 

@@ -41,7 +41,6 @@ namespace NeatMapper {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
-#pragma warning disable CA1068
 #endif
 
 			base(new CustomMapsConfiguration(
@@ -61,13 +60,12 @@ namespace NeatMapper {
 				serviceProvider) { }
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#pragma warning restore CA1068
 #nullable enable
 #endif
 
 
 		#region IAsyncMapper methods
-		override public Task<
+		override public async Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -90,10 +88,12 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			return MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken).Invoke(source);
+			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
+				return await factory.Invoke(source);
+			}
 		}
 
-		override public Task<
+		override public async Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -122,7 +122,9 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			return MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken).Invoke(source, destination);
+			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
+				return await factory.Invoke(source, destination);
+			}
 		}
 		#endregion
 
@@ -175,13 +177,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IAsyncMapperFactory methods
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, Task<object?>
-#else
-			object, Task<object>
-#endif
-			> MapAsyncNewFactory(
+		public IAsyncNewMapFactory MapAsyncNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -197,6 +193,8 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+
 			// Forward new map to merge by creating a destination
 			Func<object> destinationFactory;
 			try {
@@ -206,9 +204,7 @@ namespace NeatMapper {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}
 
-			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
-
-			return source => {
+			return new DisposableAsyncNewMapFactory(sourceType, destinationType, source => {
 				object destination;
 				try {
 					destination = destinationFactory.Invoke();
@@ -218,16 +214,10 @@ namespace NeatMapper {
 				}
 
 				return mergeFactory.Invoke(source, destination);
-			};
+			}, mergeFactory);
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, Task<object?>
-#else
-			object, object, Task<object>
-#endif
-			> MapAsyncMergeFactory(
+		public IAsyncMergeMapFactory MapAsyncMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -244,9 +234,9 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
-			var context = CreateMappingContext(mappingOptions, cancellationToken);
+			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
 
-			return async (source, destination) => {
+			return new DisposableAsyncMergeMapFactory(sourceType, destinationType, async (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
@@ -256,7 +246,7 @@ namespace NeatMapper {
 				TypeUtils.CheckObjectType(result, destinationType);
 
 				return result;
-			};
+			}, new LambdaDisposable(() => GetMappingOptionsPool(mappingOptions).Return(context)));
 		}
 		#endregion
 	}

@@ -8,7 +8,7 @@ namespace NeatMapper {
 	/// Created by <see cref="IMapperFactory"/>.
 	/// </summary>
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface INewMapFactory : IDisposable {
+	public interface IMatchMapFactory : IDisposable {
 		/// <summary>
 		/// Type of the object to map.
 		/// </summary>
@@ -20,48 +20,48 @@ namespace NeatMapper {
 		Type DestinationType { get; }
 
 		/// <summary>
-		/// Maps an object into a new one.
+		/// Checks if two objects are equivalent (usually by comparing the keys of the two).
 		/// </summary>
-		/// <param name="source">Object to map, may be null.</param>
-		/// <returns>The newly created object of type <see cref="DestinationType"/>, may be null.</returns>
-		/// <exception cref="MapNotFoundException">The provided object could not be mapped.</exception>
-		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			Invoke(
+		/// <param name="source">Source object, may be null.</param>
+		/// <param name="destination">Destination object, may be null.</param>
+		/// <returns><see langword="true"/> if the two objects match.</returns>
+		/// <exception cref="MapNotFoundException">The provided object could not be matched.</exception>
+		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
+		bool Invoke(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
 			object
 #endif
-			source);
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination);
 	}
 
 	/// <summary>
-	/// Typed version of <see cref="INewMapFactory"/>.
+	/// Typed version of <see cref="IMatchMapFactory"/>.
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface INewMapFactory<TSource, TDestination> : INewMapFactory {
-		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/summary"/>
-		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/param[@name='source']"/>
-		/// <returns>The newly created object of type <typeparamref name="TDestination"/>, may be null.</returns>
-		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/exception"/>
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-			Invoke(
+	public interface IMatchMapFactory<TSource, TDestination> : IMatchMapFactory {
+		/// <inheritdoc cref="IMatchMapFactory.Invoke(object, object)"/>
+		bool Invoke(
 #if NET5_0_OR_GREATER
 			TSource?
 #else
 			TSource
 #endif
-			source);
+			source,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination);
 	}
 }

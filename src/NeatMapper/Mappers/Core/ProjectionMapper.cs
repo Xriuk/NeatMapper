@@ -21,10 +21,10 @@ namespace NeatMapper {
 		private readonly IProjector _projector;
 
 		/// <summary>
-		/// Compiled delegates cache, delegate can be null if no map exists.
+		/// Compiled factories cache, can be null if no map exists.
 		/// </summary>
-		private readonly ConcurrentDictionary<(Type From, Type To), Func<object, object>> _mapsCache =
-			new ConcurrentDictionary<(Type, Type), Func<object, object>>();
+		private readonly ConcurrentDictionary<(Type From, Type To), INewMapFactory> _mapsCache =
+			new ConcurrentDictionary<(Type, Type), INewMapFactory>();
 
 
 		/// <summary>
@@ -132,13 +132,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperFactory methods
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			> MapNewFactory(
+		public INewMapFactory MapNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -181,7 +175,7 @@ namespace NeatMapper {
 
 				// Compile the expression and wrap it to catch exceptions
 				var deleg = (Func<object, object>)projection.Compile();
-				return source => {
+				return new NewMapFactory(sourceType, destinationType, source => {
 					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 					object result;
@@ -208,7 +202,7 @@ namespace NeatMapper {
 					TypeUtils.CheckObjectType(result, destinationType);
 
 					return result;
-				};
+				});
 			});
 			if (map == null)
 				throw new MapNotFoundException((sourceType, destinationType));
@@ -220,13 +214,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
-#else
-			object, object, object
-#endif
-			> MapMergeFactory(
+		public IMergeMapFactory MapMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

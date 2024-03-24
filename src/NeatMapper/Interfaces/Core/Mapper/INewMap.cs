@@ -14,6 +14,10 @@
 		/// Mapping context, which allows nested mappings, services retrieval via DI, additional options, ....
 		/// </param>
 		/// <returns>The newly created object, may be null.</returns>
+		/// <exception cref="MapNotFoundException">The provided types could not be mapped.</exception>
+		/// <exception cref="MappingException">
+		/// An exception was thrown while mapping the types, check the inner exception for details.
+		/// </exception>
 #if NET5_0_OR_GREATER
 		TDestination?
 #else

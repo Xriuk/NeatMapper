@@ -16,15 +16,11 @@ namespace NeatMapper.Tests.DependencyInjection {
 
 			Task<int> IAsyncNewMap<string, int>.MapAsync(string source, AsyncMappingContext context) {
 				Mapper = (IAsyncMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
-				if (context.MappingOptions.GetOptions<FactoryContext>() != null)
-					Mapper = (IAsyncMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return Task.FromResult(source?.Length ?? 0);
 			}
 
 			Task<float> IAsyncMergeMap<string, float>.MapAsync(string source, float destination, AsyncMappingContext context) {
 				Mapper = (IAsyncMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
-				if (context.MappingOptions.GetOptions<FactoryContext>() != null)
-					Mapper = (IAsyncMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return Task.FromResult((float)(source?.Length ?? 0));
 			}
 		}

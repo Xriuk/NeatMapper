@@ -673,13 +673,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="MappingContext"/>.</remarks>
 		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			> MapNewFactory(this IMapper mapper,
+		public static INewMapFactory MapNewFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -718,8 +712,8 @@ namespace NeatMapper {
 				catch { }
 			}
 
-			// Return the default map wrapped
-			return source => mapper.Map(source, sourceType, destinationType, mappingOptions);
+			// Return the map wrapped
+			return new NewMapFactory(sourceType, destinationType, source => mapper.Map(source, sourceType, destinationType, mappingOptions));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -727,13 +721,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			> MapNewFactory(this IMapper mapper,
+		public static INewMapFactory MapNewFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -759,13 +747,7 @@ namespace NeatMapper {
 		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
 		/// </returns>
 		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/exception"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?
-#else
-			TSource, TDestination
-#endif
-			> MapNewFactory<TSource, TDestination>(this IMapper mapper,
+		public static INewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
 #else
@@ -778,8 +760,7 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapNewFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-
-			return source => (TDestination)factory.Invoke(source);
+			return new DisposableNewMapFactory<TSource, TDestination>(source => (TDestination)factory.Invoke(source), factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -787,13 +768,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapNewFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?
-#else
-			TSource, TDestination
-#endif
-			> MapNewFactory<TSource, TDestination>(this IMapper mapper,
+		public static INewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
 #else
@@ -815,13 +790,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="MappingContext"/>.</remarks>
 		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
-#else
-			object, object, object
-#endif
-			> MapMergeFactory(this IMapper mapper,
+		public static IMergeMapFactory MapMergeFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -860,8 +829,8 @@ namespace NeatMapper {
 				catch { }
 			}
 
-			// Return the default map wrapped
-			return (source, destination) => mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
+			// Return the map wrapped
+			return new MergeMapFactory(sourceType, destinationType, (source, destination) => mapper.Map(source, sourceType, destination, destinationType, mappingOptions));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -870,13 +839,7 @@ namespace NeatMapper {
 
 
 		/// <inheritdoc cref="MapMergeFactory(IMapper, Type, Type, MappingOptions)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
-#else
-			object, object, object
-#endif
-			> MapMergeFactory(this IMapper mapper,
+		public static IMergeMapFactory MapMergeFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -902,13 +865,7 @@ namespace NeatMapper {
 		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
 		/// </returns>
 		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/exception"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, TDestination?
-#else
-			TSource, TDestination, TDestination
-#endif
-			> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
+		public static IMergeMapFactory<TSource, TDestination> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
 #else
@@ -921,8 +878,7 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapMergeFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-
-			return (source, destination) => (TDestination)factory.Invoke(source, destination);
+			return new DisposableMergeMapFactory<TSource, TDestination>((source, destination) => (TDestination)factory.Invoke(source, destination), factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -930,13 +886,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapMergeFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, TDestination?
-#else
-			TSource, TDestination, TDestination
-#endif
-			> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
+		public static IMergeMapFactory MapMergeFactory<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
 #else

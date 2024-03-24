@@ -84,13 +84,7 @@ namespace NeatMapper {
 			return _matcher.CanMatch(sourceType, destinationType, GetOptions(mappingOptions));
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, bool
-#else
-			object, object, bool
-#endif
-			> MatchFactory(
+		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -104,22 +98,22 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			Func<object, object, bool> factory;
+			IMatchMapFactory factory;
 			try { 
 				factory = _matcher.MatchFactory(sourceType, destinationType, GetOptions(mappingOptions));
 			}
 			catch (MapNotFoundException) {
-				return (source, destination) => false;
+				return new MatchMapFactory(sourceType, destinationType, (source, destination) => false);
 			}
 
-			return (source, destination) => {
+			return new DisposableMatchMapFactory(sourceType, destinationType, (source, destination) => {
 				try {
 					return factory.Invoke(source, destination);
 				}
 				catch (MapNotFoundException) {
 					return false;
 				}
-			};
+			}, factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

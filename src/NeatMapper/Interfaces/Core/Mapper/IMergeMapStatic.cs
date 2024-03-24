@@ -23,6 +23,10 @@ namespace NeatMapper {
 		/// The resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 		/// may be null.
 		/// </returns>
+		/// <exception cref="MapNotFoundException">The provided types could not be mapped.</exception>
+		/// <exception cref="MappingException">
+		/// An exception was thrown while mapping the types, check the inner exception for details.
+		/// </exception>
 		public static abstract TDestination? Map(TSource? source, TDestination? destination, MappingContext context);
 	}
 }

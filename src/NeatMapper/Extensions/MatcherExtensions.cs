@@ -207,13 +207,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="MappingContext"/>.</remarks>
 		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, bool
-#else
-			object, object, bool
-#endif
-			> MatchFactory(this IMatcher matcher,
+		public static IMatchMapFactory MatchFactory(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -252,8 +246,8 @@ namespace NeatMapper {
 				catch { }
 			}
 
-			// Return the default match wrapped
-			return (source, destination) => matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
+			// Return the match wrapped
+			return new MatchMapFactory(sourceType, destinationType, (source, destination) => matcher.Match(source, sourceType, destination, destinationType, mappingOptions));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -262,13 +256,7 @@ namespace NeatMapper {
 
 
 		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, bool
-#else
-			object, object, bool
-#endif
-			> MatchFactory(this IMatcher matcher,
+		public static IMatchMapFactory MatchFactory(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -290,13 +278,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/returns"/>
 		/// <inheritdoc cref="IMatcherFactory.MatchFactory(Type, Type, MappingOptions)" path="/exception"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, bool
-#else
-			TSource, TDestination, bool
-#endif
-			> MatchFactory<TSource, TDestination>(this IMatcher matcher,
+		public static IMatchMapFactory<TSource, TDestination> MatchFactory<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
 #else
@@ -309,7 +291,7 @@ namespace NeatMapper {
 #endif
 
 			var factory = matcher.MatchFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-			return (source, destination) => factory.Invoke(source, destination);
+			return new DisposableMatchMapFactory<TSource, TDestination>((source, destination) => factory.Invoke(source, destination), factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -317,13 +299,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MatchFactory{TSource, TDestination}(IMatcher, MappingOptions)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, bool
-#else
-			TSource, TDestination, bool
-#endif
-			> MatchFactory<TSource, TDestination>(this IMatcher matcher,
+		public static IMatchMapFactory<TSource, TDestination> MatchFactory<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
 #else

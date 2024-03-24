@@ -38,7 +38,7 @@ namespace NeatMapper {
 		internal CustomMapper(CustomMapsConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
-			_contextsCacheNull = CreateMappingContext(MappingOptions.Empty);
+			_contextsCacheNull = GerOrCreateMappingContext(MappingOptions.Empty);
 		}
 
 
@@ -46,7 +46,7 @@ namespace NeatMapper {
 		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null);
 
 
-		protected MappingContext CreateMappingContext(MappingOptions options) {
+		protected MappingContext GerOrCreateMappingContext(MappingOptions options) {
 			if(options == null)
 				return _contextsCacheNull;
 			else { 
@@ -56,7 +56,7 @@ namespace NeatMapper {
 						overrideOptions?.ServiceProvider ?? _serviceProvider,
 						overrideOptions?.Mapper ?? this,
 						this,
-						opts ?? MappingOptions.Empty
+						opts
 					);
 				});
 			}

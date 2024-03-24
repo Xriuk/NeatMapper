@@ -60,7 +60,7 @@ namespace NeatMapper {
 			CancellationToken cancellationToken = default);
 
 		/// <summary>
-		/// Maps an object to an existing one and returns the result.
+		/// Maps an object to an existing one and returns the result asynchronously.
 		/// </summary>
 		/// <param name="source">Object to be mapped, may be null.</param>
 		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps.</param>

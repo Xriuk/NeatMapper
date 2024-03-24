@@ -40,7 +40,7 @@ namespace NeatMapper {
 		/// Creates a new instance of <see cref="NestedMatcher"/>.
 		/// </summary>
 		/// <param name="matcher">Matcher to forward the actual matching to.</param>
-		/// <param name="mappingOptionsEditor">
+		/// <param name="optionsFactory">
 		/// Method to invoke to alter the <see cref="MappingOptions"/> passed to the matcher,
 		/// both the passed parameter and the returned value may be null.
 		/// </param>
@@ -52,10 +52,10 @@ namespace NeatMapper {
 #else
 				MappingOptions, MappingOptions
 #endif
-			> mappingOptionsEditor) {
+			> optionsFactory) {
 
 			_matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
-			_optionsFactory = mappingOptionsEditor ?? throw new ArgumentNullException(nameof(mappingOptionsEditor));
+			_optionsFactory = optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory));
 			_optionsCacheNull = _optionsFactory.Invoke(null);
 		}
 
@@ -98,13 +98,7 @@ namespace NeatMapper {
 			return _matcher.CanMatch(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, bool
-#else
-			object, object, bool
-#endif
-			> MatchFactory(
+		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

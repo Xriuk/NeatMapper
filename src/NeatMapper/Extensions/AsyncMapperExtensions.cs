@@ -947,13 +947,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, Task<object?>
-#else
-			object, Task<object>
-#endif
-			> MapAsyncNewFactory(this IAsyncMapper mapper,
+		public static IAsyncNewMapFactory MapAsyncNewFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -993,8 +987,8 @@ namespace NeatMapper {
 				catch { }
 			}
 
-			// Return the default map wrapped
-			return source => mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
+			// Return the map wrapped
+			return new AsyncNewMapFactory(sourceType, destinationType, source => mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1002,13 +996,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, Task<object?>
-#else
-			object, Task<object>
-#endif
-			> MapAsyncNewFactory(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
+		public static IAsyncNewMapFactory MapAsyncNewFactory(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -1022,13 +1010,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, Task<object?>
-#else
-			object, Task<object>
-#endif
-			> MapAsyncNewFactory(this IAsyncMapper mapper,
+		public static IAsyncNewMapFactory MapAsyncNewFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1052,17 +1034,10 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into new objects
-		/// of type <typeparamref name="TDestination"/> asynchronously.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// of type <typeparamref name="TDestination"/> asynchronously.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, Task<TDestination?>
-#else
-			TSource, Task<TDestination>
-#endif
-			> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
+		public static IAsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
 #else
@@ -1076,8 +1051,7 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapAsyncNewFactory(typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken);
-
-			return source => TaskUtils.AwaitTask<TDestination>(factory.Invoke(source));
+			return new DisposableAsyncNewMapFactory<TSource, TDestination>(async source => (TDestination)await factory.Invoke(source), factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1085,13 +1059,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, Task<TDestination?>
-#else
-			TSource, Task<TDestination>
-#endif
-			> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
+		public static IAsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -1105,13 +1073,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, Task<TDestination?>
-#else
-			TSource, Task<TDestination>
-#endif
-			> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
+		public static IAsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
 #else
@@ -1134,13 +1096,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, Task<object?>
-#else
-			object, object, Task<object>
-#endif
-			> MapAsyncMergeFactory(this IAsyncMapper mapper,
+		public static IAsyncMergeMapFactory MapAsyncMergeFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1180,8 +1136,8 @@ namespace NeatMapper {
 				catch { }
 			}
 
-			// Return the default map wrapped
-			return (source, destination) => mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+			// Return the map wrapped
+			return new AsyncMergeMapFactory(sourceType, destinationType, (source, destination) => mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1189,13 +1145,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, Task<object?>
-#else
-			object, object, Task<object>
-#endif
-			> MapAsyncMergeFactory(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
+		public static IAsyncMergeMapFactory MapAsyncMergeFactory(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -1209,13 +1159,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, Task<object?>
-#else
-			object, object, Task<object>
-#endif
-			> MapAsyncMergeFactory(this IAsyncMapper mapper,
+		public static IAsyncMergeMapFactory MapAsyncMergeFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1243,13 +1187,7 @@ namespace NeatMapper {
 		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, Task<TDestination?>
-#else
-			TSource, TDestination, Task<TDestination>
-#endif
-			> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
+		public static IAsyncMergeMapFactory<TSource, TDestination> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
 #else
@@ -1263,8 +1201,7 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapAsyncMergeFactory(typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken);
-
-			return (source, destination) => TaskUtils.AwaitTask<TDestination>(factory.Invoke(source, destination));
+			return new DisposableAsyncMergeMapFactory<TSource, TDestination>(async (source, destination) => (TDestination)await factory.Invoke(source, destination), factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1272,13 +1209,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, Task<TDestination?>
-#else
-			TSource, TDestination, Task<TDestination>
-#endif
-			> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
+		public static IAsyncMergeMapFactory<TSource, TDestination> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -1292,13 +1223,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
-		public static Func<
-#if NET5_0_OR_GREATER
-			TSource?, TDestination?, Task<TDestination?>
-#else
-			TSource, TDestination, Task<TDestination>
-#endif
-			> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
+		public static IAsyncMergeMapFactory<TSource, TDestination> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
 #else

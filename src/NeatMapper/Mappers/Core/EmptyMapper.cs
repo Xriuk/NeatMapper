@@ -101,13 +101,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperFactory methods
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			> MapNewFactory(
+		public INewMapFactory MapNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -120,13 +114,7 @@ namespace NeatMapper {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
-#else
-			object, object, object
-#endif
-			> MapMergeFactory(
+		public IMergeMapFactory MapMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

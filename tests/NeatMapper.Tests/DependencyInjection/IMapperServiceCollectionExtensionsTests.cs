@@ -15,15 +15,11 @@ namespace NeatMapper.Tests.DependencyInjection {
 
 			int INewMap<string, int>.Map(string source, MappingContext context) {
 				Mapper = (IMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
-				if(context.MappingOptions.GetOptions<FactoryContext>() != null)
-					Mapper = (IMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return source?.Length ?? 0;
 			}
 
 			float IMergeMap<string, float>.Map(string source, float destination, MappingContext context) {
 				Mapper = (IMapper)context.Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(context.Mapper);
-				if (context.MappingOptions.GetOptions<FactoryContext>() != null)
-					Mapper = (IMapper)Mapper.GetType().GetField("_mapper", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(Mapper);
 				return source?.Length ?? 0;
 			}
 		}

@@ -41,7 +41,7 @@ namespace NeatMapper {
 		/// Creates a new instance of <see cref="NestedMapper"/>.
 		/// </summary>
 		/// <param name="mapper">Mapper to forward the actual mapping to.</param>
-		/// <param name="mappingOptionsEditor">
+		/// <param name="optionsFactory">
 		/// Method to invoke to alter the <see cref="MappingOptions"/> passed to the mapper,
 		/// both the passed parameter and the returned value may be null.
 		/// </param>
@@ -53,10 +53,10 @@ namespace NeatMapper {
 #else
 				MappingOptions, MappingOptions
 #endif
-			> mappingOptionsEditor) {
+			> optionsFactory) {
 
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
-			_optionsFactory = mappingOptionsEditor ?? throw new ArgumentNullException(nameof(mappingOptionsEditor));
+			_optionsFactory = optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory));
 			_optionsCacheNull = _optionsFactory.Invoke(null);
 		}
 
@@ -148,13 +148,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperFactory methods
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			> MapNewFactory(
+		public INewMapFactory MapNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -167,13 +161,7 @@ namespace NeatMapper {
 			return _mapper.MapNewFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
-#else
-			object, object, object
-#endif
-			> MapMergeFactory(
+		public IMergeMapFactory MapMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

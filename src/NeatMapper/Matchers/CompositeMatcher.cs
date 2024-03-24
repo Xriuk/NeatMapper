@@ -1,19 +1,36 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace NeatMapper {
+	/// <summary>
+	/// <see cref="IMatcher"/> which delegates mapping to other <see cref="IMatcher"/>s,
+	/// this allows to combine different matching capabilities.<br/>
+	/// Each matcher is invoked in order and the first one to succeed in matching is returned.
+	/// </summary>
 	public sealed class CompositeMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		/// <summary>
+		/// List of <see cref="IMatcher"/>s to be tried in order when matching types.
+		/// </summary>
 		private readonly IList<IMatcher> _matchers;
+
+		/// <summary>
+		/// Cached <see cref="NestedMatchingContext"/> to provide, if not already provided in <see cref="MappingOptions"/>.
+		/// </summary>
 		private readonly NestedMatchingContext _nestedMatchingContext;
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		/// <summary>
+		/// Cached input and output <see cref="MappingOptions"/>.
+		/// </summary>
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+
+		/// <summary>
+		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
+		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// </summary>
+		private readonly MappingOptions _optionsCacheNull;
+
 
 		/// <summary>
 		/// Creates the matcher by using the provided matchers list
@@ -31,6 +48,7 @@ namespace NeatMapper {
 
 			_matchers = new List<IMatcher>(matchers);
 			_nestedMatchingContext = new NestedMatchingContext(this);
+			_optionsCacheNull = GetOrCreateMappingOptions(MappingOptions.Empty);
 		}
 
 
@@ -60,7 +78,7 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
 			foreach (var matcher in _matchers) {
 				try {
@@ -95,7 +113,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMatchers = new List<IMatcher>();
@@ -141,13 +159,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, bool
-#else
-			object, object, bool
-#endif
-			> MatchFactory(
+		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -166,44 +178,80 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
-			// Check if any matcher implements IMatcherFactory
-			var unavailableMatchers = new List<IMatcher>();
-			foreach (var matcher in _matchers.OfType<IMatcherFactory>()) {
-				try {
-					return matcher.MatchFactory(sourceType, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) {
-					unavailableMatchers.Add(matcher);
-				}
-			}
+			var unavailableMatchers = new ConcurrentBag<IMatcher>();
+			var factoriesCache = new ConcurrentBag<IMatchMapFactory>();
+			var enumerator = _matchers.OfType<IMatcherFactory>().GetEnumerator();
 
-			// Check if any mapper can map the types
-			foreach (var matcher in _matchers.OfType<IMatcherCanMatch>()) {
-				try {
-					if (!matcher.CanMatch(sourceType, destinationType))
-						unavailableMatchers.Add(matcher);
-				}
-				catch { }
-			}
+			// DEV: maybe check with CanMatch and if returns false throw instead of creating the factory?
 
-			// Return the default match wrapped
-			var matchersLeft = _matchers.Except(unavailableMatchers).ToArray();
-			if (matchersLeft.Length == 0)
-				throw new MapNotFoundException((sourceType, destinationType));
-			else {
-				return (source, destination) => {
-					foreach (var matcher in matchersLeft) {
+			return new DisposableMatchMapFactory(
+				sourceType, destinationType,
+				(source, destination) => {
+					// Try using cached factories, if any
+					foreach (var factory in factoriesCache) {
 						try {
-							return matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
+							return factory.Invoke(source, destination);
 						}
 						catch (MapNotFoundException) { }
 					}
 
-					throw new MapNotFoundException((sourceType, destinationType));
-				};
-			}
+					// Retrieve and cache new factories, if the matchers throw while retrieving the factory
+					// they can never match the given types (we assume that if it cannot provide a factory for two types,
+					// it cannot even map them), otherwise they might match them and fail (and we'll retry later)
+					lock (enumerator) {
+						if (enumerator.MoveNext()) {
+							while (true) {
+								IMatchMapFactory factory;
+								try {
+									factory = enumerator.Current.MatchFactory(sourceType, destinationType, mappingOptions);
+								}
+								catch (MapNotFoundException) {
+									unavailableMatchers.Add(enumerator.Current);
+									if (enumerator.MoveNext())
+										continue;
+									else
+										break;
+								}
+
+								factoriesCache.Add(factory);
+
+								try {
+									return factory.Invoke(source, destination);
+								}
+								catch (MapNotFoundException) { }
+
+								// Since we finished the matchers, we check if any matcher left can match the types
+								if (!enumerator.MoveNext()) {
+									foreach (var matcher in _matchers.OfType<IMatcherCanMatch>()) {
+										if (matcher is IMatcherFactory)
+											continue;
+
+										try {
+											if (!matcher.CanMatch(sourceType, destinationType, mappingOptions))
+												unavailableMatchers.Add(matcher);
+										}
+										catch { }
+									}
+
+									break;
+								}
+							}
+						}
+					}
+
+					// Invoke the default match if there are any matchers left
+					if (unavailableMatchers.Count != _matchers.Count)
+						return Match(source, sourceType, destination, destinationType, mappingOptions);
+					else
+						throw new MapNotFoundException((sourceType, destinationType));
+				},
+				enumerator, new LambdaDisposable(() => {
+					foreach (var factory in factoriesCache) {
+						factory.Dispose();
+					}
+				}));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -215,11 +263,15 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		// Will override a mapper if not already overridden
-		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			return (options ?? MappingOptions.Empty).ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
-				m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
-				n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
+		// Will override the matcher if not already overridden
+		MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
+			if (options == null)
+				return _optionsCacheNull;
+			else {
+				return _optionsCache.GetOrAdd(options, opts => opts.ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
+					m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
+					n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext));
+			}
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

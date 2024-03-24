@@ -27,17 +27,10 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// A factory which can be used to map objects of type <paramref name="sourceType"/> into new objects
-		/// of type <paramref name="destinationType"/> asynchronously.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// of type <paramref name="destinationType"/> asynchronously.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be mapped.</exception>
-		Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?, Task<object?>
-#else
-		object, Task<object>
-#endif
-			> MapAsyncNewFactory(
+		IAsyncNewMapFactory MapAsyncNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -63,17 +56,10 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// A factory which can be used to map objects of type <paramref name="sourceType"/> into existing objects
-		/// of type <paramref name="destinationType"/> asynchronously.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// of type <paramref name="destinationType"/> asynchronously.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be mapped.</exception>
-		Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?, object?, Task<object?>
-#else
-		object, object, Task<object>
-#endif
-			> MapAsyncMergeFactory(
+		IAsyncMergeMapFactory MapAsyncMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

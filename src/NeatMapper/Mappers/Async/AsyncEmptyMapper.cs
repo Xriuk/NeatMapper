@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper{
 	/// <summary>
-	/// Singleton <see cref="IAsyncMapper"/> which cannot map any type
+	/// Singleton <see cref="IAsyncMapper"/> which cannot map any type.
 	/// </summary>
 	public sealed class AsyncEmptyMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
 		/// <summary>
@@ -107,13 +107,7 @@ namespace NeatMapper{
 		#endregion
 
 		#region IAsyncMapperFactory methods
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, Task<object?>
-#else
-			object, Task<object>
-#endif
-			> MapAsyncNewFactory(
+		public IAsyncNewMapFactory MapAsyncNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -127,13 +121,7 @@ namespace NeatMapper{
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, Task<object?>
-#else
-			object, object, Task<object>
-#endif
-			> MapAsyncMergeFactory(
+		public IAsyncMergeMapFactory MapAsyncMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

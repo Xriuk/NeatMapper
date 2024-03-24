@@ -88,7 +88,9 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return MapNewFactory(sourceType, destinationType, mappingOptions).Invoke(source);
+			using(var factory = MapNewFactory(sourceType, destinationType, mappingOptions)) {
+				return factory.Invoke(source);
+			}
 		}
 
 		override public
@@ -163,13 +165,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperFactory methods
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			> MapNewFactory(
+		public INewMapFactory MapNewFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -189,9 +185,9 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
-			var context = CreateMappingContext(mappingOptions);
+			var context = GerOrCreateMappingContext(mappingOptions);
 
-			return source => {
+			return new NewMapFactory(sourceType, destinationType, source => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 				var result = map.Invoke(source, context);
@@ -200,20 +196,14 @@ namespace NeatMapper {
 				TypeUtils.CheckObjectType(result, destinationType);
 
 				return result;
-			};
+			});
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?, object?
-#else
-			object, object, object
-#endif
-			> MapMergeFactory(
+		public IMergeMapFactory MapMergeFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

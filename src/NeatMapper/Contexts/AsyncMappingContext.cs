@@ -61,6 +61,6 @@ namespace NeatMapper {
 		/// <summary>
 		/// Cancellation token of the mapping which should be passed to all the async methods inside the maps.
 		/// </summary>
-		public CancellationToken CancellationToken { get; }
+		public CancellationToken CancellationToken { get; internal set; } // DEV: internal setter for now, consider making public?
 	}
 }
