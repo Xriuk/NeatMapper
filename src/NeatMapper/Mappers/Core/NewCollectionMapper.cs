@@ -260,74 +260,77 @@ namespace NeatMapper {
 					}
 
 					try { 
-						return new DisposableNewMapFactory(sourceType, destinationType, source => {
-							TypeUtils.CheckObjectType(source, types.From, nameof(source));
+						return new DisposableNewMapFactory(
+							sourceType, destinationType,
+							source => {
+								TypeUtils.CheckObjectType(source, types.From, nameof(source));
 
-							if (source is IEnumerable sourceEnumerable) {
-								var canNew = newElementsFactory != null;
+								if (source is IEnumerable sourceEnumerable) {
+									var canNew = newElementsFactory != null;
 
-								object result;
-								try {
-									var destination = collectionFactory.Invoke();
+									object result;
+									try {
+										var destination = collectionFactory.Invoke();
 
-									foreach (var sourceElement in sourceEnumerable) {
-										// Try new map
-										if (canNew) {
+										foreach (var sourceElement in sourceEnumerable) {
+											// Try new map
+											if (canNew) {
+												try {
+													addDelegate.Invoke(destination, newElementsFactory.Invoke(sourceElement));
+													continue;
+												}
+												catch (MapNotFoundException) {
+													canNew = false;
+												}
+											}
+
+											// Try merge map
+											if(mergeElementsFactory == null)
+												throw new MapNotFoundException(types);
 											try {
-												addDelegate.Invoke(destination, newElementsFactory.Invoke(sourceElement));
-												continue;
+												addDelegate.Invoke(destination, mergeElementsFactory.Invoke(sourceElement));
 											}
 											catch (MapNotFoundException) {
-												canNew = false;
+												throw new MapNotFoundException(types);
 											}
 										}
 
-										// Try merge map
-										if(mergeElementsFactory == null)
-											throw new MapNotFoundException(types);
-										try {
-											addDelegate.Invoke(destination, mergeElementsFactory.Invoke(sourceElement));
-										}
-										catch (MapNotFoundException) {
-											throw new MapNotFoundException(types);
-										}
+										result = collectionConversionDelegate.Invoke(destination);
+									}
+									catch (MapNotFoundException) {
+										throw;
+									}
+									catch (TaskCanceledException) {
+										throw;
+									}
+									catch (Exception e) {
+										throw new MappingException(e, types);
 									}
 
-									result = collectionConversionDelegate.Invoke(destination);
-								}
-								catch (MapNotFoundException) {
-									throw;
-								}
-								catch (TaskCanceledException) {
-									throw;
-								}
-								catch (Exception e) {
-									throw new MappingException(e, types);
-								}
+									// Should not happen
+									TypeUtils.CheckObjectType(result, types.To);
 
-								// Should not happen
-								TypeUtils.CheckObjectType(result, types.To);
-
-								return result;
-							}
-							else if (source == null) { 
-								try {
-									if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
-										return null;
+									return result;
 								}
-								catch { }
+								else if (source == null) { 
+									try {
+										if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
+											return null;
+									}
+									catch { }
 
-								try {
-									if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions) && ObjectFactory.CanCreate(elementTypes.To))
-										return null;
+									try {
+										if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions) && ObjectFactory.CanCreate(elementTypes.To))
+											return null;
+									}
+									catch { }
+
+									throw new MapNotFoundException(types);
 								}
-								catch { }
-
-								throw new MapNotFoundException(types);
-							}
-							else
-								throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-						}, newElementsFactory, mergeElementsFactory);
+								else
+									throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+							},
+							newElementsFactory, mergeElementsFactory);
 					}
 					catch {
 						mergeElementsFactory?.Dispose();

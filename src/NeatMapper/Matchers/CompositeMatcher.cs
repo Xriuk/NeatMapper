@@ -10,6 +10,20 @@ namespace NeatMapper {
 	/// Each matcher is invoked in order and the first one to succeed in matching is returned.
 	/// </summary>
 	public sealed class CompositeMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		/// <summary>
+		/// Singleton array used for Linq queries.
+		/// </summary>
+		private static readonly object[] _singleElementArray = new object[] { null };
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+
+
 		/// <summary>
 		/// List of <see cref="IMatcher"/>s to be tried in order when matching types.
 		/// </summary>
@@ -36,17 +50,14 @@ namespace NeatMapper {
 		/// Creates the matcher by using the provided matchers list
 		/// </summary>
 		/// <param name="matchers">Matchers to delegate the matching to</param>
-		public CompositeMatcher(params IMatcher[] matchers) : this((IList<IMatcher>)matchers) { }
+		public CompositeMatcher(params IMatcher[] matchers) : this((IList<IMatcher>)matchers ?? throw new ArgumentNullException(nameof(matchers))) { }
 
 		/// <summary>
 		/// Creates the matcher by using the provided matchers list
 		/// </summary>
 		/// <param name="matchers">Matchers to delegate the matching to</param>
 		public CompositeMatcher(IList<IMatcher> matchers) {
-			if (matchers == null)
-				throw new ArgumentNullException(nameof(matchers));
-
-			_matchers = new List<IMatcher>(matchers);
+			_matchers = new List<IMatcher>(matchers ?? throw new ArgumentNullException(nameof(matchers)));
 			_nestedMatchingContext = new NestedMatchingContext(this);
 			_optionsCacheNull = GetOrCreateMappingOptions(MappingOptions.Empty);
 		}
@@ -79,15 +90,7 @@ namespace NeatMapper {
 #endif
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
-
-			foreach (var matcher in _matchers) {
-				try {
-					return matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			throw new MapNotFoundException((sourceType, destinationType));
+			return MatchInternal(_matchers, source, sourceType, destination, destinationType, mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -180,75 +183,62 @@ namespace NeatMapper {
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
-			var unavailableMatchers = new ConcurrentBag<IMatcher>();
-			var factoriesCache = new ConcurrentBag<IMatchMapFactory>();
-			var enumerator = _matchers.OfType<IMatcherFactory>().GetEnumerator();
+			var unavailableMatchers = new HashSet<IMatcher>();
+			var factories = new CachedLazyEnumerable<IMatchMapFactory>(
+				_matchers.OfType<IMatcherFactory>()
+				.Select(matcher => {
+					try {
+						return matcher.MatchFactory(sourceType, destinationType, mappingOptions);
+					}
+					catch (MapNotFoundException) {
+						unavailableMatchers.Add(matcher);
+						return null;
+					}
+				})
+				.Concat(_singleElementArray.Select(_ => {
+					// Since we finished the mappers, we check if any mapper left can map the types
+					foreach (var matcher in _matchers.OfType<IMatcherCanMatch>()) {
+						if (matcher is IMatchMapFactory)
+							continue;
+
+						try {
+							if (!matcher.CanMatch(sourceType, destinationType, mappingOptions)) {
+								lock (unavailableMatchers) {
+									unavailableMatchers.Add(matcher);
+								}
+							}
+							else
+								break;
+						}
+						catch { }
+					}
+
+					return (IMatchMapFactory)null;
+				}))
+				.Where(factory => factory != null));
 
 			// DEV: maybe check with CanMatch and if returns false throw instead of creating the factory?
 
 			return new DisposableMatchMapFactory(
 				sourceType, destinationType,
 				(source, destination) => {
-					// Try using cached factories, if any
-					foreach (var factory in factoriesCache) {
+					// Try using the factories, if any
+					foreach (var factory in factories) {
 						try {
 							return factory.Invoke(source, destination);
 						}
 						catch (MapNotFoundException) { }
 					}
 
-					// Retrieve and cache new factories, if the matchers throw while retrieving the factory
-					// they can never match the given types (we assume that if it cannot provide a factory for two types,
-					// it cannot even map them), otherwise they might match them and fail (and we'll retry later)
-					lock (enumerator) {
-						if (enumerator.MoveNext()) {
-							while (true) {
-								IMatchMapFactory factory;
-								try {
-									factory = enumerator.Current.MatchFactory(sourceType, destinationType, mappingOptions);
-								}
-								catch (MapNotFoundException) {
-									unavailableMatchers.Add(enumerator.Current);
-									if (enumerator.MoveNext())
-										continue;
-									else
-										break;
-								}
-
-								factoriesCache.Add(factory);
-
-								try {
-									return factory.Invoke(source, destination);
-								}
-								catch (MapNotFoundException) { }
-
-								// Since we finished the matchers, we check if any matcher left can match the types
-								if (!enumerator.MoveNext()) {
-									foreach (var matcher in _matchers.OfType<IMatcherCanMatch>()) {
-										if (matcher is IMatcherFactory)
-											continue;
-
-										try {
-											if (!matcher.CanMatch(sourceType, destinationType, mappingOptions))
-												unavailableMatchers.Add(matcher);
-										}
-										catch { }
-									}
-
-									break;
-								}
-							}
-						}
-					}
-
-					// Invoke the default match if there are any matchers left
+					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+					// because factories is already fully enumerated)
 					if (unavailableMatchers.Count != _matchers.Count)
-						return Match(source, sourceType, destination, destinationType, mappingOptions);
+						return MatchInternal(_matchers.Except(unavailableMatchers), source, sourceType, destination, destinationType, mappingOptions);
 					else
 						throw new MapNotFoundException((sourceType, destinationType));
 				},
-				enumerator, new LambdaDisposable(() => {
-					foreach (var factory in factoriesCache) {
+				factories, new LambdaDisposable(() => {
+					foreach (var factory in factories.Cached) {
 						factory.Dispose();
 					}
 				}));
@@ -272,6 +262,20 @@ namespace NeatMapper {
 					m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
 					n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext));
 			}
+		}
+
+		private static bool MatchInternal(IEnumerable<IMatcher> matchers,
+			object source, Type sourceType, object destination, Type destinationType,
+			MappingOptions mappingOptions) {
+
+			foreach (var matcher in matchers) {
+				try {
+					return matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

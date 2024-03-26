@@ -10,24 +10,29 @@ namespace NeatMapper {
 	/// Each projector is invoked in order and the first one to succeed in projection is returned.
 	/// </summary>
 	public sealed class CompositeProjector : IProjector, IProjectorCanProject {
-		private readonly IList<IProjector> _projectors;
+		/// <summary>
+		/// List of <see cref="IProjector"/>s to be tried in order when projecting types.
+		/// </summary>
+		private readonly IReadOnlyList<IProjector> _projectors;
+
+		/// <summary>
+		/// Cached <see cref="NestedProjectionContext"/> to provide, if not already provided in <see cref="MappingOptions"/>.
+		/// </summary>
 		private readonly NestedProjectionContext _nestedProjectionContext;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CompositeProjector"/>.
 		/// </summary>
 		/// <param name="projectors">Projectors to delegate the projection to.</param>
-		public CompositeProjector(params IProjector[] projectors) : this((IList<IProjector>)projectors) { }
+		public CompositeProjector(params IProjector[] projectors) : this((IList<IProjector>)projectors ?? throw new ArgumentNullException(nameof(projectors))) { }
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CompositeProjector"/>.
 		/// </summary>
 		/// <param name="projectors">Projectors to delegate the projection to.</param>
 		public CompositeProjector(IList<IProjector> projectors) {
-			if (projectors == null)
-				throw new ArgumentNullException(nameof(projectors));
-
-			_projectors = new List<IProjector>(projectors);
+			_projectors = new List<IProjector>(projectors ?? throw new ArgumentNullException(nameof(projectors)));
 			_nestedProjectionContext = new NestedProjectionContext(this);
 		}
 

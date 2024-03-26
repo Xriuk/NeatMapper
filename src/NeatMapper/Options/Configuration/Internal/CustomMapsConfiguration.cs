@@ -161,7 +161,10 @@ namespace NeatMapper {
 			GenericMaps = genericMaps;
 
 
-			bool IsGenericMethod(MethodInfo method) {
+#if NET5_0_OR_GREATER
+			static 
+#endif
+				bool IsGenericMethod(MethodInfo method) {
 				return method.IsGenericMethod ||
 					method.DeclaringType != null && method.DeclaringType.IsGenericType && !method.DeclaringType.IsConstructedGenericType;
 			}

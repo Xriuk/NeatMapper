@@ -186,8 +186,6 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var mergeFactory = MapMergeFactory(sourceType, destinationType, mappingOptions);
-
 			// Forward new map to merge by creating a destination
 			Func<object> destinationFactory;
 			try {
@@ -197,17 +195,22 @@ namespace NeatMapper {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}
 
-			return new DisposableNewMapFactory(sourceType, destinationType, source => {
-				object destination;
-				try {
-					destination = destinationFactory.Invoke();
-				}
-				catch (ObjectCreationException e) {
-					throw new MappingException(e, (sourceType, destinationType));
-				}
+			var mergeFactory = MapMergeFactory(sourceType, destinationType, mappingOptions);
 
-				return mergeFactory.Invoke(source, destination);
-			}, mergeFactory);
+			return new DisposableNewMapFactory(
+				sourceType, destinationType,
+				source => {
+					object destination;
+					try {
+						destination = destinationFactory.Invoke();
+					}
+					catch (ObjectCreationException e) {
+						throw new MappingException(e, (sourceType, destinationType));
+					}
+
+					return mergeFactory.Invoke(source, destination);
+				},
+				mergeFactory);
 		}
 
 		public IMergeMapFactory MapMergeFactory(
@@ -226,19 +229,21 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
-			var context = GerOrCreateMappingContext(mappingOptions);
+			var context = GetOrCreateMappingContext(mappingOptions);
 
-			return new MergeMapFactory(sourceType, destinationType, (source, destination) => {
-				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+			return new MergeMapFactory(
+				sourceType, destinationType,
+				(source, destination) => {
+					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+					TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-				var result = map.Invoke(source, destination, context);
+					var result = map.Invoke(source, destination, context);
 
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
+					// Should not happen
+					TypeUtils.CheckObjectType(result, destinationType);
 
-				return result;
-			});
+					return result;
+				});
 		}
 		#endregion
 	}

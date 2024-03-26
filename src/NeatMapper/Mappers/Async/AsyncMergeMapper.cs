@@ -193,8 +193,6 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
-
 			// Forward new map to merge by creating a destination
 			Func<object> destinationFactory;
 			try {
@@ -203,6 +201,8 @@ namespace NeatMapper {
 			catch (ObjectCreationException) {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}
+
+			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
 
 			return new DisposableAsyncNewMapFactory(sourceType, destinationType, source => {
 				object destination;

@@ -282,8 +282,8 @@ namespace NeatMapper {
 						mergeElementsFactory = null;
 					}
 
-					try { 
-						// Create the matcher (it will never throw because of SafeMatcher)
+					try {
+						// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
 						IMatcher elementsMatcher;
 						if (mergeMappingOptions?.Matcher != null)
 							elementsMatcher = new SafeMatcher(new DelegateMatcher(mergeMappingOptions.Matcher, _elementsMatcher, _serviceProvider));
@@ -291,181 +291,175 @@ namespace NeatMapper {
 							elementsMatcher = _elementsMatcher;
 						var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
 
-						try { 
-							var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
-								?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
+						var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
+							?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
 
-							return new DisposableMergeMapFactory(
-								sourceType, destinationType,
-								(source, destination) => {
-									TypeUtils.CheckObjectType(source, types.From, nameof(source));
-									TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
+						return new DisposableMergeMapFactory(
+							sourceType, destinationType,
+							(source, destination) => {
+								TypeUtils.CheckObjectType(source, types.From, nameof(source));
+								TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
 
-									if (source is IEnumerable sourceEnumerable) {
-										// If we have to create the destination collection we know that we can always map to it
-										// Otherwise we must check that first
-										if (destination == null) {
-											if (collectionFactory == null)
+								if (source is IEnumerable sourceEnumerable) {
+									// If we have to create the destination collection we know that we can always map to it
+									// Otherwise we must check that first
+									if (destination == null) {
+										if (collectionFactory == null)
+											throw new MapNotFoundException(types);
+
+										destination = collectionFactory.Invoke();
+									}
+									else {
+										// Check if the collection is not readonly recursively, if it throws it means that
+										// the element mapper will be responsible for mapping the object and not collection mapper recursively
+										try {
+											if (!CanMapMerge(types.From, types.To, destination as IEnumerable, mappingOptions))
 												throw new MapNotFoundException(types);
-
-											destination = collectionFactory.Invoke();
 										}
-										else {
-											// Check if the collection is not readonly recursively, if it throws it means that
-											// the element mapper will be responsible for mapping the object and not collection mapper recursively
-											try {
-												if (!CanMapMerge(types.From, types.To, destination as IEnumerable, mappingOptions))
-													throw new MapNotFoundException(types);
-											}
-											catch (MapNotFoundException) {
-												throw;
-											}
-											catch { }
+										catch (MapNotFoundException) {
+											throw;
 										}
+										catch { }
+									}
 
-										if (destination is IEnumerable destinationEnumerable) {
-											var elementsToRemove = new List<object>();
-											var elementsToAdd = new List<object>();
+									if (destination is IEnumerable destinationEnumerable) {
+										var elementsToRemove = new List<object>();
+										var elementsToAdd = new List<object>();
 
-											var canNew = newElementsFactory != null;
-											var canMerge = mergeElementsFactory != null;
+										var canNew = newElementsFactory != null;
+										var canMerge = mergeElementsFactory != null;
 
-											object result;
-											try {
-												// Deleted elements
-												if (removeNotMatchedDestinationElements) {
-													foreach (var destinationElement in destinationEnumerable) {
-														bool found = false;
-														foreach (var sourceElement in sourceEnumerable) {
-															if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
-																found = true;
-																break;
-															}
-														}
-
-														if (!found)
-															elementsToRemove.Add(destinationElement);
-													}
-												}
-
-												// Added/updated elements
-												foreach (var sourceElement in sourceEnumerable) {
+										object result;
+										try {
+											// Deleted elements
+											if (removeNotMatchedDestinationElements) {
+												foreach (var destinationElement in destinationEnumerable) {
 													bool found = false;
-													object matchingDestinationElement = null;
-													foreach (var destinationElement in destinationEnumerable) {
-														if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-															!elementsToRemove.Contains(destinationElement)) {
-
-															matchingDestinationElement = destinationElement;
+													foreach (var sourceElement in sourceEnumerable) {
+														if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
 															found = true;
 															break;
 														}
 													}
 
-													if (found) {
-														// Try merge map
-														if (canMerge) {
-															try {
-																var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
-																if (mergeResult != matchingDestinationElement) {
-																	elementsToRemove.Add(matchingDestinationElement);
-																	elementsToAdd.Add(mergeResult);
-																}
-																continue;
-															}
-															catch (MapNotFoundException) {
-																canMerge = false;
-															}
-														}
+													if (!found)
+														elementsToRemove.Add(destinationElement);
+												}
+											}
 
-														// Try new map
-														if (!canNew)
-															throw new MapNotFoundException(types);
+											// Added/updated elements
+											foreach (var sourceElement in sourceEnumerable) {
+												bool found = false;
+												object matchingDestinationElement = null;
+												foreach (var destinationElement in destinationEnumerable) {
+													if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+														!elementsToRemove.Contains(destinationElement)) {
+
+														matchingDestinationElement = destinationElement;
+														found = true;
+														break;
+													}
+												}
+
+												if (found) {
+													// Try merge map
+													if (canMerge) {
 														try {
-															elementsToRemove.Add(matchingDestinationElement);
+															var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
+															if (mergeResult != matchingDestinationElement) {
+																elementsToRemove.Add(matchingDestinationElement);
+																elementsToAdd.Add(mergeResult);
+															}
+															continue;
+														}
+														catch (MapNotFoundException) {
+															canMerge = false;
+														}
+													}
+
+													// Try new map
+													if (!canNew)
+														throw new MapNotFoundException(types);
+													try {
+														elementsToRemove.Add(matchingDestinationElement);
+														elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+													}
+													catch (MapNotFoundException) {
+														throw new MapNotFoundException(types);
+													}
+												}
+												else {
+													// Try new map
+													if (canNew) {
+														try {
 															elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+															continue;
 														}
 														catch (MapNotFoundException) {
-															throw new MapNotFoundException(types);
+															canNew = false;
 														}
 													}
-													else {
-														// Try new map
-														if (canNew) {
-															try {
-																elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-																continue;
-															}
-															catch (MapNotFoundException) {
-																canNew = false;
-															}
-														}
 
-														// Try merge map
-														if (!canMerge || destinationFactory == null)
-															throw new MapNotFoundException(types);
-														try {
-															elementsToAdd.Add(mergeElementsFactory.Invoke(sourceElement, destinationFactory.Invoke()));
-														}
-														catch (MapNotFoundException) {
-															throw new MapNotFoundException(types);
-														}
+													// Try merge map
+													if (!canMerge || destinationFactory == null)
+														throw new MapNotFoundException(types);
+													try {
+														elementsToAdd.Add(mergeElementsFactory.Invoke(sourceElement, destinationFactory.Invoke()));
+													}
+													catch (MapNotFoundException) {
+														throw new MapNotFoundException(types);
 													}
 												}
-
-												// Update destination collection
-												foreach (var element in elementsToRemove) {
-													if (!removeDelegate.Invoke(destination, element))
-														throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
-												}
-												foreach (var element in elementsToAdd) {
-													addDelegate.Invoke(destination, element);
-												}
-
-												result = collectionConversionDelegate.Invoke(destination);
-											}
-											catch (MapNotFoundException) {
-												throw;
-											}
-											catch (TaskCanceledException) {
-												throw;
-											}
-											catch (Exception e) {
-												throw new MappingException(e, types);
 											}
 
-											// Should not happen
-											TypeUtils.CheckObjectType(result, types.To);
+											// Update destination collection
+											foreach (var element in elementsToRemove) {
+												if (!removeDelegate.Invoke(destination, element))
+													throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+											}
+											foreach (var element in elementsToAdd) {
+												addDelegate.Invoke(destination, element);
+											}
 
-											return result;
+											result = collectionConversionDelegate.Invoke(destination);
 										}
-										else
-											throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
-									}
-									else if (source == null) {
-										try {
-											if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
-												return null;
+										catch (MapNotFoundException) {
+											throw;
 										}
-										catch { }
-
-										try {
-											if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions) && ObjectFactory.CanCreate(elementTypes.To))
-												return null;
+										catch (TaskCanceledException) {
+											throw;
 										}
-										catch { }
+										catch (Exception e) {
+											throw new MappingException(e, types);
+										}
 
-										throw new MapNotFoundException(types);
+										// Should not happen
+										TypeUtils.CheckObjectType(result, types.To);
+
+										return result;
 									}
 									else
-										throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-								},
-								newElementsFactory, mergeElementsFactory, elementsMatcherFactory);
-						}
-						catch {
-							elementsMatcherFactory.Dispose();
-							throw;
-						}
+										throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+								}
+								else if (source == null) {
+									try {
+										if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
+											return null;
+									}
+									catch { }
+
+									try {
+										if (elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions) && ObjectFactory.CanCreate(elementTypes.To))
+											return null;
+									}
+									catch { }
+
+									throw new MapNotFoundException(types);
+								}
+								else
+									throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+							},
+							newElementsFactory, mergeElementsFactory, elementsMatcherFactory);
 					}
 					catch {
 						mergeElementsFactory?.Dispose();

@@ -13,6 +13,20 @@ namespace NeatMapper {
 	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
 	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap {
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		/// <summary>
+		/// Singleton array used for Linq queries.
+		/// </summary>
+		private static readonly object[] _singleElementArray = new object[] { null };
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+
+
 		/// <summary>
 		/// List of <see cref="IMapper"/>s to be tried in order when mapping types.
 		/// </summary>
@@ -39,17 +53,14 @@ namespace NeatMapper {
 		/// Creates the mapper by using the provided mappers list.
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
-		public AsyncCompositeMapper(params IAsyncMapper[] mappers) : this((IList<IAsyncMapper>) mappers) { }
+		public AsyncCompositeMapper(params IAsyncMapper[] mappers) : this((IList<IAsyncMapper>)mappers ?? throw new ArgumentNullException(nameof(mappers))) { }
 
 		/// <summary>
 		/// Creates the mapper by using the provided mappers list.
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public AsyncCompositeMapper(IList<IAsyncMapper> mappers) {
-			if (mappers == null)
-				throw new ArgumentNullException(nameof(mappers));
-
-			_mappers = new List<IAsyncMapper>(mappers);
+			_mappers = new List<IAsyncMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers)));
 			_nestedMappingContext = new AsyncNestedMappingContext(this);
 			_optionsCacheNull = GetOrCreateMappingOptions(MappingOptions.Empty);
 		}
@@ -262,80 +273,62 @@ namespace NeatMapper {
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
-			var unavailableMappers = new ConcurrentBag<IAsyncMapper>();
-			var factoriesCache = new ConcurrentBag<IAsyncNewMapFactory>();
-			var enumerator = _mappers.OfType<IAsyncMapperFactory>().GetEnumerator();
-			var enumeratorSemaphore = new SemaphoreSlim(1);
+			var unavailableMappers = new HashSet<IAsyncMapper>();
+			var factories = new CachedLazyEnumerable<IAsyncNewMapFactory>(
+				_mappers.OfType<IAsyncMapperFactory>()
+				.Select(mapper => {
+					try {
+						return mapper.MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+					}
+					catch (MapNotFoundException) {
+						unavailableMappers.Add(mapper);
+						return null;
+					}
+				})
+				.Concat(_singleElementArray.Select(e => {
+					// Since we finished the mappers, we check if any mapper left can map the types
+					foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+						if (mapper is IAsyncMapperFactory)
+							continue;
+
+						try {
+							if (!mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken).Result) {
+								lock (unavailableMappers) {
+									unavailableMappers.Add(mapper);
+								}
+							}
+							else
+								break;
+						}
+						catch { }
+					}
+
+					return (IAsyncNewMapFactory)e;
+				}))
+				.Where(factory => factory != null));
 
 			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
 
 			return new DisposableAsyncNewMapFactory(
 				sourceType, destinationType,
 				async source => {
-					// Try using cached factories, if any
-					foreach (var factory in factoriesCache) {
+					// Try using the factories, if any
+					foreach (var factory in factories) {
 						try {
 							return await factory.Invoke(source);
 						}
 						catch (MapNotFoundException) { }
 					}
 
-					// Retrieve and cache new factories, if the mappers throw while retrieving the factory
-					// they can never map the given types (we assume that if it cannot provide a factory for two types,
-					// it cannot even map them), otherwise they might map them and fail (and we'll retry later)
-					await enumeratorSemaphore.WaitAsync(cancellationToken);
-					try { 
-						if (enumerator.MoveNext()) {
-							while (true) {
-								IAsyncNewMapFactory factory;
-								try {
-									factory = enumerator.Current.MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken);
-								}
-								catch (MapNotFoundException) {
-									unavailableMappers.Add(enumerator.Current);
-									if (enumerator.MoveNext())
-										continue;
-									else
-										break;
-								}
-
-								factoriesCache.Add(factory);
-
-								try {
-									return await factory.Invoke(source);
-								}
-								catch (MapNotFoundException) { }
-
-								// Since we finished the mappers, we check if any mapper left can map the types
-								if (!enumerator.MoveNext()) {
-									foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
-										if (mapper is IAsyncMapperFactory)
-											continue;
-
-										try {
-											if (!await mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken))
-												unavailableMappers.Add(mapper);
-										}
-										catch { }
-									}
-
-									break;
-								}
-							}
-						}
-					}
-					finally {
-						enumeratorSemaphore.Release();
-					}
-
-					// Invoke the default map if there are any mappers left
+					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+					// because factories is already fully enumerated)
 					if (unavailableMappers.Count != _mappers.Count)
 						return await MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destinationType, mappingOptions, cancellationToken);
 					else
 						throw new MapNotFoundException((sourceType, destinationType));
 				},
-				enumerator, enumeratorSemaphore, new LambdaDisposable(() => {
-					foreach (var factory in factoriesCache) {
+				factories, new LambdaDisposable(() => {
+					foreach (var factory in factories.Cached) {
 						factory.Dispose();
 					}
 				}));
@@ -367,80 +360,62 @@ namespace NeatMapper {
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
-			var unavailableMappers = new ConcurrentBag<IAsyncMapper>();
-			var factoriesCache = new ConcurrentBag<IAsyncMergeMapFactory>();
-			var enumerator = _mappers.OfType<IAsyncMapperFactory>().GetEnumerator();
-			var enumeratorSemaphore = new SemaphoreSlim(1);
+			var unavailableMappers = new HashSet<IAsyncMapper>();
+			var factories = new CachedLazyEnumerable<IAsyncMergeMapFactory>(
+				_mappers.OfType<IAsyncMapperFactory>()
+				.Select(mapper => {
+					try {
+						return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+					}
+					catch (MapNotFoundException) {
+						unavailableMappers.Add(mapper);
+						return null;
+					}
+				})
+				.Concat(_singleElementArray.Select(_ => {
+					// Since we finished the mappers, we check if any mapper left can map the types
+					foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+						if (mapper is IAsyncMapperFactory)
+							continue;
+
+						try {
+							if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken).Result) {
+								lock (unavailableMappers) {
+									unavailableMappers.Add(mapper);
+								}
+							}
+							else
+								break;
+						}
+						catch { }
+					}
+
+					return (IAsyncMergeMapFactory)null;
+				}))
+				.Where(factory => factory != null));
 
 			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
 
 			return new DisposableAsyncMergeMapFactory(
 				sourceType, destinationType,
 				async (source, destination) => {
-					// Try using cached factories, if any
-					foreach (var factory in factoriesCache) {
+					// Try using the factories, if any
+					foreach (var factory in factories) {
 						try {
 							return await factory.Invoke(source, destination);
 						}
 						catch (MapNotFoundException) { }
 					}
 
-					// Retrieve and cache new factories, if the mappers throw while retrieving the factory
-					// they can never map the given types (we assume that if it cannot provide a factory for two types,
-					// it cannot even map them), otherwise they might map them and fail (and we'll retry later)
-					await enumeratorSemaphore.WaitAsync(cancellationToken);
-					try {
-						if (enumerator.MoveNext()) {
-							while (true) {
-								IAsyncMergeMapFactory factory;
-								try {
-									factory = enumerator.Current.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
-								}
-								catch (MapNotFoundException) {
-									unavailableMappers.Add(enumerator.Current);
-									if (enumerator.MoveNext())
-										continue;
-									else
-										break;
-								}
-
-								factoriesCache.Add(factory);
-
-								try {
-									return await factory.Invoke(source, destination);
-								}
-								catch (MapNotFoundException) { }
-
-								// Since we finished the mappers, we check if any mapper left can map the types
-								if (!enumerator.MoveNext()) {
-									foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
-										if (mapper is IAsyncMapperFactory)
-											continue;
-
-										try {
-											if (!await mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken))
-												unavailableMappers.Add(mapper);
-										}
-										catch { }
-									}
-
-									break;
-								}
-							}
-						}
-					}
-					finally {
-						enumeratorSemaphore.Release();
-					}
-
-					// Invoke the default map if there are any mappers left
+					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+					// because factories is already fully enumerated)
 					if (unavailableMappers.Count != _mappers.Count)
 						return await MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 					else
 						throw new MapNotFoundException((sourceType, destinationType));
 				},
-				enumerator, enumeratorSemaphore, new LambdaDisposable(() => {
-					foreach (var factory in factoriesCache) {
+				factories, new LambdaDisposable(() => {
+					foreach (var factory in factories.Cached) {
 						factory.Dispose();
 					}
 				}));

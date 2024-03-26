@@ -63,9 +63,17 @@ namespace NeatMapper {
 			?? throw new InvalidOperationException("Could not find new string(char[])");
 
 
-		// Used as a nested projector too, includes the collection projector itself
+		/// <summary>
+		/// <see cref="IProjector"/> which is used to project the elements of the collections, will be also provided
+		/// as a nested projector in <see cref="ProjectorOverrideMappingOptions"/> (if not already present).
+		/// </summary>
 		private readonly IProjector _elementsProjector;
+
+		/// <summary>
+		/// Cached nested context with no parents.
+		/// </summary>
 		private readonly NestedProjectionContext _nestedProjectionContext;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CollectionProjector"/>.
@@ -120,18 +128,15 @@ namespace NeatMapper {
 						throw new MapNotFoundException(types);
 					}
 
-					// If we have an IQueryable we quote the element projection expression as it needs to stay an Expression<Func<...>>
-					if(isQueryable)
-						elementProjection = Expression.Quote(elementProjection);
-
 					var param = Expression.Parameter(types.From, "source");
 
 					// source.Select(PROJECTION)
+					// If we have an IQueryable we quote the element projection expression as it needs to stay an Expression<Func<..., ...>>
 					Expression body = Expression.Call(
 						null,
 						(isQueryable ? Queryable_Select : Enumerable_Select).MakeGenericMethod(elementTypes.From, elementTypes.To),
 						param,
-						elementProjection);
+						(isQueryable ? Expression.Quote(elementProjection) : elementProjection));
 
 					// Create the final built-in collection for non queryables
 					if (!isQueryable) {
@@ -186,6 +191,10 @@ namespace NeatMapper {
 										CreateDictionary(body, elementTypes.To)
 									);
 								}
+								else if (genericDefinition == typeof(Dictionary<,>)) {
+									// DICTIONARY(PROJECTION)
+									collection = CreateDictionary(body, elementTypes.To);
+								}
 								else if(genericDefinition == typeof(ReadOnlyObservableCollection<>)) {
 									// new ReadOnlyObservableCollection(new ObservableCollection(PROJECTION))
 									collection = Expression.New(
@@ -209,7 +218,7 @@ namespace NeatMapper {
 							// Create the final custom collection
 							if(collection == null) {
 								// new CustomCollection(PROJECTION)
-								collection = Expression.New(types.To.GetConstructor(new[] { typeof(IEnumerable<>).MakeGenericType(elementTypes.To) }), body);
+								collection = Expression.New(types.To.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(IEnumerable<>).MakeGenericType(elementTypes.To) }, null), body);
 							}
 						}
 						else
@@ -328,6 +337,7 @@ namespace NeatMapper {
 				}
 				else if (genericDefinition == typeof(ReadOnlyCollection<>) ||
 					genericDefinition == typeof(ReadOnlyDictionary<,>) ||
+					genericDefinition == typeof(Dictionary<,>) ||
 					genericDefinition == typeof(ReadOnlyObservableCollection<>) ||
 					genericDefinition == typeof(SortedList<,>)) {
 
@@ -336,7 +346,7 @@ namespace NeatMapper {
 			}
 
 			// Otherwise a collection (even custom) can be projected only if it has a constructor which accepts an IEnumerable<T>
-			return type.GetConstructor(new[] { typeof(IEnumerable<>).MakeGenericType(type.GetEnumerableElementType()) }) != null;
+			return type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(IEnumerable<>).MakeGenericType(type.GetEnumerableElementType()) }, null) != null;
 		}
 
 		// Will override a projector if not already overridden

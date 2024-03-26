@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Microsoft.Extensions.Options;
+using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -15,6 +17,9 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
+		/// <summary>
+		/// Replaces a nested map invocation with the map itself.
+		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
 			protected object RetrieveValueRecursively(Expression expr) {
 				// Navigate up recursively until ConstantExpression and retrieve the projector from it down again
@@ -107,8 +112,29 @@ namespace NeatMapper {
 #endif
 
 
+		/// <summary>
+		/// Configuration for class and additional maps for the projector.
+		/// </summary>
 		internal readonly CustomMapsConfiguration _configuration;
+
+		/// <summary>
+		/// Service provider available in the created <see cref="ProjectionContext"/>s.
+		/// </summary>
 		private readonly IServiceProvider _serviceProvider;
+
+		/// <summary>
+		/// Cached input <see cref="MappingOptions"/> and output <see cref="ProjectionContext"/>.
+		/// </summary>
+		private readonly ConcurrentDictionary<MappingOptions, ProjectionContext> _contextsCache
+			= new ConcurrentDictionary<MappingOptions, ProjectionContext>();
+
+		/// <summary>
+		/// Cached output <see cref="ProjectionContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
+		/// for thread-safety.
+		/// </summary>
+		private readonly ProjectionContext _contextsCacheNull;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CustomProjector"/>.<br/>
@@ -157,6 +183,7 @@ namespace NeatMapper {
 				additionalMapsOptions?._maps.Values
 			);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
+			_contextsCacheNull = new ProjectionContext(_serviceProvider, this, MappingOptions.Empty);
 		}
 
 
@@ -181,11 +208,19 @@ namespace NeatMapper {
 
 			var map = _configuration.GetContextMap<ProjectionContext>((sourceType, destinationType));
 
-			var overrideOptions = mappingOptions?.GetOptions<ProjectorOverrideMappingOptions>();
-			var context = new ProjectionContext(
-				overrideOptions?.ServiceProvider ?? _serviceProvider,
-				overrideOptions?.Projector ?? this,
-				mappingOptions ?? MappingOptions.Empty);
+			ProjectionContext context;
+			if (mappingOptions == null)
+				context = _contextsCacheNull;
+			else {
+				context = _contextsCache.GetOrAdd(mappingOptions, opts => {
+					var overrideOptions = opts.GetOptions<ProjectorOverrideMappingOptions>();
+					return new ProjectionContext(
+						overrideOptions?.ServiceProvider ?? _serviceProvider,
+						overrideOptions?.Projector ?? this,
+						mappingOptions
+					);
+				});
+			}
 
 			object result;
 			try {
@@ -208,8 +243,8 @@ namespace NeatMapper {
 			// Should not happen
 			if (result == null)
 				throw new InvalidOperationException($"Null expression returned for types {sourceType.FullName ?? sourceType.Name} -> {destinationType.FullName ?? destinationType.Name}");
-			else if (!typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(sourceType, destinationType)).IsAssignableFrom(result.GetType()))
-				throw new InvalidOperationException($"Object of type {result.GetType().FullName ?? result.GetType().Name} is not assignable to type {typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(sourceType, destinationType)).FullName}");
+			else
+				TypeUtils.CheckObjectType(result, typeof(Expression<>).MakeGenericType(typeof(Func<,>).MakeGenericType(sourceType, destinationType)));
 
 			return (LambdaExpression)result;
 

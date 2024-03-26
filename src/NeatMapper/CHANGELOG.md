@@ -1,9 +1,10 @@
 # Changelog
 
-## [2.3.0] - Unreleased
+## [3.0.0] - Unreleased
 
 ### Changed
 
+- `IMapperFactory`, `IAsyncMapperFactory` and `IMatcherFactory` interfaces were changed to return custom factory interfaces instead of plain `Delegate`s, this was done to allow factories to dispose unmanaged resources via `IDisposable`. All core classes (including extension methods) are now updated, and implementers must do the same
 - (Async)Mappers/matchers/projectors are now 40 to 90% faster as they cache various data, from maps to `MappingOptions` and others
 - `AsyncCompositeMapper`/`CompositeMapper`'s `MapInternal` methods visibility has been changed from public (mistakenly) to private
 - All interfaces (async and not) now require their implementing classes to be thread-safe (including returned factories), core types were adjusted to be compliant
@@ -14,6 +15,7 @@
 
 - `MappingContext` nested Mapper creation fixes
 - Custom maps now correctly throw `MapNotFoundException` if the types matches the current mapped types or wraps it in `MappingException`/`MatcherException`/`ProjectionException`
+- Fixed various memory leaks, especially in AsyncMappers (whooops)
 
 
 ## [2.2.0] - 2024-02-03

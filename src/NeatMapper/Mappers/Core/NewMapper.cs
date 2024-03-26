@@ -185,18 +185,20 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
-			var context = GerOrCreateMappingContext(mappingOptions);
+			var context = GetOrCreateMappingContext(mappingOptions);
 
-			return new NewMapFactory(sourceType, destinationType, source => {
-				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			return new NewMapFactory(
+				sourceType, destinationType,
+				source => {
+					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-				var result = map.Invoke(source, context);
+					var result = map.Invoke(source, context);
 
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
+					// Should not happen
+					TypeUtils.CheckObjectType(result, destinationType);
 
-				return result;
-			});
+					return result;
+				});
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

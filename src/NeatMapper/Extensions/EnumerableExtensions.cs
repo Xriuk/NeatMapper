@@ -2,25 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 
 namespace NeatMapper {
 	public static class EnumerableExtensions {
-		/// <summary>
-		/// <see cref="Enumerable.Select{TSource, TResult}(IEnumerable{TSource}, Func{TSource, TResult})"/>
-		/// </summary>
-		private static readonly MethodInfo Enumerable_Select = typeof(Enumerable).GetMethods().Single(m => {
-			if (m.Name != nameof(Enumerable.Select))
-				return false;
-			var parameters = m.GetParameters();
-			return (parameters.Length == 2 && parameters[1].ParameterType.IsGenericType && parameters[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>));
-		});
-		/// <summary>
-		/// <see cref="MapperExtensions.MapNewFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
-		/// </summary>
-		private static readonly MethodInfo MapperExtensions_MapNewFactory = typeof(MapperExtensions).GetMethod(nameof(MapperExtensions.MapNewFactory), new[] { typeof(IMapper), typeof(MappingOptions) })
-			?? throw new InvalidOperationException("Could not find MapperExtensions.MapNewFactory method");
-
 		// DEV: maybe add (optional?) cache to save lazy results and avoid multiple iterations
 
 		#region Project
@@ -126,11 +110,11 @@ namespace NeatMapper {
 			if (destinationElementType == null)
 				throw new ArgumentNullException(nameof(destinationElementType));
 
-			return (IEnumerable)Enumerable_Select.MakeGenericMethod(sourceElementType, destinationElementType)
-				.Invoke(null, new object[] {
-					enumerable,
-					MapperExtensions_MapNewFactory.MakeGenericMethod(sourceElementType, destinationElementType).Invoke(null, new object[]{ mapper, mappingOptions })
-				});
+			using(var factory = mapper.MapNewFactory(sourceElementType, destinationElementType, mappingOptions)) {
+				foreach(var sourceElement in enumerable) {
+					yield return factory.Invoke(sourceElement);
+				}
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -193,7 +177,7 @@ namespace NeatMapper {
 				sourceElementType = typeof(object);
 			}
 
-			return (IEnumerable<TDestination>)enumerable.Project(mapper, sourceElementType, typeof(TDestination), mappingOptions);
+			return enumerable.Project(mapper, sourceElementType, typeof(TDestination), mappingOptions).Cast<TDestination>();
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(IEnumerable, IMapper, MappingOptions)"/>
@@ -259,15 +243,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return (IEnumerable<TDestination>)enumerable.Project(mapper, typeof(TSource), typeof(TDestination), mappingOptions);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return enumerable.Project(mapper, typeof(TSource), typeof(TDestination), mappingOptions).Cast<TDestination>();
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IEnumerable{TSource}, IMapper, MappingOptions)"/>

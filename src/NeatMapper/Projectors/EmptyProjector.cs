@@ -3,11 +3,11 @@ using System.Linq.Expressions;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Singleton <see cref="IProjector"/> which cannot project any type
+	/// Singleton <see cref="IProjector"/> which cannot project any type.
 	/// </summary>
 	public sealed class EmptyProjector : IProjector, IProjectorCanProject {
 		/// <summary>
-		/// Singleton instance of the projector
+		/// Singleton instance of the projector.
 		/// </summary>
 		public static readonly IProjector Instance = new EmptyProjector();
 

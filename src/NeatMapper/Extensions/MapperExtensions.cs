@@ -713,7 +713,9 @@ namespace NeatMapper {
 			}
 
 			// Return the map wrapped
-			return new NewMapFactory(sourceType, destinationType, source => mapper.Map(source, sourceType, destinationType, mappingOptions));
+			return new NewMapFactory(
+				sourceType, destinationType,
+				source => mapper.Map(source, sourceType, destinationType, mappingOptions));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -830,7 +832,9 @@ namespace NeatMapper {
 			}
 
 			// Return the map wrapped
-			return new MergeMapFactory(sourceType, destinationType, (source, destination) => mapper.Map(source, sourceType, destination, destinationType, mappingOptions));
+			return new MergeMapFactory(
+				sourceType, destinationType,
+				(source, destination) => mapper.Map(source, sourceType, destination, destinationType, mappingOptions));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
