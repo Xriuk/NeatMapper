@@ -103,9 +103,31 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using (var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
-				return factory.Invoke(source, destination);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+			var comparer = _configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
+			var context = GetOrCreateMappingContext(mappingOptions);
+
+			try {
+				return (bool)comparer.Invoke(source, destination, context);
 			}
+			catch (MappingException e) {
+				throw new MatcherException(e.InnerException, (sourceType, destinationType));
+			}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public bool CanMatch(
@@ -153,20 +175,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var comparer = _configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
-			MatchingContext context;
-			if(mappingOptions == null)
-				context = _contextsCacheNull;
-			else {
-				context = _contextsCache.GetOrAdd(mappingOptions, opts => {
-					var overrideOptions = mappingOptions.GetOptions<MatcherOverrideMappingOptions>();
-					return new MatchingContext(
-						overrideOptions?.ServiceProvider ?? _serviceProvider,
-						overrideOptions?.Matcher ?? this,
-						this,
-						mappingOptions
-					);
-				});
-			}
+			var context = GetOrCreateMappingContext(mappingOptions);
 
 			return new MatchMapFactory(sourceType, destinationType, (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -184,5 +193,30 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private MatchingContext GetOrCreateMappingContext(MappingOptions options) {
+			if (options == null)
+				return _contextsCacheNull;
+			else {
+				return _contextsCache.GetOrAdd(options, opts => {
+					var overrideOptions = opts.GetOptions<MatcherOverrideMappingOptions>();
+					return new MatchingContext(
+						overrideOptions?.ServiceProvider ?? _serviceProvider,
+						overrideOptions?.Matcher ?? this,
+						this,
+						opts
+					);
+				});
+			}
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

@@ -65,7 +65,7 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
-		override public async Task<
+		override public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -88,9 +88,23 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
-				return await factory.Invoke(source);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+			// Forward new map to merge by creating a destination
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
 			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 		}
 
 		override public async Task<
@@ -122,8 +136,26 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
-				return await factory.Invoke(source, destination);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
+			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
+			try { 
+				var result = await map.Invoke(source, destination, context);
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			}
+			finally {
+				GetMappingOptionsPool(mappingOptions).Return(context);
 			}
 		}
 		#endregion

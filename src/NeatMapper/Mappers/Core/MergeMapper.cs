@@ -88,9 +88,23 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using (var factory = MapNewFactory(sourceType, destinationType, mappingOptions)) {
-				return factory.Invoke(source);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+			// Forward new map to merge by creating a destination
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
 			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return Map(source, sourceType, destination, destinationType, mappingOptions);
 		}
 
 		override public
@@ -121,9 +135,23 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using (var factory = MapMergeFactory(sourceType, destinationType, mappingOptions)) {
-				return factory.Invoke(source, destination);
-			}
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
+			var context = GetOrCreateMappingContext(mappingOptions);
+
+			var result = map.Invoke(source, destination, context);
+
+			// Should not happen
+			TypeUtils.CheckObjectType(result, destinationType);
+
+			return result;
 		}
 		#endregion
 

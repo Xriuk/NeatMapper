@@ -6,10 +6,6 @@ namespace NeatMapper {
 	/// Options used to define a list of <see cref="IMapper"/>s to use for <see cref="CompositeMapper"/>
 	/// </summary>
 	public sealed class CompositeMapperOptions {
-		[Obsolete("This constant is no longer used and will be removed in future versions.")]
-		public const string Base = "Base";
-
-
 		/// <summary>
 		/// Creates a new instance
 		/// </summary>

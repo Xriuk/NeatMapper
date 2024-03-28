@@ -19,24 +19,6 @@ namespace NeatMapper {
 	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
 	/// </summary>
 	public sealed class AsyncNewCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
-		/// <inheritdoc cref="AsyncNewCollectionMapper(IAsyncMapper, AsyncCollectionMappersOptions)"/>
-		[Obsolete("serviceProvider parameter is no longer used and will be removed in future versions, use other overloads.")]
-		public AsyncNewCollectionMapper(
-			IAsyncMapper elementsMapper,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncCollectionMappersOptions?
-#else
-			AsyncCollectionMappersOptions
-#endif
-			asyncCollectionMappersOptions,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider) :
-			base(elementsMapper, asyncCollectionMappersOptions) { }
-
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncNewCollectionMapper"/>.
 		/// </summary>

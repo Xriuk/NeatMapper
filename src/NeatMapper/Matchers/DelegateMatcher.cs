@@ -6,7 +6,7 @@ namespace NeatMapper {
 	/// <see cref="IMatcher"/> which matches by invoking a delegate. Should throw <see cref="MapNotFoundException"/>
 	/// for incompatible types.
 	/// </summary>
-	public sealed class DelegateMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class DelegateMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Delegate to use for matching.
 		/// </summary>
@@ -79,38 +79,6 @@ namespace NeatMapper {
 
 			using (var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
 				return factory.Invoke(source, destination);
-			}
-		}
-
-		// DEV: remove, and let extension methods handle
-		[Obsolete("The method will be removed in future versions, use the extension methods instead.")]
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			// Try creating two default source and destination objects and try mapping them
-			object source;
-			object destination;
-			try {
-				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-				destination = ObjectFactory.GetOrCreateCached(destinationType) ?? throw new Exception(); // Just in case
-			}
-			catch {
-				throw new InvalidOperationException("Cannot verify if the matcher supports the given match because unable to create the objects to test it");
-			}
-
-			try {
-				Match(source, sourceType, destination, destinationType, mappingOptions);
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
 			}
 		}
 

@@ -88,9 +88,30 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using(var factory = MapNewFactory(sourceType, destinationType, mappingOptions)) {
-				return factory.Invoke(source);
-			}
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
+			var context = GetOrCreateMappingContext(mappingOptions);
+
+			var result = map.Invoke(source, context);
+
+			// Should not happen
+			TypeUtils.CheckObjectType(result, destinationType);
+
+			return result;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		override public

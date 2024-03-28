@@ -6,10 +6,6 @@ namespace NeatMapper {
 	/// Options used to define a list of <see cref="IAsyncMapper"/>s to use for <see cref="AsyncCompositeMapper"/>
 	/// </summary>
 	public sealed class AsyncCompositeMapperOptions {
-		[Obsolete("This constant is no longer used and will be removed in future versions.")]
-		public const string Base = "Base";
-
-
 		/// <summary>
 		/// Creates a new instance
 		/// </summary>

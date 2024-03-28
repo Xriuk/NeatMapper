@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -21,10 +22,10 @@ namespace NeatMapper {
 		private readonly IProjector _projector;
 
 		/// <summary>
-		/// Compiled factories cache, can be null if no map exists.
+		/// Compiled maps cache, can be null if no map exists.
 		/// </summary>
-		private readonly ConcurrentDictionary<(Type From, Type To), INewMapFactory> _mapsCache =
-			new ConcurrentDictionary<(Type, Type), INewMapFactory>();
+		private readonly ConcurrentDictionary<(Type From, Type To), Func<object, object>> _mapsCache =
+			new ConcurrentDictionary<(Type, Type), Func<object, object>>();
 
 
 		/// <summary>
@@ -59,7 +60,9 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return MapNewFactory(sourceType, destinationType, mappingOptions).Invoke(source);
+			using(var factory = MapNewFactory(sourceType, destinationType, mappingOptions)) { 
+				return factory.Invoke(source);
+			}
 		}
 
 		public
@@ -151,7 +154,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var map = _mapsCache.GetOrAdd((sourceType, destinationType), types => {
+			var deleg = _mapsCache.GetOrAdd((sourceType, destinationType), types => {
 				// Retrieve the projection from the projector
 				LambdaExpression projection;
 				try {
@@ -174,40 +177,39 @@ namespace NeatMapper {
 					param);
 
 				// Compile the expression and wrap it to catch exceptions
-				var deleg = (Func<object, object>)projection.Compile();
-				return new NewMapFactory(sourceType, destinationType, source => {
-					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
-					object result;
-					try {
-						result = deleg.Invoke(source);
-					}
-					catch (ProjectionException e) {
-						throw new MappingException(e.InnerException, (sourceType, destinationType));
-					}
-					catch (MapNotFoundException e) {
-						if (e.From == types.From && e.To == types.To)
-							throw;
-						else
-							throw new MappingException(e, types);
-					}
-					catch (TaskCanceledException) {
-						throw;
-					}
-					catch (Exception e) {
-						throw new MappingException(e, types);
-					}
-
-					// Should not happen
-					TypeUtils.CheckObjectType(result, destinationType);
-
-					return result;
-				});
+				return (Func<object, object>)projection.Compile();
 			});
-			if (map == null)
+			if (deleg == null)
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			return map;
+			return new NewMapFactory(sourceType, destinationType, source => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+				object result;
+				try {
+					result = deleg.Invoke(source);
+				}
+				catch (ProjectionException e) {
+					throw new MappingException(e.InnerException, (sourceType, destinationType));
+				}
+				catch (MapNotFoundException e) {
+					if (e.From == sourceType && e.To == destinationType)
+						throw;
+					else
+						throw new MappingException(e, (sourceType, destinationType));
+				}
+				catch (TaskCanceledException) {
+					throw;
+				}
+				catch (Exception e) {
+					throw new MappingException(e, (sourceType, destinationType));
+				}
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			});
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

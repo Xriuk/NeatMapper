@@ -1,6 +1,10 @@
 # Changelog
 
-## [3.0.0] - Unreleased
+## [3.0.0] - 2024-03-28
+
+### Removed
+
+- Removed classes and methods previously marked as Obsolete
 
 ### Changed
 
@@ -9,13 +13,15 @@
 - `AsyncCompositeMapper`/`CompositeMapper`'s `MapInternal` methods visibility has been changed from public (mistakenly) to private
 - All interfaces (async and not) now require their implementing classes to be thread-safe (including returned factories), core types were adjusted to be compliant
 - All options passed as `MappingOptions` are now required to be (and assumed to be) immutable, for performance reasons
-- Improved performances for nested mappings/matchings/projections
+- Improved performances for nested (async)mappings/matchings, nested (async)mappers/matchers will be created lazily only if a nested map is performed
 
 ### Fixed
 
 - `MappingContext` nested Mapper creation fixes
 - Custom maps now correctly throw `MapNotFoundException` if the types matches the current mapped types or wraps it in `MappingException`/`MatcherException`/`ProjectionException`
 - Fixed various memory leaks, especially in AsyncMappers (whooops)
+- Composite (Async)Mapper/Matcher will now correctly fallback to the next mapper/matcher in the list if the factory returned by one of the previous ones fails after being invoked
+- Added/improved docs
 
 
 ## [2.2.0] - 2024-02-03

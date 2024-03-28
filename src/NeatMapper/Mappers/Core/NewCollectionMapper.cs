@@ -17,18 +17,6 @@ namespace NeatMapper {
 	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
 	/// </summary>
 	public sealed class NewCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
-		/// <inheritdoc cref="NewCollectionMapper(IMapper)"/>
-		[Obsolete("serviceProvider parameter is no longer used and will be removed in future versions, use other overloads.")]
-		public NewCollectionMapper(
-			IMapper elementsMapper,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider) :
-				base(elementsMapper) { }
-
 		/// <summary>
 		/// Creates a new instance of <see cref="NewCollectionMapper"/>.
 		/// </summary>

@@ -21,7 +21,7 @@ namespace NeatMapper {
 		/// Replaces a nested map invocation with the map itself.
 		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
-			protected object RetrieveValueRecursively(Expression expr) {
+			protected static object RetrieveValueRecursively(Expression expr) {
 				// Navigate up recursively until ConstantExpression and retrieve the projector from it down again
 				if (expr != null) { 
 					object value;
@@ -41,7 +41,7 @@ namespace NeatMapper {
 				throw new InvalidOperationException("The provided expression is not a member access or constant expression");
 			}
 
-			protected object CompileAndRunExpression(Expression body) {
+			protected static object CompileAndRunExpression(Expression body) {
 				try { 
 					return Expression.Lambda(body).Compile().DynamicInvoke();
 				}

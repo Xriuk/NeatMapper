@@ -88,8 +88,25 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
-				return await factory.Invoke(source);
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+			var map = _configuration.GetSingleMapAsync((sourceType, destinationType));
+			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
+			try { 
+				var result = await map.Invoke(source, context);
+
+				// Should not happen
+				TypeUtils.CheckObjectType(result, destinationType);
+
+				return result;
+			}
+			finally {
+				GetMappingOptionsPool(mappingOptions).Return(context);
 			}
 		}
 

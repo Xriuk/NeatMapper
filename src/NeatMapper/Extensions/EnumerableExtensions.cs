@@ -5,8 +5,6 @@ using System.Linq;
 
 namespace NeatMapper {
 	public static class EnumerableExtensions {
-		// DEV: maybe add (optional?) cache to save lazy results and avoid multiple iterations
-
 		#region Project
 		#region Runtime destination, inferred source
 		/// <summary>
