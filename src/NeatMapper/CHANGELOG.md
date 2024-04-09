@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.0.1] - Unreleased
+
+### Fixed
+
+- Dependency Injection (DI) now uses `IOptionSnapshot` instead of `IOptions` to respect different lifetimes of mappers/matchers/projectors, previously `IOptions` forced Singleton instead of the specified lifetime
+
 ## [3.0.0] - 2024-03-28
 
 ### Removed

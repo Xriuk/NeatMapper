@@ -32,8 +32,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 
 		[TestCleanup]
 		public void Cleanup() {
-			_serviceProvider.Dispose();
-			_connection.Dispose();
+			_serviceProvider?.Dispose();
+			_connection?.Dispose();
 		}
 
 

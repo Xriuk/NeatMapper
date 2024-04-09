@@ -1,6 +1,6 @@
 ﻿namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
-	/// Specifies how the entities will be retrieved when mapping from keys to entities
+	/// Specifies how the entities will be retrieved when mapping from keys to entities.
 	/// </summary>
 	public enum EntitiesRetrievalMode {
 		/// <summary>
@@ -19,7 +19,7 @@
 		/// </para>
 		/// <para>
 		/// This can be used when you want to update entities without retrieving them first, or you just need
-		/// to set a navigation to an entity which cannot be set with the foreign key.
+		/// to set a navigation to an entity which cannot be set with just the foreign key.
 		/// </para>
 		/// </summary>
 		LocalOrAttach,
@@ -28,7 +28,8 @@
 		/// </summary>
 		LocalOrRemote,
 		/// <summary>
-		/// Entities will be queried directly from the db, the context will then handle merging them together with local ones, null will be returned if not found.
+		/// Entities will be queried directly from the db, the context will then handle merging them together with local ones, 
+		/// null will be returned if not found.
 		/// </summary>
 		Remote
 	}

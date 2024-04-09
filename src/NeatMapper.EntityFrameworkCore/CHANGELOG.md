@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.1] - Unreleased
+
+### Changed
+
+- Updated NeatMapper dependency version
+
+### Fixed
+
+- `AsyncEntityFrameworkCoreMapper` now correctly resolves the `DbContext` from an overridden `IServiceProvider` from `AsyncMapperOverrideMappingOptions` instead of `MapperOverrideMappingOptions`
+- Added optional `IServiceProvider` parameter to `EntityFrameworkCoreProjector` to provide `DbContext` instances to project shadow keys during compilation
+- Fixed some conditional null checks, which apparently worked even if broken somehow, and managed to pass the tests...
+
 ## [2.2.0] - 2024-02-03
 
 ### Changed

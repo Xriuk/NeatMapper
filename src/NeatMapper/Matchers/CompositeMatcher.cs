@@ -19,6 +19,21 @@ namespace NeatMapper {
 		/// </summary>
 		private static readonly object[] _singleElementArray = new object[] { null };
 
+
+		private static bool MatchInternal(IEnumerable<IMatcher> matchers,
+			object source, Type sourceType, object destination, Type destinationType,
+			MappingOptions mappingOptions) {
+
+			foreach (var matcher in matchers) {
+				try {
+					return matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
+		}
+
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -254,7 +269,7 @@ namespace NeatMapper {
 #endif
 
 		// Will override the matcher if not already overridden
-		MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
+		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
 			if (options == null)
 				return _optionsCacheNull;
 			else {
@@ -262,20 +277,6 @@ namespace NeatMapper {
 					m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
 					n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext));
 			}
-		}
-
-		private static bool MatchInternal(IEnumerable<IMatcher> matchers,
-			object source, Type sourceType, object destination, Type destinationType,
-			MappingOptions mappingOptions) {
-
-			foreach (var matcher in matchers) {
-				try {
-					return matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

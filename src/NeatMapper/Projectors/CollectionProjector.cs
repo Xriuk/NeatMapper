@@ -63,6 +63,50 @@ namespace NeatMapper {
 			?? throw new InvalidOperationException("Could not find new string(char[])");
 
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private static bool CanProjectCollection(Type type) {
+			if (type == typeof(string))
+				return true;
+			else if (type.IsArray)
+				return true;
+			else if (type.IsGenericType) {
+				var genericDefinition = type.GetGenericTypeDefinition();
+				if (type.IsInterface) {
+					if (genericDefinition == typeof(IEnumerable<>) || genericDefinition == typeof(IList<>) || genericDefinition == typeof(ICollection<>) ||
+						genericDefinition == typeof(IReadOnlyList<>) || genericDefinition == typeof(IReadOnlyCollection<>) ||
+						genericDefinition == typeof(IDictionary<,>) || genericDefinition == typeof(IReadOnlyDictionary<,>) || genericDefinition == typeof(ISet<>)
+#if NET5_0_OR_GREATER
+						|| genericDefinition == typeof(IReadOnlySet<>)
+#endif
+						) {
+
+						return true;
+					}
+					else
+						return false;
+				}
+				else if (genericDefinition == typeof(ReadOnlyCollection<>) ||
+					genericDefinition == typeof(ReadOnlyDictionary<,>) ||
+					genericDefinition == typeof(Dictionary<,>) ||
+					genericDefinition == typeof(ReadOnlyObservableCollection<>) ||
+					genericDefinition == typeof(SortedList<,>)) {
+
+					return true;
+				}
+			}
+
+			// Otherwise a collection (even custom) can be projected only if it has a constructor which accepts an IEnumerable<T>
+			return type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(IEnumerable<>).MakeGenericType(type.GetEnumerableElementType()) }, null) != null;
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+
+
 		/// <summary>
 		/// <see cref="IProjector"/> which is used to project the elements of the collections, will be also provided
 		/// as a nested projector in <see cref="ProjectorOverrideMappingOptions"/> (if not already present).
@@ -313,41 +357,6 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
-
-		private static bool CanProjectCollection(Type type) {
-			if (type == typeof(string))
-				return true;
-			else if (type.IsArray)
-				return true;
-			else if (type.IsGenericType) {
-				var genericDefinition = type.GetGenericTypeDefinition();
-				if (type.IsInterface) {
-					if (genericDefinition == typeof(IEnumerable<>) || genericDefinition == typeof(IList<>) || genericDefinition == typeof(ICollection<>) ||
-						genericDefinition == typeof(IReadOnlyList<>) || genericDefinition == typeof(IReadOnlyCollection<>) ||
-						genericDefinition == typeof(IDictionary<,>) || genericDefinition == typeof(IReadOnlyDictionary<,>) || genericDefinition == typeof(ISet<>)
-#if NET5_0_OR_GREATER
-						|| genericDefinition == typeof(IReadOnlySet<>)
-#endif
-						) {
-
-						return true;
-					}
-					else
-						return false;
-				}
-				else if (genericDefinition == typeof(ReadOnlyCollection<>) ||
-					genericDefinition == typeof(ReadOnlyDictionary<,>) ||
-					genericDefinition == typeof(Dictionary<,>) ||
-					genericDefinition == typeof(ReadOnlyObservableCollection<>) ||
-					genericDefinition == typeof(SortedList<,>)) {
-
-					return true;
-				}
-			}
-
-			// Otherwise a collection (even custom) can be projected only if it has a constructor which accepts an IEnumerable<T>
-			return type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new[] { typeof(IEnumerable<>).MakeGenericType(type.GetEnumerableElementType()) }, null) != null;
-		}
 
 		// Will override a projector if not already overridden
 		private MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {

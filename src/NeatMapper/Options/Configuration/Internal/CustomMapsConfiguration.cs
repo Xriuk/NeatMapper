@@ -478,6 +478,7 @@ namespace NeatMapper {
 					else
 						return (Expression)Expression.Convert(parameters.p1, parameters.p2.ParameterType);
 				});
+			// Method((Type1)arg1, (Type2)arg2, ...)
 			Expression body;
 			if (method.IsStatic)
 				body = Expression.Call(method, parametersList);

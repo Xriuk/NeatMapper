@@ -67,7 +67,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 #if NET5_0_OR_GREATER
 			_db.ChangeTracker.Clear();
 #else
-			foreach (var entry in _db.ChangeTracker.Entries<IntKey>().ToArray()) {
+			foreach (var entry in _db.ChangeTracker.Entries().ToArray()) {
 				entry.State = EntityState.Detached;
 			}
 #endif
@@ -77,8 +77,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestCleanup]
 		public void Cleanup() {
-			_serviceProvider.Dispose();
-			_connection.Dispose();
+			_serviceProvider?.Dispose();
+			_connection?.Dispose();
 		}
 	}
 

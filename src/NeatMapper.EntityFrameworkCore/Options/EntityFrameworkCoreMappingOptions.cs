@@ -23,7 +23,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		/// <inheritdoc cref="EntityFrameworkCore.EntitiesRetrievalMode"/>
-		/// <remarks><see langword="null"/> to use global setting</remarks>
+		/// <remarks><see langword="null"/> to use global setting.</remarks>
 		public EntitiesRetrievalMode? EntitiesRetrievalMode {
 			get;
 #if NET5_0_OR_GREATER

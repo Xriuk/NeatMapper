@@ -24,9 +24,9 @@ namespace NeatMapper.Tests.Extensions {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(mappersLifetime: ServiceLifetime.Singleton);
 			serviceCollection.Configure<CustomMapsOptions>(o => o.TypesToScan.Add(typeof(Maps)));
-			ServiceProvider services = serviceCollection.BuildServiceProvider();
-
-			_mapper = services.GetRequiredService<IMapper>();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				_mapper = services.GetRequiredService<IMapper>();
+			}
 		}
 
 		[TestMethod]

@@ -9,11 +9,13 @@ using System;
 namespace NeatMapper {
 	public static class ServiceCollectionExtensions {
 		/// <summary>
-		/// Adds NeatMapper services to the services collection:<br/>
-		/// -<see cref="IMapper"/><br/>
-		/// -<see cref="IAsyncMapper"/><br/>
-		/// -<see cref="IMatcher"/><br/>
-		/// -<see cref="IProjector"/>
+		/// Adds NeatMapper services to the services collection:
+		/// <list type="bullet">
+		/// <item><see cref="IMapper"/></item>
+		/// <item><see cref="IAsyncMapper"/></item>
+		/// <item><see cref="IMatcher"/></item>
+		/// <item><see cref="IProjector"/></item>
+		/// </list>
 		/// </summary>
 		/// <param name="mappersLifetime">
 		/// Lifetime of the <see cref="IMapper"/> service (and all the specific mappers registered
@@ -57,8 +59,8 @@ namespace NeatMapper {
 			services.Add(new ServiceDescriptor(
 				typeof(CustomMatcher),
 				s => new CustomMatcher(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomMatchAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMatchAdditionalMapsOptions>>()?.Value,
 					s),
 				matchersLifetime));
 
@@ -66,15 +68,15 @@ namespace NeatMapper {
 			services.Add(new ServiceDescriptor(
 				typeof(HierarchyCustomMatcher),
 				s => new HierarchyCustomMatcher(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomHierarchyMatchAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomHierarchyMatchAdditionalMapsOptions>>()?.Value,
 					s),
 				matchersLifetime));
 
 			// IMatcher (composite matcher)
 			services.Add(new ServiceDescriptor(
 				typeof(IMatcher),
-				s => new CompositeMatcher(s.GetService<IOptions<CompositeMatcherOptions>>()?.Value.Matchers ?? Array.Empty<IMatcher>()),
+				s => new CompositeMatcher(s.GetService<IOptionsSnapshot<CompositeMatcherOptions>>()?.Value.Matchers ?? Array.Empty<IMatcher>()),
 				matchersLifetime));
 			#endregion
 
@@ -90,7 +92,7 @@ namespace NeatMapper {
 					o.Mappers.Add(new MergeCollectionMapper(
 						EmptyMapper.Instance,
 						s.GetService<IMatcher>(),
-						s.GetService<IOptions<MergeCollectionsOptions>>()?.Value,
+						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
 						s));
 
 					o.Mappers.Add(p);
@@ -103,15 +105,15 @@ namespace NeatMapper {
 			services.Add(new ServiceDescriptor(
 				typeof(NewMapper),
 				s => new NewMapper(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomNewAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomNewAdditionalMapsOptions>>()?.Value,
 					s),
 				mappersLifetime));
 			services.Add(new ServiceDescriptor(
 				typeof(MergeMapper),
 				s => new MergeMapper(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomMergeAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMergeAdditionalMapsOptions>>()?.Value,
 					s),
 				mappersLifetime));
 			services.Add(new ServiceDescriptor(
@@ -129,14 +131,14 @@ namespace NeatMapper {
 				s => new MergeCollectionMapper(
 					s.GetRequiredService<IMapper>(),
 					s.GetService<IMatcher>(),
-					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
 					s),
 				mappersLifetime));
 
 			// IMapper (composite mapper)
 			services.Add(new ServiceDescriptor(
 				typeof(IMapper),
-				s => new CompositeMapper(s.GetService<IOptions<CompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IMapper>()),
+				s => new CompositeMapper(s.GetService<IOptionsSnapshot<CompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IMapper>()),
 				mappersLifetime));
 			#endregion
 
@@ -148,7 +150,7 @@ namespace NeatMapper {
 					o.Mappers.Add(m);
 
 					// Creating collection mappers with AsyncEmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
-					var asyncOptions = s.GetService<IOptions<AsyncCollectionMappersOptions>>()?.Value;
+					var asyncOptions = s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value;
 					o.Mappers.Add(new AsyncNewCollectionMapper(
 						AsyncEmptyMapper.Instance,
 						asyncOptions));
@@ -156,7 +158,7 @@ namespace NeatMapper {
 						AsyncEmptyMapper.Instance,
 						s.GetService<IMatcher>(),
 						asyncOptions,
-						s.GetService<IOptions<MergeCollectionsOptions>>()?.Value,
+						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
 						s));
 				});
 
@@ -166,15 +168,15 @@ namespace NeatMapper {
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncNewMapper),
 				s => new AsyncNewMapper(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomAsyncNewAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomAsyncNewAdditionalMapsOptions>>()?.Value,
 					s),
 				asyncMappersLifetime));
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncMergeMapper),
 				s => new AsyncMergeMapper(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomAsyncMergeAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomAsyncMergeAdditionalMapsOptions>>()?.Value,
 					s),
 				asyncMappersLifetime));
 
@@ -183,22 +185,22 @@ namespace NeatMapper {
 				typeof(AsyncNewCollectionMapper),
 				s => new AsyncNewCollectionMapper(
 					s.GetRequiredService<IAsyncMapper>(),
-					s.GetService<IOptions<AsyncCollectionMappersOptions>>()?.Value),
+					s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value),
 				asyncMappersLifetime));
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncMergeCollectionMapper),
 				s => new AsyncMergeCollectionMapper(
 					s.GetRequiredService<IAsyncMapper>(),
 					s.GetService<IMatcher>(),
-					s.GetService<IOptions<AsyncCollectionMappersOptions>>()?.Value,
-					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
 					s),
 				asyncMappersLifetime));
 
 			// IAsyncMapper (composite mapper)
 			services.Add(new ServiceDescriptor(
 				typeof(IAsyncMapper),
-				s => new AsyncCompositeMapper(s.GetService<IOptions<AsyncCompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IAsyncMapper>()),
+				s => new AsyncCompositeMapper(s.GetService<IOptionsSnapshot<AsyncCompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IAsyncMapper>()),
 				asyncMappersLifetime));
 			#endregion
 
@@ -219,8 +221,8 @@ namespace NeatMapper {
 			services.Add(new ServiceDescriptor(
 				typeof(CustomProjector),
 				s => new CustomProjector(
-					s.GetService<IOptions<CustomMapsOptions>>()?.Value,
-					s.GetService<IOptions<CustomProjectionAdditionalMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<CustomProjectionAdditionalMapsOptions>>()?.Value,
 					s),
 				projectorsLifetime));
 
@@ -233,7 +235,7 @@ namespace NeatMapper {
 			// IProjector (composite projector)
 			services.Add(new ServiceDescriptor(
 				typeof(IProjector),
-				s => new CompositeProjector(s.GetService<IOptions<CompositeProjectorOptions>>()?.Value.Projectors ?? Array.Empty<IProjector>()),
+				s => new CompositeProjector(s.GetService<IOptionsSnapshot<CompositeProjectorOptions>>()?.Value.Projectors ?? Array.Empty<IProjector>()),
 				projectorsLifetime));
 			#endregion
 

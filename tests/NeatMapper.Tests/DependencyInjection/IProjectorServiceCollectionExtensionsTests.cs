@@ -24,74 +24,68 @@ namespace NeatMapper.Tests.DependencyInjection {
 		public void ShouldRespectLifetime_Singleton() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Singleton);
-			ServiceProvider services = serviceCollection.BuildServiceProvider();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				var projector = services.GetRequiredService<IProjector>();
 
-			var projector = services.GetRequiredService<IProjector>();
+				using (var scope = services.CreateScope()) {
+					var projector2 = services.GetRequiredService<IProjector>();
 
-			using (var scope = services.CreateScope()) {
-				var projector2 = services.GetRequiredService<IProjector>();
+					Assert.AreSame(projector, projector2);
 
-				Assert.AreSame(projector, projector2);
+					var projector3 = scope.ServiceProvider.GetRequiredService<IProjector>();
 
-				var projector3 = scope.ServiceProvider.GetRequiredService<IProjector>();
+					Assert.AreSame(projector2, projector3);
+				}
 
-				Assert.AreSame(projector2, projector3);
+				{
+					var projector2 = services.GetRequiredService<IProjector>();
+
+					Assert.AreSame(projector, projector2);
+				}
 			}
-
-			{
-				var projector2 = services.GetRequiredService<IProjector>();
-
-				Assert.AreSame(projector, projector2);
-			}
-
-			services.Dispose();
 		}
 
 		[TestMethod]
 		public void ShouldRespectLifetime_Scoped() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Scoped);
-			ServiceProvider services = serviceCollection.BuildServiceProvider();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				// Not throwing?
+				//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IProjector>());
 
-			// Not throwing?
-			//Assert.ThrowsException<InvalidOperationException>(() => services.GetRequiredService<IProjector>());
+				using (var scope = services.CreateScope()) {
+					var projector2 = scope.ServiceProvider.GetRequiredService<IProjector>();
 
-			using (var scope = services.CreateScope()) {
-				var projector2 = scope.ServiceProvider.GetRequiredService<IProjector>();
+					var projector3 = scope.ServiceProvider.GetRequiredService<IProjector>();
 
-				var projector3 = scope.ServiceProvider.GetRequiredService<IProjector>();
-
-				Assert.AreSame(projector2, projector3);
+					Assert.AreSame(projector2, projector3);
+				}
 			}
-
-			services.Dispose();
 		}
 
 		[TestMethod]
 		public void ShouldRespectLifetime_Transient() {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Transient);
-			ServiceProvider services = serviceCollection.BuildServiceProvider();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				var projector = services.GetRequiredService<IProjector>();
 
-			var projector = services.GetRequiredService<IProjector>();
+				using (var scope = services.CreateScope()) {
+					var projector2 = services.GetRequiredService<IProjector>();
 
-			using (var scope = services.CreateScope()) {
-				var projector2 = services.GetRequiredService<IProjector>();
+					Assert.AreNotSame(projector, projector2);
 
-				Assert.AreNotSame(projector, projector2);
+					var projector3 = scope.ServiceProvider.GetRequiredService<IProjector>();
 
-				var projector3 = scope.ServiceProvider.GetRequiredService<IProjector>();
+					Assert.AreNotSame(projector2, projector3);
+				}
 
-				Assert.AreNotSame(projector2, projector3);
+				{
+					var projector2 = services.GetRequiredService<IProjector>();
+
+					Assert.AreNotSame(projector, projector2);
+				}
 			}
-
-			{
-				var projector2 = services.GetRequiredService<IProjector>();
-
-				Assert.AreNotSame(projector, projector2);
-			}
-
-			services.Dispose();
 		}
 
 		[TestMethod]
@@ -101,11 +95,11 @@ namespace NeatMapper.Tests.DependencyInjection {
 			serviceCollection.Configure<CustomMapsOptions>(o => {
 				o.TypesToScan.Add(typeof(Maps));
 			});
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
-
-			var projector = services.GetRequiredService<IProjector>();
-			projector.Project<string, int>();
-			projector.Project<IEnumerable<string>, List<int>>();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				var projector = services.GetRequiredService<IProjector>();
+				projector.Project<string, int>();
+				projector.Project<IEnumerable<string>, List<int>>();
+			}
 		}
 
 		[TestMethod]
@@ -115,10 +109,10 @@ namespace NeatMapper.Tests.DependencyInjection {
 			serviceCollection.Configure<CustomProjectionAdditionalMapsOptions>(o => {
 				o.AddMap<string, int>(c => s => s != null ? s.Length : 0);
 			});
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
-
-			var projector = services.GetRequiredService<IProjector>();
-			projector.Project<string, int>();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				var projector = services.GetRequiredService<IProjector>();
+				projector.Project<string, int>();
+			}
 		}
 
 		[TestMethod]
@@ -128,21 +122,21 @@ namespace NeatMapper.Tests.DependencyInjection {
 			serviceCollection.Configure<CustomMapsOptions>(o => {
 				o.TypesToScan.Add(typeof(Maps));
 			});
-			IServiceProvider services = serviceCollection.BuildServiceProvider();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				var projector = services.GetRequiredService<IProjector>();
 
-			var projector = services.GetRequiredService<IProjector>();
+				// Normal
+				Maps.Projector = null;
+				projector.Project<string, int>();
+				Assert.IsNotNull(Maps.Projector);
+				Assert.AreSame(projector, Maps.Projector);
 
-			// Normal
-			Maps.Projector = null;
-			projector.Project<string, int>();
-			Assert.IsNotNull(Maps.Projector);
-			Assert.AreSame(projector, Maps.Projector);
-
-			// Collection
-			Maps.Projector = null;
-			projector.Project<IEnumerable<string>, List<int>>();
-			Assert.IsNotNull(Maps.Projector);
-			Assert.AreSame(projector, Maps.Projector);
+				// Collection
+				Maps.Projector = null;
+				projector.Project<IEnumerable<string>, List<int>>();
+				Assert.IsNotNull(Maps.Projector);
+				Assert.AreSame(projector, Maps.Projector);
+			}
 		}
 	}
 }

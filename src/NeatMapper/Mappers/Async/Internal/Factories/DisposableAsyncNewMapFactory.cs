@@ -13,7 +13,8 @@ namespace NeatMapper {
 			this(typeof(TSource), typeof(TDestination), mapDelegate, disposables){ }
 		protected DisposableAsyncNewMapFactory(Type sourceType, Type destinationType, Func<TSource, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
 			base(sourceType, destinationType, mapDelegate) {
-			_disposables = disposables;
+
+			_disposables = disposables ?? throw new ArgumentNullException(nameof(disposables));
 		}
 
 

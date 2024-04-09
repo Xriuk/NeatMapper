@@ -9,7 +9,7 @@ namespace NeatMapper {
 
 
 		public object GetService(Type serviceType) {
-			throw new NotImplementedException();
+			return null;
 		}
 	}
 }

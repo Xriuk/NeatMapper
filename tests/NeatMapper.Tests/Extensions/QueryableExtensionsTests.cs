@@ -25,9 +25,9 @@ namespace NeatMapper.Tests.Extensions {
 			var serviceCollection = new ServiceCollection();
 			serviceCollection.AddNeatMapper(projectorsLifetime: ServiceLifetime.Singleton);
 			serviceCollection.Configure<CustomMapsOptions>(o => o.TypesToScan.Add(typeof(Maps)));
-			ServiceProvider services = serviceCollection.BuildServiceProvider();
-
-			_projector = services.GetRequiredService<IProjector>();
+			using(var services = serviceCollection.BuildServiceProvider()) { 
+				_projector = services.GetRequiredService<IProjector>();
+			}
 		}
 
 		[TestMethod]

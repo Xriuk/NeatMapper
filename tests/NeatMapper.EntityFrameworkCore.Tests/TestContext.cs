@@ -1,8 +1,12 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System;
+using System.Diagnostics;
 
 namespace NeatMapper.EntityFrameworkCore.Tests {
 	public class TestContext : DbContext {
-		public TestContext(DbContextOptions<TestContext> options) : base(options) { }
+		public TestContext(DbContextOptions<TestContext> options) : base(options) {}
+
+		public string Tag { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder modelBuilder) {
 			base.OnModelCreating(modelBuilder);

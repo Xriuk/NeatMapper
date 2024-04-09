@@ -11,43 +11,29 @@ using System.Linq;
 
 namespace NeatMapper.EntityFrameworkCore {
 	public static class ServiceCollectionExtensions {
-		[Obsolete("The lifetime parameters are no longer used and will be removed in future versions, use other overloads.")]
-		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services,
-			ServiceLifetime mapperLifetime,
-			ServiceLifetime asyncMapperLifetime,
-			ServiceLifetime matcherLifetime) where TContext : DbContext {
-
-			return services.AddNeatMapperEntityFrameworkCore<TContext>();
-		}
-
-		[Obsolete("The lifetime parameters are no longer used and will be removed in future versions, use other overloads.")]
-		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services,
-			IModel model,
-			ServiceLifetime mapperLifetime,
-			ServiceLifetime asyncMapperLifetime,
-			ServiceLifetime matcherLifetime) where TContext : DbContext {
-
-			return services.AddNeatMapperEntityFrameworkCore<TContext>(model);
-		}
-
-
 		/// <inheritdoc cref="AddNeatMapperEntityFrameworkCore{TContext}(IServiceCollection, IModel)"/>
 		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services) where TContext : DbContext {
-
 			if (services == null)
 				throw new ArgumentNullException(nameof(services));
+			if(typeof(TContext) == typeof(DbContext))
+				throw new ArgumentException("The provided type must derive from DbContext.");
 
-			if (typeof(TContext).GetConstructor(Type.EmptyTypes) != null) {
-				using(var instance = (TContext)Activator.CreateInstance(typeof(TContext))) {
-					return services.AddNeatMapperEntityFrameworkCore<TContext>(instance.Model);
+			
+			TContext instance;
+			try {
+				instance = ObjectFactory.Create(typeof(TContext)) as TContext;
+			}
+			catch {
+				if(!services.Any(s => s.ServiceType == typeof(TContext)))
+					throw new InvalidOperationException("Entity Framework Core mappers must be added after the EF Core package.");
+
+				using (var serviceProvider = services.BuildServiceProvider())
+				using (var scope = serviceProvider.CreateScope()) {
+					return services.AddNeatMapperEntityFrameworkCore<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model);
 				}
 			}
-			else { 
-				using (var serviceProvider = services.BuildServiceProvider()) {
-					using(var scope = serviceProvider.CreateScope()) {
-						return services.AddNeatMapperEntityFrameworkCore<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model);
-					}
-				}
+			using (instance) {
+				return services.AddNeatMapperEntityFrameworkCore<TContext>(instance.Model);
 			}
 		}
 
@@ -57,7 +43,9 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// </summary>
 		/// <remarks>
 		/// Must be called after adding the core NeatMapper package with
-		/// <see cref="NeatMapper.ServiceCollectionExtensions.AddNeatMapper(IServiceCollection, ServiceLifetime, ServiceLifetime, ServiceLifetime, ServiceLifetime)"/>.
+		/// <see cref="NeatMapper.ServiceCollectionExtensions.AddNeatMapper(IServiceCollection, ServiceLifetime, ServiceLifetime, ServiceLifetime, ServiceLifetime)"/>,
+		/// and also after adding the EF Core package with
+		/// <see cref="EntityFrameworkServiceCollectionExtensions.AddDbContext{TContext}(IServiceCollection, ServiceLifetime, ServiceLifetime)"/> or other overloads.
 		/// </remarks>
 		/// <typeparam name="TContext">Type of the DbContext to use with the mapper.</typeparam>
 		/// <returns>The same services collection so multiple calls could be chained.</returns>
@@ -66,15 +54,17 @@ namespace NeatMapper.EntityFrameworkCore {
 				throw new ArgumentNullException(nameof(services));
 			if (model == null)
 				throw new ArgumentNullException(nameof(model));
+			if (typeof(TContext) == typeof(DbContext))
+				throw new ArgumentException("The provided type must derive from DbContext.");
 
 			var mapper = services.FirstOrDefault(s => s.ServiceType == typeof(IMapper))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package");
+				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
 			var asyncMapper = services.FirstOrDefault(s => s.ServiceType == typeof(IAsyncMapper))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package");
+				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
 			var matcher = services.FirstOrDefault(s => s.ServiceType == typeof(IMatcher))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package");
+				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
 			var projector = services.FirstOrDefault(s => s.ServiceType == typeof(IProjector))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package");
+				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
 
 			#region IMatcher
 			// Add matcher to composite matcher
@@ -107,9 +97,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					model,
 					typeof(TContext),
 					s,
-					s.GetService<IOptions<EntityFrameworkCoreOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<EntityFrameworkCoreOptions>>()?.Value,
 					s.GetService<IMatcher>(),
-					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value),
+					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
 				mapper.Lifetime));
 			#endregion
 
@@ -131,9 +121,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					model,
 					typeof(TContext),
 					s,
-					s.GetService<IOptions<EntityFrameworkCoreOptions>>()?.Value,
+					s.GetService<IOptionsSnapshot<EntityFrameworkCoreOptions>>()?.Value,
 					s.GetService<IMatcher>(),
-					s.GetService<IOptions<MergeCollectionsOptions>>()?.Value),
+					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
 				asyncMapper.Lifetime));
 			#endregion
 

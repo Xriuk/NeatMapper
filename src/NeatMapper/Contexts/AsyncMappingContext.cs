@@ -48,7 +48,7 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
-		/// The only options forwarded automatically are <see cref="AsyncNestedMappingContext"/> and <see cref="FactoryContext"/>.
+		/// The only option forwarded automatically is <see cref="AsyncNestedMappingContext"/>.
 		/// </summary>
 		public IAsyncMapper Mapper => _mapper.Value;
 

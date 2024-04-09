@@ -30,8 +30,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Projection {
 
 		[TestCleanup]
 		public void Cleanup() {
-			_serviceProvider.Dispose();
-			_connection.Dispose();
+			_serviceProvider?.Dispose();
+			_connection?.Dispose();
 		}
 
 

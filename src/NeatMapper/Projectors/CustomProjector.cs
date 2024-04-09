@@ -12,7 +12,6 @@ namespace NeatMapper {
 	/// also supports nested maps which get expanded into the final map.
 	/// </summary>
 	public sealed class CustomProjector : IProjector, IProjectorCanProject {
-
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -49,6 +48,7 @@ namespace NeatMapper {
 					throw new InvalidOperationException("Error during expression evaluation, check the inner exception for details. Parameters of the projection expression cannot be referenced in nested projections.", e);
 				}
 			}
+
 
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
 				// Expand mapper.Project into the corresponding expressions

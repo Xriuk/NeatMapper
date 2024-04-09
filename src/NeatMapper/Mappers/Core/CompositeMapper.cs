@@ -20,6 +20,45 @@ namespace NeatMapper {
 		/// </summary>
 		private static readonly object[] _singleElementArray = new object[] { null };
 
+
+		private static object MapInternal(IEnumerable<IMapper> mappers,
+			object source, Type sourceType, Type destinationType,
+			MappingOptions mappingOptions) {
+
+			// Try new map
+			foreach (var mapper in mappers) {
+				try {
+					return mapper.Map(source, sourceType, destinationType, mappingOptions);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			// Try creating a destination and forward to merge map
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions);
+		}
+
+		private static object MapInternal(IEnumerable<IMapper> mappers,
+			object source, Type sourceType, object destination, Type destinationType,
+			MappingOptions mappingOptions) {
+
+			foreach (var mapper in mappers) {
+				try {
+					return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
+		}
+
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -423,7 +462,8 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
+		// Will override the mapper if not already overridden
+		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
 			if (options == null)
 				return _optionsCacheNull;
 			else {
@@ -431,44 +471,6 @@ namespace NeatMapper {
 					m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
 					n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext));
 			}
-		}
-
-		private static object MapInternal(IEnumerable<IMapper> mappers,
-			object source, Type sourceType, Type destinationType,
-			MappingOptions mappingOptions) {
-
-			// Try new map
-			foreach (var mapper in mappers) {
-				try {
-					return mapper.Map(source, sourceType, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			// Try creating a destination and forward to merge map
-			object destination;
-			try {
-				destination = ObjectFactory.Create(destinationType);
-			}
-			catch (ObjectCreationException) {
-				throw new MapNotFoundException((sourceType, destinationType));
-			}
-
-			return MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions);
-		}
-
-		private static object MapInternal(IEnumerable<IMapper> mappers,
-			object source, Type sourceType, object destination, Type destinationType,
-			MappingOptions mappingOptions) {
-
-			foreach (var mapper in mappers) {
-				try {
-					return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

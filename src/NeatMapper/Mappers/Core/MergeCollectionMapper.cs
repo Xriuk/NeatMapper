@@ -245,6 +245,7 @@ namespace NeatMapper {
 				var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
 				var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
 
+				// Used in case we create a new collection
 				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
 				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);

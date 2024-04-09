@@ -16,6 +16,22 @@ namespace NeatMapper {
 	/// Supports only new maps and not merge maps.
 	/// </summary>
 	public sealed class ProjectionMapper : IMapper, IMapperCanMap, IMapperFactory {
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		// Adds a compilation context, this allows projections not suited to be compiled to throw and be ignored
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private static MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
+			return (options ?? MappingOptions.Empty)
+				.ReplaceOrAdd<ProjectionCompilationContext>(_ => ProjectionCompilationContext.Instance);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+
+
 		/// <summary>
 		/// <see cref="IProjector"/> which is used to create expressions to compile into delegates.
 		/// </summary>
@@ -230,21 +246,5 @@ namespace NeatMapper {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 		#endregion
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Adds a compilation context, this allows projections not suited to be compiled to throw and be ignored
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			return (options ?? MappingOptions.Empty)
-				.ReplaceOrAdd<ProjectionCompilationContext>(_ => ProjectionCompilationContext.Instance);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

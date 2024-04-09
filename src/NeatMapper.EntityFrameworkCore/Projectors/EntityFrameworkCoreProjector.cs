@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
@@ -33,19 +34,53 @@ namespace NeatMapper.EntityFrameworkCore {
 			?? throw new Exception("Could not find EntityEntry.Property(string)");
 
 
+		/// <summary>
+		/// Db model, shared between instances of the same DbContext type.
+		/// </summary>
 		private readonly IModel _model;
+
+		/// <summary>
+		/// Type of DbContext to retrieve from <see cref="_serviceProvider"/>.
+		/// </summary>
 		private readonly Type _dbContextType;
+
+		/// <summary>
+		/// Service provider used to retrieve <see cref="DbContext"/> instances.
+		/// </summary>
+		private readonly IServiceProvider _serviceProvider;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="EntityFrameworkCoreProjector"/>.
 		/// </summary>
-		/// <param name="model">Model to use to retrieve keys of entities.</param>
-		/// <param name="dbContextType">Type of the database context to use, must derive from <see cref="DbContext"/>.</param>
-		public EntityFrameworkCoreProjector(IModel model, Type dbContextType) {
+		/// <param name = "model" > Model to use to retrieve keys of entities.</param>
+		/// <param name="dbContextType">
+		/// Type of the database context to use, must derive from <see cref="DbContext"/>.
+		/// </param>
+		/// <param name="serviceProvider">
+		/// Optional service provider used to retrieve instances of <paramref name="dbContextType"/> context.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.ServiceProvider"/>.
+		/// </param>
+		public EntityFrameworkCoreProjector(
+			IModel model,
+			Type dbContextType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) {
+
 			_model = model ?? throw new ArgumentNullException(nameof(model));
 			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
 			if (!typeof(DbContext).IsAssignableFrom(_dbContextType))
 				throw new ArgumentException($"Type {_dbContextType.FullName ?? _dbContextType.Name} is not derived from DbContext", nameof(dbContextType));
+			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
+
+#if !NET5_0 && !NETCOREAPP3_1
+			if (_serviceProvider.GetService<IServiceProviderIsService>()?.IsService(dbContextType) == false)
+				throw new ArgumentException($"The provided IServiceProvider does not support the DbContext of type {_dbContextType.FullName ?? _dbContextType.Name}", nameof(serviceProvider));
+#endif
 		}
 
 
@@ -75,8 +110,8 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			var entity = _model.FindEntityType(sourceType);
 			var key = entity.FindPrimaryKey();
-			var isCompiling = mappingOptions.GetOptions<ProjectionCompilationContext>() != null;
-			var dbContext = isCompiling ? mappingOptions.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance : null;
+			var isCompiling = mappingOptions?.GetOptions<ProjectionCompilationContext>() != null;
+			var dbContext = isCompiling ? RetrieveDbContext(mappingOptions) : null;
 
 			Expression body;
 			if (isCompiling && key.Properties.Any(k => k.IsShadowProperty())) {
@@ -236,11 +271,11 @@ namespace NeatMapper.EntityFrameworkCore {
 				return false;
 
 			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
-			// or a db context is passed to retrieve the tracked instances
-			if(key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions.GetOptions<ProjectionCompilationContext>() != null) {
-				var contextType = mappingOptions.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance?.GetType();
-				if(contextType == null || !_dbContextType.IsAssignableFrom(contextType))
-					return false;
+			// or we have a db context to retrieve the tracked instances
+			if(key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
+				RetrieveDbContext(mappingOptions) == null) {
+
+				return false;
 			}
 
 			// Check that the key type matches
@@ -258,5 +293,30 @@ namespace NeatMapper.EntityFrameworkCore {
 #nullable enable
 #endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
+			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;
+			if (dbContext != null && dbContext.GetType() != _dbContextType)
+				dbContext = null;
+
+			if (dbContext == null) {
+				try {
+					dbContext = (mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
+						.GetService(_dbContextType) as DbContext;
+				}
+				catch { }
+			}
+
+			return dbContext;
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

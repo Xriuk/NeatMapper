@@ -3,30 +3,36 @@ using Microsoft.EntityFrameworkCore;
 #endif
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
-	/// <see cref="IMatcher"/> which matches entities with their keys, even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>. Allows also matching entities with other entities.
+	/// <see cref="IMatcher"/> which matches entities with their keys (even composite keys
+	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>). Allows also matching entities with other entities.
 	/// </summary>
 	public sealed class EntityFrameworkCoreMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+		/// <summary>
+		/// Db model, shared between instances of the same DbContext type.
+		/// </summary>
 		private readonly IModel _model;
-		/// <summary>
-		/// entity: (entity, key) => bool
-		/// </summary>
-		private readonly IDictionary<Type, Delegate> _entityKeyComparerCache = new Dictionary<Type, Delegate>();
-		/// <summary>
-		/// entity: (key1) => key2
-		/// </summary>
-		private readonly IDictionary<Type, Delegate> _tupleToValueTupleCache = new Dictionary<Type, Delegate>();
-		/// <summary>
-		/// entity: (entity1, entity2) => bool
-		/// </summary>
-		private readonly IDictionary<Type, Delegate> _entityEntityComparerCache = new Dictionary<Type, Delegate>();
 
+		/// <summary>
+		/// Delegates which compare an entity with its key, keys are entity types, the order of the parameters is: entity, key.
+		/// </summary>
+		private readonly ConcurrentDictionary<Type, Func<object, object, bool>> _entityKeyComparerCache = new ConcurrentDictionary<Type, Func<object, object, bool>>();
+
+		/// <summary>
+		/// Delegates which compare an entity with another entity of the same type, keys are entity types.
+		/// </summary>
+		private readonly ConcurrentDictionary<Type, Func<object, object, bool>> _entityEntityComparerCache = new ConcurrentDictionary<Type, Func<object, object, bool>>();
+
+
+		/// <summary>
+		/// Creates a new instance of <see cref="EntityFrameworkCoreMatcher"/>.
+		/// </summary>
+		/// <param name="model">Model to use to retrieve keys of entities.</param>
 		public EntityFrameworkCoreMatcher(IModel model) {
 			_model = model ?? throw new ArgumentNullException(nameof(model));
 		}
@@ -54,7 +60,9 @@ namespace NeatMapper.EntityFrameworkCore {
 #endif
 			mappingOptions = null) {
 
-			return MatchFactory(sourceType, destinationType, mappingOptions).Invoke(source, destination);
+			using(var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
+				return factory.Invoke(source, destination);
+			}
 		}
 
 		public bool CanMatch(
@@ -98,6 +106,14 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (!entityType.IsClass)
 				return false;
 
+			// Check if we already have a cached matching map
+			if(keyType != null) {
+				if(_entityKeyComparerCache.ContainsKey(entityType))
+					return true;
+			}
+			else if(_entityEntityComparerCache.ContainsKey(entityType))
+				return true;
+
 			// Check if the entity is in the model
 			var modelEntity = _model.FindEntityType(entityType);
 			if (modelEntity == null || modelEntity.IsOwned())
@@ -124,13 +140,7 @@ namespace NeatMapper.EntityFrameworkCore {
 #endif
 		}
 
-		public Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?, object?, bool
-#else
-		object, object, bool
-#endif
-			> MatchFactory(
+		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -167,103 +177,85 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 
 				// Create and cache the delegate for the map if needed
-				Delegate entityKeyComparer;
-				lock (_entityKeyComparerCache) {
-					if (!_entityKeyComparerCache.TryGetValue(entityType, out entityKeyComparer)) {
-						var entityParam = Expression.Parameter(entityType, "entity");
-						var keyParam = Expression.Parameter(keyType.IsCompositeKeyType() ? TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType : keyType.UnwrapNullable(), "key");
-						var modelEntity = _model.FindEntityType(entityType);
-						var key = modelEntity.FindPrimaryKey();
-						Expression body;
-						if (key.Properties.Count == 1) {
-							// entity.Id == key
-							body = Expression.Equal(Expression.Property(entityParam, key.Properties[0].PropertyInfo), keyParam);
-						}
-						else {
-							// entity.Key1 == key.Key1 && ...
-							body = key.Properties
-								.Select((p, i) => Expression.Equal(
-									Expression.Property(entityParam, p.PropertyInfo),
-									Expression.PropertyOrField(keyParam, "Item" + (i + 1))))
-								.Aggregate(Expression.AndAlso);
-						}
-						entityKeyComparer = Expression.Lambda(typeof(Func<,,>).MakeGenericType(entityType, keyParam.Type, body.Type), body, entityParam, keyParam).Compile();
-						_entityKeyComparerCache.Add(entityType, entityKeyComparer);
-					}
-				}
-				
-				// If the key is a tuple we convert it to a value tuple, because maps are with value tuples only
-				Delegate tupleToValueTuple;
-				if (keyType.IsTuple()) {
-					lock (_tupleToValueTupleCache) {
-						if (!_tupleToValueTupleCache.TryGetValue(entityType, out tupleToValueTuple)) {
-							var keyParam = Expression.Parameter(keyType, "key");
-							// new ValueTuple<...>(key.Item1, ...)
-							Expression body = Expression.New(
-								TupleUtils.GetValueTupleConstructor(keyParam.Type.GetGenericArguments()),
-								Enumerable.Range(1, keyParam.Type.GetGenericArguments().Length).Select(n => Expression.Property(keyParam, "Item" + n)));
-							tupleToValueTuple = Expression.Lambda(typeof(Func<,>).MakeGenericType(keyParam.Type, body.Type), body, keyParam).Compile();
-							_tupleToValueTupleCache.Add(entityType, tupleToValueTuple);
-						}
-					}
-				}
-				else
-					tupleToValueTuple = null;
-
-				return (source, destination) => {
-					NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-					NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-					if (TypeUtils.IsDefaultValue(sourceType, source) || TypeUtils.IsDefaultValue(destinationType, destination))
-						return false;
-
-					object keyObject;
-					object entityObject;
-					if(sourceType == keyType) {
-						keyObject = source;
-						entityObject = destination;
+				var entityKeyComparer = _entityKeyComparerCache.GetOrAdd(entityType, _ => {
+					var entityParam = Expression.Parameter(typeof(object), "entity");
+					var keyParam = Expression.Parameter(typeof(object), "key");
+					var keyParamType = keyType.IsCompositeKeyType() ? TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType : keyType.UnwrapNullable();
+					var modelEntity = _model.FindEntityType(entityType);
+					var key = modelEntity.FindPrimaryKey();
+					Expression body;
+					if (key.Properties.Count == 1) {
+						// ((EntityType)entity).Id == (KeyType)key
+						body = Expression.Equal(Expression.Property(Expression.Convert(entityParam, entityType), key.Properties[0].PropertyInfo), Expression.Convert(keyParam, keyParamType));
 					}
 					else {
-						keyObject = destination;
-						entityObject = source;
+						// ((EntityType)entity).Key1 == ((KeyType)key).Key1 && ...
+						body = key.Properties
+							.Select((p, i) => Expression.Equal(
+								Expression.Property(Expression.Convert(entityParam, entityType), p.PropertyInfo),
+								Expression.PropertyOrField(Expression.Convert(keyParam, keyParamType), "Item" + (i + 1))))
+							.Aggregate(Expression.AndAlso);
 					}
+					return Expression.Lambda<Func<object, object, bool>>(body, entityParam, keyParam).Compile();
+				});
+				
+				// If the key is a tuple we convert it to a value tuple, because maps are with value tuples only
+				var tupleToValueTuple = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(keyType) : null;
 
-					// Convert the tuple if needed
-					if(tupleToValueTuple != null) 
-						keyObject = tupleToValueTuple.DynamicInvoke(keyObject);
+				return new MatchMapFactory(
+					sourceType, destinationType,
+					(source, destination) => {
+						NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+						NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-					return (bool)entityKeyComparer.DynamicInvoke(entityObject, keyObject);
-				};
+						if (TypeUtils.IsDefaultValue(sourceType, source) || TypeUtils.IsDefaultValue(destinationType, destination))
+							return false;
+
+						object keyObject;
+						object entityObject;
+						if(sourceType == keyType) {
+							keyObject = source;
+							entityObject = destination;
+						}
+						else {
+							keyObject = destination;
+							entityObject = source;
+						}
+
+						// Convert the tuple if needed
+						if(tupleToValueTuple != null) 
+							keyObject = tupleToValueTuple.DynamicInvoke(keyObject);
+
+						return entityKeyComparer.Invoke(entityObject, keyObject);
+					});
 			}
 			else {
 				// Create and cache the delegate if needed
-				Delegate entityEntityComparer;
-				lock (_entityEntityComparerCache) {
-					if (!_entityEntityComparerCache.TryGetValue(sourceType, out entityEntityComparer)) {
-						var entity1Param = Expression.Parameter(sourceType, "entity1");
-						var entity2Param = Expression.Parameter(sourceType, "entity2");
-						var modelEntity = _model.FindEntityType(sourceType);
-						var key = modelEntity.FindPrimaryKey();
-						// entity1.Key1 == entity2.Key1 && ...
-						Expression body = key.Properties
-							.Select((p, i) => Expression.Equal(
-								Expression.Property(entity1Param, p.PropertyInfo),
-								Expression.Property(entity2Param, p.PropertyInfo)))
-							.Aggregate(Expression.AndAlso);
-						entityEntityComparer = Expression.Lambda(typeof(Func<,,>).MakeGenericType(sourceType, sourceType, body.Type), body, entity1Param, entity2Param).Compile();
-						_entityEntityComparerCache.Add(sourceType, entityEntityComparer);
-					}
-				}
+				var entityEntityComparer = _entityEntityComparerCache.GetOrAdd(sourceType, type => {
+					var entity1Param = Expression.Parameter(typeof(object), "entity1");
+					var entity2Param = Expression.Parameter(typeof(object), "entity2");
+					var modelEntity = _model.FindEntityType(type);
+					var key = modelEntity.FindPrimaryKey();
+					// ((EntityType)entity1).Key1 == ((EntityType)entity2).Key1 && ...
+					Expression body = key.Properties
+						.Select((p, i) => Expression.Equal(
+							Expression.Property(Expression.Convert(entity1Param, type), p.PropertyInfo),
+							Expression.Property(Expression.Convert(entity2Param, type), p.PropertyInfo)))
+						.Aggregate(Expression.AndAlso);
+					return Expression.Lambda<Func<object, object, bool>>(body, entity1Param, entity2Param).Compile();
+				});
 
-				return (source, destination) => {
-					NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-					NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+				return new MatchMapFactory(
+					sourceType, destinationType,
+					(source, destination) => {
+						NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+						NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-					if (source == null || destination == null)
-						return false;
+						if (source == null || destination == null)
+							return false;
 
-					return (bool)entityEntityComparer.DynamicInvoke(source, destination);
-				};
+						return entityEntityComparer.Invoke(source, destination);
+					});
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

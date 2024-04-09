@@ -22,6 +22,45 @@ namespace NeatMapper {
 		/// </summary>
 		private static readonly object[] _singleElementArray = new object[] { null };
 
+
+		private static async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
+			object source, Type sourceType, Type destinationType,
+			MappingOptions mappingOptions, CancellationToken cancellationToken) {
+
+			// Try new map
+			foreach (var mapper in mappers) {
+				try {
+					return await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			// Try creating a destination and forward to merge map
+			object destination;
+			try {
+				destination = ObjectFactory.Create(destinationType);
+			}
+			catch (ObjectCreationException) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			return await MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+		}
+
+		private static async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
+			object source, Type sourceType, object destination, Type destinationType,
+			MappingOptions mappingOptions, CancellationToken cancellationToken) {
+
+			foreach (var mapper in mappers) {
+				try {
+					return await mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+				}
+				catch (MapNotFoundException) { }
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
+		}
+
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -432,7 +471,7 @@ namespace NeatMapper {
 #endif
 
 		// Will override the mapper if not already overridden
-		MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
+		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
 			if (options == null)
 				return _optionsCacheNull;
 			else {
@@ -440,44 +479,6 @@ namespace NeatMapper {
 					m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(this, m?.ServiceProvider),
 					n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext));
 			}
-		}
-
-		private static async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
-			object source, Type sourceType, Type destinationType,
-			MappingOptions mappingOptions, CancellationToken cancellationToken) {
-
-			// Try new map
-			foreach (var mapper in mappers) {
-				try {
-					return await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			// Try creating a destination and forward to merge map
-			object destination;
-			try {
-				destination = ObjectFactory.Create(destinationType);
-			}
-			catch (ObjectCreationException) {
-				throw new MapNotFoundException((sourceType, destinationType));
-			}
-
-			return await MapInternal(mappers, source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
-		}
-
-		private static async Task<object> MapInternal(IEnumerable<IAsyncMapper> mappers,
-			object source, Type sourceType, object destination, Type destinationType,
-			MappingOptions mappingOptions, CancellationToken cancellationToken) {
-
-			foreach (var mapper in mappers) {
-				try {
-					return await mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

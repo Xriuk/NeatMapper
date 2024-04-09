@@ -36,7 +36,7 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Matcher which can be used for nested matches. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
-		/// The only options forwarded automatically are <see cref="NestedMatchingContext"/> and <see cref="FactoryContext"/>.
+		/// The only option forwarded automatically is <see cref="NestedMatchingContext"/>.
 		/// </summary>
 		public IMatcher Matcher => _matcher.Value;
 

@@ -12,7 +12,8 @@ namespace NeatMapper {
 			this(typeof(TSource), typeof(TDestination), mapDelegate, disposables){ }
 		protected DisposableMatchMapFactory(Type sourceType, Type destinationType, Func<TSource, TDestination, bool> mapDelegate, params IDisposable[] disposables) :
 			base(sourceType, destinationType, mapDelegate) {
-			_disposables = disposables;
+
+			_disposables = disposables ?? throw new ArgumentNullException(nameof(disposables));
 		}
 
 
