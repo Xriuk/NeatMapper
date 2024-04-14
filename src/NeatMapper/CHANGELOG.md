@@ -11,6 +11,7 @@
 ### Removed
 
 - Removed classes and methods previously marked as Obsolete
+- `FactoryContext` was removed, all maps should assume they will be included in factories and should optimize themselves
 
 ### Changed
 
