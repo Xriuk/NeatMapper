@@ -32,6 +32,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Copy NeatMapper core Changelog
+        uses: canastro/copy-file-action@master
+        with:
+          source: "src/NeatMapper/CHANGELOG.md"
+          target: "docs/_includes/NeatMapperChangelog.md"
+          flags: "-f"
+      - name: Copy NeatMapper EF Core Changelog
+        uses: canastro/copy-file-action@master
+        with:
+          source: "src/NeatMapper.EntityFrameworkCore/CHANGELOG.md"
+          target: "docs/_includes/NeatMapperEntityFrameworkCoreChangelog.md"
+          flags: "-f"
+      - name: Copy License
+        uses: canastro/copy-file-action@master
+        with:
+          source: "LICENSE.md"
+          target: "docs/_includes/License.md"
+          flags: "-f"
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
