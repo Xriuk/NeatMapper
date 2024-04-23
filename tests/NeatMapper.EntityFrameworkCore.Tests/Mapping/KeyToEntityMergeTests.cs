@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using NeatMapper.Tests;
 using System;
 using System.Collections;
@@ -218,10 +217,15 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapEntitiesWithShadowKeys() {
+		public void ShouldMapShadowKeyToEntities() {
 			Assert.IsTrue(_mapper.CanMapMerge<int, ShadowIntKey>());
 
 			Assert.IsNotNull(_mapper.Map(1, (ShadowIntKey)null));
+
+
+			Assert.IsTrue(_mapper.CanMapMerge<Tuple<int, string>, ShadowCompositeKey>());
+
+			Assert.IsNotNull(_mapper.Map(Tuple.Create(2, "Test"), (ShadowCompositeKey)null));
 		}
 
 		[TestMethod]

@@ -2,7 +2,7 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Exception thrown when an exception was thrown inside a IMatchMap or IMatchMapStatic
+	/// Exception thrown when an exception was thrown inside a match map
 	/// </summary>
 	public sealed class MatcherException : TypesException {
 		public MatcherException(Exception exception, (Type From, Type To) types) :

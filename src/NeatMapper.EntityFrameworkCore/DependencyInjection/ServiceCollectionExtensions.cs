@@ -75,7 +75,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreMatcher),
-				s => new EntityFrameworkCoreMatcher(model),
+				s => new EntityFrameworkCoreMatcher(model, typeof(TContext), s),
 				matcher.Lifetime));
 			#endregion
 

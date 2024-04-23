@@ -6,12 +6,11 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
-using System.Threading.Tasks;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// <see cref="IMapper"/> which retrieves entities from their keys (even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>) from a <see cref="DbContext"/>.<br/>
+	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>, and shadow keys) from a <see cref="DbContext"/>.<br/>
 	/// Supports new and merge maps, also supports collections (not nested).<br/>
 	/// Entities may be searched locally in the <see cref="DbContext"/> first,
 	/// otherwise a query to the db will be made, depending on
@@ -20,8 +19,8 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// </summary>
 	/// <remarks>
 	/// Since a single <see cref="DbContext"/> instance cannot be used concurrently and it is not thread-safe
-	/// on its own, every access to the provided <see cref="DbContext"/> instance for each map and all its members
-	/// (local and remote) is protected by a semaphore.<br/>
+	/// on its own, every access to the provided <see cref="DbContext"/> instance and all its members
+	/// (local and remote) for each map is protected by a semaphore.<br/>
 	/// This makes this class thread-safe and concurrently usable, though not necessarily efficient to do so.<br/>
 	/// Any external concurrent use of the <see cref="DbContext"/> instance is not monitored and could throw exceptions,
 	/// so you should not be accessing the context externally while mapping.
@@ -246,22 +245,31 @@ namespace NeatMapper.EntityFrameworkCore {
 			// Retrieve the db context from the services
 			var dbContext = RetrieveDbContext(mappingOptions);
 
+			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
+
 			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(types.To).FindPrimaryKey();
-			var dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
-				?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
-			var localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
-				?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+			object dbSet;
+			IEnumerable localView;
+			dbContextSemaphore.Wait();
+			try { 
+				dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
+					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
+				localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
+					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+			}
+			finally {
+				dbContextSemaphore.Release();
+			}
 
-			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(types.From) : null;
+			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
-			var dbContextSemaphore = GetOrCreateSemaphoreForDbContext(dbContext);
-
-			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
-			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, mappingOptions);
+			// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
+			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, mappingOptions
+				.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance));
 			try { 
 				// Check if we are mapping a collection or just a single entity
 				if (collectionElementTypes != null) {
@@ -316,6 +324,7 @@ namespace NeatMapper.EntityFrameworkCore {
 												missingEntities
 												.Select(e => keyValuesDelegate.Invoke(e.Key))
 												.ToArray());
+											// Locking shouldn't be needed here because Queryable.Where creates just an Expression.Call
 											var query = Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, filterExpression }) as IQueryable;
 
 											dbContextSemaphore.Wait();
@@ -357,7 +366,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 									result = collectionConversionDelegate.Invoke(destination);
 								}
-								catch (TaskCanceledException) {
+								catch (OperationCanceledException) {
 									throw;
 								}
 								catch (Exception e) {
@@ -440,7 +449,7 @@ namespace NeatMapper.EntityFrameworkCore {
 									throw new InvalidOperationException("Unknown retrieval mode");
 								}
 							}
-							catch (TaskCanceledException) {
+							catch (OperationCanceledException) {
 								throw;
 							}
 							catch (Exception e) {
@@ -587,7 +596,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								catch (MappingException) {
 									throw;
 								}
-								catch (TaskCanceledException) {
+								catch (OperationCanceledException) {
 									throw;
 								}
 								catch (MapNotFoundException) {
@@ -605,12 +614,12 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 				}
 				else {
-					var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(types.From) : null;
+					var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
 					var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
 					var attachEntityDelegate = GetOrCreateAttachEntityDelegate(types.To, key);
 
-					var dbContextSemaphore = dbContext != null ? GetOrCreateSemaphoreForDbContext(dbContext) : null;
+					var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
 					return new DisposableMergeMapFactory(
 						sourceType, destinationType,
@@ -663,7 +672,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							catch (MappingException) {
 								throw;
 							}
-							catch (TaskCanceledException) {
+							catch (OperationCanceledException) {
 								throw;
 							}
 							catch (MapNotFoundException) {

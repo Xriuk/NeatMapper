@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which retrieves asynchronously entities from their keys (even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>) from a <see cref="DbContext"/>.<br/>
+	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>, or shadow keys) from a <see cref="DbContext"/>.<br/>
 	/// Supports new and merge maps, also supports collections (not nested).<br/>
 	/// Entities may be searched locally in the <see cref="DbContext"/> first,
 	/// otherwise an async query to the db will be made, depending on
@@ -261,15 +261,15 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(types.To).FindPrimaryKey();
-			var dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
+			var dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
 				?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
 			var localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
 				?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
 
-			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(types.From) : null;
+			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
-			var dbContextSemaphore = GetOrCreateSemaphoreForDbContext(dbContext);
+			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
 			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
 			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, mappingOptions);
@@ -367,7 +367,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 									result = collectionConversionDelegate.Invoke(destination);
 								}
-								catch (TaskCanceledException) {
+								catch (OperationCanceledException) {
 									throw;
 								}
 								catch (Exception e) {
@@ -451,7 +451,7 @@ namespace NeatMapper.EntityFrameworkCore {
 									throw new InvalidOperationException("Unknown retrieval mode");
 								}
 							}
-							catch (TaskCanceledException) {
+							catch (OperationCanceledException) {
 								throw;
 							}
 							catch (Exception e) {
@@ -599,7 +599,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								catch (MappingException) {
 									throw;
 								}
-								catch (TaskCanceledException) {
+								catch (OperationCanceledException) {
 									throw;
 								}
 								catch (MapNotFoundException) {
@@ -617,12 +617,12 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 				}
 				else {
-					var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(types.From) : null;
+					var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
 					var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
 					var attachEntityDelegate = GetOrCreateAttachEntityDelegate(types.To, key);
 
-					var dbContextSemaphore = dbContext != null ? GetOrCreateSemaphoreForDbContext(dbContext) : null;
+					var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
 					return new DisposableAsyncMergeMapFactory(
 						sourceType, destinationType,
@@ -675,7 +675,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							catch (MappingException) {
 								throw;
 							}
-							catch (TaskCanceledException) {
+							catch (OperationCanceledException) {
 								throw;
 							}
 							catch (MapNotFoundException) {

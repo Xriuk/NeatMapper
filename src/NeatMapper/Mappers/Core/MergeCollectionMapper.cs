@@ -427,7 +427,7 @@ namespace NeatMapper {
 										catch (MapNotFoundException) {
 											throw;
 										}
-										catch (TaskCanceledException) {
+										catch (OperationCanceledException) {
 											throw;
 										}
 										catch (Exception e) {

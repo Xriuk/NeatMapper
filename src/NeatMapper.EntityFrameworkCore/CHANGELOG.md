@@ -1,16 +1,19 @@
 # Changelog
 
-## [3.0.1] - Unreleased
+## [3.1.0] - Unreleased
 
 ### Changed
 
 - Updated NeatMapper dependency version
+- `EntityFrameworkCoreMatcher` now handles shadow keys too, and now it requires a `DbContext` type and optionally a `ServiceProvider` in its constructor
+- Instead of `TaskCanceledException` which where caught and re-thrown directly by maps and mappers (instead of being wrapped in `MappingException` like the others) now `OperationCanceledException`s are caught and re-thrown, this is backwards compatible, since `TaskCanceledException` is derived from it, but now other exceptions can be caught too
 
 ### Fixed
 
 - `AsyncEntityFrameworkCoreMapper` now correctly resolves the `DbContext` from an overridden `IServiceProvider` from `AsyncMapperOverrideMappingOptions` instead of `MapperOverrideMappingOptions`
 - Added optional `IServiceProvider` parameter to `EntityFrameworkCoreProjector` to provide `DbContext` instances to project shadow keys during compilation
 - Fixed some conditional null checks, which apparently worked even if broken somehow, and managed to pass the tests...
+- `EntityFrameworkCoreMatcher` now correctly handles default values for keys (eg: allows to match an entity with a key with value 0)
 
 ## [2.2.0] - 2024-02-03
 

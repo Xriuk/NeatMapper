@@ -1,17 +1,30 @@
-﻿#if !NET6_0_OR_GREATER
-using Microsoft.EntityFrameworkCore; 
-#endif
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches entities with their keys (even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>). Allows also matching entities with other entities.
+	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>, and shadow keys). Allows also matching entities
+	/// with other entities.
+	/// Will return <see langword="false"/> if at least one of the entities/key is null, so it won't match
+	/// null entities and keys, but will match default non-nullable keys (like <see langword="0"/>,
+	/// <see cref="Guid.Empty"/>, ...).
 	/// </summary>
+	/// <remarks>
+	/// When working with shadow keys, a <see cref="DbContext"/> will be required.
+	/// Since a single <see cref="DbContext"/> instance cannot be used concurrently and it is not thread-safe
+	/// on its own, every access to the provided <see cref="DbContext"/> instance and all its members
+	/// (local and remote) for each match is protected by a semaphore.<br/>
+	/// This makes this class thread-safe and concurrently usable, though not necessarily efficient to do so.<br/>
+	/// Any external concurrent use of the <see cref="DbContext"/> instance is not monitored and could throw exceptions,
+	/// so you should not be accessing the context externally while matching.
+	/// </remarks>
 	public sealed class EntityFrameworkCoreMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
 		/// <summary>
 		/// Db model, shared between instances of the same DbContext type.
@@ -19,22 +32,57 @@ namespace NeatMapper.EntityFrameworkCore {
 		private readonly IModel _model;
 
 		/// <summary>
+		/// Type of DbContext to retrieve from <see cref="_serviceProvider"/>.
+		/// </summary>
+		private readonly Type _dbContextType;
+
+		/// <summary>
+		/// Service provider used to retrieve <see cref="DbContext"/> instances.
+		/// </summary>
+		private readonly IServiceProvider _serviceProvider;
+
+		/// <summary>
+		/// Values indicating if the given type has at least one shadow key or not, keys are entity types.
+		/// </summary>
+		private readonly ConcurrentDictionary<Type, bool> _entityShadowKeyCache = new ConcurrentDictionary<Type, bool>();
+
+		/// <summary>
 		/// Delegates which compare an entity with its key, keys are entity types, the order of the parameters is: entity, key.
 		/// </summary>
-		private readonly ConcurrentDictionary<Type, Func<object, object, bool>> _entityKeyComparerCache = new ConcurrentDictionary<Type, Func<object, object, bool>>();
+		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>> _entityKeyComparerCache =
+			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>>();
 
 		/// <summary>
 		/// Delegates which compare an entity with another entity of the same type, keys are entity types.
 		/// </summary>
-		private readonly ConcurrentDictionary<Type, Func<object, object, bool>> _entityEntityComparerCache = new ConcurrentDictionary<Type, Func<object, object, bool>>();
+		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>> _entityEntityComparerCache =
+			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>>();
 
 
 		/// <summary>
 		/// Creates a new instance of <see cref="EntityFrameworkCoreMatcher"/>.
 		/// </summary>
 		/// <param name="model">Model to use to retrieve keys of entities.</param>
-		public EntityFrameworkCoreMatcher(IModel model) {
+		/// <param name="dbContextType">
+		/// Type of the database context to use, must derive from <see cref="DbContext"/>.
+		/// </param>
+		/// <param name="serviceProvider">
+		/// Optional service provider used to retrieve instances of <paramref name="dbContextType"/> context.<br/>
+		/// Can be overridden during mapping with <see cref="MatcherOverrideMappingOptions.ServiceProvider"/>.
+		/// </param>
+		public EntityFrameworkCoreMatcher(
+			IModel model,
+			Type dbContextType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IServiceProvider?
+#else
+			IServiceProvider
+#endif
+			serviceProvider = null) {
+
 			_model = model ?? throw new ArgumentNullException(nameof(model));
+			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
+			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
 
@@ -84,20 +132,20 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			// Check which type is the key and which is the entity, since it can be used both ways
-			// We could also match two entities
+			// Check which type is the key and which is the entity, since it can be used both ways,
+			// we could also match two entities
 			Type keyType;
 			Type entityType;
-			if (sourceType.IsKeyType() || sourceType.IsCompositeKeyType()) {
+			if (sourceType == destinationType) {
+				keyType = null;
+				entityType = sourceType;
+			}
+			else if (sourceType.IsKeyType() || sourceType.IsCompositeKeyType()) {
 				keyType = sourceType;
 				entityType = destinationType;
 			}
 			else if (destinationType.IsKeyType() || destinationType.IsCompositeKeyType()) {
 				keyType = destinationType;
-				entityType = sourceType;
-			}
-			else if(sourceType == destinationType) {
-				keyType = null;
 				entityType = sourceType;
 			}
 			else
@@ -106,14 +154,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (!entityType.IsClass)
 				return false;
 
-			// Check if we already have a cached matching map
-			if(keyType != null) {
-				if(_entityKeyComparerCache.ContainsKey(entityType))
-					return true;
-			}
-			else if(_entityEntityComparerCache.ContainsKey(entityType))
-				return true;
-
 			// Check if the entity is in the model
 			var modelEntity = _model.FindEntityType(entityType);
 			if (modelEntity == null || modelEntity.IsOwned())
@@ -121,17 +161,21 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Check that the entity has a key and that it matches the key type
 			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1 || !key.Properties.All(p => p.PropertyInfo != null))
+			if (key == null || key.Properties.Count < 1)
 				return false;
 			if(keyType != null) { 
 				if (keyType.IsCompositeKeyType()) {
-					var keyTypes = !keyType.IsNullable() ? keyType.GetGenericArguments() : keyType.GetGenericArguments()[0].GetGenericArguments();
+					var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
 					if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
 						return false;
 				}
-				else if (key.Properties.Count != 1 || (key.Properties[0].ClrType != keyType && !keyType.IsNullable(key.Properties[0].ClrType)))
+				else if (key.Properties.Count != 1 || key.Properties[0].ClrType != keyType.UnwrapNullable())
 					return false;
 			}
+
+			// If the key has shadow properties we need a DbContext to get the values
+			if(key.Properties.Any(p => p.IsShadowProperty()) && RetrieveDbContext(mappingOptions) == null) 
+				return false;
 
 			return true;
 
@@ -180,27 +224,121 @@ namespace NeatMapper.EntityFrameworkCore {
 				var entityKeyComparer = _entityKeyComparerCache.GetOrAdd(entityType, _ => {
 					var entityParam = Expression.Parameter(typeof(object), "entity");
 					var keyParam = Expression.Parameter(typeof(object), "key");
+					var dbContextSemaphoreParam = Expression.Parameter(typeof(SemaphoreSlim), "dbContextSemaphore");
+					var dbContextParam = Expression.Parameter(typeof(DbContext), "dbContext");
+
 					var keyParamType = keyType.IsCompositeKeyType() ? TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType : keyType.UnwrapNullable();
 					var modelEntity = _model.FindEntityType(entityType);
 					var key = modelEntity.FindPrimaryKey();
+
+					var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
+
 					Expression body;
 					if (key.Properties.Count == 1) {
-						// ((EntityType)entity).Id == (KeyType)key
-						body = Expression.Equal(Expression.Property(Expression.Convert(entityParam, entityType), key.Properties[0].PropertyInfo), Expression.Convert(keyParam, keyParamType));
+						// (KeyType)key
+						var keyExpr = Expression.Convert(keyParam, keyParamType);
+
+						if (key.Properties[0].IsShadowProperty()) {
+							// (KeyType)entityEntry.Property("Id").CurrentValue == KEY
+							body = Expression.Equal(
+								Expression.Convert(
+									Expression.Property(
+										Expression.Call(
+											entityEntryVar,
+											EfCoreUtils.EntityEntry_Property,
+											Expression.Constant(key.Properties[0].Name)),
+										EfCoreUtils.MemberEntry_CurrentValue),
+									keyParamType),
+								keyExpr);
+						}
+						else {
+							// ((EntityType)entity).Id == KEY
+							body = Expression.Equal(Expression.Property(Expression.Convert(entityParam, entityType), key.Properties[0].PropertyInfo), keyExpr);
+						}
 					}
 					else {
-						// ((EntityType)entity).Key1 == ((KeyType)key).Key1 && ...
+						// KEY1 && ...
 						body = key.Properties
-							.Select((p, i) => Expression.Equal(
-								Expression.Property(Expression.Convert(entityParam, entityType), p.PropertyInfo),
-								Expression.PropertyOrField(Expression.Convert(keyParam, keyParamType), "Item" + (i + 1))))
+							.Select((p, i) => {
+								// ((KeyType)key).Item1
+								var keyExpr = Expression.PropertyOrField(Expression.Convert(keyParam, keyParamType), "Item" + (i + 1));
+
+								if (p.IsShadowProperty()) {
+									// (KeyItemType)entityEntry.Property("Key1").CurrentValue == KEY
+									return Expression.Equal(
+										Expression.Convert(
+											Expression.Property(
+												Expression.Call(
+													entityEntryVar,
+													EfCoreUtils.EntityEntry_Property,
+													Expression.Constant(p.Name)),
+												EfCoreUtils.MemberEntry_CurrentValue),
+											p.ClrType),
+										keyExpr);
+								}
+								else {
+									// ((EntityType)entity).Key1 == KEY
+									return Expression.Equal(Expression.Property(Expression.Convert(entityParam, entityType), p.PropertyInfo), keyExpr);
+								}
+							})
 							.Aggregate(Expression.AndAlso);
 					}
-					return Expression.Lambda<Func<object, object, bool>>(body, entityParam, keyParam).Compile();
+
+					// If we have a shadow key we must retrieve values from DbContext, so we must use a semaphore (if not already inside one)
+					if (_entityShadowKeyCache.GetOrAdd(entityType, __ => key.Properties.Any(p => p.IsShadowProperty()))) {
+						body = Expression.Block(typeof(bool),
+							// if(dbContextSemaphore != null)
+							//     dbContextSemaphore.Wait()
+							Expression.IfThen(
+								Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
+								Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Wait)),
+							Expression.TryFinally(
+								Expression.Block(typeof(bool), new[] { entityEntryVar },
+									// var entityEntry = dbContext.Entry(entity)
+									Expression.Assign(
+										entityEntryVar,
+										Expression.Call(dbContextParam, EfCoreUtils.DbContext_Entry, entityParam)),
+									// entityEntry.State == EntityState.Detached ? throw ... : ...
+									Expression.Condition(
+										Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
+										Expression.Throw(
+											Expression.New(
+												typeof(MatcherException).GetConstructors().Single(),
+												Expression.New(
+													typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+													Expression.Constant($"The entity of type {entityType.FullName ?? entityType.Name} is not being tracked " +
+														$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
+														$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
+												Expression.Constant((sourceType, destinationType))
+											),
+											body.Type),
+										body)
+								),
+								// if(dbContextSemaphore != null)
+								//     dbContextSemaphore.Release()
+								Expression.IfThen(
+									Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
+									Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Release)))
+						);
+					}
+
+					return Expression.Lambda<Func<object, object, SemaphoreSlim, DbContext, bool>>(body, entityParam, keyParam, dbContextSemaphoreParam, dbContextParam).Compile();
 				});
 				
 				// If the key is a tuple we convert it to a value tuple, because maps are with value tuples only
-				var tupleToValueTuple = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(keyType) : null;
+				var tupleToValueTupleDelegate = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType) : null;
+
+				// Retrieve DbContext and semaphore if dealing with shadow keys
+				DbContext dbContext;
+				SemaphoreSlim dbContextSemaphore;
+				if (_entityShadowKeyCache.TryGetValue(entityType, out var shadowKey) && shadowKey) {
+					dbContext = RetrieveDbContext(mappingOptions) ?? throw new MapNotFoundException((sourceType, destinationType));
+					dbContextSemaphore = mappingOptions?.GetOptions<NestedSemaphoreContext>() == null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
+				}
+				else {
+					dbContext = null;
+					dbContextSemaphore = null;
+				}
 
 				return new MatchMapFactory(
 					sourceType, destinationType,
@@ -208,7 +346,7 @@ namespace NeatMapper.EntityFrameworkCore {
 						NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 						NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-						if (TypeUtils.IsDefaultValue(sourceType, source) || TypeUtils.IsDefaultValue(destinationType, destination))
+						if (source == null || destination == null)
 							return false;
 
 						object keyObject;
@@ -223,10 +361,10 @@ namespace NeatMapper.EntityFrameworkCore {
 						}
 
 						// Convert the tuple if needed
-						if(tupleToValueTuple != null) 
-							keyObject = tupleToValueTuple.DynamicInvoke(keyObject);
+						if (tupleToValueTupleDelegate != null) 
+							keyObject = tupleToValueTupleDelegate.DynamicInvoke(keyObject);
 
-						return entityKeyComparer.Invoke(entityObject, keyObject);
+						return entityKeyComparer.Invoke(entityObject, keyObject, dbContextSemaphore, dbContext);
 					});
 			}
 			else {
@@ -234,16 +372,105 @@ namespace NeatMapper.EntityFrameworkCore {
 				var entityEntityComparer = _entityEntityComparerCache.GetOrAdd(sourceType, type => {
 					var entity1Param = Expression.Parameter(typeof(object), "entity1");
 					var entity2Param = Expression.Parameter(typeof(object), "entity2");
+					var dbContextSemaphoreParam = Expression.Parameter(typeof(SemaphoreSlim), "dbContextSemaphore");
+					var dbContextParam = Expression.Parameter(typeof(DbContext), "dbContext");
+
 					var modelEntity = _model.FindEntityType(type);
 					var key = modelEntity.FindPrimaryKey();
-					// ((EntityType)entity1).Key1 == ((EntityType)entity2).Key1 && ...
+
+					var entityEntry1Var = Expression.Variable(typeof(EntityEntry), "entityEntry1");
+					var entityEntry2Var = Expression.Variable(typeof(EntityEntry), "entityEntry2");
+
 					Expression body = key.Properties
-						.Select((p, i) => Expression.Equal(
-							Expression.Property(Expression.Convert(entity1Param, type), p.PropertyInfo),
-							Expression.Property(Expression.Convert(entity2Param, type), p.PropertyInfo)))
+						.Select(p => {
+							if (key.Properties[0].IsShadowProperty()) {
+								// (KeyItemType)entityEntry1.Property("Key1").CurrentValue == (KeyItemType)entityEntry2.Property("Key1").CurrentValue
+								return Expression.Equal(
+									Expression.Convert(
+										Expression.Property(
+											Expression.Call(
+												entityEntry1Var,
+												EfCoreUtils.EntityEntry_Property,
+												Expression.Constant(p.Name)),
+											EfCoreUtils.MemberEntry_CurrentValue),
+										p.ClrType),
+									Expression.Convert(
+										Expression.Property(
+											Expression.Call(
+												entityEntry2Var,
+												EfCoreUtils.EntityEntry_Property,
+												Expression.Constant(p.Name)),
+											EfCoreUtils.MemberEntry_CurrentValue),
+										p.ClrType));
+							}
+							else {
+								// ((EntityType)entity1).Key1 == ((EntityType)entity2).Key1
+								return Expression.Equal(
+									Expression.Property(Expression.Convert(entity1Param, type), p.PropertyInfo),
+									Expression.Property(Expression.Convert(entity2Param, type), p.PropertyInfo));
+							}
+						})
 						.Aggregate(Expression.AndAlso);
-					return Expression.Lambda<Func<object, object, bool>>(body, entity1Param, entity2Param).Compile();
+
+					// If we have a shadow key we must retrieve values from DbContext, so we must use a semaphore
+					if (_entityShadowKeyCache.GetOrAdd(sourceType, __ => key.Properties.Any(p => p.IsShadowProperty()))) {
+						body = Expression.Block(typeof(bool),
+							// if(dbContextSemaphore != null)
+							//     dbContextSemaphore.Wait()
+							Expression.IfThen(
+								Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
+								Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Wait)),
+							Expression.TryFinally(
+								Expression.Block(typeof(bool), new[] { entityEntry1Var, entityEntry2Var },
+									// var entityEntry1 = dbContext.Entry(entity1)
+									Expression.Assign(
+										entityEntry1Var,
+										Expression.Call(dbContextParam, EfCoreUtils.DbContext_Entry, entity1Param)),
+									// var entityEntry2 = dbContext.Entry(entity2)
+									Expression.Assign(
+										entityEntry2Var,
+										Expression.Call(dbContextParam, EfCoreUtils.DbContext_Entry, entity2Param)),
+
+									// (entityEntry1.State == EntityState.Detached || entityEntry2.State == EntityState.Detached) ? throw ... : ...
+									Expression.Condition(
+										Expression.OrElse(
+											Expression.Equal(Expression.Property(entityEntry1Var, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
+											Expression.Equal(Expression.Property(entityEntry2Var, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached))),
+										Expression.Throw(
+											Expression.New(
+												typeof(MatcherException).GetConstructors().Single(),
+												Expression.New(
+													typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+													Expression.Constant($"The entity(ies) of type {sourceType.FullName ?? sourceType.Name} is/are not being tracked " +
+														$"by the provided {nameof(DbContext)}, so its/their shadow key(s) cannot be retrieved locally. " +
+														$"Either provide a valid {nameof(DbContext)} or pass a tracked entity(ies).")),
+												Expression.Constant((sourceType, destinationType))
+											),
+											body.Type),
+										body)
+								),
+								// if(dbContextSemaphore != null)
+								//     dbContextSemaphore.Release()
+								Expression.IfThen(
+									Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
+									Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Release)))
+						);
+					}
+
+					return Expression.Lambda<Func<object, object, SemaphoreSlim, DbContext, bool>>(body, entity1Param, entity2Param, dbContextSemaphoreParam, dbContextParam).Compile();
 				});
+
+				// Retrieve DbContext and semaphore if dealing with shadow keys
+				DbContext dbContext;
+				SemaphoreSlim dbContextSemaphore;
+				if (_entityShadowKeyCache.TryGetValue(sourceType, out var shadowKey) && shadowKey) {
+					dbContext = RetrieveDbContext(mappingOptions) ?? throw new MapNotFoundException((sourceType, destinationType));
+					dbContextSemaphore = mappingOptions?.GetOptions<NestedSemaphoreContext>() == null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
+				}
+				else {
+					dbContext = null;
+					dbContextSemaphore = null;
+				}
 
 				return new MatchMapFactory(
 					sourceType, destinationType,
@@ -254,7 +481,7 @@ namespace NeatMapper.EntityFrameworkCore {
 						if (source == null || destination == null)
 							return false;
 
-						return entityEntityComparer.Invoke(source, destination);
+						return entityEntityComparer.Invoke(source, destination, dbContextSemaphore, dbContext);
 					});
 			}
 
@@ -262,5 +489,28 @@ namespace NeatMapper.EntityFrameworkCore {
 #nullable enable
 #endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		// Retrieves the DbContext if available, may return null
+		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
+			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;
+			if (dbContext != null && dbContext.GetType() != _dbContextType)
+				dbContext = null;
+
+			if (dbContext == null) {
+				dbContext = (mappingOptions?.GetOptions<MatcherOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
+					.GetService(_dbContextType) as DbContext;
+			}
+
+			return dbContext;
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

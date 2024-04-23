@@ -696,7 +696,8 @@ namespace NeatMapper {
 				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
 			}
 			catch {
-				throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create an object to test it");
+				throw new InvalidOperationException(
+					"Cannot verify if the mapper supports the given map because unable to create a dummy object to test it.");
 			}
 
 			try {
@@ -705,6 +706,11 @@ namespace NeatMapper {
 			}
 			catch (MapNotFoundException) {
 				return false;
+			}
+			catch (Exception e) {
+				throw new InvalidOperationException(
+					"Cannot verify if the mapper supports the given map because it threw an exception while trying to map a dummy object. " +
+					"Check inner exception for details.", e);
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -838,7 +844,8 @@ namespace NeatMapper {
 				destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
 			}
 			catch {
-				throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create the objects to test it");
+				throw new InvalidOperationException(
+					"Cannot verify if the mapper supports the given map because unable to create dummy objects to test it.");
 			}
 
 			try {
@@ -847,6 +854,11 @@ namespace NeatMapper {
 			}
 			catch (MapNotFoundException) {
 				return false;
+			}
+			catch (Exception e) {
+				throw new InvalidOperationException(
+					"Cannot verify if the mapper supports the given map because it threw an exception while trying to map dummy objects. " +
+					"Check inner exception for details.", e);
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

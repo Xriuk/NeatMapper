@@ -123,7 +123,7 @@ namespace NeatMapper {
 					else
 						throw new MappingException(e, (sourceType, destinationType));
 				}
-				catch (TaskCanceledException) {
+				catch (OperationCanceledException) {
 					throw;
 				}
 				catch (Exception e) {

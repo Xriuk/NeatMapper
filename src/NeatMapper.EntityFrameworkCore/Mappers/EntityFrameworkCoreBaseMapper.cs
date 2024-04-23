@@ -16,7 +16,6 @@ using System.Collections.ObjectModel;
 using System.Collections;
 using System.Linq.Expressions;
 using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -26,22 +25,6 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// Internal class.
 	/// </summary>
 	public abstract class EntityFrameworkCoreBaseMapper {
-		private sealed class Finalizer<TValue> where TValue : class {
-			private readonly Action<TValue> action;
-
-			public TValue Value { get; }
-
-
-			public Finalizer(TValue key, Action<TValue> action) {
-				this.Value = key;
-				this.action = action;
-			}
-
-			~Finalizer() {
-				action?.Invoke(Value);
-			}
-		}
-
 		internal sealed class DisposableMergeCollectionFactory : IDisposable {
 			private int _disposed = 0;
 			private readonly Action<IEnumerable, IEnumerable, IEnumerable> _mapDelegate;
@@ -105,51 +88,6 @@ namespace NeatMapper.EntityFrameworkCore {
 		private static readonly MethodInfo Enumerable_Contains = typeof(Enumerable).GetMethods().First(m => 
 			m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2);
 
-		/// <summary>
-		/// <see cref="SemaphoreSlim.Wait()"/>
-		/// </summary>
-		private static readonly MethodInfo SemaphoreSlim_Wait = typeof(SemaphoreSlim).GetMethods().First(m =>
-			m.Name == nameof(SemaphoreSlim.Wait) && m.GetParameters().Length == 0);
-
-		/// <summary>
-		/// <see cref="SemaphoreSlim.Release()"/>
-		/// </summary>
-		private static readonly MethodInfo SemaphoreSlim_Release = typeof(SemaphoreSlim).GetMethods().First(m =>
-			m.Name == nameof(SemaphoreSlim.Release) && m.GetParameters().Length == 0);
-
-		/// <summary>
-		/// <see cref="DbContext.Entry(object)"/>
-		/// </summary>
-		private static readonly MethodInfo DbContext_Entry = typeof(DbContext).GetMethods().First(m =>
-			m.Name == nameof(DbContext.Entry) && !m.IsGenericMethod);
-
-		/// <summary>
-		/// <see cref="EntityEntry.State"/>
-		/// </summary>
-		private static readonly PropertyInfo EntityEntry_State = typeof(EntityEntry).GetProperty(nameof(EntityEntry.State));
-
-		/// <summary>
-		/// <see cref="EntityEntry.Property(string)"/>
-		/// </summary>
-		private static readonly MethodInfo EntityEntry_Property = typeof(EntityEntry).GetMethod(nameof(EntityEntry.Property));
-
-		/// <summary>
-		/// <see cref="MemberEntry.CurrentValue"/>
-		/// </summary>
-		private static readonly PropertyInfo MemberEntry_CurrentValue = typeof(MemberEntry).GetProperty(nameof(MemberEntry.CurrentValue));
-
-		/// <summary>
-		/// Semaphores used to lock on DbContext instances, each semaphore should be disposed automatically when
-		/// the corresponding context is (depending on the GC).
-		/// </summary>
-		private static readonly ConditionalWeakTable<DbContext, Finalizer<SemaphoreSlim>> _dbContextSemaphores =
-			new ConditionalWeakTable<DbContext, Finalizer<SemaphoreSlim>>();
-
-
-		protected static SemaphoreSlim GetOrCreateSemaphoreForDbContext(DbContext dbContext) {
-			return _dbContextSemaphores.GetValue(dbContext, key => new Finalizer<SemaphoreSlim>(new SemaphoreSlim(1), s => s.Dispose())).Value;
-		}
-
 
 		/// <summary>
 		/// Db model, shared between instances of the same DbContext type.
@@ -185,7 +123,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// Delegates which extract values from a key (single or composite), keys are entity key types.
 		/// Composite keys are <see cref="ValueTuple"/>s, so <see cref="Tuple"/>s should be converted with
-		/// the corresponding <see cref="EfCoreUtils.GetOrCreateTupleToValueTupleMap(Type)"/> delegate first.
+		/// the corresponding <see cref="EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(Type)"/> delegate first.
 		/// </summary>
 		protected readonly ConcurrentDictionary<Type, Func<object, object[]>> _keyToValuesCache =
 			new ConcurrentDictionary<Type, Func<object, object[]>>();
@@ -354,10 +292,14 @@ namespace NeatMapper.EntityFrameworkCore {
 				var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
 				var blockExprs = new List<Expression>() {
 					// var entityEntry = dbContext.Entry(entity)
-					Expression.Assign(entityEntryVar, Expression.Call(dbContextParam, DbContext_Entry, entityParam)),
+					Expression.Assign(
+						entityEntryVar,
+						Expression.Call(dbContextParam, EfCoreUtils.DbContext_Entry, entityParam)),
 
 					// entityEntry.State = EntityState.Unchanged
-					Expression.Assign(Expression.Property(entityEntryVar, EntityEntry_State), Expression.Constant(EntityState.Unchanged))
+					Expression.Assign(
+						Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State),
+						Expression.Constant(EntityState.Unchanged))
 				};
 
 				if (key.Properties.Any(p => p.IsShadowProperty())) {
@@ -365,12 +307,19 @@ namespace NeatMapper.EntityFrameworkCore {
 					// ...
 					blockExprs.AddRange(key.Properties.Select((kp, i) => (kp, i))
 						.Where(kpi => kpi.kp.IsShadowProperty())
-						.Select(kpi => Expression.Assign(Expression.Property(Expression.Call(entityEntryVar, EntityEntry_Property, Expression.Constant(kpi.kp.Name)), MemberEntry_CurrentValue), Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i))))
+						.Select(kpi => Expression.Assign(
+							Expression.Property(
+								Expression.Call(
+									entityEntryVar,
+									EfCoreUtils.EntityEntry_Property,
+									Expression.Constant(kpi.kp.Name)),
+								EfCoreUtils.MemberEntry_CurrentValue),
+							Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i))))
 					);
 
 					// Reset the state again after changing the shadow keys
 					// entityEntry.State = EntityState.Unchanged
-					blockExprs.Add(Expression.Assign(Expression.Property(entityEntryVar, EntityEntry_State), Expression.Constant(EntityState.Unchanged)));
+					blockExprs.Add(Expression.Assign(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Unchanged)));
 				}
 
 				body = Expression.Block(
@@ -378,11 +327,11 @@ namespace NeatMapper.EntityFrameworkCore {
 					Expression.Assign(entityParam, body),
 
 					// dbContextSemaphore.Wait()
-					Expression.Call(dbContextSemaphoreParam, SemaphoreSlim_Wait),
+					Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Wait),
 					Expression.TryFinally(
 						Expression.Block(new[] { entityEntryVar }, blockExprs),
 						// dbContextSemaphore.Release()
-						Expression.Call(dbContextSemaphoreParam, SemaphoreSlim_Release))
+						Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Release))
 				);
 
 				return Expression.Lambda<AttachEntityDelegate>(body, entityParam, keyValuesParam, dbContextSemaphoreParam, dbContextParam).Compile();
@@ -400,14 +349,14 @@ namespace NeatMapper.EntityFrameworkCore {
 			var removeNotMatchedDestinationElements = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>()?.RemoveNotMatchedDestinationElements
 				?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
 
-			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(types.From) : null;
+			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
 			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(types.To, key);
 
-			var dbContextSemaphore = dbContext != null ? GetOrCreateSemaphoreForDbContext(dbContext) : null;
+			var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
-			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
+			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher), may contain semaphore
 			var elementsMatcherFactory = RetrieveMatcher(mappingOptions).MatchFactory(types.From, types.To, mappingOptions);
 
 			return new DisposableMergeCollectionFactory(
@@ -527,7 +476,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					catch (MapNotFoundException) {
 						throw;
 					}
-					catch (TaskCanceledException) {
+					catch (OperationCanceledException) {
 						throw;
 					}
 					catch (Exception e) {
@@ -551,36 +500,47 @@ namespace NeatMapper.EntityFrameworkCore {
 
 				if (!hasOne) {
 					var prop = key.Properties[0];
+					// new []{ key1, key2, ... }.Contains(EF.Property<KeyType>(entity, "Key"))
+					// new []{ key1, key2, ... }.Contains(entity.Key)
 					return Expression.Lambda(
 						Expression.Call(Enumerable_Contains.MakeGenericMethod(prop.ClrType),
 							// DEV: check if Expression.Constant of object array is valid
 							Expression.NewArrayInit(prop.ClrType, keysValues.Select(values => Expression.Constant(values[0], prop.ClrType))),
-							Expression.Property(param, prop.PropertyInfo)),
+							prop.IsShadowProperty() ?
+								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
+								Expression.Property(param, prop.PropertyInfo)),
 						param);
 				}
 			}
 
-			var tupleToValueTuple = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(keyType) : null;
+			var tupleToValueTuple = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType) : null;
 
+			// entity.Key1 == key1 && ...
+			// EF.Property<KeyType1>(entity, "Key1") == key1 && ...
 			return Expression.Lambda(
 				keysValues.Select(values => key.Properties
-						.Select((prop, i) => (Expression)Expression.Equal(Expression.Property(param, prop.PropertyInfo), Expression.Constant(values[i], prop.ClrType)))
+						.Select((prop, i) => (Expression)Expression.Equal(
+							prop.IsShadowProperty() ?
+								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
+								Expression.Property(param, prop.PropertyInfo),
+							Expression.Constant(values[i], prop.ClrType)))
 						.Aggregate(Expression.AndAlso))
 					.Aggregate(Expression.OrElse),
 				param);
 		}
 
+		// Elements matched factory should be provided with NestedSemaphoreContext options set
 		/// <remarks>Returned factory contains semaphore</remarks>
 		internal Func<object, EntityMappingInfo> RetrieveLocalAndPredicateFactory(
 			Type keyType, Type entityType,
 			IKey key, EntitiesRetrievalMode retrievalMode, IEnumerable localView, DbContext dbContext, IMatchMapFactory elementsMatcherFactory) {
 
-			var tupleToValueTupleDelegate = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleMap(keyType) : null;
+			var tupleToValueTupleDelegate = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType) : null;
 			var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(keyType);
 
 			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(entityType, key);
 
-			var dbContextSemaphore = GetOrCreateSemaphoreForDbContext(dbContext);
+			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
 			return sourceElement => {
 				if (sourceElement == null || TypeUtils.IsDefaultValue(keyType.UnwrapNullable(), sourceElement))
@@ -627,10 +587,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// Normalizes <see cref="Tuple"/> key types to <see cref="ValueTuple"/>
 		/// </summary>
 		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions mappingOptions) {
-			return GetNormalizedMatchFactory(RetrieveMatcher(mappingOptions), types, mappingOptions);
-		}
-		protected IMatchMapFactory GetNormalizedMatchFactory(IMatcher elementsMatcher, (Type Key, Type Entity) types, MappingOptions mappingOptions) {
-			return elementsMatcher.MatchFactory(types.Key.IsTuple() ? TupleUtils.GetValueTupleConstructor(types.Key.GetGenericArguments()).DeclaringType : types.Key, types.Entity, mappingOptions);
+			return RetrieveMatcher(mappingOptions).MatchFactory(types.Key.IsTuple() ? TupleUtils.GetValueTupleConstructor(types.Key.GetGenericArguments()).DeclaringType : types.Key, types.Entity, mappingOptions);
 		}
 	}
 }

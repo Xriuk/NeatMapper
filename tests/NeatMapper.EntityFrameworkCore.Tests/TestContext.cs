@@ -35,7 +35,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 				.HasKey("Id");
 
 			modelBuilder.Entity<ShadowStringKey>()
-				.Property(typeof(string), "StringId");
+				.Property(typeof(string), "StringId").HasDefaultValue(""); // Adding default to avoid null values
 			modelBuilder.Entity<ShadowStringKey>()
 				.HasOne(s => s.String).WithMany()
 				.HasForeignKey("StringId");
@@ -43,7 +43,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 				.HasKey("StringId");
 
 			modelBuilder.Entity<ShadowCompositeKey>()
-				.Property(typeof(string), "Id2");
+				.Property(typeof(string), "Id2").HasDefaultValue(""); // Adding default to avoid null values
 			modelBuilder.Entity<ShadowCompositeKey>()
 				.HasKey("Id1", "Id2");
 

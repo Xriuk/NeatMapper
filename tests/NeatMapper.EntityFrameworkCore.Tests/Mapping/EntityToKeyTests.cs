@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 
 namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
+	// Uses compiled maps from EntityFrameworkProjector
 	[TestClass]
 	public class EntityToKeyTests {
 		private SqliteConnection _connection = null;
@@ -195,30 +196,14 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldNotMapEntitiesWithShadowKeysWithoutContext() {
+		public void ShouldNotMapEntitiesToShadowKeysWithoutContext() {
 			Assert.IsFalse(_mapper.CanMapNew<ShadowIntKey, int>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new ShadowIntKey()));
 		}
 
 		[TestMethod]
-		public void ShouldMapEntitiesWithShadowKeysWithContextIfTracked() {
-			var db = _serviceProvider.GetRequiredService<TestContext>();
-			db.Database.EnsureDeleted();
-			db.Database.EnsureCreated();
-			var entity = new ShadowIntKey();
-			db.Add(entity);
-			db.SaveChanges();
-
-			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
-
-			Assert.IsTrue(_mapper.CanMapNew<ShadowIntKey, int>(options));
-
-			Assert.AreEqual(1, _mapper.Map<int>(entity, options));
-		}
-
-		[TestMethod]
-		public void ShouldNotMapEntitiesWithShadowKeysWithContextIfNotTracked() {
+		public void ShouldNotMapEntitiesToShadowKeysWithContextIfNotTracked() {
 			var db = _serviceProvider.GetRequiredService<TestContext>();
 			db.Database.EnsureDeleted();
 			db.Database.EnsureCreated();
@@ -231,6 +216,22 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(entity, options));
 			Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
 			Assert.AreEqual($"The entity of type {typeof(ShadowIntKey).FullName} is not being tracked by the provided context, so its shadow key(s) cannot be retrieved locally.", exc.InnerException.Message);
+		}
+
+		[TestMethod]
+		public void ShouldMapEntitiesToShadowKeysWithContextIfTracked() {
+			var db = _serviceProvider.GetRequiredService<TestContext>();
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+			var entity = new ShadowIntKey();
+			db.Add(entity);
+			db.SaveChanges();
+
+			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
+
+			Assert.IsTrue(_mapper.CanMapNew<ShadowIntKey, int>(options));
+
+			Assert.AreEqual(1, _mapper.Map<int>(entity, options));
 		}
 
 		[TestMethod]

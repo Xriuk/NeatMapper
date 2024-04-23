@@ -2,8 +2,9 @@
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
-	/// Options for <see cref="EntityFrameworkCoreMapper"/> and <see cref="AsyncEntityFrameworkCoreMapper"/>,
-	/// these will override any configuration options defined in <see cref="EntityFrameworkCoreOptions"/>.
+	/// Options for <see cref="EntityFrameworkCoreMatcher"/>, <see cref="EntityFrameworkCoreMapper"/>
+	/// and <see cref="AsyncEntityFrameworkCoreMapper"/>, these will override any configuration options
+	/// defined in <see cref="EntityFrameworkCoreOptions"/>.
 	/// </summary>
 	public sealed class EntityFrameworkCoreMappingOptions {
 		public EntityFrameworkCoreMappingOptions(

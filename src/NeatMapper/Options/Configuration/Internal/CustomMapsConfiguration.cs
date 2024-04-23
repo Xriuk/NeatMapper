@@ -191,7 +191,7 @@ namespace NeatMapper {
 							else
 								throw new MappingException(e, types);
 						}
-						catch (TaskCanceledException) {
+						catch (OperationCanceledException) {
 							throw;
 						}
 						catch (Exception e) {
@@ -226,7 +226,7 @@ namespace NeatMapper {
 							else
 								throw new MappingException(e, types);
 						}
-						catch (TaskCanceledException) {
+						catch (OperationCanceledException) {
 							throw;
 						}
 						catch (Exception e) {
@@ -260,7 +260,7 @@ namespace NeatMapper {
 							else
 								throw new MappingException(e, types);
 						}
-						catch (TaskCanceledException) {
+						catch (OperationCanceledException) {
 							throw;
 						}
 						catch (Exception e) {
@@ -295,7 +295,7 @@ namespace NeatMapper {
 							else
 								throw new MappingException(e, types);
 						}
-						catch (TaskCanceledException) {
+						catch (OperationCanceledException) {
 							throw;
 						}
 						catch (Exception e) {
@@ -346,7 +346,7 @@ namespace NeatMapper {
 					else
 						throw new MappingException(e, types);
 				}
-				catch (TaskCanceledException) {
+				catch (OperationCanceledException) {
 					throw;
 				}
 				catch (Exception e) {
@@ -376,7 +376,7 @@ namespace NeatMapper {
 							else
 								throw new MappingException(e, types);
 						}
-						catch (TaskCanceledException) {
+						catch (OperationCanceledException) {
 							throw;
 						}
 						catch (Exception e) {

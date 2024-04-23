@@ -132,7 +132,8 @@ namespace NeatMapper {
 				destination = ObjectFactory.GetOrCreateCached(destinationType) ?? throw new Exception(); // Just in case
 			}
 			catch {
-				throw new InvalidOperationException("Cannot verify if the matcher supports the given match because unable to create the objects to test it");
+				throw new InvalidOperationException(
+					"Cannot verify if the matcher supports the given match map because unable to create dummy objects to test it.");
 			}
 
 			try {
@@ -141,6 +142,11 @@ namespace NeatMapper {
 			}
 			catch (MapNotFoundException) {
 				return false;
+			}
+			catch (Exception e) {
+				throw new InvalidOperationException(
+					"Cannot verify if the matcher supports the given match map because it threw an exception while trying to match dummy objects. " +
+					"Check inner exception for details.", e);
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

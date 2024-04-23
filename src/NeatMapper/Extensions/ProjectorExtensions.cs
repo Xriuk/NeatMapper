@@ -202,6 +202,11 @@ namespace NeatMapper {
 			catch (MapNotFoundException) {
 				return false;
 			}
+			catch (Exception e) {
+				throw new InvalidOperationException(
+					"Cannot verify if the projector supports the given projection because it threw an exception while trying to project the types. " +
+					"Check inner exception for details.", e);
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

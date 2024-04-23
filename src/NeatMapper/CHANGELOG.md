@@ -1,10 +1,12 @@
 # Changelog
 
-## [3.0.1] - Unreleased
+## [3.1.0] - Unreleased
 
 ### Fixed
 
 - Dependency Injection (DI) now uses `IOptionSnapshot` instead of `IOptions` to respect different lifetimes of mappers/matchers/projectors, previously `IOptions` forced Singleton instead of the specified lifetime
+- `CanMap*`/`CanMatch`/`CanProject` extension methods now wrap exceptions thrown by the mapper/matcher/projector, while invoking the corresponding `Map*`/`Match`/`Project` methods. An `InvalidOperationException` with the inner exception wrapped will be thrown instead, signaling that the mapper/matcher/projector cannot determine if the two types are supported
+- Instead of `TaskCanceledException` which where caught and re-thrown directly by maps and mappers (instead of being wrapped in `MappingException` like the others) now `OperationCanceledException`s are caught and re-thrown, this is backwards compatible, since `TaskCanceledException` is derived from it, but now other exceptions can be caught too
 
 ## [3.0.0] - 2024-03-28
 
