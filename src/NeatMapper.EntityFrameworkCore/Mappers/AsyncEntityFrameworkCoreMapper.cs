@@ -257,22 +257,31 @@ namespace NeatMapper.EntityFrameworkCore {
 			// Retrieve the db context from the services
 			var dbContext = RetrieveDbContext(mappingOptions);
 
+			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
+
 			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(types.To).FindPrimaryKey();
-			var dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
-				?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
-			var localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
-				?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+			object dbSet;
+			IEnumerable localView;
+			dbContextSemaphore.Wait();
+			try {
+				dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
+					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
+				localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
+					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+			}
+			finally {
+				dbContextSemaphore.Release();
+			}
 
 			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
-			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
-
-			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
-			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, mappingOptions);
+			// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
+			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, mappingOptions
+				.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance));
 			try { 
 				// Check if we are mapping a collection or just a single entity
 				if (collectionElementTypes != null) {
@@ -327,6 +336,7 @@ namespace NeatMapper.EntityFrameworkCore {
 												missingEntities
 												.Select(e => keyValuesDelegate.Invoke(e.Key))
 												.ToArray());
+											// Locking shouldn't be needed here because Queryable.Where creates just an Expression.Call
 											var query = Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, filterExpression }) as IQueryable;
 
 											await dbContextSemaphore.WaitAsync(cancellationToken);

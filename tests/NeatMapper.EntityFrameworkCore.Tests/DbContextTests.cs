@@ -47,7 +47,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 				var mapper = scope.ServiceProvider.GetRequiredService<IMapper>();
 				mapper.Map<IntKey>(2);
 
-				var conditionalWeakTable = typeof(EntityFrameworkCoreBaseMapper).GetField("_dbContextSemaphores", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null) as IEnumerable;
+				var conditionalWeakTable = typeof(EfCoreUtils).GetField("_dbContextSemaphores", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null) as IEnumerable;
 				var contextKey = conditionalWeakTable.Cast<object>().First();
 				var context = contextKey.GetType().GetProperty(nameof(KeyValuePair<object, object>.Key)).GetValue(contextKey) as TestContext;
 				Assert.AreEqual("Test", context.Tag);
@@ -76,7 +76,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 					Assert.IsFalse(dbContextRef.IsAlive);
 
 					// Semaphores should be destroyed
-					var conditionalWeakTable = typeof(EntityFrameworkCoreBaseMapper).GetField("_dbContextSemaphores", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null) as IEnumerable;
+					var conditionalWeakTable = typeof(EfCoreUtils).GetField("_dbContextSemaphores", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null) as IEnumerable;
 					Assert.AreEqual(0, conditionalWeakTable.Cast<object>().Count());
 				}
 			}

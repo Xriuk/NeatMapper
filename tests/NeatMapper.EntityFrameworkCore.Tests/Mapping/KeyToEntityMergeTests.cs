@@ -190,7 +190,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldNotMapCompositeKeyToEntitysIfOrderIsWrong() {
+		public void ShouldNotMapCompositeKeyToEntityIfOrderIsWrong() {
 			// Tuple
 			{
 				Assert.IsFalse(_mapper.CanMapMerge<Tuple<Guid, int>, CompositePrimitiveKey>());

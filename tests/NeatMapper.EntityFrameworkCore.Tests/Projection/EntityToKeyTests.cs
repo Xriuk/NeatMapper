@@ -99,7 +99,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Projection {
 
 			var map = _projector.Project<ShadowStringKey, string>(options, ProjectionCompilationContext.Instance);
 			var deleg = map.Compile();
-			Assert.ThrowsException<MapNotFoundException>(() => deleg.Invoke(new ShadowStringKey()));
+
+			var exc = Assert.ThrowsException<ProjectionException>(() => deleg.Invoke(new ShadowStringKey()));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(ObjectDisposedException));
 		}
 
 		[TestMethod]

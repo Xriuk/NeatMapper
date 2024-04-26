@@ -63,6 +63,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			_db.Add(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") });
 			_db.Add(new CompositeClassKey { Id1 = 2, Id2 = "Test" });
 			_db.Add(new ShadowIntKey());
+			var comp = _db.Add(new ShadowCompositeKey {
+				Id1 = 2
+			});
+			comp.Property("Id2").CurrentValue = "Test";
 
 			_db.SaveChanges();
 #if NET5_0_OR_GREATER
@@ -227,6 +231,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsTrue(await _mapper.CanMapAsyncNew<int, ShadowIntKey>());
 
 			Assert.IsNotNull(await _mapper.MapAsync<ShadowIntKey>(1));
+
+
+			Assert.IsTrue(await _mapper.CanMapAsyncNew<Tuple<int, string>, ShadowCompositeKey>());
+
+			Assert.IsNotNull(await _mapper.MapAsync<ShadowCompositeKey>(Tuple.Create(2, "Test")));
 		}
 
 		[TestMethod]

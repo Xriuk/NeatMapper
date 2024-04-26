@@ -191,7 +191,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public async Task ShouldNotMapCompositeKeyToEntitysIfOrderIsWrong() {
+		public async Task ShouldNotMapCompositeKeyToEntityIfOrderIsWrong() {
 			// Tuple
 			{
 				Assert.IsFalse(await _mapper.CanMapAsyncMerge<Tuple<Guid, int>, CompositePrimitiveKey>());
@@ -218,10 +218,15 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public async Task ShouldMapEntitiesWithShadowKeys() {
+		public async Task ShouldMapShadowKeyToEntities() {
 			Assert.IsTrue(await _mapper.CanMapAsyncMerge<int, ShadowIntKey>());
 
 			Assert.IsNotNull(await _mapper.MapAsync(1, (ShadowIntKey)null));
+
+
+			Assert.IsTrue(await _mapper.CanMapAsyncMerge<Tuple<int, string>, ShadowCompositeKey>());
+
+			Assert.IsNotNull(await _mapper.MapAsync(Tuple.Create(2, "Test"), (ShadowCompositeKey)null));
 		}
 
 		[TestMethod]

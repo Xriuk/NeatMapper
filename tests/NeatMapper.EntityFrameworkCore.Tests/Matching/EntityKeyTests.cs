@@ -284,5 +284,29 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				semaphore.Release();
 			}
 		}
+
+		[TestMethod]
+		public void ShouldThrowMatcherExceptionIfDbContextIsDisposed() {
+			var db = new TestContext(_serviceProvider.GetRequiredService<DbContextOptions<TestContext>>());
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+			var entity = new ShadowIntKey();
+			db.Add(entity);
+			db.SaveChanges();
+
+			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
+
+			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, int>(options));
+
+			Assert.IsTrue(_matcher.Match(entity, 1, options));
+			Assert.IsFalse(_matcher.Match(entity, 2, options));
+
+			db.Dispose();
+
+			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, int>(options));
+
+			var exc = Assert.ThrowsException<MatcherException>(() => _matcher.Match(entity, 1, options));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(ObjectDisposedException));
+		}
 	}
 }

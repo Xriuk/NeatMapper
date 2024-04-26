@@ -115,7 +115,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// <see cref="EntityEntry.Property(string)"/>
 		/// </summary>
-		public static readonly MethodInfo EntityEntry_Property = typeof(EntityEntry).GetMethod(nameof(EntityEntry.Property))
+		public static readonly MethodInfo EntityEntry_Property = typeof(EntityEntry).GetMethod(nameof(EntityEntry.Property), new[] { typeof(string) })
 			?? throw new Exception("Could not find EntityEntry.Property(string)");
 
 		/// <summary>

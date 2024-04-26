@@ -57,6 +57,10 @@ favicon_ico: "/assets/images/icon.png"
 
 search_enabled: true
 
+nav_external_links:
+  - title: GitHub
+    url: https://github.com/Xriuk/NeatMapper
+
 back_to_top: true
 back_to_top_text: "Back to top"
 

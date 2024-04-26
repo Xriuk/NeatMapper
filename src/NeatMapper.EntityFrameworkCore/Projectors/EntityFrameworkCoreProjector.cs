@@ -1,18 +1,30 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+
+// For IServiceProviderIsService
+#if !NET5_0 && !NETCOREAPP3_1
 using Microsoft.Extensions.DependencyInjection;
+#endif
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
-using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
-	/// <see cref="IProjector"/> which projects entities into their keys, even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>.
+	/// <see cref="IProjector"/> which projects entities into their keys (even composite keys
+	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>, and shadow keys).
 	/// </summary>
+	/// <remarks>
+	/// When working with shadow keys, a <see cref="DbContext"/> will be required.
+	/// Since a single <see cref="DbContext"/> instance cannot be used concurrently and is not thread-safe
+	/// on its own, every access to the provided <see cref="DbContext"/> instance and all its members
+	/// (local and remote) for each projection is protected by a semaphore.<br/>
+	/// This makes this class thread-safe and concurrently usable, though not necessarily efficient to do so.<br/>
+	/// Any external concurrent use of the <see cref="DbContext"/> instance is not monitored and could throw exceptions,
+	/// so you should not be accessing the context externally while projecting.
+	/// </remarks>
 	public sealed class EntityFrameworkCoreProjector : IProjector, IProjectorCanProject {
 		/// <summary>
 		/// Db model, shared between instances of the same DbContext type.
@@ -20,12 +32,12 @@ namespace NeatMapper.EntityFrameworkCore {
 		private readonly IModel _model;
 
 		/// <summary>
-		/// Type of DbContext to retrieve from <see cref="_serviceProvider"/>.
+		/// Type of DbContext to retrieve from <see cref="_serviceProvider"/>. Used for shadow keys.
 		/// </summary>
 		private readonly Type _dbContextType;
 
 		/// <summary>
-		/// Service provider used to retrieve <see cref="DbContext"/> instances.
+		/// Service provider used to retrieve <see cref="DbContext"/> instances. Used for shadow keys.
 		/// </summary>
 		private readonly IServiceProvider _serviceProvider;
 
@@ -120,9 +132,8 @@ namespace NeatMapper.EntityFrameworkCore {
 							k.ClrType
 						);
 					}
-					else {
-						return (Expression)Expression.Property(entityParam, k.PropertyInfo);
-					}
+					else
+						return (Expression)Expression.PropertyOrField(entityParam, k.Name);
 				});
 				if (key.Properties.Count == 1) {
 					// entity.Id
@@ -138,6 +149,8 @@ namespace NeatMapper.EntityFrameworkCore {
 						properties);
 				}
 
+				var catchExceptionParam = Expression.Parameter(typeof(Exception), "e");
+
 				body = Expression.TryCatch(
 					Expression.Block(
 						new [] { entityEntryVar },
@@ -149,38 +162,27 @@ namespace NeatMapper.EntityFrameworkCore {
 								Expression.Assign(
 									entityEntryVar,
 									Expression.Call(dbContextConstant, EfCoreUtils.DbContext_Entry, entityParam)),
-								// Throws MapNotFoundException if the DbContext is disposed
 								// entity.State == EntityState.Detached ? throw ... : ...
 								Expression.Condition(
 									Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
 									Expression.Throw(
 										Expression.New(
-											typeof(ProjectionException).GetConstructors().Single(),
-											Expression.New(
-												typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
-												Expression.Constant($"The entity of type {sourceType.FullName ?? sourceType.Name} is not being tracked by the provided context, so its shadow key(s) cannot be retrieved locally.")),
-											Expression.Constant((sourceType, destinationType))
-										),
-										body.Type
-									),
-									body
-								)
-							),
+											typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+											Expression.Constant($"The entity of type {sourceType.FullName ?? sourceType.Name} is not being tracked " +
+												$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
+												$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
+										body.Type),
+									body)),
 							// dbContextSemaphore.Release()
-							Expression.Call(dbContextSemaphoreConstant, EfCoreUtils.SemaphoreSlim_Release)
-						)
-					),
-					Expression.Catch(
-						typeof(ObjectDisposedException),
-						Expression.Throw(
-							Expression.New(
-								typeof(MapNotFoundException).GetConstructor(new[] { typeof((Type, Type)) }),
-								Expression.Constant((sourceType, destinationType))
-							),
-							body.Type
-						)
-					)
-				);
+							Expression.Call(dbContextSemaphoreConstant, EfCoreUtils.SemaphoreSlim_Release))),
+						Expression.Catch(
+							catchExceptionParam,
+							Expression.Throw(
+								Expression.New(
+									typeof(ProjectionException).GetConstructors().Single(),
+									catchExceptionParam,
+									Expression.Constant((sourceType, destinationType))),
+								body.Type)));
 			}
 			else {
 				var properties = key.Properties.Select(k => {
@@ -258,27 +260,25 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (modelEntity == null || modelEntity.IsOwned())
 				return false;
 
-			// Check that the entity has a key
+			// Check that the entity has a key and that it matches the key type
 			var key = modelEntity.FindPrimaryKey();
 			if (key == null || key.Properties.Count < 1)
 				return false;
-
-			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
-			// or we have a db context to retrieve the tracked instances
-			if(key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
-				RetrieveDbContext(mappingOptions) == null) {
-
-				return false;
-			}
-
-			// Check that the key type matches
 			if (destinationType.IsCompositeKeyType()) {
 				var keyTypes = destinationType.UnwrapNullable().GetGenericArguments();
 				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
 					return false;
 			}
-			else if (key.Properties.Count != 1 || (key.Properties[0].ClrType != destinationType && !destinationType.IsNullable(key.Properties[0].ClrType)))
+			else if (key.Properties.Count != 1 || key.Properties[0].ClrType != destinationType.UnwrapNullable())
 				return false;
+
+			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
+			// or we have a db context to retrieve the tracked instances
+			if (key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
+				RetrieveDbContext(mappingOptions) == null) {
+
+				return false;
+			}
 
 			return true;
 
@@ -292,14 +292,23 @@ namespace NeatMapper.EntityFrameworkCore {
 #nullable disable
 #endif
 
+		// Retrieves the DbContext if available, may return null
 		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
 			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;
 			if (dbContext != null && dbContext.GetType() != _dbContextType)
 				dbContext = null;
 
-			if (dbContext == null) {
+			if (dbContext == null && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null) {
 				try {
 					dbContext = (mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
+						.GetService(_dbContextType) as DbContext;
+				}
+				catch { }
+			}
+
+			if (dbContext == null) {
+				try {
+					dbContext = (mappingOptions?.GetOptions<ProjectorOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
 						.GetService(_dbContextType) as DbContext;
 				}
 				catch { }

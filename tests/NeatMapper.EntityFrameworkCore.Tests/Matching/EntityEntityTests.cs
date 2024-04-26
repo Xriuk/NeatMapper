@@ -113,7 +113,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 
 			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
 
-			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, int>(options));
+			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, ShadowIntKey>(options));
 
 			Assert.IsTrue(_matcher.Match(entity1, entity1, options));
 			Assert.IsFalse(_matcher.Match(entity1, entity2, options));
@@ -163,6 +163,32 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 			finally {
 				semaphore.Release();
 			}
+		}
+
+		[TestMethod]
+		public void ShouldThrowMatcherExceptionIfDbContextIsDisposed() {
+			var db = new TestContext(_serviceProvider.GetRequiredService<DbContextOptions<TestContext>>());
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+			var entity1 = new ShadowIntKey();
+			db.Add(entity1);
+			var entity2 = new ShadowIntKey();
+			db.Add(entity2);
+			db.SaveChanges();
+
+			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
+
+			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, ShadowIntKey>(options));
+
+			Assert.IsTrue(_matcher.Match(entity1, entity1, options));
+			Assert.IsFalse(_matcher.Match(entity1, entity2, options));
+
+			db.Dispose();
+
+			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, ShadowIntKey>(options));
+
+			var exc = Assert.ThrowsException<MatcherException>(() => _matcher.Match(entity1, entity1, options));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(ObjectDisposedException));
 		}
 	}
 }

@@ -18,7 +18,7 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// </summary>
 	/// <remarks>
 	/// When working with shadow keys, a <see cref="DbContext"/> will be required.
-	/// Since a single <see cref="DbContext"/> instance cannot be used concurrently and it is not thread-safe
+	/// Since a single <see cref="DbContext"/> instance cannot be used concurrently and is not thread-safe
 	/// on its own, every access to the provided <see cref="DbContext"/> instance and all its members
 	/// (local and remote) for each match is protected by a semaphore.<br/>
 	/// This makes this class thread-safe and concurrently usable, though not necessarily efficient to do so.<br/>
@@ -32,12 +32,12 @@ namespace NeatMapper.EntityFrameworkCore {
 		private readonly IModel _model;
 
 		/// <summary>
-		/// Type of DbContext to retrieve from <see cref="_serviceProvider"/>.
+		/// Type of DbContext to retrieve from <see cref="_serviceProvider"/>. Used for shadow keys.
 		/// </summary>
 		private readonly Type _dbContextType;
 
 		/// <summary>
-		/// Service provider used to retrieve <see cref="DbContext"/> instances.
+		/// Service provider used to retrieve <see cref="DbContext"/> instances. Used for shadow keys.
 		/// </summary>
 		private readonly IServiceProvider _serviceProvider;
 
@@ -233,59 +233,41 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
 
-					Expression body;
-					if (key.Properties.Count == 1) {
-						// (KeyType)key
-						var keyExpr = Expression.Convert(keyParam, keyParamType);
-
-						if (key.Properties[0].IsShadowProperty()) {
-							// (KeyType)entityEntry.Property("Id").CurrentValue == KEY
-							body = Expression.Equal(
-								Expression.Convert(
+					var properties = key.Properties
+						.Select((p, i) => {
+							if (p.IsShadowProperty()) {
+								// (KeyItemType)entityEntry.Property("Key1").CurrentValue
+								return (Expression)Expression.Convert(
 									Expression.Property(
 										Expression.Call(
 											entityEntryVar,
 											EfCoreUtils.EntityEntry_Property,
-											Expression.Constant(key.Properties[0].Name)),
+											Expression.Constant(p.Name)),
 										EfCoreUtils.MemberEntry_CurrentValue),
-									keyParamType),
-								keyExpr);
-						}
-						else {
-							// ((EntityType)entity).Id == KEY
-							body = Expression.Equal(Expression.Property(Expression.Convert(entityParam, entityType), key.Properties[0].PropertyInfo), keyExpr);
-						}
+									p.ClrType);
+							}
+							else {
+								// ((EntityType)entity).Key1
+								return Expression.PropertyOrField(Expression.Convert(entityParam, entityType), p.Name);
+							}
+						});
+					Expression body;
+					if (key.Properties.Count == 1) {
+						// KEYPROP == (KeyType)key
+						body = Expression.Equal(properties.Single(), Expression.Convert(keyParam, keyParamType));
 					}
 					else {
-						// KEY1 && ...
-						body = key.Properties
-							.Select((p, i) => {
-								// ((KeyType)key).Item1
-								var keyExpr = Expression.PropertyOrField(Expression.Convert(keyParam, keyParamType), "Item" + (i + 1));
-
-								if (p.IsShadowProperty()) {
-									// (KeyItemType)entityEntry.Property("Key1").CurrentValue == KEY
-									return Expression.Equal(
-										Expression.Convert(
-											Expression.Property(
-												Expression.Call(
-													entityEntryVar,
-													EfCoreUtils.EntityEntry_Property,
-													Expression.Constant(p.Name)),
-												EfCoreUtils.MemberEntry_CurrentValue),
-											p.ClrType),
-										keyExpr);
-								}
-								else {
-									// ((EntityType)entity).Key1 == KEY
-									return Expression.Equal(Expression.Property(Expression.Convert(entityParam, entityType), p.PropertyInfo), keyExpr);
-								}
-							})
+						// KEYPROP1 == ((KeyType)key).Item1 && ...
+						body = properties
+							.Select((p, i) => Expression.Equal(p, Expression.PropertyOrField(Expression.Convert(keyParam, keyParamType), "Item" + (i + 1))))
 							.Aggregate(Expression.AndAlso);
 					}
 
-					// If we have a shadow key we must retrieve values from DbContext, so we must use a semaphore (if not already inside one)
+					// If we have a shadow key we must retrieve values from DbContext, so we must use a semaphore (if not already inside one),
+					// also we wrap the access to dbContext in a try/catch block to throw map not found if the context is disposed
 					if (_entityShadowKeyCache.GetOrAdd(entityType, __ => key.Properties.Any(p => p.IsShadowProperty()))) {
+						var catchExceptionParam = Expression.Parameter(typeof(Exception), "e");
+
 						body = Expression.Block(typeof(bool),
 							// if(dbContextSemaphore != null)
 							//     dbContextSemaphore.Wait()
@@ -303,14 +285,10 @@ namespace NeatMapper.EntityFrameworkCore {
 										Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
 										Expression.Throw(
 											Expression.New(
-												typeof(MatcherException).GetConstructors().Single(),
-												Expression.New(
-													typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
-													Expression.Constant($"The entity of type {entityType.FullName ?? entityType.Name} is not being tracked " +
-														$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
-														$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
-												Expression.Constant((sourceType, destinationType))
-											),
+												typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+												Expression.Constant($"The entity of type {entityType.FullName ?? entityType.Name} is not being tracked " +
+													$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
+													$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
 											body.Type),
 										body)
 								),
@@ -319,7 +297,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								Expression.IfThen(
 									Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
 									Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Release)))
-						);
+							);
 					}
 
 					return Expression.Lambda<Func<object, object, SemaphoreSlim, DbContext, bool>>(body, entityParam, keyParam, dbContextSemaphoreParam, dbContextParam).Compile();
@@ -364,7 +342,21 @@ namespace NeatMapper.EntityFrameworkCore {
 						if (tupleToValueTupleDelegate != null) 
 							keyObject = tupleToValueTupleDelegate.DynamicInvoke(keyObject);
 
-						return entityKeyComparer.Invoke(entityObject, keyObject, dbContextSemaphore, dbContext);
+						try { 
+							return entityKeyComparer.Invoke(entityObject, keyObject, dbContextSemaphore, dbContext);
+						}
+						catch (MapNotFoundException e) {
+							if (e.From == sourceType && e.To == destinationType)
+								throw;
+							else
+								throw new MappingException(e, (sourceType, destinationType));
+						}
+						catch (OperationCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MatcherException(e, (sourceType, destinationType));
+						}
 					});
 			}
 			else {
@@ -438,14 +430,10 @@ namespace NeatMapper.EntityFrameworkCore {
 											Expression.Equal(Expression.Property(entityEntry2Var, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached))),
 										Expression.Throw(
 											Expression.New(
-												typeof(MatcherException).GetConstructors().Single(),
-												Expression.New(
-													typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
-													Expression.Constant($"The entity(ies) of type {sourceType.FullName ?? sourceType.Name} is/are not being tracked " +
-														$"by the provided {nameof(DbContext)}, so its/their shadow key(s) cannot be retrieved locally. " +
-														$"Either provide a valid {nameof(DbContext)} or pass a tracked entity(ies).")),
-												Expression.Constant((sourceType, destinationType))
-											),
+												typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+												Expression.Constant($"The entity(ies) of type {sourceType.FullName ?? sourceType.Name} is/are not being tracked " +
+													$"by the provided {nameof(DbContext)}, so its/their shadow key(s) cannot be retrieved locally. " +
+													$"Either provide a valid {nameof(DbContext)} or pass a tracked entity(ies).")),
 											body.Type),
 										body)
 								),
@@ -481,7 +469,21 @@ namespace NeatMapper.EntityFrameworkCore {
 						if (source == null || destination == null)
 							return false;
 
-						return entityEntityComparer.Invoke(source, destination, dbContextSemaphore, dbContext);
+						try { 
+							return entityEntityComparer.Invoke(source, destination, dbContextSemaphore, dbContext);
+						}
+						catch (MapNotFoundException e) {
+							if (e.From == sourceType && e.To == destinationType)
+								throw;
+							else
+								throw new MappingException(e, (sourceType, destinationType));
+						}
+						catch (OperationCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MatcherException(e, (sourceType, destinationType));
+						}
 					});
 			}
 

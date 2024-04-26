@@ -57,8 +57,8 @@ var myEntitiesKeys = db.Set<MyEntity>()
 
 ## Advanced options
 
-Find more advanced use cases in the [wiki](https://github.com/Xriuk/NeatMapper/wiki/Entity-Framework-Core) or in the extended [tests project](https://github.com/Xriuk/NeatMapper/tree/main/tests/NeatMapper.EntityFrameworkCore.Tests).
+Find more advanced use cases in the [website](https://www.neatmapper.org/ef-core/configuration) or in the extended [tests project](https://github.com/Xriuk/NeatMapper/tree/main/tests/NeatMapper.EntityFrameworkCore.Tests).
 
 ## License
 
-[Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/LICENSE.md)
+[Read the license here](https://www.neatmapper.org/license)

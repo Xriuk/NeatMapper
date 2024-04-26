@@ -215,7 +215,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(entity, options));
 			Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
-			Assert.AreEqual($"The entity of type {typeof(ShadowIntKey).FullName} is not being tracked by the provided context, so its shadow key(s) cannot be retrieved locally.", exc.InnerException.Message);
+			Assert.IsTrue(exc.InnerException?.Message.StartsWith($"The entity of type {typeof(ShadowIntKey).FullName} is not being tracked by the provided {nameof(DbContext)}"));
 		}
 
 		[TestMethod]
@@ -394,6 +394,29 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				TestUtils.AssertMapNotFound(() => _mapper.Map<(Guid, int)?[]>(new[] { new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") } }));
 				TestUtils.AssertMapNotFound(() => _mapper.Map<(string, int)?[]>(new[] { new CompositeClassKey { Id1 = 2, Id2 = "Test" } }));
 			}
+		}
+
+		[TestMethod]
+		public void ShouldThrowMappingExceptionIfDbContextIsDisposed() {
+			var db = new TestContext(_serviceProvider.GetRequiredService<DbContextOptions<TestContext>>());
+			db.Database.EnsureDeleted();
+			db.Database.EnsureCreated();
+			var entity = new ShadowIntKey();
+			db.Add(entity);
+			db.SaveChanges();
+
+			var options = new object[] { new EntityFrameworkCoreMappingOptions(dbContextInstance: db) };
+
+			Assert.IsTrue(_mapper.CanMapNew<ShadowIntKey, int>(options));
+
+			Assert.AreEqual(1, _mapper.Map<int>(entity, options));
+
+			db.Dispose();
+
+			Assert.IsTrue(_mapper.CanMapNew<ShadowIntKey, int>(options));
+
+			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(entity, options));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(ObjectDisposedException));
 		}
 	}
 }

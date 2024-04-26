@@ -64,7 +64,7 @@ public class MyMaps :
 # Match elements in collections 
 
 {: .highlight }
-The below **does not apply** to projectors.
+The section below **does not apply** to projectors.
 
 When merging to an existing collection, by default all the object present are removed and new ones are mapped and added (by using `INewMap<TSource, TDestination>` or `IMergeMap<TSource, TDestination>` in this order).
 
@@ -114,7 +114,8 @@ You can also match whole hierarchies by creating a `IHierarchyMatchMap<TSource, 
 
 # Destination collection cleanup
 
-The below **does not apply** to projectors.
+{: .highlight }
+The section below **does not apply** to projectors.
 
 Any element in the destination collection which do not have a corresponding element
 in the source collection is removed by default, you can disable this
