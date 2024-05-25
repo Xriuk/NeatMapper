@@ -8,25 +8,30 @@ using System;
 using System.Threading.Tasks;
 using System.Linq;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using System.Diagnostics;
 
 namespace NeatMapper.Analyzers {
 	/// <summary>
 	/// NEATMAPPER0001: Analyzer which detects when an async method inside a IAsyncNewMap or IAsyncMergeMap
+	/// (or their .NET 7.0+ static counterparts IAsyncNewMapStatic or IAsyncMergeMapStatic,
+	/// or even their delegates versions AsyncNewMapDelegate, AsyncMergeMapDelegate)
 	/// does not have the AsyncMappingContext.CancellationToken forwarded to it.
 	/// </summary>
-	/// <remarks>Copied from https://github.com/dotnet/roslyn-analyzers/blob/8dccccec1ce3bd2fb532ec77d7e092ab9d684db7/src/NetAnalyzers/Core/Microsoft.NetCore.Analyzers/Runtime/ForwardCancellationTokenToInvocations.Analyzer.cs</remarks>
+	/// <remarks>Adapted from https://github.com/dotnet/roslyn-analyzers/blob/8dccccec1ce3bd2fb532ec77d7e092ab9d684db7/src/NetAnalyzers/Core/Microsoft.NetCore.Analyzers/Runtime/ForwardCancellationTokenToInvocations.Analyzer.cs</remarks>
 	[DiagnosticAnalyzer(LanguageNames.CSharp)]
-	public sealed class IAsyncNewMapForwardCancellationTokenToInvocationsAnalyzer : DiagnosticAnalyzer {
+	public sealed class ForwardAsyncMappingContextCancellationTokenToInvocationsAnalyzer : DiagnosticAnalyzer {
+		internal const string Title = "Forward the 'CancellationToken' from the 'AsyncMappingContext' parameter to methods";
+		internal const string Message = "Forward the 'CancellationToken' from the '{0}' parameter to the '{1}' method or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token";
+		internal const string Description = "Forward the 'CancellationToken' from the 'AsyncMappingContext' parameter to methods to ensure the operation cancellation notifications gets properly propagated, or pass in 'CancellationToken.None' explicitly to indicate intentionally not propagating the token. This message is a custom implementation of CA2016.";
+
 		private static readonly DiagnosticDescriptor Descriptor =
 			new DiagnosticDescriptor(
-				NeatMapperRules.IAsyncNewMapForwardCancellationTokenToInvocations,
-				new LocalizableResourceString(nameof(Resources.IAsyncNewMapForwardCancellationTokenToInvocationsTitle), Resources.ResourceManager, typeof(Resources)),
-				new LocalizableResourceString(nameof(Resources.IAsyncNewMapForwardCancellationTokenToInvocationsMessage), Resources.ResourceManager, typeof(Resources)),
+				NeatMapperRules.ForwardAsyncMappingContextCancellationTokenToInvocations,
+				Title,
+				Message,
 				NeatMapperCategories.Reliability,
 				DiagnosticSeverity.Info,
 				true,
-				new LocalizableResourceString(nameof(Resources.IAsyncNewMapForwardCancellationTokenToInvocationsDescription), Resources.ResourceManager, typeof(Resources)),
+				Description,
 				"https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2016");
 
 		internal const string ShouldFix = "ShouldFix";
@@ -37,10 +42,6 @@ namespace NeatMapper.Analyzers {
 			ImmutableArray.Create(Descriptor);
 
 		override public void Initialize(AnalysisContext context) {
-			/*if (!Debugger.IsAttached) {
-				Debugger.Launch();
-			}*/
-
 			context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
 			context.EnableConcurrentExecution();
 			context.RegisterCompilationStartAction(AnalyzeCompilationStart);
@@ -51,13 +52,10 @@ namespace NeatMapper.Analyzers {
 			var typeProvider = WellKnownTypeProvider.GetOrCreate(context.Compilation);
 			if (!typeProvider.TryGetOrCreateTypeByMetadataName(typeof(CancellationToken).FullName, out INamedTypeSymbol cancellationTokenType)
 				|| !typeProvider.TryGetOrCreateTypeByMetadataName(typeof(ObsoleteAttribute).FullName, out INamedTypeSymbol obsoleteAttribute)
-				|| !typeProvider.TryGetOrCreateTypeByMetadataName("NeatMapper.IAsyncNewMap`2", out INamedTypeSymbol interfaceType)
-				|| !typeProvider.TryGetOrCreateTypeByMetadataName("NeatMapper.AsyncMappingContext", out INamedTypeSymbol contextType)) {
+				|| !typeProvider.TryGetOrCreateTypeByMetadataName("NeatMapper.AsyncMappingContext", out INamedTypeSymbol asyncMappingContextType)) {
 
 				return;
 			}
-
-			interfaceType = interfaceType.ConstructUnboundGenericType();
 
 			// We don't care if these symbols are not defined in our compilation. They are used to special case the Task<T> <-> ValueTask<T> logic
 			typeProvider.TryGetOrCreateTypeByMetadataName(typeof(Task<>).Namespace + typeof(Task<>).Name, out INamedTypeSymbol genericTask);
@@ -66,7 +64,6 @@ namespace NeatMapper.Analyzers {
 			context.RegisterOperationAction(context1 => {
 				IInvocationOperation invocation = (IInvocationOperation)context1.Operation;
 
-				// DEV: check for type implementation
 				if (!(context1.ContainingSymbol is IMethodSymbol containingMethod)) {
 					return;
 				}
@@ -79,10 +76,9 @@ namespace NeatMapper.Analyzers {
 					genericTask,
 					genericValueTask,
 					obsoleteAttribute,
-					interfaceType,
-					contextType,
+					asyncMappingContextType,
 					out int shouldFix,
-					out string cancellationTokenArgumentName,
+					out string contextArgumentName,
 					out string invocationTokenParameterName)) {
 					return;
 				}
@@ -92,12 +88,12 @@ namespace NeatMapper.Analyzers {
 
 				ImmutableDictionary<string, string>.Builder properties = ImmutableDictionary.CreateBuilder<string, string>(StringComparer.Ordinal);
 				properties.Add(ShouldFix, $"{shouldFix}");
-				properties.Add(ArgumentName, cancellationTokenArgumentName); // The new argument to pass to the invocation, can contain "." if nested
+				properties.Add(ArgumentName, contextArgumentName); // The context argument to pass to the invocation
 				properties.Add(ParameterName, invocationTokenParameterName); // If the passed argument should be named, then this will be non-null
 
 				context1.ReportDiagnostic(
 					Diagnostic.Create(Descriptor, nodeToDiagnose.GetLocation(), properties.ToImmutable(),
-						cancellationTokenArgumentName, invocation.TargetMethod.Name ));
+						contextArgumentName, invocation.TargetMethod.Name ));
 			},
 			OperationKind.Invocation);
 		}
@@ -118,7 +114,7 @@ namespace NeatMapper.Analyzers {
 		}
 		private bool ArgumentsImplicitOrNamed(INamedTypeSymbol cancellationTokenType, ImmutableArray<IArgumentOperation> arguments) {
 			return arguments.Any(a =>
-				(a.IsImplicit && a.Parameter != null && !a.Parameter.Type.Equals(cancellationTokenType)) ||
+				(a.IsImplicit && a.Parameter != null && !SymbolEqualityComparer.Default.Equals(a.Parameter.Type, cancellationTokenType)) ||
 				(a.Syntax is ArgumentSyntax argumentNode && argumentNode.NameColon != null));
 		}
 
@@ -131,12 +127,11 @@ namespace NeatMapper.Analyzers {
 			INamedTypeSymbol genericTask,
 			INamedTypeSymbol genericValueTask,
 			INamedTypeSymbol obsoleteAttribute,
-			INamedTypeSymbol interfaceType,
-			INamedTypeSymbol contextType,
-			out int shouldFix, out string ancestorTokenParameterName, out string invocationTokenParameterName) {
+			INamedTypeSymbol asyncMappingContextType,
+			out int shouldFix, out string ancestorContextParameterName, out string invocationTokenParameterName) {
 
 			shouldFix = 1;
-			ancestorTokenParameterName = null;
+			ancestorContextParameterName = null;
 			invocationTokenParameterName = null;
 
 			IMethodSymbol method = invocation.TargetMethod;
@@ -144,7 +139,7 @@ namespace NeatMapper.Analyzers {
 			// Verify that the current invocation is not passing an explicit token already
 			if (AnyArgument(
 				invocation.Arguments,
-				(a, cancellationTokenType1) => cancellationTokenType1.Equals(a.Parameter?.Type) && !a.IsImplicit,
+				(a, cancellationTokenType1) => SymbolEqualityComparer.Default.Equals(cancellationTokenType1, a.Parameter?.Type) && !a.IsImplicit,
 				cancellationTokenType)) {
 				return false;
 			}
@@ -167,18 +162,18 @@ namespace NeatMapper.Analyzers {
 			}
 
 			// Check if there is an ancestor method that has a ct that we can pass to the invocation
-			if (!TryGetClosestAncestorThatTakesAToken(
-				invocation, containingSymbol, interfaceType,
-				contextType, out shouldFix,
-				out IMethodSymbol ancestor, out ancestorTokenParameterName)) {
+			if (!TryGetClosestIAsyncMap(
+				invocation, containingSymbol,
+				asyncMappingContextType, out shouldFix,
+				out IMethodSymbol ancestor, out ancestorContextParameterName)) {
 
 				return false;
 			}
 
 			// Finally, if the ct is in an overload method, but adding the ancestor's ct to the current
 			// invocation would cause the new signature to become a recursive call, avoid creating a diagnostic
-			if (overload != null && overload == ancestor) {
-				ancestorTokenParameterName = null;
+			if (overload != null && SymbolEqualityComparer.Default.Equals(overload, ancestor)) {
+				ancestorContextParameterName = null;
 				return false;
 			}
 
@@ -187,14 +182,13 @@ namespace NeatMapper.Analyzers {
 
 		// Try to find the most immediate IAsyncNewMap. Returns true.
 		// If none is found, return the context containing symbol. Returns false.
-		private static bool TryGetClosestAncestorThatTakesAToken(
+		private static bool TryGetClosestIAsyncMap(
 			IInvocationOperation invocation,
 			IMethodSymbol containingSymbol,
-			INamedTypeSymbol interfaceType,
-			INamedTypeSymbol contextType,
+			INamedTypeSymbol asyncMappingContextType,
 			out int shouldFix,
 			out IMethodSymbol ancestor,
-			out string cancellationTokenParameterName) {
+			out string asyncMappingContextParameterName) {
 
 			shouldFix = 1;
 			IOperation currentOperation = invocation.Parent;
@@ -210,7 +204,8 @@ namespace NeatMapper.Analyzers {
 
 				// When the current ancestor is not IAsyncNewMap, will continue with the next ancestor
 				if (ancestor != null) {
-					if (TryGetTokenParamName(ancestor, interfaceType, contextType, out cancellationTokenParameterName)) {
+					if (TryGetContextParamName(ancestor, asyncMappingContextType, out asyncMappingContextParameterName)) {
+
 						return true;
 					}
 					// If no token param was found in the previous check, return false if the current operation is an anonymous function,
@@ -232,7 +227,7 @@ namespace NeatMapper.Analyzers {
 
 			// Last resort: fallback to the containing symbol
 			ancestor = containingSymbol;
-			return TryGetTokenParamName(ancestor, interfaceType, contextType, out cancellationTokenParameterName);
+			return TryGetContextParamName(ancestor, asyncMappingContextType, out asyncMappingContextParameterName);
 		}
 
 		// https://stackoverflow.com/a/65068997/2672235
@@ -244,30 +239,23 @@ namespace NeatMapper.Analyzers {
 			var query = from iface in containingType.AllInterfaces
 						from interfaceMember in iface.GetMembers()
 						let impl = containingType.FindImplementationForInterfaceMember(interfaceMember)
-						where symbol.Equals(impl)
+						where SymbolEqualityComparer.Default.Equals(symbol, impl)
 						select interfaceMember;
 			return query.ToImmutableArray();
 		}
 
-		private static bool TryGetTokenParamName(
+		private static bool TryGetContextParamName(
 			IMethodSymbol methodDeclaration,
-			INamedTypeSymbol interfaceType,
-			INamedTypeSymbol contextType,
+			INamedTypeSymbol asyncMappingContextType,
 			out string cancellationTokenParameterName) {
 
-			cancellationTokenParameterName = null;
-
-			// Check if the method is an implementation (explicit or implicit) of IAsyncNewMap
-			var implementations = ExplicitOrImplicitInterfaceImplementations(methodDeclaration);
-			if(implementations.Length == 0 || !implementations.Any(i => i.ContainingType.IsGenericType && i.ContainingType.ConstructUnboundGenericType().Equals(interfaceType)))
-				return false;
-
-			// Check if the method has a AsyncMappingContext parameter (it should, but we'll make it future proof
-			if(methodDeclaration.Parameters.Count(x => x.Type.Equals(contextType)) == 1) {
-				cancellationTokenParameterName = methodDeclaration.Parameters.First(p => p.Type.Equals(contextType)).Name;
+			// Check if the method has a single AsyncMappingContext parameter
+			if(methodDeclaration.Parameters.Count(x => SymbolEqualityComparer.Default.Equals(x.Type, asyncMappingContextType)) == 1) {
+				cancellationTokenParameterName = methodDeclaration.Parameters.First(p => SymbolEqualityComparer.Default.Equals(p.Type, asyncMappingContextType)).Name;
 				return true;
 			}
 
+			cancellationTokenParameterName = null;
 			return false;
 		}
 
@@ -303,14 +291,14 @@ namespace NeatMapper.Analyzers {
 			INamedTypeSymbol cancellationTokenType) {
 
 
-			if (lastParameter.Type.Equals(cancellationTokenType) &&
+			if (SymbolEqualityComparer.Default.Equals(lastParameter.Type, cancellationTokenType) &&
 				lastParameter.IsOptional) // Has a default value being used
 			{
 				// Find out if the ct argument is using the default value
 				// Need to check among all arguments in case the user is passing them named and unordered (despite the ct being defined as the last parameter)
 				return AnyArgument(
 					arguments,
-					(a, cancellationTokenType1) => a.Parameter != null && a.Parameter.Type.Equals(cancellationTokenType1) && a.ArgumentKind == ArgumentKind.DefaultValue,
+					(a, cancellationTokenType1) => a.Parameter != null && SymbolEqualityComparer.Default.Equals(a.Parameter.Type, cancellationTokenType1) && a.ArgumentKind == ArgumentKind.DefaultValue,
 					cancellationTokenType);
 			}
 
@@ -325,7 +313,7 @@ namespace NeatMapper.Analyzers {
 
 			if (lastParameter.IsParams &&
 				   lastParameter.Type is IArrayTypeSymbol arrayTypeSymbol &&
-				   arrayTypeSymbol.ElementType.Equals(cancellationTokenType)) {
+				   SymbolEqualityComparer.Default.Equals(arrayTypeSymbol.ElementType, cancellationTokenType)) {
 				IArgumentOperation paramsArgument = arguments.FirstOrDefault(a => a.ArgumentKind == ArgumentKind.ParamArray);
 				if (paramsArgument?.Value is IArrayCreationOperation arrayOperation) {
 					// Do not offer a diagnostic if the user already passed a ct to the params
@@ -363,9 +351,9 @@ namespace NeatMapper.Analyzers {
 				IMethodSymbol originalMethod,
 				IMethodSymbol methodToCompare) {
 				// Avoid comparing to itself, or when there are no parameters, or when the last parameter is not a ct
-				if (originalMethod.Equals(methodToCompare) ||
-					methodToCompare.Parameters.Count(p => p.Type.Equals(cancellationTokenType1)) != 1 ||
-					!methodToCompare.Parameters[methodToCompare.Parameters.Length-1].Type.Equals(cancellationTokenType1)) {
+				if (SymbolEqualityComparer.Default.Equals(originalMethod, methodToCompare) ||
+					methodToCompare.Parameters.Count(p => SymbolEqualityComparer.Default.Equals(p.Type, cancellationTokenType1)) != 1 ||
+					!SymbolEqualityComparer.Default.Equals(methodToCompare.Parameters[methodToCompare.Parameters.Length-1].Type, cancellationTokenType1)) {
 					return false;
 				}
 
@@ -382,7 +370,7 @@ namespace NeatMapper.Analyzers {
 				for (int i = 0; i < originalMethodWithAllParameters.Parameters.Length; i++) {
 					IParameterSymbol originalParameter = originalMethodWithAllParameters.Parameters[i];
 					IParameterSymbol comparedParameter = methodToCompareWithAllParameters.Parameters[i];
-					if (!originalParameter.Type.Equals(comparedParameter.Type)) {
+					if (!SymbolEqualityComparer.Default.Equals(originalParameter.Type, comparedParameter.Type)) {
 						return false;
 					}
 				}
@@ -407,12 +395,12 @@ namespace NeatMapper.Analyzers {
 
 				bool IsTaskLikeType(ITypeSymbol typeSymbol) {
 					if (!(genericTask1 is null) &&
-						typeSymbol.OriginalDefinition.Equals(genericTask1)) {
+						SymbolEqualityComparer.Default.Equals(typeSymbol.OriginalDefinition, genericTask1)) {
 						return true;
 					}
 
 					if (!(genericValueTask1 is null) &&
-						typeSymbol.OriginalDefinition.Equals(genericValueTask1)) {
+						SymbolEqualityComparer.Default.Equals(typeSymbol.OriginalDefinition, genericValueTask1)) {
 						return true;
 					}
 

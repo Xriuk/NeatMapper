@@ -3,6 +3,6 @@
 		private const string Prefix = "NEATMAPPER";
 
 
-		public const string IAsyncNewMapForwardCancellationTokenToInvocations = Prefix + "0001";
+		public const string ForwardAsyncMappingContextCancellationTokenToInvocations = Prefix + "0001";
 	}
 }

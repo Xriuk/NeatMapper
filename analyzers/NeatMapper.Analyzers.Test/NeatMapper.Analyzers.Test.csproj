@@ -21,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\NeatMapper.Analyzers.CodeFixes\NeatMapper.Analyzers.CodeFixes.csproj" />
     <ProjectReference Include="..\NeatMapper.Analyzers\NeatMapper.Analyzers.csproj" />
   </ItemGroup>
 

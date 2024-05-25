@@ -1,8 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Threading.Tasks;
 using VerifyCS = NeatMapper.Analyzers.Test.CSharpCodeFixVerifier<
-	NeatMapper.Analyzers.NeatMapperAnalyzersAnalyzer,
-	NeatMapper.Analyzers.NeatMapperAnalyzersCodeFixProvider>;
+	NeatMapper.Analyzers.ForwardAsyncMappingContextCancellationTokenToInvocationsAnalyzer,
+	NeatMapper.Analyzers.ForwardAsyncMappingContextCancellationTokenToInvocationsFixer>;
 
 namespace NeatMapper.Analyzers.Test {
 	[TestClass]
