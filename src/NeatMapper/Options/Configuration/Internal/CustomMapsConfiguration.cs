@@ -527,8 +527,7 @@ namespace NeatMapper {
 						t2Attributes != GenericParameterAttributes.None &&
 						// If both of them are structs/unmanaged
 						(!t1Attributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint) ||
-						!t2Attributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))
-						) {
+						!t2Attributes.HasFlag(GenericParameterAttributes.NotNullableValueTypeConstraint))) {
 
 						return false;
 					}
@@ -544,6 +543,7 @@ namespace NeatMapper {
 					if (t1Constraints.Length != t2Constraints.Length)
 						return false;
 
+					// Check types inheritance constraints
 					return !t1Constraints.Where(t1c => !t2Constraints.Any(t2c => t2c.IsAssignableFrom(t1c))).Any() ||
 						!t2Constraints.Where(t2c => !t1Constraints.Any(t1c => t1c.IsAssignableFrom(t2c))).Any();
 				}
