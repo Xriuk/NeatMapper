@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.2.0] - Unreleased
+
+### Added
+
+- Analyzers and code fixers to detect when `CancellationToken` from `AsyncMappingContext` is not forwarded to async methods, works like CA2016
+
 ## [3.1.0] - 2024-04-26
 
 ### Added

@@ -20,8 +20,4 @@
     <PackageReference Include="Microsoft.CodeAnalysis.VisualBasic.CodeRefactoring.Testing.MSTest" Version="1.1.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\NeatMapper.Analyzers\NeatMapper.Analyzers.csproj" />
-  </ItemGroup>
-
 </Project>

@@ -4,7 +4,7 @@
     <TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
 		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">enable</Nullable>
     <PackageId>NeatMapper</PackageId>
-	  <Version>3.1.0</Version>
+	  <Version>$(GlobalVersion)</Version>
     <Authors>Xriuk</Authors>
     <Title>.NEaT Mapper</Title>
     <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
@@ -23,6 +23,10 @@
 		<CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
+	<ItemGroup>
+		<PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="3.3.4" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.3.1" />
+	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net47' Or '$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'netstandard2.1' Or '$(TargetFramework)' == 'net6.0' Or '$(TargetFramework)' == 'net7.0'">
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[7,8)" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="[7,8)" />
@@ -38,6 +42,13 @@
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[8,9)" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="[8,9)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\NeatMapper.Analyzers\NeatMapper.Analyzers.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>all</ExcludeAssets>
+		</ProjectReference>
 	</ItemGroup>
 
 	<ItemGroup>
@@ -62,6 +73,11 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
+
+	<ItemGroup>
+		<None Update="..\NeatMapper.Analyzers\tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" />
+		<None Include="..\NeatMapper.Analyzers\bin\$(Configuration)\netstandard2.0\NeatMapper.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+	</ItemGroup>
 
   <ItemGroup>
     <None Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.tt">
