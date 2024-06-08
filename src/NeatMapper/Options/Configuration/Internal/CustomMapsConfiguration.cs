@@ -180,7 +180,9 @@ namespace NeatMapper {
 			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<TContext, object>>(types, "context");
 				if (mapDeleg != null) {
+#if !NET48
 #pragma warning disable IDE0039 // Use local function
+#endif
 					Func<TContext, object> deleg = context => {
 						try {
 							return mapDeleg.Invoke(context);
@@ -198,7 +200,9 @@ namespace NeatMapper {
 							throw new MappingException(e, types);
 						}
 					};
+#if !NET48
 #pragma warning restore IDE0039 // Use local function
+#endif
 
 					return deleg;
 				}
@@ -215,7 +219,9 @@ namespace NeatMapper {
 			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, TContext, object>>(types, "source", "context");
 				if(mapDeleg != null) {
+#if !NET48
 #pragma warning disable IDE0039 // Use local function
+#endif
 					Func<object, TContext, object> deleg = (source, context) => {
 						try {
 							return mapDeleg.Invoke(source, context);
@@ -233,7 +239,9 @@ namespace NeatMapper {
 							throw new MappingException(e, types);
 						}
 					};
+#if !NET48
 #pragma warning restore IDE0039 // Use local function
+#endif
 
 					return deleg;
 				}
@@ -249,7 +257,9 @@ namespace NeatMapper {
 			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, AsyncMappingContext, Task<object>>>(types, "source", "context");
 				if (mapDeleg != null) {
+#if !NET48
 #pragma warning disable IDE0039 // Use local function
+#endif
 					Func<object, AsyncMappingContext, Task<object>> deleg = async (source, context) => {
 						try {
 							return await mapDeleg.Invoke(source, context);
@@ -267,7 +277,9 @@ namespace NeatMapper {
 							throw new MappingException(e, types);
 						}
 					};
+#if !NET48
 #pragma warning restore IDE0039 // Use local function
+#endif
 
 					return deleg;
 				}
@@ -284,7 +296,9 @@ namespace NeatMapper {
 			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, object, TContext, object>>(types, "source", "destination", "context");
 				if (mapDeleg != null) {
+#if !NET48
 #pragma warning disable IDE0039 // Use local function
+#endif
 					Func<object, object, TContext, object> deleg = (source, destination, context) => {
 						try {
 							return mapDeleg.Invoke(source, destination, context);
@@ -302,7 +316,9 @@ namespace NeatMapper {
 							throw new MappingException(e, types);
 						}
 					};
+#if !NET48
 #pragma warning restore IDE0039 // Use local function
+#endif
 
 					return deleg;
 				}
@@ -335,7 +351,9 @@ namespace NeatMapper {
 			}
 
 			var mapDeleg = MethodToDelegate<Func<object, object, TContext, object>>(map.Value.Method, "source", "destination", "context");
+#if !NET48
 #pragma warning disable IDE0039 // Use local function
+#endif
 			Func<object, object, TContext, object> deleg = (source, destination, context) => {
 				try {
 					return mapDeleg.Invoke(source, destination, context);
@@ -353,7 +371,9 @@ namespace NeatMapper {
 					throw new MappingException(e, types);
 				}
 			};
+#if !NET48
 #pragma warning restore IDE0039 // Use local function
+#endif
 
 			cacheDeleg = _mapsCache.GetOrAdd(types, _ => deleg);
 			if (cacheDeleg == null)
@@ -365,7 +385,9 @@ namespace NeatMapper {
 			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, object, AsyncMappingContext, Task<object>>>(types, "source", "destination", "context");
 				if (mapDeleg != null) {
+#if !NET48
 #pragma warning disable IDE0039 // Use local function
+#endif
 					Func<object, object, AsyncMappingContext, Task<object>> deleg = async (source, destination, context) => {
 						try {
 							return await mapDeleg.Invoke(source, destination, context);
@@ -383,7 +405,9 @@ namespace NeatMapper {
 							throw new MappingException(e, types);
 						}
 					};
+#if !NET48
 #pragma warning restore IDE0039 // Use local function
+#endif
 
 					return deleg;
 				}

@@ -4,8 +4,12 @@ using Microsoft.CodeAnalysis.CSharp.Testing;
 using Microsoft.CodeAnalysis.Diagnostics;
 using Microsoft.CodeAnalysis.Testing;
 using Microsoft.CodeAnalysis.Testing.Verifiers;
+using System;
+using System.Collections.Immutable;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using static Microsoft.CodeAnalysis.Testing.ReferenceAssemblies;
 
 namespace NeatMapper.Analyzers.Test {
 	public static partial class CSharpCodeFixVerifier<TAnalyzer, TCodeFix>
@@ -47,6 +51,7 @@ namespace NeatMapper.Analyzers.Test {
 				TestCode = source,
 				FixedCode = fixedSource,
 			};
+			test.TestState.AdditionalReferences.Add(typeof(AsyncMappingContext).Assembly);
 
 			test.ExpectedDiagnostics.AddRange(expected);
 			await test.RunAsync(CancellationToken.None);

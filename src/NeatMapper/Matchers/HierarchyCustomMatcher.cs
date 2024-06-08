@@ -165,7 +165,7 @@ namespace NeatMapper {
 				});
 			}
 
-			return new MatchMapFactory(sourceType, destinationType, (source, destination) => {
+			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 

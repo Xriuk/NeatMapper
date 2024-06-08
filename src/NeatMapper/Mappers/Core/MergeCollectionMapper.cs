@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -87,7 +86,7 @@ namespace NeatMapper {
 
 			_originalElementMapper = elementsMapper;
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
-			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
+			_mergeCollectionOptions = mergeCollectionsOptions != null ? new MergeCollectionsOptions(mergeCollectionsOptions) : new MergeCollectionsOptions();
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 

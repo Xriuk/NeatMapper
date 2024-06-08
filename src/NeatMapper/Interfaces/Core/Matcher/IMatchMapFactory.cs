@@ -47,10 +47,15 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface IMatchMapFactory<TSource, TDestination> : IMatchMapFactory {
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class MatchMapFactory<TSource, TDestination> : IMatchMapFactory {
+		public abstract Type SourceType { get; }
+
+		public abstract Type DestinationType { get; }
+
+
 		/// <inheritdoc cref="IMatchMapFactory.Invoke(object, object)"/>
-		bool Invoke(
+		public abstract bool Invoke(
 #if NET5_0_OR_GREATER
 			TSource?
 #else
@@ -63,5 +68,25 @@ namespace NeatMapper {
 			TDestination
 #endif
 			destination);
+
+		public abstract void Dispose();
+
+
+		bool IMatchMapFactory.Invoke(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination) {
+
+			return Invoke((TSource)source, (TDestination)destination);
+		}
 	}
 }

@@ -76,7 +76,7 @@ namespace NeatMapper {
 			// IMatcher (composite matcher)
 			services.Add(new ServiceDescriptor(
 				typeof(IMatcher),
-				s => new CompositeMatcher(s.GetService<IOptionsSnapshot<CompositeMatcherOptions>>()?.Value.Matchers ?? Array.Empty<IMatcher>()),
+				s => new CompositeMatcher(s.GetService<IOptionsSnapshot<CompositeMatcherOptions>>()?.Value ?? new CompositeMatcherOptions()),
 				matchersLifetime));
 			#endregion
 

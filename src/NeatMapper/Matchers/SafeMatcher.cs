@@ -103,7 +103,7 @@ namespace NeatMapper {
 				factory = _matcher.MatchFactory(sourceType, destinationType, GetOptions(mappingOptions));
 			}
 			catch (MapNotFoundException) {
-				return new MatchMapFactory(sourceType, destinationType, (source, destination) => false);
+				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
 			}
 
 			return new DisposableMatchMapFactory(sourceType, destinationType, (source, destination) => {

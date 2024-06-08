@@ -14,7 +14,7 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
-				return new NewMapFactory(sourceType, destinationType, source => throw new MapNotFoundException((sourceType, destinationType)));
+				return new DefaultNewMapFactory(sourceType, destinationType, source => throw new MapNotFoundException((sourceType, destinationType)));
 			}
 
 			public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {

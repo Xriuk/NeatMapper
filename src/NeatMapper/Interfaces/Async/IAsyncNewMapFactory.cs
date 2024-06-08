@@ -50,8 +50,13 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface IAsyncNewMapFactory<TSource, TDestination> : IAsyncNewMapFactory {
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class AsyncNewMapFactory<TSource, TDestination> : IAsyncNewMapFactory {
+		public abstract Type SourceType { get; }
+
+		public abstract Type DestinationType { get; }
+
+
 		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object)" path="/summary"/>
 		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object)" path="/param[@name='source']"/>
 		/// <returns>
@@ -59,7 +64,7 @@ namespace NeatMapper {
 		/// which may be null.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object)" path="/exception"/>
-		Task<
+		public abstract Task<
 #if NET5_0_OR_GREATER
 			TDestination?
 #else
@@ -72,5 +77,25 @@ namespace NeatMapper {
 			TSource
 #endif
 			source);
+
+		public abstract void Dispose();
+
+
+		async Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> IAsyncNewMapFactory.Invoke(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source) {
+
+			return await Invoke((TSource)source);
+		}
 	}
 }

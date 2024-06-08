@@ -208,7 +208,7 @@ namespace NeatMapper {
 			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
 			var context = GetOrCreateMappingContext(mappingOptions);
 
-			return new NewMapFactory(
+			return new DefaultNewMapFactory(
 				sourceType, destinationType,
 				source => {
 					TypeUtils.CheckObjectType(source, sourceType, nameof(source));

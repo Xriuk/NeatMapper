@@ -5,7 +5,7 @@
 using System;
 
 namespace NeatMapper {
-	internal class DisposableNewMapFactory<TSource, TDestination> : NewMapFactory<TSource, TDestination> {
+	internal class DisposableNewMapFactory<TSource, TDestination> : DefaultNewMapFactory<TSource, TDestination> {
 		protected readonly IDisposable[] _disposables;
 
 		internal DisposableNewMapFactory(Func<TSource, TDestination> mapDelegate, params IDisposable[] disposables) :

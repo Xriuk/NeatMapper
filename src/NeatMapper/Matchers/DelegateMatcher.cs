@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
@@ -50,7 +51,9 @@ namespace NeatMapper {
 			serviceProvider = null) {
 
 			_matchDelegate = matchDelegate ?? throw new ArgumentNullException(nameof(matchDelegate));
-			_nestedMatcher = nestedMatcher != null ? (IMatcher)new CompositeMatcher(this, nestedMatcher) : (IMatcher)this;
+			_nestedMatcher = nestedMatcher != null ? (IMatcher)new CompositeMatcher(new CompositeMatcherOptions {
+				Matchers = new List<IMatcher> { this, nestedMatcher }
+			}) : (IMatcher)this;
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
@@ -110,7 +113,7 @@ namespace NeatMapper {
 				mappingOptions ?? MappingOptions.Empty
 			);
 
-			return new MatchMapFactory(sourceType, destinationType, (source, destination) => {
+			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 

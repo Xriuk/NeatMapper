@@ -6,7 +6,7 @@ using System;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
-	internal class DisposableAsyncMergeMapFactory<TSource, TDestination> : AsyncMergeMapFactory<TSource, TDestination> {
+	internal class DisposableAsyncMergeMapFactory<TSource, TDestination> : DefaultAsyncMergeMapFactory<TSource, TDestination> {
 		protected readonly IDisposable[] _disposables;
 
 		internal DisposableAsyncMergeMapFactory(Func<TSource, TDestination, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :

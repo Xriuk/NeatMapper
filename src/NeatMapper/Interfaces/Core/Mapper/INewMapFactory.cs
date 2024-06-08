@@ -45,12 +45,18 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface INewMapFactory<TSource, TDestination> : INewMapFactory {
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class NewMapFactory<TSource, TDestination> : INewMapFactory {
+		public abstract Type SourceType { get; }
+
+		public abstract Type DestinationType { get; }
+
+
 		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/summary"/>
 		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/param[@name='source']"/>
 		/// <returns>The newly created object of type <typeparamref name="TDestination"/>, may be null.</returns>
 		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/exception"/>
+		public abstract
 #if NET5_0_OR_GREATER
 		TDestination?
 #else
@@ -63,5 +69,24 @@ namespace NeatMapper {
 			TSource
 #endif
 			source);
+
+		public abstract void Dispose();
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+		object?
+#else
+		object
+#endif
+			INewMapFactory.Invoke(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source) {
+
+			return Invoke((TSource)source);
+		}
 	}
 }

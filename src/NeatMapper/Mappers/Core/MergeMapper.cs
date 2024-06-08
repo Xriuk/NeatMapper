@@ -259,7 +259,7 @@ namespace NeatMapper {
 			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
 			var context = GetOrCreateMappingContext(mappingOptions);
 
-			return new MergeMapFactory(
+			return new DefaultMergeMapFactory(
 				sourceType, destinationType,
 				(source, destination) => {
 					TypeUtils.CheckObjectType(source, sourceType, nameof(source));

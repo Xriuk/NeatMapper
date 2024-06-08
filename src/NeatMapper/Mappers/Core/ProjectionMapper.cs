@@ -198,7 +198,7 @@ namespace NeatMapper {
 			if (deleg == null)
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			return new NewMapFactory(sourceType, destinationType, source => {
+			return new DefaultNewMapFactory(sourceType, destinationType, source => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 				object result;

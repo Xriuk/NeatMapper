@@ -58,8 +58,13 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface IAsyncMergeMapFactory<TSource, TDestination> : IAsyncMergeMapFactory {
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class AsyncMergeMapFactory<TSource, TDestination> : IAsyncMergeMapFactory {
+		public abstract Type SourceType { get; }
+
+		public abstract Type DestinationType { get; }
+
+
 		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object)" path="/summary"/>
 		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object)" path="/param[@name='source']"/>
 		/// <returns>
@@ -68,7 +73,7 @@ namespace NeatMapper {
 		/// may be null.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object)" path="/exception"/>
-		Task<
+		public abstract Task<
 #if NET5_0_OR_GREATER
 			TDestination?
 #else
@@ -87,5 +92,31 @@ namespace NeatMapper {
 			TDestination
 #endif
 			destination);
+
+		public abstract void Dispose();
+
+
+		async Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> IAsyncMergeMapFactory.Invoke(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination) {
+
+			return await Invoke((TSource)source, (TDestination)destination);
+		}
 	}
 }

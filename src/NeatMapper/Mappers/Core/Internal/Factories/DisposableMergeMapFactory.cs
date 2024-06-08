@@ -5,7 +5,7 @@
 using System;
 
 namespace NeatMapper {
-	internal class DisposableMergeMapFactory<TSource, TDestination> : MergeMapFactory<TSource, TDestination> {
+	internal class DisposableMergeMapFactory<TSource, TDestination> : DefaultMergeMapFactory<TSource, TDestination> {
 		protected readonly IDisposable[] _disposables;
 
 		internal DisposableMergeMapFactory(Func<TSource, TDestination, TDestination> mapDelegate, params IDisposable[] disposables) :
