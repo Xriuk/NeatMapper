@@ -12,6 +12,8 @@
 
 - Analyzers and code fixers to detect when `CancellationToken` from `AsyncMappingContext` is not forwarded to async methods, works like [CA2016](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2016).
 - Added overloads with `params object[]` mapping options for `IMapper` extensions (`Map`, `CanMapNew`, `CanMapMerge`, `MapNewFactory` and `MapMergeFactory`) and `IMatcher` extensions (`Match`, `CanMatch`, and `MatchFactory`).
+- `IMatcher` extension method `Predicate`, which allows to compare a single provided value of a given type with other values of a different type repeatedly by returning a predicate (`Func<T, bool>`) which can be used in Linq methods like `Where`, `First`, `Count`, ...
+- Implicit conversions from generic factories (`NewMapFactory`, `MergeMapFactory`, `MatchMapFactory`, `AsyncNewMapFactory` and `AsyncMergeMapFactory`) to corresponding delegates (`Func<...>`).
 
 ### Fixed
 

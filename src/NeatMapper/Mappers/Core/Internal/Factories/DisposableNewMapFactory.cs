@@ -17,12 +17,14 @@ namespace NeatMapper {
 		}
 
 
-		public override void Dispose() {
+		protected override void Dispose(bool disposing) {
 			lock (_disposables) { 
-				base.Dispose();
+				base.Dispose(disposing);
 
-				foreach(var disposable in _disposables) {
-					disposable?.Dispose();
+				if (disposing) { 
+					foreach(var disposable in _disposables) {
+						disposable?.Dispose();
+					}
 				}
 			}
 		}

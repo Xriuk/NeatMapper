@@ -226,7 +226,7 @@ namespace NeatMapper {
 				}))
 				.Where(factory => factory != null));
 			HashSet<IMatcher> unavailableMatchersReverse;
-			IEnumerable<IMatchMapFactory> factoriesReverse;
+			CachedLazyEnumerable<IMatchMapFactory> factoriesReverse;
 			if(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes) { 
 				unavailableMatchersReverse = new HashSet<IMatcher>();
 				factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(
@@ -264,7 +264,7 @@ namespace NeatMapper {
 			}
 			else {
 				unavailableMatchersReverse = new HashSet<IMatcher>(_compositeMatcherOptions.Matchers);
-				factoriesReverse = Enumerable.Empty<IMatchMapFactory>();
+				factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(Enumerable.Empty<IMatchMapFactory>());
 			}
 
 			// DEV: maybe check with CanMatch and if returns false throw instead of creating the factory?
@@ -298,8 +298,11 @@ namespace NeatMapper {
 					else
 						throw new MapNotFoundException((sourceType, destinationType));
 				},
-				factoriesExact, new LambdaDisposable(() => {
+				factoriesExact, factoriesReverse, new LambdaDisposable(() => {
 					foreach (var factory in factoriesExact.Cached) {
+						factory.Dispose();
+					}
+					foreach (var factory in factoriesReverse.Cached) {
 						factory.Dispose();
 					}
 				}));

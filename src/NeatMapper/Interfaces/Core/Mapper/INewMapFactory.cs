@@ -70,7 +70,12 @@ namespace NeatMapper {
 #endif
 			source);
 
-		public abstract void Dispose();
+		protected abstract void Dispose(bool disposing);
+
+		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
 
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -86,7 +91,43 @@ namespace NeatMapper {
 #endif
 			source) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
 			return Invoke((TSource)source);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
+
+
+		public static implicit operator Func<
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			>(
+			NewMapFactory<
+#if NET5_0_OR_GREATER
+				TSource?
+#else
+				TSource
+#endif
+				,
+#if NET5_0_OR_GREATER
+				TDestination?
+#else
+				TDestination
+#endif
+				> factory) => factory.Invoke;
 	}
 }

@@ -31,8 +31,8 @@ namespace NeatMapper {
 			return _mapDelegate.Invoke(source, destination);
 		}
 
-		public override void Dispose() {
-			if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
+		protected override void Dispose(bool disposing) {
+			if (disposing && Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
 				throw new ObjectDisposedException(null);
 		}
 	}

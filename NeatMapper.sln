@@ -10,6 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{51F07181-2F60-4B0C-8C55-5FA86811D861}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		Directory.Build.props = Directory.Build.props
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.EntityFrameworkCore", "src\NeatMapper.EntityFrameworkCore\NeatMapper.EntityFrameworkCore.csproj", "{451EB7D4-1B8F-4C28-ADFB-9C2CD4D10238}"

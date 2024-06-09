@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IAsyncMapper"/> which creates a new collection (derived from <see cref="ICollection{T}"/>
-	/// plus some special types like below), even nested and readonly, from a <see cref="IEnumerable{T}"/>, asynchronously.<br/>
+	/// <see cref="IAsyncMapper"/> which creates a new <see cref="IEnumerable{T}"/> (derived from <see cref="ICollection{T}"/>
+	/// plus some special types like below), even nested and readonly, from another <see cref="IEnumerable{T}"/>, asynchronously.<br/>
 	/// Elements are then mapped with another <see cref="IAsyncMapper"/> by trying new map first, then merge map.<br/>
 	/// Special collections which can be created are:
 	/// <list type="bullet">

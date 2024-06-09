@@ -370,16 +370,11 @@ namespace NeatMapper {
 													// Deleted elements
 													if (removeNotMatchedDestinationElements) {
 														foreach (var destinationElement in destinationEnumerable) {
-															bool found = false;
-															foreach (var sourceElement in sourceEnumerable) {
-																if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
-																	found = true;
-																	break;
-																}
-															}
+															if (!sourceEnumerable.Cast<object>()
+																.Any(sourceElement => elementsMatcherFactory.Invoke(sourceElement, destinationElement))) { 
 
-															if (!found)
 																elementsToRemove.Add(destinationElement);
+															}
 														}
 													}
 
@@ -387,17 +382,17 @@ namespace NeatMapper {
 													var sourceDestinationMatches = sourceEnumerable
 														.Cast<object>()
 														.Select(sourceElement => {
+															// Cannot use FirstOrDefault because there might be matching null elements
 															bool found = false;
 															object matchingDestinationElement = null;
-															foreach (var destinationElement in destinationEnumerable) {
-																if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-																	!elementsToRemove.Contains(destinationElement)) {
-
-																	matchingDestinationElement = destinationElement;
-																	found = true;
-																	break;
-																}
+															try {
+																matchingDestinationElement = destinationEnumerable.Cast<object>()
+																	.First(destinationElement => elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+																		!elementsToRemove.Contains(destinationElement));
+																found = true;
 															}
+															catch { }
+
 															return (SourceElement: sourceElement, Found: found, MatchingDestinationElement: matchingDestinationElement);
 														});
 
