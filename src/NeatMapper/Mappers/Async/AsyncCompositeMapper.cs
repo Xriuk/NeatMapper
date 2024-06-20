@@ -298,8 +298,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -317,7 +316,7 @@ namespace NeatMapper {
 				_mappers.OfType<IAsyncMapperFactory>()
 				.Select(mapper => {
 					try {
-						return mapper.MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+						return mapper.MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
 					}
 					catch (MapNotFoundException) {
 						unavailableMappers.Add(mapper);
@@ -331,7 +330,7 @@ namespace NeatMapper {
 							continue;
 
 						try {
-							if (!mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken).Result) {
+							if (!mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions).Result) {
 								lock (unavailableMappers) {
 									unavailableMappers.Add(mapper);
 								}
@@ -350,11 +349,11 @@ namespace NeatMapper {
 
 			return new DisposableAsyncNewMapFactory(
 				sourceType, destinationType,
-				async source => {
+				async (source, cancellationToken) => {
 					// Try using the factories, if any
 					foreach (var factory in factories) {
 						try {
-							return await factory.Invoke(source);
+							return await factory.Invoke(source, cancellationToken);
 						}
 						catch (MapNotFoundException) { }
 					}
@@ -385,8 +384,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -404,7 +402,7 @@ namespace NeatMapper {
 				_mappers.OfType<IAsyncMapperFactory>()
 				.Select(mapper => {
 					try {
-						return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+						return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions);
 					}
 					catch (MapNotFoundException) {
 						unavailableMappers.Add(mapper);
@@ -418,7 +416,7 @@ namespace NeatMapper {
 							continue;
 
 						try {
-							if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken).Result) {
+							if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result) {
 								lock (unavailableMappers) {
 									unavailableMappers.Add(mapper);
 								}
@@ -437,11 +435,11 @@ namespace NeatMapper {
 
 			return new DisposableAsyncMergeMapFactory(
 				sourceType, destinationType,
-				async (source, destination) => {
+				async (source, destination, cancellationToken) => {
 					// Try using the factories, if any
 					foreach (var factory in factories) {
 						try {
-							return await factory.Invoke(source, destination);
+							return await factory.Invoke(source, destination, cancellationToken);
 						}
 						catch (MapNotFoundException) { }
 					}

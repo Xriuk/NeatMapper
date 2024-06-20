@@ -161,10 +161,9 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return _mapper.MapAsyncNewFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions), cancellationToken);
+			return _mapper.MapAsyncNewFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 
 		public IAsyncMergeMapFactory MapAsyncMergeFactory(
@@ -175,10 +174,9 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return _mapper.MapAsyncMergeFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions), cancellationToken);
+			return _mapper.MapAsyncMergeFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 		#endregion
 

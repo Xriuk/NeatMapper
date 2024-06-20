@@ -90,7 +90,10 @@ namespace NeatMapper.EntityFrameworkCore {
 			MergeCollectionsOptions
 #endif
 			mergeCollectionsOptions = null) :
-				base(model, dbContextType, serviceProvider, entityFrameworkCoreOptions, elementsMatcher, mergeCollectionsOptions) {}
+				base(model, dbContextType, serviceProvider,
+					entityFrameworkCoreOptions != null ? new EntityFrameworkCoreOptions(entityFrameworkCoreOptions) : null,
+					elementsMatcher,
+					mergeCollectionsOptions != null ? new MergeCollectionsOptions(mergeCollectionsOptions) : null) {}
 
 
 		#region IMapper methods

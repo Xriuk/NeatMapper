@@ -374,6 +374,82 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreEqual(typeof(float[]), exc.To);
 			}
 		}
+
+
+		[TestMethod]
+		public async Task ShouldMapAsyncEnumerable() {
+			// From
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<IAsyncEnumerable<int>, string[]>());
+
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+				var strings = await _mapper.MapAsync<string[]>(new DefaultAsyncEnumerable<int>(new[] { 2, -3, 0 }));
+
+				Assert.IsNotNull(strings);
+				Assert.AreEqual(3, strings.Length);
+				Assert.AreEqual("4", strings[0]);
+				Assert.AreEqual("-6", strings[1]);
+				Assert.AreEqual("0", strings[2]);
+
+				Assert.IsNull(MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
+			}
+
+			// To
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], IAsyncEnumerable<string>>());
+
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+				var strings = await _mapper.MapAsync<IAsyncEnumerable<string>>(new[] { 2, -3, 0 });
+
+				Assert.IsNotNull(strings);
+				var asyncEnumerator = strings.GetAsyncEnumerator();
+				try { 
+					Assert.IsTrue(await asyncEnumerator.MoveNextAsync());
+					Assert.AreEqual("4", asyncEnumerator.Current);
+					Assert.IsTrue(await asyncEnumerator.MoveNextAsync());
+					Assert.AreEqual("-6", asyncEnumerator.Current);
+					Assert.IsTrue(await asyncEnumerator.MoveNextAsync());
+					Assert.AreEqual("0", asyncEnumerator.Current);
+					Assert.IsFalse(await asyncEnumerator.MoveNextAsync());
+
+					Assert.IsNull(MappingOptionsUtils.options);
+					Assert.IsNull(MappingOptionsUtils.mergeOptions);
+				}
+				finally {
+					await asyncEnumerator.DisposeAsync();
+				}
+			}
+
+			// Both
+			{
+				Assert.IsTrue(await _mapper.CanMapAsyncNew<IAsyncEnumerable<int>, IAsyncEnumerable<string>>());
+
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+				var strings = await _mapper.MapAsync<IAsyncEnumerable<string>>(new DefaultAsyncEnumerable<int>(new[] { 2, -3, 0 }));
+
+				Assert.IsNotNull(strings);
+				var asyncEnumerator = strings.GetAsyncEnumerator();
+				try {
+					Assert.IsTrue(await asyncEnumerator.MoveNextAsync());
+					Assert.AreEqual("4", asyncEnumerator.Current);
+					Assert.IsTrue(await asyncEnumerator.MoveNextAsync());
+					Assert.AreEqual("-6", asyncEnumerator.Current);
+					Assert.IsTrue(await asyncEnumerator.MoveNextAsync());
+					Assert.AreEqual("0", asyncEnumerator.Current);
+					Assert.IsFalse(await asyncEnumerator.MoveNextAsync());
+
+					Assert.IsNull(MappingOptionsUtils.options);
+					Assert.IsNull(MappingOptionsUtils.mergeOptions);
+				}
+				finally {
+					await asyncEnumerator.DisposeAsync();
+				}
+			}
+		}
 	}
 
 	[TestClass]

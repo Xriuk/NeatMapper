@@ -10,15 +10,21 @@ namespace NeatMapper {
 	/// <see cref="ICollection{T}"/> (not readonly), will create a new <see cref="ICollection{T}"/>
 	/// if destination is null.<br/>
 	/// Will try to match elements of the source collection with the destination by using an
-	/// <see cref="IMatcher"/> if provided:<br/>
-	/// - If a match is found will try to merge the two elements or will replace with a new one by using
-	/// a <see cref="IMapper"/>.<br/>
-	/// - If a match is not found a new element will be added by mapping the types with a <see cref="IMapper"/>
-	/// by trying new map, then merge map.<br/>
+	/// <see cref="IMatcher"/> if provided:
+	/// <list type="bullet">
+	/// <item>
+	/// If a match is found will try to merge the two elements or will replace with a new one by using
+	/// a <see cref="IMapper"/>.
+	/// </item>
+	/// <item>
+	/// If a match is not found a new element will be added by mapping the types with a <see cref="IMapper"/>
+	/// by trying new map, then merge map.
+	/// </item>
+	/// </list>
 	/// Not matched elements from the destination collection are treated according to
-	/// <see cref="MergeCollectionsOptions"/> (and overrides).<br/>
-	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
+	/// <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
+	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
 	public sealed class MergeCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
 		// DEV: what is it used for? Try to remove
 		private readonly IMapper _originalElementMapper;

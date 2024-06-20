@@ -87,7 +87,10 @@ namespace NeatMapper.EntityFrameworkCore {
 			MergeCollectionsOptions
 #endif
 			mergeCollectionsOptions = null) : 
-				base(model, dbContextType, serviceProvider, entityFrameworkCoreOptions, elementsMatcher, mergeCollectionsOptions) {}
+				base(model, dbContextType, serviceProvider,
+					entityFrameworkCoreOptions != null ? new EntityFrameworkCoreOptions(entityFrameworkCoreOptions) : null,
+					elementsMatcher,
+					mergeCollectionsOptions != null ? new MergeCollectionsOptions(mergeCollectionsOptions) : null) {}
 
 
 		#region IAsyncMapper methods
@@ -114,8 +117,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
-				return await factory.Invoke(source);
+			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions)) {
+				return await factory.Invoke(source, cancellationToken);
 			}
 		}
 
@@ -148,8 +151,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken)) {
-				return await factory.Invoke(source, destination);
+			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions)) {
+				return await factory.Invoke(source, destination, cancellationToken);
 			}
 		}
 		#endregion
@@ -233,8 +236,7 @@ namespace NeatMapper.EntityFrameworkCore {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -245,7 +247,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (!CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken).Result)
+			if (!CanMapAsyncNew(sourceType, destinationType, mappingOptions).Result)
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			(Type From, Type To)? collectionElementTypes = destinationType.IsEnumerable() && destinationType != typeof(string) ?
@@ -313,7 +315,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					return new DisposableAsyncNewMapFactory(
 						sourceType, destinationType,
-						async source => {
+						async (source, cancellationToken) => {
 							NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 							if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
@@ -399,7 +401,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					return new DisposableAsyncNewMapFactory(
 						sourceType, destinationType,
-						async source => {
+						async (source, cancellationToken) => {
 							NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 							if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
@@ -494,8 +496,7 @@ namespace NeatMapper.EntityFrameworkCore {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -506,7 +507,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (!CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken).Result)
+			if (!CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result)
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			var efCoreOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
@@ -521,7 +522,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else
 				destinationMappingOptions = mappingOptions;
-			var destinationFactory = MapAsyncNewFactory(sourceType, destinationType, destinationMappingOptions, cancellationToken);
+			var destinationFactory = MapAsyncNewFactory(sourceType, destinationType, destinationMappingOptions);
 
 			try { 
 				(Type From, Type To)? collectionElementTypes = destinationType.IsCollection() && !destinationType.IsArray ?
@@ -558,13 +559,13 @@ namespace NeatMapper.EntityFrameworkCore {
 						}
 					}
 
-					var newFactory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+					var newFactory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
 					try {
 						var mergeFactory = MergeCollection(types, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
 
 						return new DisposableAsyncMergeMapFactory(
 							sourceType, destinationType,
-							async (source, destination) => {
+							async (source, destination, cancellationToken) => {
 								try {
 									NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 									NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
@@ -591,7 +592,7 @@ namespace NeatMapper.EntityFrameworkCore {
 											if (destinationInstanceType.IsArray)
 												throw new MapNotFoundException((sourceType, destinationType));
 
-											var sourceEntitiesEnumerable = (await destinationFactory.Invoke(source)) as IEnumerable
+											var sourceEntitiesEnumerable = (await destinationFactory.Invoke(source, cancellationToken)) as IEnumerable
 												?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
 											mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
@@ -636,7 +637,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					return new DisposableAsyncMergeMapFactory(
 						sourceType, destinationType,
-						async (source, destination) => {
+						async (source, destination, cancellationToken) => {
 							NeatMapper.TypeUtils.CheckObjectType(source, types.From, nameof(source));
 							NeatMapper.TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
 

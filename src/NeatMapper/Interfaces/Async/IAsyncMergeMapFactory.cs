@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
@@ -25,6 +26,9 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="source">Object to be mapped, may be null.</param>
 		/// <param name="destination">Object to map to, may be null.</param>
+		/// <param name="cancellationToken">
+		/// Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping.
+		/// </param>
 		/// <returns>
 		/// A task which when completed returns the resulting object of the mapping of type
 		/// <see cref="DestinationType"/>, which can be the same as <paramref name="destination"/> or a new one,
@@ -50,7 +54,8 @@ namespace NeatMapper {
 #else
 			object
 #endif
-			destination);
+			destination,
+			CancellationToken cancellationToken = default);
 	}
 
 	/// <summary>
@@ -65,14 +70,15 @@ namespace NeatMapper {
 		public abstract Type DestinationType { get; }
 
 
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object)" path="/summary"/>
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/summary"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns the resulting object of the mapping of type
 		/// <typeparamref name="TDestination"/>, which can be the same as <paramref name="destination"/> or a new one,
 		/// may be null.
 		/// </returns>
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object)" path="/exception"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/exception"/>
 		public abstract Task<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -91,7 +97,8 @@ namespace NeatMapper {
 #else
 			TDestination
 #endif
-			destination);
+			destination,
+			CancellationToken cancellationToken = default);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -119,13 +126,14 @@ namespace NeatMapper {
 #else
 			object
 #endif
-			destination) {
+			destination,
+			CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-			return await Invoke((TSource)source, (TDestination)destination);
+			return await Invoke((TSource)source, (TDestination)destination, cancellationToken);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -146,6 +154,7 @@ namespace NeatMapper {
 			TDestination
 #endif
 			,
+			CancellationToken,
 			Task<
 #if NET5_0_OR_GREATER
 			TDestination?

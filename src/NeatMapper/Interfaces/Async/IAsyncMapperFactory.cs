@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -22,9 +21,6 @@ namespace NeatMapper {
 		/// <param name="mappingOptions">
 		/// Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore.
 		/// </param>
-		/// <param name="cancellationToken">
-		/// Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping.
-		/// </param>
 		/// <returns>
 		/// A factory which can be used to map objects of type <paramref name="sourceType"/> into new objects
 		/// of type <paramref name="destinationType"/> asynchronously.
@@ -38,8 +34,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default);
+			mappingOptions = null);
 
 		/// <summary>
 		/// Creates a factory to map an object to an existing one asynchronously.
@@ -50,9 +45,6 @@ namespace NeatMapper {
 		/// </param>
 		/// <param name="mappingOptions">
 		/// Additional options passed to the context, support depends on the mapper and/or the maps, null to ignore.
-		/// </param>
-		/// <param name="cancellationToken">
-		/// Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping.
 		/// </param>
 		/// <returns>
 		/// A factory which can be used to map objects of type <paramref name="sourceType"/> into existing objects
@@ -67,7 +59,6 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default);
+			mappingOptions = null);
 	}
 }

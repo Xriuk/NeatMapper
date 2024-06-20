@@ -4,16 +4,20 @@
 
 ### Changed
 
+- `IAsyncNewMapFactory` and `IAsyncMergeMapFactory`'s `Invoke(...)` method can now receive a `CancellationToken` parameter, which was moved from the factory creation to invocation, to better handle cancellability of parallel tasks in case of exceptions.
 - Generic versions of `INewMapFactory`, `IMergeMapFactory`, `IMatchMapFactory`, `IAsyncNewMapFactory` and `IAsyncMergeMapFactory` have been converted to classes (same names without the "I") to explicitly implement `Invoke` methods of non-generic parent interfaces, this was done to hide the parent method in the generic implementation, because it could have caused mistakes as it would allow to pass any variables in any order, which is not type-safe.
+- `AsyncMappingContext` was converted to a struct to reduce allocations when forwarding the `CancellationToken` parameter while invoking async factories.
 - `CompositeMatcher` constructor changed signature to accept a single parameter of type `CompositeMatcherOptions`.
 - `CompositeMatcher` now matches the given types in any order, the exact one is tried first, then the types are reverted. This behaviour can be configured with CompositeMatcherOptions (and CompositeMatcherMappingOptions).
-- 
+
 ### Added
 
 - Analyzers and code fixers to detect when `CancellationToken` from `AsyncMappingContext` is not forwarded to async methods, works like [CA2016](https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca2016).
 - Added overloads with `params object[]` mapping options for `IMapper` extensions (`Map`, `CanMapNew`, `CanMapMerge`, `MapNewFactory` and `MapMergeFactory`) and `IMatcher` extensions (`Match`, `CanMatch`, and `MatchFactory`).
 - `IMatcher` extension method `Predicate`, which allows to compare a single provided value of a given type with other values of a different type repeatedly by returning a predicate (`Func<T, bool>`) which can be used in Linq methods like `Where`, `First`, `Count`, ...
 - Implicit conversions from generic factories (`NewMapFactory`, `MergeMapFactory`, `MatchMapFactory`, `AsyncNewMapFactory` and `AsyncMergeMapFactory`) to corresponding delegates (`Func<...>`).
+- `IAsyncEnumerable<T>` support for `AsyncNewCollectionMapper` for both source and destination and for `AsyncMergeCollectionMapper` only for source.
+- AsyncMappers `IAsyncEnumerable` extension methods `Project`, which creates a lazy projection (just like Linq.Async method `Select()`).
 
 ### Fixed
 

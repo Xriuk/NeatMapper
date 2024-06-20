@@ -8,11 +8,13 @@
 #else
 				null;
 #endif
+#pragma warning disable CS0219
 			MatchMapFactory<string, string> genericFactory2 =
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 				null!;
 #else
 				null;
+#pragma warning restore CS0219
 #endif
 
 			// Predicate

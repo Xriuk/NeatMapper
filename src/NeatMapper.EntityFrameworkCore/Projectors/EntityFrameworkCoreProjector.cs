@@ -1,8 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-
 // For IServiceProviderIsService
 #if !NET5_0 && !NETCOREAPP3_1
 using Microsoft.Extensions.DependencyInjection;

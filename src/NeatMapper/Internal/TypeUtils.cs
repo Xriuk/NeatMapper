@@ -41,6 +41,16 @@ namespace NeatMapper {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsAsyncEnumerable(this Type type) {
+			return type.HasInterface(typeof(IAsyncEnumerable<>));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Type GetAsyncEnumerableElementType(this Type type) {
+			return type.GetInterfaceElementType(typeof(IAsyncEnumerable<>));
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool IsCollection(this Type type) {
 			return type.HasInterface(typeof(ICollection<>));
 		}

@@ -13,8 +13,8 @@ namespace NeatMapper {
 	/// <item><see cref="Queue{T}"/></item>
 	/// <item><see cref="string"/> (considered as a collection of <see cref="char"/>s)</item>
 	/// </list>
-	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
 	/// </summary>
+	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
 	public sealed class NewCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
 		/// Creates a new instance of <see cref="NewCollectionMapper"/>.
@@ -23,8 +23,7 @@ namespace NeatMapper {
 		/// <see cref="IMapper"/> to use to map collection elements.<br/>
 		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.Mapper"/>.
 		/// </param>
-		public NewCollectionMapper(
-			IMapper elementsMapper) : base(elementsMapper) { }
+		public NewCollectionMapper(IMapper elementsMapper) : base(elementsMapper) { }
 		
 
 		#region IMapper methods
