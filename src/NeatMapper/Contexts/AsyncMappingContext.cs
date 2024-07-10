@@ -6,6 +6,9 @@ using System;
 using System.Threading;
 
 namespace NeatMapper {
+	/// <summary>
+	/// Contains informations and services for the current asynchronous mapping operation.
+	/// </summary>
 	public sealed class AsyncMappingContextOptions {
 		private readonly Lazy<IAsyncMapper> _mapper;
 
@@ -24,11 +27,12 @@ namespace NeatMapper {
 
 			if (parentMapper == null)
 				throw new ArgumentNullException(nameof(parentMapper));
+
 			_mapper = new Lazy<IAsyncMapper>(() => {
 				var nestedMappingContext = new AsyncNestedMappingContext(parentMapper);
 				return new AsyncNestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
 					.ReplaceOrAdd<AsyncNestedMappingContext>(
-						n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext));
+						n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
 			}, true);
 
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
@@ -55,6 +59,8 @@ namespace NeatMapper {
 
 	/// <summary>
 	/// Contains informations and services for the current asynchronous mapping operation.
+	/// This is an optimized value type which allows to share the same <see cref="AsyncMappingContextOptions"/>
+	/// while changing <see cref="CancellationToken"/> for each map.
 	/// </summary>
 	public readonly struct AsyncMappingContext {
 		private readonly AsyncMappingContextOptions _options;

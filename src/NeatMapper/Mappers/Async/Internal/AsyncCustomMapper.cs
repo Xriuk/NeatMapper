@@ -24,15 +24,16 @@ namespace NeatMapper {
 		protected readonly IServiceProvider _serviceProvider;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> and output <see cref="AsyncMappingContextOptions"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="AsyncMappingContextOptions"/>.
 		/// </summary>
 		internal readonly ConcurrentDictionary<MappingOptions, AsyncMappingContextOptions> _contextsCache
 			= new ConcurrentDictionary<MappingOptions, AsyncMappingContextOptions>();
 
 		/// <summary>
 		/// Cached output <see cref="AsyncMappingContextOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
-		/// for thread-safety.
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/>,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		internal readonly AsyncMappingContextOptions _contextsCacheNull;
 
@@ -49,19 +50,22 @@ namespace NeatMapper {
 
 
 		protected AsyncMappingContextOptions GetOrCreateMappingContextOptions(MappingOptions options) {
-			if (options == null)
+			if (options == null || options == MappingOptions.Empty)
 				return _contextsCacheNull;
-			else {
-				return _contextsCache.GetOrAdd(options, opts => {
-					var overrideOptions = opts.GetOptions<AsyncMapperOverrideMappingOptions>();
-					return new AsyncMappingContextOptions(
-						overrideOptions?.ServiceProvider ?? _serviceProvider,
-						overrideOptions?.Mapper ?? this,
-						this,
-						opts
-					);
-				});
-			}
+			else if(options.Cached)
+				return _contextsCache.GetOrAdd(options, CreateMappingContextOptions);
+			else
+				return CreateMappingContextOptions(options);
+		}
+
+		private AsyncMappingContextOptions CreateMappingContextOptions(MappingOptions options) {
+			var overrideOptions = options.GetOptions<AsyncMapperOverrideMappingOptions>();
+			return new AsyncMappingContextOptions(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Mapper ?? this,
+				this,
+				options
+			);
 		}
 	}
 }

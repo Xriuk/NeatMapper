@@ -1,0 +1,24 @@
+﻿is_global = true
+
+# Use ArgumentNullException throw helper - requires .NET 7+
+dotnet_diagnostic.CA1510.severity = none
+
+
+# Wrong ending tag
+dotnet_diagnostic.CS1570.severity = none
+
+# Missing param tag
+dotnet_diagnostic.CS1573.severity = none
+
+# Missing comment
+dotnet_diagnostic.CS1591.severity = none
+
+
+# Use primary constructor - requires C# 12+
+dotnet_diagnostic.IDE0290.severity = none
+
+# Use pattern matching (not operator) - requires C# 9.0+
+dotnet_diagnostic.IDE0083.severity = none
+
+# Simplify new expression - requires C# 9.0+
+dotnet_diagnostic.IDE0090.severity = none

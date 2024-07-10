@@ -19,7 +19,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// Empty instance with no options inside.
 		/// </summary>
-		public static readonly MappingOptions Empty = new MappingOptions((IEnumerable)null);
+		public static readonly MappingOptions Empty = new MappingOptions((IEnumerable)null, true);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -30,11 +30,17 @@ namespace NeatMapper {
 		/// </summary>
 		private readonly IReadOnlyDictionary<Type, object> options;
 
+		internal bool Cached { get; }
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="MappingOptions"/>.
 		/// </summary>
 		/// <param name="options">Objects to add to options, must be unique by type.</param>
+		/// <param name="cached">
+		/// True if the options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
+		/// </param>
 		/// <exception cref="ArgumentException">
 		/// <paramref name="options"/> have more than one instance for the same type.
 		/// </exception>
@@ -44,7 +50,8 @@ namespace NeatMapper {
 #else
 			IEnumerable
 #endif
-			options) {
+			options,
+			bool cached = false) {
 
 			if(options != null) {
 				options = options.Cast<object>().Where(o => o != null);
@@ -58,6 +65,7 @@ namespace NeatMapper {
 			}
 			else
 				this.options = emptyDictionary;
+			Cached = cached;
 		}
 
 		// Internal faster constructor
@@ -103,6 +111,10 @@ namespace NeatMapper {
 		/// to the new options (if non-<see langword="null"/>) or removed (if <see langword="null"/>).<br/>
 		/// If no factories are provided the current instance will be returned unaltered.
 		/// </param>
+		/// <param name="cached">
+		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
+		/// </param>
 		/// <returns>
 		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
 		/// replaced with the provided factories.
@@ -114,7 +126,8 @@ namespace NeatMapper {
 #else
 			object
 #endif
-			>> factories) {
+			>> factories,
+			bool cached = false) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -144,7 +157,7 @@ namespace NeatMapper {
 			if(!changed)
 				return this;
 
-			return new MappingOptions(newValues.Concat(options.Where(o => !factories.ContainsKey(o.Key))));
+			return new MappingOptions(newValues.Concat(options.Where(o => !factories.ContainsKey(o.Key))), cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -161,6 +174,10 @@ namespace NeatMapper {
 		/// and the result will be added to the new options (if non-<see langword="null"/>) or removed
 		/// (if <see langword="null"/>).<br/>
 		/// If no factories are provided the current instance will be returned unaltered.
+		/// </param>
+		/// <param name="cached">
+		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
 		/// </param>
 		/// <returns>
 		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
@@ -179,7 +196,8 @@ namespace NeatMapper {
 #else
 			object
 #endif
-			>> factories) {
+			>> factories,
+			bool cached = false) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -206,7 +224,7 @@ namespace NeatMapper {
 			if (!changed)
 				return this;
 
-			return new MappingOptions(newValues.Concat(options.Where(o => !factories.ContainsKey(o.Key))));
+			return new MappingOptions(newValues.Concat(options.Where(o => !factories.ContainsKey(o.Key))), cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

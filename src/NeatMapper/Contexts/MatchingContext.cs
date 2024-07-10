@@ -18,11 +18,12 @@ namespace NeatMapper {
 
 			if(parentMatcher == null)
 				throw new ArgumentNullException(nameof(parentMatcher));
+
 			_matcher = new Lazy<IMatcher>(() => {
 				var nestedMatchingContext = new NestedMatchingContext(parentMatcher);
 				return new NestedMatcher(nestedMatcher, o => (o ?? MappingOptions.Empty)
 					.ReplaceOrAdd<NestedMatchingContext>(
-						n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext));
+						n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext, (o ?? MappingOptions.Empty).Cached));
 			}, true);
 
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));

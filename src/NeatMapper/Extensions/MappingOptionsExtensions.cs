@@ -32,6 +32,10 @@ namespace NeatMapper {
 		/// <typeparamref name="TOptions"/> exists in the current mapping options, will receive it as a parameter.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
 		/// </param>
+		/// <param name="cached">
+		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
+		/// </param>
 		/// <returns>The new generated options.</returns>
 		public static MappingOptions Replace<TOptions>(this MappingOptions options, Func<TOptions,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -39,7 +43,8 @@ namespace NeatMapper {
 #else
 			TOptions
 #endif
-			> factory) where TOptions : class {
+			> factory,
+			bool cached = false) where TOptions : class {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -50,14 +55,14 @@ namespace NeatMapper {
 
 			return options.Replace(new Dictionary<Type, Func<object, object>> {
 				{ typeof(TOptions), o => o is TOptions opts ? (object)factory.Invoke(opts) : null }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
+		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions Replace<TOptions1, TOptions2>(this MappingOptions options,
 			Func<TOptions1,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -72,7 +77,8 @@ namespace NeatMapper {
 #else
 				TOptions2
 #endif
-				> factory2)
+				> factory2,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class {
 
@@ -86,14 +92,14 @@ namespace NeatMapper {
 			return options.Replace(new Dictionary<Type, Func<object, object>> {
 				{ typeof(TOptions1), o => o is TOptions1 opts ? (object)factory1.Invoke(opts) : null },
 				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
+		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3>(this MappingOptions options,
 			Func<TOptions1,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -115,7 +121,8 @@ namespace NeatMapper {
 #else
 				TOptions3
 #endif
-				> factory3)
+				> factory3,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class {
@@ -131,14 +138,14 @@ namespace NeatMapper {
 				{ typeof(TOptions1), o => o is TOptions1 opts ? (object)factory1.Invoke(opts) : null },
 				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null },
 				{ typeof(TOptions3), o => o is TOptions3 opts ? (object)factory3.Invoke(opts) : null }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
+		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3, TOptions4>(this MappingOptions options,
 			Func<TOptions1,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -167,7 +174,8 @@ namespace NeatMapper {
 #else
 				TOptions4
 #endif
-				> factory4)
+				> factory4,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class
@@ -185,7 +193,7 @@ namespace NeatMapper {
 				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null },
 				{ typeof(TOptions3), o => o is TOptions3 opts ? (object)factory3.Invoke(opts) : null },
 				{ typeof(TOptions4), o => o is TOptions4 opts ? (object)factory4.Invoke(opts) : null }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -226,6 +234,10 @@ namespace NeatMapper {
 		/// <typeparamref name="TOptions5"/> exists in the current mapping options, will receive it as a parameter.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied into the new instance.
 		/// </param>
+		/// <param name="cached">
+		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
+		/// </param>
 		/// <returns>The new generated options.</returns>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
 			Func<TOptions1,
@@ -262,7 +274,8 @@ namespace NeatMapper {
 #else
 				TOptions5
 #endif
-				> factory5)
+				> factory5,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class
@@ -282,7 +295,7 @@ namespace NeatMapper {
 				{ typeof(TOptions3), o => o is TOptions3 opts ? (object)factory3.Invoke(opts) : null },
 				{ typeof(TOptions4), o => o is TOptions4 opts ? (object)factory4.Invoke(opts) : null },
 				{ typeof(TOptions5), o => o is TOptions5 opts ? (object)factory5.Invoke(opts) : null }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -301,6 +314,10 @@ namespace NeatMapper {
 		/// <typeparamref name="TOptions"/> if they exists in the current mapping options.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
+		/// <param name="cached">
+		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
+		/// </param>
 		/// <returns>The new generated options.</returns>
 		public static MappingOptions ReplaceOrAdd<TOptions>(this MappingOptions options, Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -314,7 +331,8 @@ namespace NeatMapper {
 #else
 				TOptions
 #endif
-				> factory) where TOptions : class {
+				> factory,
+			bool cached = false) where TOptions : class {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -325,14 +343,14 @@ namespace NeatMapper {
 
 			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
 				{ typeof(TOptions), o => factory.Invoke(o as TOptions) }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
+		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -359,7 +377,8 @@ namespace NeatMapper {
 #else
 				TOptions2
 #endif
-				> factory2)
+				> factory2,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class {
 
@@ -373,14 +392,14 @@ namespace NeatMapper {
 			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
 				{ typeof(TOptions1), o => factory1.Invoke(o as TOptions1) },
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
+		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -420,7 +439,8 @@ namespace NeatMapper {
 #else
 				TOptions3
 #endif
-				> factory3)
+				> factory3,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class {
@@ -436,14 +456,14 @@ namespace NeatMapper {
 				{ typeof(TOptions1), o => factory1.Invoke(o as TOptions1) },
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) },
 				{ typeof(TOptions3), o => factory3.Invoke(o as TOptions3) }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5})"/>
+		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4>(this MappingOptions options,
 			Func<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -496,7 +516,8 @@ namespace NeatMapper {
 #else
 				TOptions4
 #endif
-				> factory4)
+				> factory4,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class
@@ -514,7 +535,7 @@ namespace NeatMapper {
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) },
 				{ typeof(TOptions3), o => factory3.Invoke(o as TOptions3) },
 				{ typeof(TOptions4), o => factory4.Invoke(o as TOptions4) }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -554,6 +575,10 @@ namespace NeatMapper {
 		/// Factory used to create the new options, will receive as a parameter the options of type
 		/// <typeparamref name="TOptions5"/> if they exists in the current mapping options.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
+		/// </param>
+		/// <param name="cached">
+		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
+		/// to avoid recomputing them.
 		/// </param>
 		/// <returns>The new generated options.</returns>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
@@ -621,7 +646,8 @@ namespace NeatMapper {
 #else
 				TOptions5
 #endif
-				> factory5)
+				> factory5,
+			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class
@@ -641,7 +667,7 @@ namespace NeatMapper {
 				{ typeof(TOptions3), o => factory3.Invoke(o as TOptions3) },
 				{ typeof(TOptions4), o => factory4.Invoke(o as TOptions4) },
 				{ typeof(TOptions5), o => factory5.Invoke(o as TOptions5) }
-			});
+			}, cached);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

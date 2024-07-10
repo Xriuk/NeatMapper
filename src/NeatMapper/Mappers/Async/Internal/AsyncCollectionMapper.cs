@@ -4,6 +4,7 @@
 
 using System;
 using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -31,14 +32,17 @@ namespace NeatMapper {
 		private readonly AsyncNestedMappingContext _nestedMappingContext;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> and output <see cref="MappingOptions"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
+		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
 		/// </summary>
 		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
 			new ConcurrentDictionary<MappingOptions, MappingOptions>();
 
 		/// <summary>
 		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key).
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly MappingOptions _optionsCacheNull;
 
@@ -57,18 +61,27 @@ namespace NeatMapper {
 
 		// Will override the mapper if not already overridden
 		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
-			if (options == null) {
+			if (options == null || options == MappingOptions.Empty) {
 				mergeCollectionsMappingOptions = null;
 				return _optionsCacheNull;
 			}
 			else {
 				mergeCollectionsMappingOptions = options.GetOptions<MergeCollectionsMappingOptions>();
-				return _optionsCache.GetOrAdd(options, opts => opts
-					.Replace<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(m.RemoveNotMatchedDestinationElements, null))
-					.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
-						m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
-						n => n != null ? new AsyncNestedMappingContext(_nestedMappingContext.ParentMapper, n) : _nestedMappingContext));
+				if (options.Cached)
+					return _optionsCache.GetOrAdd(options, MergeMappingOptions);
+				else
+					return MergeMappingOptions(options);
 			}
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private MappingOptions MergeMappingOptions(MappingOptions options) {
+			// Caching only ReplaceOrAdd (if options are cached aswell) as the first Replace is discarded
+			return options
+				.Replace<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(m.RemoveNotMatchedDestinationElements, null))
+				.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
+					m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
+					n => n != null ? new AsyncNestedMappingContext(_nestedMappingContext.ParentMapper, n) : _nestedMappingContext, options.Cached);
 		}
 	}
 }

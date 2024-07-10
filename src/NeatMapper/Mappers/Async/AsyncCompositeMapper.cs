@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -77,13 +78,17 @@ namespace NeatMapper {
 		private readonly AsyncNestedMappingContext _nestedMappingContext;
 
 		/// <summary>
-		/// Cached input and output <see cref="MappingOptions"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
+		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
+			new ConcurrentDictionary<MappingOptions, MappingOptions>();
 
 		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly MappingOptions _optionsCacheNull;
 
@@ -92,7 +97,8 @@ namespace NeatMapper {
 		/// Creates the mapper by using the provided mappers list.
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
-		public AsyncCompositeMapper(params IAsyncMapper[] mappers) : this((IList<IAsyncMapper>)mappers ?? throw new ArgumentNullException(nameof(mappers))) { }
+		public AsyncCompositeMapper(params IAsyncMapper[] mappers) :
+			this((IList<IAsyncMapper>)mappers ?? throw new ArgumentNullException(nameof(mappers))) { }
 
 		/// <summary>
 		/// Creates the mapper by using the provided mappers list.
@@ -470,13 +476,20 @@ namespace NeatMapper {
 
 		// Will override the mapper if not already overridden
 		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
-			if (options == null)
+			if (options == null || options == MappingOptions.Empty)
 				return _optionsCacheNull;
-			else {
-				return _optionsCache.GetOrAdd(options, opts => opts.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
-					m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(this, m?.ServiceProvider),
-					n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext));
-			}
+			else if(options.Cached)
+				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
+			else
+				return MergeMappingOptions(options);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private MappingOptions MergeMappingOptions(MappingOptions options) {
+			// Caching (if options are cached aswell)
+			return options.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
+				m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext, options.Cached);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

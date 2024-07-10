@@ -122,15 +122,16 @@ namespace NeatMapper {
 		private readonly IServiceProvider _serviceProvider;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> and output <see cref="ProjectionContext"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="ProjectionContext"/>.
 		/// </summary>
 		private readonly ConcurrentDictionary<MappingOptions, ProjectionContext> _contextsCache
 			= new ConcurrentDictionary<MappingOptions, ProjectionContext>();
 
 		/// <summary>
 		/// Cached output <see cref="ProjectionContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
-		/// for thread-safety.
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/>,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly ProjectionContext _contextsCacheNull;
 
@@ -182,7 +183,7 @@ namespace NeatMapper {
 				additionalMapsOptions?._maps.Values
 			);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
-			_contextsCacheNull = new ProjectionContext(_serviceProvider, this, MappingOptions.Empty);
+			_contextsCacheNull = CreateProjectionContext(MappingOptions.Empty);
 		}
 
 
@@ -210,16 +211,10 @@ namespace NeatMapper {
 			ProjectionContext context;
 			if (mappingOptions == null)
 				context = _contextsCacheNull;
-			else {
-				context = _contextsCache.GetOrAdd(mappingOptions, opts => {
-					var overrideOptions = opts.GetOptions<ProjectorOverrideMappingOptions>();
-					return new ProjectionContext(
-						overrideOptions?.ServiceProvider ?? _serviceProvider,
-						overrideOptions?.Projector ?? this,
-						mappingOptions
-					);
-				});
-			}
+			else if(mappingOptions.Cached)
+				context = _contextsCache.GetOrAdd(mappingOptions, CreateProjectionContext);
+			else
+				context = CreateProjectionContext(mappingOptions);
 
 			object result;
 			try {
@@ -283,5 +278,23 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private ProjectionContext CreateProjectionContext(MappingOptions options) {
+			var overrideOptions = options.GetOptions<ProjectorOverrideMappingOptions>();
+			return new ProjectionContext(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Projector ?? this,
+				options
+			);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

@@ -18,15 +18,16 @@ namespace NeatMapper {
 		private readonly IServiceProvider _serviceProvider;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> and output <see cref="MatchingContext"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="MatchingContext"/>.
 		/// </summary>
 		private readonly ConcurrentDictionary<MappingOptions, MatchingContext> _contextsCache
 			= new ConcurrentDictionary<MappingOptions, MatchingContext>();
 
 		/// <summary>
 		/// Cached output <see cref="MatchingContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
-		/// for thread-safety.
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/>,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly MatchingContext _contextsCacheNull;
 
@@ -153,17 +154,10 @@ namespace NeatMapper {
 			MatchingContext context;
 			if (mappingOptions == null)
 				context = _contextsCacheNull;
-			else {
-				context = _contextsCache.GetOrAdd(mappingOptions, opts => {
-					var overrideOptions = mappingOptions.GetOptions<MatcherOverrideMappingOptions>();
-					return new MatchingContext(
-						overrideOptions?.ServiceProvider ?? _serviceProvider,
-						overrideOptions?.Matcher ?? this,
-						this,
-						mappingOptions
-					);
-				});
-			}
+			else if(mappingOptions.Cached)
+				context = _contextsCache.GetOrAdd(mappingOptions, CreateMatchingContext);
+			else 
+				context = CreateMatchingContext(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -181,5 +175,24 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private MatchingContext CreateMatchingContext(MappingOptions options) {
+			var overrideOptions = options.GetOptions<MatcherOverrideMappingOptions>();
+			return new MatchingContext(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Matcher ?? this,
+				this,
+				options
+			);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

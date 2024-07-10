@@ -98,4 +98,8 @@
     </Compile>
   </ItemGroup>
 
+	<ItemGroup>
+		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig"/>
+	</ItemGroup>
+	
 </Project>

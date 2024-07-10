@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -38,7 +35,7 @@ namespace NeatMapper {
 		private readonly IProjector _projector;
 
 		/// <summary>
-		/// Compiled maps cache, can be null if no map exists.
+		/// Compiled maps cache, value can be null if no map exists.
 		/// </summary>
 		private readonly ConcurrentDictionary<(Type From, Type To), Func<object, object>> _mapsCache =
 			new ConcurrentDictionary<(Type, Type), Func<object, object>>();

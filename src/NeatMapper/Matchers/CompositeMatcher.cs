@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -10,7 +11,8 @@ namespace NeatMapper {
 	/// Types can be matched in any order, the exact one is tried first, then the types are reverted. This
 	/// behaviour can be configured with <see cref="CompositeMatcherOptions"/> (and
 	/// <see cref="CompositeMatcherMappingOptions"/>).<br/>
-	/// Each matcher is invoked in order and the first one to succeed in matching is returned.
+	/// Each matcher is invoked in order (in the exact order of types first, then with the types reverted)
+	/// and the first one to succeed in matching is returned.
 	/// </summary>
 	public sealed class CompositeMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -38,13 +40,17 @@ namespace NeatMapper {
 		private readonly NestedMatchingContext _nestedMatchingContext;
 
 		/// <summary>
-		/// Cached input and output <see cref="MappingOptions"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
+		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
+			new ConcurrentDictionary<MappingOptions, MappingOptions>();
 
 		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly MappingOptions _optionsCacheNull;
 
@@ -129,7 +135,9 @@ namespace NeatMapper {
 					undeterminateMatchers.Add(matcher);
 				}
 			}
-			if(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes) {
+			if(sourceType != destinationType &&
+				(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) {
+
 				foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
 					try {
 						if (matcher.CanMatch(destinationType, sourceType, mappingOptions))
@@ -227,7 +235,9 @@ namespace NeatMapper {
 				.Where(factory => factory != null));
 			HashSet<IMatcher> unavailableMatchersReverse;
 			CachedLazyEnumerable<IMatchMapFactory> factoriesReverse;
-			if(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes) { 
+			if(sourceType != destinationType &&
+				(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) {
+				
 				unavailableMatchersReverse = new HashSet<IMatcher>();
 				factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(
 					_compositeMatcherOptions.Matchers.OfType<IMatcherFactory>()
@@ -319,13 +329,20 @@ namespace NeatMapper {
 
 		// Will override the matcher if not already overridden
 		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
-			if (options == null)
+			if (options == null || options == MappingOptions.Empty)
 				return _optionsCacheNull;
-			else {
-				return _optionsCache.GetOrAdd(options, opts => opts.ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
-					m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
-					n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext));
-			}
+			else if(options.Cached)
+				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
+			else
+				return MergeMappingOptions(options);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private MappingOptions MergeMappingOptions(MappingOptions options) {
+			// Caching (if options are cached aswell)
+			return options.ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
+				m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext, options.Cached);
 		}
 
 		private bool MatchInternal(IEnumerable<IMatcher> matchers,
@@ -341,7 +358,9 @@ namespace NeatMapper {
 			}
 
 			// Try reverse map
-			if (mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes) { 
+			if (sourceType != destinationType &&
+				(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) { 
+
 				foreach (var matcher in matchers) {
 					try {
 						return matcher.Match(destination, destinationType, source, sourceType, mappingOptions);

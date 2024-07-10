@@ -119,6 +119,10 @@ var myBookDtos = db.Set<Book>()
 
 Find more advanced use cases in the [wiki](https://github.com/Xriuk/NeatMapper/wiki) or in the extended [tests project](https://github.com/Xriuk/NeatMapper/tree/main/tests/NeatMapper.Tests).
 
+## Contributing
+
+You can contribute by creating issues for: bug fixes, feature requests or tests in the [official repository](https://github.com/Xriuk/NeatMapper).
+
 ## License
 
 [Read the license here](https://github.com/Xriuk/NeatMapper/blob/main/LICENSE.md)
