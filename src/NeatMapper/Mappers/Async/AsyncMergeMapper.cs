@@ -145,18 +145,13 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
-			try { 
-				var result = await map.Invoke(source, destination, context);
+			var context = GetOrCreateMappingContextOptions(mappingOptions);
+			var result = await map.Invoke(source, destination, new AsyncMappingContext(context, cancellationToken));
 
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
+			// Should not happen
+			TypeUtils.CheckObjectType(result, destinationType);
 
-				return result;
-			}
-			finally {
-				GetMappingOptionsPool(mappingOptions).Return(context);
-			}
+			return result;
 		}
 		#endregion
 
@@ -217,8 +212,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -234,9 +228,9 @@ namespace NeatMapper {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}
 
-			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions, cancellationToken);
+			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions);
 
-			return new DisposableAsyncNewMapFactory(sourceType, destinationType, source => {
+			return new DisposableAsyncNewMapFactory(sourceType, destinationType, (source, cancellationToken) => {
 				object destination;
 				try {
 					destination = destinationFactory.Invoke();
@@ -245,7 +239,7 @@ namespace NeatMapper {
 					throw new MappingException(e, (sourceType, destinationType));
 				}
 
-				return mergeFactory.Invoke(source, destination);
+				return mergeFactory.Invoke(source, destination, cancellationToken);
 			}, mergeFactory);
 		}
 
@@ -257,8 +251,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -266,19 +259,19 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
+			var contextOptions = GetOrCreateMappingContextOptions(mappingOptions);
 
-			return new DisposableAsyncMergeMapFactory(sourceType, destinationType, async (source, destination) => {
+			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, async (source, destination, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-				var result = await map.Invoke(source, destination, context);
+				var result = await map.Invoke(source, destination, new AsyncMappingContext(contextOptions, cancellationToken));
 
 				// Should not happen
 				TypeUtils.CheckObjectType(result, destinationType);
 
 				return result;
-			}, new LambdaDisposable(() => GetMappingOptionsPool(mappingOptions).Return(context)));
+			});
 		}
 		#endregion
 	}

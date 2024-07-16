@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
@@ -496,7 +497,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.AreEqual("-6", await factory.Invoke(-3));
 			var context2 = MappingOptionsUtils.asyncContext;
 			Assert.IsNotNull(context2);
-			Assert.AreSame(context1, context2);
+			Assert.AreSame(context1.Value.Mapper, context2.Value.Mapper);
+			Assert.AreSame(context1.Value.ServiceProvider, context2.Value.ServiceProvider);
+			Assert.AreSame(context1.Value.MappingOptions, context2.Value.MappingOptions);
 		}
 
 		[TestMethod]

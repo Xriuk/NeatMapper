@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
@@ -24,6 +25,9 @@ namespace NeatMapper {
 		/// Maps an object into a new one asynchronously.
 		/// </summary>
 		/// <param name="source">Object to map, may be null.</param>
+		/// <param name="cancellationToken">
+		/// Cancellation token used to cancel async operations, will be forwarded to all the contexts in the mapping.
+		/// </param>
 		/// <returns>
 		/// A task which when completed returns the newly created object of type <see cref="DestinationType"/>,
 		/// which may be null.
@@ -42,7 +46,8 @@ namespace NeatMapper {
 #else
 			object
 #endif
-			source);
+			source,
+			CancellationToken cancellationToken = default);
 	}
 
 	/// <summary>
@@ -50,16 +55,22 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface IAsyncNewMapFactory<TSource, TDestination> : IAsyncNewMapFactory {
-		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object)" path="/summary"/>
-		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object)" path="/param[@name='source']"/>
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class AsyncNewMapFactory<TSource, TDestination> : IAsyncNewMapFactory {
+		public abstract Type SourceType { get; }
+
+		public abstract Type DestinationType { get; }
+
+
+		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object, CancellationToken)" path="/summary"/>
+		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns the newly created object of type <typeparamref name="TDestination"/>,
 		/// which may be null.
 		/// </returns>
-		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object)" path="/exception"/>
-		Task<
+		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object, CancellationToken)" path="/exception"/>
+		public abstract Task<
 #if NET5_0_OR_GREATER
 			TDestination?
 #else
@@ -71,6 +82,71 @@ namespace NeatMapper {
 #else
 			TSource
 #endif
-			source);
+			source,
+			CancellationToken cancellationToken = default);
+
+		protected abstract void Dispose(bool disposing);
+
+		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+
+		async Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> IAsyncNewMapFactory.Invoke(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			return await Invoke((TSource)source, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+
+		public static implicit operator Func<
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			,
+			CancellationToken,
+			Task<
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			>>(
+			AsyncNewMapFactory<
+#if NET5_0_OR_GREATER
+				TSource?
+#else
+				TSource
+#endif
+				,
+#if NET5_0_OR_GREATER
+				TDestination?
+#else
+				TDestination
+#endif
+				> factory) => factory.Invoke;
 	}
 }

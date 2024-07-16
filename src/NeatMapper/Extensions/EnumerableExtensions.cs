@@ -9,10 +9,10 @@ namespace NeatMapper {
 		#region Runtime destination, inferred source
 		/// <summary>
 		/// Projects an enumerable into another one lazily. The source type will be inferred from the enumerable itself
-		/// (so it CANNOT be null, if it implements <see cref="IEnumerable{T}"/> it will be the type argument,
-		/// otherwise it will be <see cref="object"/>).
+		/// (if it implements <see cref="IEnumerable{T}"/> it will be the type argument, otherwise it will be
+		/// <see cref="object"/>).
 		/// </summary>
-		/// <param name="mapper">Mapper to use.</param>
+		/// <param name="mapper">Mapper to use to map the elements.</param>
 		/// <param name="destinationElementType">
 		/// Type of the destination element, used to retrieve the available maps.
 		/// </param>

@@ -41,7 +41,10 @@ namespace NeatMapper.EntityFrameworkCore {
 				_mapDelegate.Invoke(destination, source, sourceEntities);
 			}
 
-			public void Dispose() {
+			private void Dispose(bool disposing) {
+				if(!disposing)
+					return;
+
 				lock (_disposables) {
 					if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
 						throw new ObjectDisposedException(null);
@@ -50,6 +53,10 @@ namespace NeatMapper.EntityFrameworkCore {
 						disposable?.Dispose();
 					}
 				}
+			}
+			public void Dispose() {
+				Dispose(true);
+				GC.SuppressFinalize(this);
 			}
 		}
 

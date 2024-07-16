@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
@@ -11,15 +10,21 @@ namespace NeatMapper {
 	/// <see cref="ICollection{T}"/> (not readonly), will create a new <see cref="ICollection{T}"/>
 	/// if destination is null.<br/>
 	/// Will try to match elements of the source collection with the destination by using an
-	/// <see cref="IMatcher"/> if provided:<br/>
-	/// - If a match is found will try to merge the two elements or will replace with a new one by using
-	/// a <see cref="IMapper"/>.<br/>
-	/// - If a match is not found a new element will be added by mapping the types with a <see cref="IMapper"/>
-	/// by trying new map, then merge map.<br/>
+	/// <see cref="IMatcher"/> if provided:
+	/// <list type="bullet">
+	/// <item>
+	/// If a match is found will try to merge the two elements or will replace with a new one by using
+	/// a <see cref="IMapper"/>.
+	/// </item>
+	/// <item>
+	/// If a match is not found a new element will be added by mapping the types with a <see cref="IMapper"/>
+	/// by trying new map, then merge map.
+	/// </item>
+	/// </list>
 	/// Not matched elements from the destination collection are treated according to
-	/// <see cref="MergeCollectionsOptions"/> (and overrides).<br/>
-	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
+	/// <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
+	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
 	public sealed class MergeCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
 		// DEV: what is it used for? Try to remove
 		private readonly IMapper _originalElementMapper;
@@ -87,7 +92,7 @@ namespace NeatMapper {
 
 			_originalElementMapper = elementsMapper;
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
-			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
+			_mergeCollectionOptions = mergeCollectionsOptions != null ? new MergeCollectionsOptions(mergeCollectionsOptions) : new MergeCollectionsOptions();
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
@@ -335,32 +340,26 @@ namespace NeatMapper {
 											// Deleted elements
 											if (removeNotMatchedDestinationElements) {
 												foreach (var destinationElement in destinationEnumerable) {
-													bool found = false;
-													foreach (var sourceElement in sourceEnumerable) {
-														if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
-															found = true;
-															break;
-														}
-													}
+													if (!sourceEnumerable.Cast<object>()
+																.Any(sourceElement => elementsMatcherFactory.Invoke(sourceElement, destinationElement))) {
 
-													if (!found)
 														elementsToRemove.Add(destinationElement);
+													}
 												}
 											}
 
 											// Added/updated elements
 											foreach (var sourceElement in sourceEnumerable) {
+												// Cannot use FirstOrDefault because there might be matching null elements
 												bool found = false;
 												object matchingDestinationElement = null;
-												foreach (var destinationElement in destinationEnumerable) {
-													if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-														!elementsToRemove.Contains(destinationElement)) {
-
-														matchingDestinationElement = destinationElement;
-														found = true;
-														break;
-													}
+												try {
+													matchingDestinationElement = destinationEnumerable.Cast<object>()
+														.First(destinationElement => elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+															!elementsToRemove.Contains(destinationElement));
+													found = true;
 												}
+												catch {}
 
 												if (found) {
 													// Try merge map

@@ -8,7 +8,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace NeatMapper {
-	internal class CachedLazyEnumerable<T> : IEnumerable<T>, IDisposable {
+	internal sealed class CachedLazyEnumerable<T> : IEnumerable<T>, IDisposable {
 		private IEnumerator<T> _enumerator;
 		private readonly ConcurrentBag<T> _cache = new ConcurrentBag<T>();
 
@@ -45,11 +45,18 @@ namespace NeatMapper {
 			return GetEnumerator();
 		}
 
-		public void Dispose() {
-			lock (_cache) {
-				_enumerator?.Dispose();
-				_enumerator = null;
+		private void Dispose(bool disposing) {
+			if (disposing) {
+				lock (_cache) {
+					_enumerator?.Dispose();
+					_enumerator = null;
+				}
 			}
+		}
+
+		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
 		}
 	}
 }

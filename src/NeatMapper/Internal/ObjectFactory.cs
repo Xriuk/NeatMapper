@@ -11,6 +11,8 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace NeatMapper {
 	internal static class ObjectFactory {
@@ -24,10 +26,18 @@ namespace NeatMapper {
 
 		private static readonly ConcurrentDictionary<Type, (Func<object>, Type)> factoriesCache = new ConcurrentDictionary<Type, (Func<object>, Type)>();
 
-		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsCustomAddMethodsCache = new ConcurrentDictionary<Type, Action<object, object>>();
-		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsAddMethodsCache = new ConcurrentDictionary<Type, Action<object, object>>();
-		private static readonly ConcurrentDictionary<Type, Func<object, object, bool>> collectionsRemoveMethodsCache = new ConcurrentDictionary<Type, Func<object, object, bool>>();
-		private static readonly ConcurrentDictionary<Type, Func<object, object>> collectionsConversionCache = new ConcurrentDictionary<Type, Func<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsCustomAddMethodsCache =
+			new ConcurrentDictionary<Type, Action<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsAddMethodsCache =
+			new ConcurrentDictionary<Type, Action<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, object, bool>> collectionsRemoveMethodsCache =
+			new ConcurrentDictionary<Type, Func<object, object, bool>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, object>> collectionsConversionMethodsCache =
+			new ConcurrentDictionary<Type, Func<object, object>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, CancellationToken, IAsyncDisposable>> asyncGetEnumeratorMethodsCache =
+			new ConcurrentDictionary<Type, Func<object, CancellationToken, IAsyncDisposable>>();
+		private static readonly ConcurrentDictionary<Type, Func<IAsyncDisposable, ValueTask<bool>>> asyncMoveNextMethodsCache =
+			new ConcurrentDictionary<Type, Func<IAsyncDisposable, ValueTask<bool>>>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -120,7 +130,8 @@ namespace NeatMapper {
 				var collectionDefinition = objectType.GetGenericTypeDefinition();
 				if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
 					collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
-					collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+					collectionDefinition == typeof(ReadOnlyObservableCollection<>) ||
+					collectionDefinition == typeof(IAsyncEnumerable<>)) {
 
 					return true;
 				}
@@ -136,13 +147,17 @@ namespace NeatMapper {
 			else if (objectType.IsArray)
 				objectType = typeof(List<>).MakeGenericType(objectType.GetElementType());
 			else if (objectType.IsGenericType) {
-				var collectionDefinition = objectType.GetGenericTypeDefinition();
-				if (collectionDefinition == typeof(ReadOnlyCollection<>))
-					objectType = typeof(List<>).MakeGenericType(objectType.GetGenericArguments());
-				else if (collectionDefinition == typeof(ReadOnlyDictionary<,>))
-					objectType = typeof(Dictionary<,>).MakeGenericType(objectType.GetGenericArguments());
-				else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>))
-					objectType = typeof(ObservableCollection<>).MakeGenericType(objectType.GetGenericArguments());
+				if (objectType.IsAsyncEnumerable()) 
+					objectType = typeof(List<>).MakeGenericType(objectType.GetAsyncEnumerableElementType());
+				else { 
+					var collectionDefinition = objectType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>))
+						objectType = typeof(List<>).MakeGenericType(objectType.GetGenericArguments());
+					else if (collectionDefinition == typeof(ReadOnlyDictionary<,>))
+						objectType = typeof(Dictionary<,>).MakeGenericType(objectType.GetGenericArguments());
+					else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>))
+						objectType = typeof(ObservableCollection<>).MakeGenericType(objectType.GetGenericArguments());
+				}
 			}
 
 			return CreateFactory(objectType, out actualType);
@@ -208,7 +223,7 @@ namespace NeatMapper {
 				if (destinationType == typeof(string))
 					return collection => ((StringBuilder)collection).ToString();
 				else if(destinationType.IsArray || destinationType.IsGenericType) { 
-					return collectionsConversionCache.GetOrAdd(destinationType, destination => {
+					return collectionsConversionMethodsCache.GetOrAdd(destinationType, destination => {
 						if (destination.IsArray) {
 							var toArray = Enumerable_ToArray.MakeGenericMethod(destination.GetElementType());
 							var collectionParam = Expression.Parameter(typeof(object), "collection");
@@ -217,29 +232,34 @@ namespace NeatMapper {
 							return Expression.Lambda<Func<object, object>>(Expression.Convert(body, typeof(object)), collectionParam).Compile();
 						}
 						else if (destination.IsGenericType){
-							var collectionDefinition = destination.GetGenericTypeDefinition();
 							ConstructorInfo constr = null;
-							if (collectionDefinition == typeof(ReadOnlyCollection<>)) {
-								constr = typeof(ReadOnlyCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
-									.First(c => {
-										var param = c.GetParameters().Single();
-										return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IList<>);
-									});
+							if (destination.IsAsyncEnumerable()) {
+								constr = typeof(DefaultAsyncEnumerable<>).MakeGenericType(destination.GetAsyncEnumerableElementType()).GetConstructors()
+										.Single();
 							}
-							else if (collectionDefinition == typeof(ReadOnlyDictionary<,>)) {
-								constr = typeof(ReadOnlyDictionary<,>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
-									.First(c => {
-										var param = c.GetParameters().Single();
-										return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>);
-									});
-							}
-							else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
-								constr = typeof(ReadOnlyObservableCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
-									.First(c => {
-										var param = c.GetParameters().Single();
-										return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(ObservableCollection<>);
-									});
-
+							else { 
+								var collectionDefinition = destination.GetGenericTypeDefinition();
+								if (collectionDefinition == typeof(ReadOnlyCollection<>)) {
+									constr = typeof(ReadOnlyCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
+										.First(c => {
+											var param = c.GetParameters().Single();
+											return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IList<>);
+										});
+								}
+								else if (collectionDefinition == typeof(ReadOnlyDictionary<,>)) {
+									constr = typeof(ReadOnlyDictionary<,>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
+										.First(c => {
+											var param = c.GetParameters().Single();
+											return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(IDictionary<,>);
+										});
+								}
+								else if (collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+									constr = typeof(ReadOnlyObservableCollection<>).MakeGenericType(destination.GetGenericArguments()).GetConstructors()
+										.First(c => {
+											var param = c.GetParameters().Single();
+											return param.ParameterType.IsGenericType && param.ParameterType.GetGenericTypeDefinition() == typeof(ObservableCollection<>);
+										});
+								}
 							}
 
 							if(constr != null) {
@@ -256,6 +276,26 @@ namespace NeatMapper {
 			}
 			
 			return collection => collection;
+		}
+
+		public static Func<object, CancellationToken, IAsyncDisposable> GetAsyncEnumerableGetAsyncEnumerator(Type elementType) {
+			return asyncGetEnumeratorMethodsCache.GetOrAdd(elementType, type => {
+				var enumerableType = typeof(IAsyncEnumerable<>).MakeGenericType(type);
+				var enumerableParam = Expression.Parameter(typeof(object), "enumerable");
+				var cancellationParam = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
+				// ((IAsyncEnumerator<Type>)enumerable).GetAsyncEnumerator(cancellationToken)
+				var body = Expression.Call(Expression.Convert(enumerableParam, enumerableType), enumerableType.GetMethod(nameof(IAsyncEnumerable<object>.GetAsyncEnumerator)), cancellationParam);
+				return Expression.Lambda<Func<object, CancellationToken, IAsyncDisposable>>(body, enumerableParam, cancellationParam).Compile();
+			});
+		}
+		public static Func<IAsyncDisposable, ValueTask<bool>> GetAsyncEnumeratorMoveNextAsync(Type elementType) {
+			return asyncMoveNextMethodsCache.GetOrAdd(elementType, type => {
+				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
+				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
+				// ((IAsyncEnumerator<Type>)enumerator).MoveNextAsync()
+				var body = Expression.Call(Expression.Convert(enumeratorParam, enumeratorType), enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync)));
+				return Expression.Lambda<Func<IAsyncDisposable, ValueTask<bool>>>(body, enumeratorParam).Compile();
+			});
 		}
 	}
 }

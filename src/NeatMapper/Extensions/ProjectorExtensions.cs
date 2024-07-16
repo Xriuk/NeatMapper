@@ -32,7 +32,16 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)"/>
-		public static LambdaExpression Project(this IProjector projector, Type sourceType, Type destinationType, params object[] mappingOptions) {
+		public static LambdaExpression Project(this IProjector projector,
+			Type sourceType,
+			Type destinationType,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -144,7 +153,14 @@ namespace NeatMapper {
 			TDestination
 #endif
 			>>
-			Project<TSource, TDestination>(this IProjector projector, params object[] mappingOptions) {
+			Project<TSource, TDestination>(this IProjector projector,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
@@ -228,7 +244,17 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanProject(IProjector, Type, Type, MappingOptions)"/>
-		public static bool CanProject(this IProjector projector, Type sourceType, Type destinationType, params object[] mappingOptions) {
+		public static bool CanProject(this IProjector projector,
+			Type sourceType,
+			Type destinationType,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
 			return projector.CanProject(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
@@ -267,7 +293,15 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
-		public static bool CanProject<TSource, TDestination>(this IProjector projector, params object[] mappingOptions) {
+		public static bool CanProject<TSource, TDestination>(this IProjector projector,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
 			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion

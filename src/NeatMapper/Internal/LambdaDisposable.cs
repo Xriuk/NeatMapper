@@ -9,8 +9,14 @@ namespace NeatMapper {
 		}
 
 
+		private void Dispose(bool disposing) {
+			if (disposing) 
+				_dispose.Invoke();
+		}
+
 		public void Dispose() {
-			_dispose.Invoke();
+			Dispose(true);
+			GC.SuppressFinalize(this);
 		}
 	}
 }

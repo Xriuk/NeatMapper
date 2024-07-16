@@ -1,6 +1,10 @@
 <!-- https://stackoverflow.com/a/73098203 -->
 <Project>
- <Target Name="UseExplicitPackageVersions" BeforeTargets="GenerateNuspec">
+	<PropertyGroup>
+		<GlobalVersion>4.0.0</GlobalVersion>
+	</PropertyGroup>
+
+	<Target Name="UseExplicitPackageVersions" BeforeTargets="GenerateNuspec">
     <ItemGroup>
       <_ProjectReferenceWithExplicitPackageVersion Include="@(ProjectReference->'%(FullPath)')"
         Condition="'%(ProjectReference.PackageVersion)' != ''" />

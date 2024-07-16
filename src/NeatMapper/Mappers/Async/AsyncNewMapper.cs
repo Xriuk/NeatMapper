@@ -96,18 +96,13 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 			var map = _configuration.GetSingleMapAsync((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
-			try { 
-				var result = await map.Invoke(source, context);
+			var contextOptions = GetOrCreateMappingContextOptions(mappingOptions);
+			var result = await map.Invoke(source, new AsyncMappingContext(contextOptions, cancellationToken));
 
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
+			// Should not happen
+			TypeUtils.CheckObjectType(result, destinationType);
 
-				return result;
-			}
-			finally {
-				GetMappingOptionsPool(mappingOptions).Return(context);
-			}
+			return result;
 		}
 
 		override public Task<
@@ -193,8 +188,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -202,18 +196,18 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetSingleMapAsync((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions, cancellationToken);
+			var contextOptions = GetOrCreateMappingContextOptions(mappingOptions);
 
-			return new DisposableAsyncNewMapFactory(sourceType, destinationType, async source => {
+			return new DefaultAsyncNewMapFactory(sourceType, destinationType, async (source, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-				var result = await map.Invoke(source, context);
+				var result = await map.Invoke(source, new AsyncMappingContext(contextOptions, cancellationToken));
 
 				// Should not happen
 				TypeUtils.CheckObjectType(result, destinationType);
 
 				return result;
-			}, new LambdaDisposable(() => GetMappingOptionsPool(mappingOptions).Return(context)));
+			});
 		}
 
 		public IAsyncMergeMapFactory MapAsyncMergeFactory(
@@ -224,8 +218,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));

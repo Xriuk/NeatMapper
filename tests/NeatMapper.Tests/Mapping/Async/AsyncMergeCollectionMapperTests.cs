@@ -570,6 +570,25 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreEqual(typeof(List<float>), exc.To);
 			}
 		}
+
+
+		[TestMethod]
+		public async Task ShouldMapAsyncEnumerable() {
+			Assert.IsTrue(await _mapper.CanMapAsyncMerge<IAsyncEnumerable<int>, List<string>>());
+
+			MappingOptionsUtils.options = null;
+			MappingOptionsUtils.mergeOptions = null;
+			var strings = await _mapper.MapAsync<IAsyncEnumerable<int>, List<string>>(new DefaultAsyncEnumerable<int>(new[] { 2, -3, 0 }), new List<string>());
+
+			Assert.IsNotNull(strings);
+			Assert.AreEqual(3, strings.Count);
+			Assert.AreEqual("4", strings[0]);
+			Assert.AreEqual("-6", strings[1]);
+			Assert.AreEqual("0", strings[2]);
+
+			Assert.IsNull(MappingOptionsUtils.options);
+			Assert.IsNull(MappingOptionsUtils.mergeOptions);
+		}
 	}
 
 	public abstract class AsyncMergeMapperMergeCollectionMapperTests : AsyncMergeCollectionMapperTests {

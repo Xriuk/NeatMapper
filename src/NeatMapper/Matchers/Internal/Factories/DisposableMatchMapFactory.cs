@@ -5,7 +5,7 @@
 using System;
 
 namespace NeatMapper {
-	internal class DisposableMatchMapFactory<TSource, TDestination> : MatchMapFactory<TSource, TDestination> {
+	internal class DisposableMatchMapFactory<TSource, TDestination> : DefaultMatchMapFactory<TSource, TDestination> {
 		protected readonly IDisposable[] _disposables;
 
 		internal DisposableMatchMapFactory(Func<TSource, TDestination, bool> mapDelegate, params IDisposable[] disposables) :
@@ -17,12 +17,14 @@ namespace NeatMapper {
 		}
 
 
-		public override void Dispose() {
+		protected override void Dispose(bool disposing) {
 			lock (_disposables) {
-				base.Dispose();
+				base.Dispose(disposing);
 
-				foreach (var disposable in _disposables) {
-					disposable?.Dispose();
+				if (disposing) { 
+					foreach (var disposable in _disposables) {
+						disposable?.Dispose();
+					}
 				}
 			}
 		}

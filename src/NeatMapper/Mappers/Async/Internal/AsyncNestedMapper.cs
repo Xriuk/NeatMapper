@@ -23,13 +23,16 @@ namespace NeatMapper {
 		private readonly Func<MappingOptions, MappingOptions> _optionsFactory;
 
 		/// <summary>
-		/// Cached input and output <see cref="MappingOptions"/> from <see cref="_optionsFactory"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="MappingOptions"/> from <see cref="_optionsFactory"/>.
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
+			new ConcurrentDictionary<MappingOptions, MappingOptions>();
 
 		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly MappingOptions _optionsCacheNull;
 
@@ -58,7 +61,7 @@ namespace NeatMapper {
 
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 			_optionsFactory = optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory));
-			_optionsCacheNull = _optionsFactory.Invoke(null);
+			_optionsCacheNull = _optionsFactory.Invoke(MappingOptions.Empty);
 		}
 
 
@@ -161,10 +164,9 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return _mapper.MapAsyncNewFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions), cancellationToken);
+			return _mapper.MapAsyncNewFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 
 		public IAsyncMergeMapFactory MapAsyncMergeFactory(
@@ -175,10 +177,9 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return _mapper.MapAsyncMergeFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions), cancellationToken);
+			return _mapper.MapAsyncMergeFactory(sourceType, destinationType, GetOrCreateOptions(mappingOptions));
 		}
 		#endregion
 
@@ -187,16 +188,13 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		/// <summary>
-		/// Retrieves cached cached options or apples <see cref="_optionsFactory"/> on them.
-		/// </summary>
-		/// <param name="mappingOptions">Input options to check.</param>
-		/// <returns>Cached or created and cached resulting options.</returns>
-		private MappingOptions GetOrCreateOptions(MappingOptions mappingOptions) {
-			if (mappingOptions == null)
+		private MappingOptions GetOrCreateOptions(MappingOptions options) {
+			if (options == null)
 				return _optionsCacheNull;
+			else if(options.Cached)
+				return _optionsCache.GetOrAdd(options, _optionsFactory);
 			else
-				return _optionsCache.GetOrAdd(mappingOptions, _optionsFactory);
+				return _optionsFactory.Invoke(options);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

@@ -50,6 +50,7 @@ namespace NeatMapper.Tests.Matching {
 				IMatchMap<float, string>
 #endif
 				.Match(float source, string destination, MatchingContext context) {
+
 				options = context.MappingOptions.GetOptions<TestMappingOptions>();
 				return (source * 2).ToString() == destination;
 			}
@@ -120,45 +121,76 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestInitialize]
 		public void Initialize() {
-			_matcher = new CompositeMatcher(
-				new CustomMatcher(new CustomMapsOptions {
-					TypesToScan = new List<Type> { typeof(Maps) }
-				}),
-				new HierarchyCustomMatcher(new CustomMapsOptions {
-					TypesToScan = new List<Type> { typeof(Maps) }
-				})
-			);
+			_matcher = new CompositeMatcher(new CompositeMatcherOptions {
+				Matchers = new List<IMatcher> {
+					new CustomMatcher(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(Maps) }
+					}),
+					new HierarchyCustomMatcher(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(Maps) }
+					})
+				}
+			});
 		}
 
 
 		[TestMethod]
 		public void ShouldMatchPrimitives() {
 			Assert.IsTrue(_matcher.CanMatch<int, string>());
+			Assert.IsTrue(_matcher.CanMatch<string, int>());
 
 			Assert.IsTrue(_matcher.Match(2, "4"));
+			Assert.IsTrue(_matcher.Match("4", 2));
 			Assert.IsFalse(_matcher.Match(-3, "-5"));
+			Assert.IsFalse(_matcher.Match("-5", -3));
 			Assert.IsTrue(_matcher.Match(0, "0"));
+			Assert.IsTrue(_matcher.Match("0", 0));
 
 			// Factories should share the same context
-			var factory = _matcher.MatchFactory<int, string>();
-			MappingOptionsUtils.matchingContext = null;
-			Assert.IsTrue(factory.Invoke(2, "4"));
-			var context1 = MappingOptionsUtils.matchingContext;
-			Assert.IsNotNull(context1);
-			MappingOptionsUtils.matchingContext = null;
-			Assert.IsTrue(factory.Invoke(-3, "-6"));
-			var context2 = MappingOptionsUtils.matchingContext;
-			Assert.IsNotNull(context2);
-			Assert.AreSame(context1, context2);
+			{ 
+				var factory = _matcher.MatchFactory<int, string>();
+				MappingOptionsUtils.matchingContext = null;
+				Assert.IsTrue(factory.Invoke(2, "4"));
+				var context1 = MappingOptionsUtils.matchingContext;
+				Assert.IsNotNull(context1);
+				MappingOptionsUtils.matchingContext = null;
+				Assert.IsTrue(factory.Invoke(-3, "-6"));
+				var context2 = MappingOptionsUtils.matchingContext;
+				Assert.IsNotNull(context2);
+				Assert.AreSame(context1, context2);
+			}
+			{
+				var factory = _matcher.MatchFactory<string, int>();
+				MappingOptionsUtils.matchingContext = null;
+				Assert.IsTrue(factory.Invoke("4", 2));
+				var context1 = MappingOptionsUtils.matchingContext;
+				Assert.IsNotNull(context1);
+				MappingOptionsUtils.matchingContext = null;
+				Assert.IsTrue(factory.Invoke("-6", -3));
+				var context2 = MappingOptionsUtils.matchingContext;
+				Assert.IsNotNull(context2);
+				Assert.AreSame(context1, context2);
+			}
 		}
 
 		[TestMethod]
 		public void ShouldMatchClasses() {
 			Assert.IsTrue(_matcher.CanMatch<Product, ProductDto>());
+			Assert.IsTrue(_matcher.CanMatch<ProductDto, Product>());
 
 			Assert.IsTrue(_matcher.Match(new Product {
 				Code = "Test1"
 			}, new ProductDto {
+				Code = "Test1"
+			}));
+			Assert.IsTrue(_matcher.Match(new ProductDto {
+				Code = "Test1"
+			}, new Product {
+				Code = "Test1"
+			}));
+			Assert.IsFalse(_matcher.Match(new ProductDto {
+				Code = "Test2"
+			}, new Product {
 				Code = "Test1"
 			}));
 			Assert.IsFalse(_matcher.Match(new Product {
@@ -172,10 +204,15 @@ namespace NeatMapper.Tests.Matching {
 			}, new ProductDto {
 				Code = "Test1"
 			}));
-			Assert.IsFalse(_matcher.MatchFactory<Product, ProductDto>().Invoke(new Product {
+			Assert.IsTrue(_matcher.MatchFactory<ProductDto, Product>().Invoke(new ProductDto {
 				Code = "Test1"
-			}, new ProductDto {
+			}, new Product {
+				Code = "Test1"
+			}));
+			Assert.IsFalse(_matcher.MatchFactory<ProductDto, Product>().Invoke(new ProductDto {
 				Code = "Test2"
+			}, new Product {
+				Code = "Test1"
 			}));
 		}
 
@@ -207,10 +244,16 @@ namespace NeatMapper.Tests.Matching {
 		[TestMethod]
 		public void ShouldMatchHierarchies() {
 			Assert.IsTrue(_matcher.CanMatch<LimitedProduct, ProductDto>());
+			Assert.IsTrue(_matcher.CanMatch<ProductDto, LimitedProduct>());
 
 			Assert.IsTrue(_matcher.Match(new LimitedProduct {
 				Code = "Test1"
 			}, new ProductDto {
+				Code = "Test1"
+			}));
+			Assert.IsTrue(_matcher.Match(new ProductDto {
+				Code = "Test1"
+			}, new LimitedProduct {
 				Code = "Test1"
 			}));
 
@@ -259,10 +302,14 @@ namespace NeatMapper.Tests.Matching {
 		public void ShouldNotMatchIfMapRejectsItself() {
 			// CanMatch returns true because the map does exist, even if it will fail
 			Assert.IsTrue(_matcher.CanMatch<float, double>());
+			Assert.IsTrue(_matcher.CanMatch<double, float>());
 
-			var exc = TestUtils.AssertMapNotFound(() => _matcher.Match(1f, 2d));
-			Assert.AreEqual(typeof(float), exc.From);
-			Assert.AreEqual(typeof(double), exc.To);
+			var exc1 = TestUtils.AssertMapNotFound(() => _matcher.Match(1f, 2d));
+			Assert.AreEqual(typeof(float), exc1.From);
+			Assert.AreEqual(typeof(double), exc1.To);
+			var exc2 = TestUtils.AssertMapNotFound(() => _matcher.Match(2d, 1f));
+			Assert.AreEqual(typeof(double), exc2.From);
+			Assert.AreEqual(typeof(float), exc2.To);
 		}
 	}
 }

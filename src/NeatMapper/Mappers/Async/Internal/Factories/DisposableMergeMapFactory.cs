@@ -3,34 +3,37 @@
 #endif
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
-	internal class DisposableAsyncMergeMapFactory<TSource, TDestination> : AsyncMergeMapFactory<TSource, TDestination> {
+	internal class DisposableAsyncMergeMapFactory<TSource, TDestination> : DefaultAsyncMergeMapFactory<TSource, TDestination> {
 		protected readonly IDisposable[] _disposables;
 
-		internal DisposableAsyncMergeMapFactory(Func<TSource, TDestination, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
+		internal DisposableAsyncMergeMapFactory(Func<TSource, TDestination, CancellationToken, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
 			this(typeof(TSource), typeof(TDestination), mapDelegate, disposables){ }
-		protected DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<TSource, TDestination, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
+		protected DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<TSource, TDestination, CancellationToken, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
 			base(sourceType, destinationType, mapDelegate) {
 
 			_disposables = disposables ?? throw new ArgumentNullException(nameof(disposables));
 		}
 
 
-		public override void Dispose() {
+		protected override void Dispose(bool disposing) {
 			lock (_disposables) {
-				base.Dispose();
+				base.Dispose(disposing);
 
-				foreach (var disposable in _disposables) {
-					disposable?.Dispose();
+				if (disposing) { 
+					foreach (var disposable in _disposables) {
+						disposable?.Dispose();
+					}
 				}
 			}
 		}
 	}
 
 	internal class DisposableAsyncMergeMapFactory : DisposableAsyncMergeMapFactory<object, object> {
-		internal DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<object, object, Task<object>> mapDelegate, params IDisposable[] disposables) :
+		internal DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<object, object, CancellationToken, Task<object>> mapDelegate, params IDisposable[] disposables) :
 			base(sourceType, destinationType, mapDelegate, disposables) {}
 	}
 }

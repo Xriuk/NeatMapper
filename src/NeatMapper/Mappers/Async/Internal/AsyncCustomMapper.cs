@@ -24,27 +24,24 @@ namespace NeatMapper {
 		protected readonly IServiceProvider _serviceProvider;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> and output pool of <see cref="AsyncMappingContext"/>.<br/>S
-		/// A pool is needed for each <see cref="MappingOptions"/> because <see cref="CancellationToken"/> can change,
-		/// so we reuse <see cref="AsyncMappingContext"/>s by changing <see cref="AsyncMappingContext.CancellationToken"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="AsyncMappingContextOptions"/>.
 		/// </summary>
-		internal readonly ConcurrentDictionary<MappingOptions, ObjectPool<AsyncMappingContext>> _contextsCache
-			= new ConcurrentDictionary<MappingOptions, ObjectPool<AsyncMappingContext>>();
+		internal readonly ConcurrentDictionary<MappingOptions, AsyncMappingContextOptions> _contextsCache
+			= new ConcurrentDictionary<MappingOptions, AsyncMappingContextOptions>();
 
 		/// <summary>
-		/// Cached output pool of <see cref="AsyncMappingContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed
-		/// for thread-safety.<br/>
-		/// A pool is needed for each <see cref="MappingOptions"/> because <see cref="CancellationToken"/> can change,
-		/// so we reuse <see cref="AsyncMappingContext"/>s by changing <see cref="AsyncMappingContext.CancellationToken"/>.
+		/// Cached output <see cref="AsyncMappingContextOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/>,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
-		internal readonly ObjectPool<AsyncMappingContext> _contextsCacheNull;
+		internal readonly AsyncMappingContextOptions _contextsCacheNull;
 
 
 		internal AsyncCustomMapper(CustomMapsConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
-			_contextsCacheNull = new ObjectPool<AsyncMappingContext>(() => GetOrCreateMappingContext(MappingOptions.Empty, default));
+			_contextsCacheNull = CreateMappingContextOptions(MappingOptions.Empty);
 		}
 
 
@@ -52,27 +49,23 @@ namespace NeatMapper {
 		public abstract Task<object> MapAsync(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken  = default);
 
 
-		internal ObjectPool<AsyncMappingContext> GetMappingOptionsPool(MappingOptions options) {
-			if (options == null)
+		protected AsyncMappingContextOptions GetOrCreateMappingContextOptions(MappingOptions options) {
+			if (options == null || options == MappingOptions.Empty)
 				return _contextsCacheNull;
-			else {
-				return _contextsCache.GetOrAdd(options, opts => new ObjectPool<AsyncMappingContext>(() => {
-					var overrideOptions = opts.GetOptions<AsyncMapperOverrideMappingOptions>();
-					return new AsyncMappingContext(
-						overrideOptions?.ServiceProvider ?? _serviceProvider,
-						overrideOptions?.Mapper ?? this,
-						this,
-						opts,
-						default
-					);
-				}));
-			}
+			else if(options.Cached)
+				return _contextsCache.GetOrAdd(options, CreateMappingContextOptions);
+			else
+				return CreateMappingContextOptions(options);
 		}
 
-		protected AsyncMappingContext GetOrCreateMappingContext(MappingOptions options, CancellationToken cancellationToken) {
-			var context = GetMappingOptionsPool(options).Get();
-			context.CancellationToken = cancellationToken;
-			return context;
+		private AsyncMappingContextOptions CreateMappingContextOptions(MappingOptions options) {
+			var overrideOptions = options.GetOptions<AsyncMapperOverrideMappingOptions>();
+			return new AsyncMappingContextOptions(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Mapper ?? this,
+				this,
+				options
+			);
 		}
 	}
 }

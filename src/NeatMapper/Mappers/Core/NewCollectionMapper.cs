@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which creates a new collection (derived from <see cref="ICollection{T}"/>
-	/// plus some special types like below), even nested and readonly, from a <see cref="IEnumerable{T}"/>.<br/>
+	/// <see cref="IMapper"/> which creates a new <see cref="IEnumerable{T}"/> (derived from <see cref="ICollection{T}"/>
+	/// plus some special types like below), even nested and readonly, from another <see cref="IEnumerable{T}"/>.<br/>
 	/// Elements are then mapped with another <see cref="IMapper"/> by trying new map first, then merge map.<br/>
 	/// Special collections which can be created are:
 	/// <list type="bullet">
@@ -14,8 +13,8 @@ namespace NeatMapper {
 	/// <item><see cref="Queue{T}"/></item>
 	/// <item><see cref="string"/> (considered as a collection of <see cref="char"/>s)</item>
 	/// </list>
-	/// Collections are NOT mapped lazily, all source elements are evaluated during the map.
 	/// </summary>
+	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
 	public sealed class NewCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
 		/// Creates a new instance of <see cref="NewCollectionMapper"/>.
@@ -24,8 +23,7 @@ namespace NeatMapper {
 		/// <see cref="IMapper"/> to use to map collection elements.<br/>
 		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.Mapper"/>.
 		/// </param>
-		public NewCollectionMapper(
-			IMapper elementsMapper) : base(elementsMapper) { }
+		public NewCollectionMapper(IMapper elementsMapper) : base(elementsMapper) { }
 		
 
 		#region IMapper methods

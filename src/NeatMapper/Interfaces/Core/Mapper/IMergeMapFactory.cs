@@ -55,8 +55,13 @@ namespace NeatMapper {
 	/// </summary>
 	/// <typeparam name="TSource">Source type.</typeparam>
 	/// <typeparam name="TDestination">Destination type.</typeparam>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface IMergeMapFactory<TSource, TDestination> : IMergeMapFactory {
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class MergeMapFactory<TSource, TDestination> : IMergeMapFactory {
+		public abstract Type SourceType { get; }
+
+		public abstract Type DestinationType { get; }
+
+
 		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/summary"/>
 		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/param[@name='source']"/>
 		/// <returns>
@@ -64,6 +69,7 @@ namespace NeatMapper {
 		/// <paramref name="destination"/> or a new one, may be null.
 		/// </returns>
 		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/exception"/>
+		public abstract
 #if NET5_0_OR_GREATER
 		TDestination?
 #else
@@ -82,5 +88,77 @@ namespace NeatMapper {
 			TDestination
 #endif
 			destination);
+
+		protected abstract void Dispose(bool disposing);
+
+		public void Dispose() {
+			Dispose(true);
+			GC.SuppressFinalize(this);
+		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+		object?
+#else
+		object
+#endif
+			IMergeMapFactory.Invoke(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			return Invoke((TSource)source, (TDestination)destination);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+
+		public static implicit operator Func<
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			>(
+			MergeMapFactory<
+#if NET5_0_OR_GREATER
+				TSource?
+#else
+				TSource
+#endif
+				,
+#if NET5_0_OR_GREATER
+				TDestination?
+#else
+				TDestination
+#endif
+				> factory) => factory.Invoke;
 	}
 }

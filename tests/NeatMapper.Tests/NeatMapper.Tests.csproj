@@ -2,6 +2,7 @@
 
   <PropertyGroup>
 		<TargetFrameworks>net47;net48;netcoreapp3.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
+		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">annotations</Nullable>
 
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>

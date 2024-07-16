@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Options;
+using System;
 using System.Collections.Concurrent;
 
 namespace NeatMapper {
@@ -21,13 +22,17 @@ namespace NeatMapper {
 		private readonly Func<MappingOptions, MappingOptions> _optionsFactory;
 
 		/// <summary>
-		/// Cached input and output <see cref="MappingOptions"/> from <see cref="_optionsFactory"/>.
+		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
+		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (<see cref="MappingOptions.Cached"/>
+		/// will depend on the factory) from <see cref="_optionsFactory"/>.
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache = new ConcurrentDictionary<MappingOptions, MappingOptions>();
+		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
+			new ConcurrentDictionary<MappingOptions, MappingOptions>();
 
 		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for the <see langword="null"/> input <see cref="MappingOptions"/>
-		/// (since a dictionary can't have a null key), also provides faster access since locking isn't needed for thread-safety.
+		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
+		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
+		/// also provides faster access since locking isn't needed for thread-safety.
 		/// </summary>
 		private readonly MappingOptions _optionsCacheNull;
 
@@ -43,6 +48,7 @@ namespace NeatMapper {
 		/// <param name="optionsFactory">
 		/// Method to invoke to alter the <see cref="MappingOptions"/> passed to the matcher,
 		/// both the passed parameter and the returned value may be null.
+		/// If null, the passed parameter should be treated as <see cref="MappingOptions.Empty"/>.
 		/// </param>
 		public NestedMatcher(
 			IMatcher matcher,
@@ -116,16 +122,13 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-		/// <summary>
-		/// Retrieves cached cached options or apples <see cref="_optionsFactory"/> on them.
-		/// </summary>
-		/// <param name="mappingOptions">Input options to check.</param>
-		/// <returns>Cached or created and cached resulting options.</returns>
 		private MappingOptions GetOrCreateOptions(MappingOptions mappingOptions) {
-			if (mappingOptions == null)
+			if (mappingOptions == null || mappingOptions == MappingOptions.Empty)
 				return _optionsCacheNull;
-			else
+			else if (mappingOptions.Cached)
 				return _optionsCache.GetOrAdd(mappingOptions, _optionsFactory);
+			else
+				return _optionsFactory.Invoke(mappingOptions);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

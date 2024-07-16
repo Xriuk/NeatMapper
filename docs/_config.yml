@@ -58,6 +58,8 @@ favicon_ico: "/assets/images/icon.png"
 search_enabled: true
 
 nav_external_links:
+  - title: NuGet
+    url: https://www.nuget.org/packages/NeatMapper/
   - title: GitHub
     url: https://github.com/Xriuk/NeatMapper
 

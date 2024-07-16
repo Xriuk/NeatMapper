@@ -115,8 +115,7 @@ namespace NeatMapper{
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
@@ -129,8 +128,7 @@ namespace NeatMapper{
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			throw new MapNotFoundException((sourceType, destinationType));
 		}

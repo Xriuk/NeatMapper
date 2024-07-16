@@ -318,7 +318,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					dbContextSemaphore = null;
 				}
 
-				return new MatchMapFactory(
+				return new DefaultMatchMapFactory(
 					sourceType, destinationType,
 					(source, destination) => {
 						NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -460,7 +460,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					dbContextSemaphore = null;
 				}
 
-				return new MatchMapFactory(
+				return new DefaultMatchMapFactory(
 					sourceType, destinationType,
 					(source, destination) => {
 						NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
