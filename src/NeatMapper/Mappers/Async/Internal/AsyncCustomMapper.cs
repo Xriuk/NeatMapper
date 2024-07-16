@@ -41,7 +41,7 @@ namespace NeatMapper {
 		internal AsyncCustomMapper(CustomMapsConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
-			_contextsCacheNull = GetOrCreateMappingContextOptions(MappingOptions.Empty);
+			_contextsCacheNull = CreateMappingContextOptions(MappingOptions.Empty);
 		}
 
 

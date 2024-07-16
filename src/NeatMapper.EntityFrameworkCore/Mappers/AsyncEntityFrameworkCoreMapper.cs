@@ -282,7 +282,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
 			// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
-			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, mappingOptions
+			var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(types, (mappingOptions ?? MappingOptions.Empty)
 				.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance));
 			try { 
 				// Check if we are mapping a collection or just a single entity

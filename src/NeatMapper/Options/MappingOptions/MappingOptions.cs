@@ -65,16 +65,21 @@ namespace NeatMapper {
 			}
 			else
 				this.options = emptyDictionary;
+
 			Cached = cached;
 		}
 
 		// Internal faster constructor
-		internal MappingOptions(IEnumerable<KeyValuePair<Type, object>> options) {
+		internal MappingOptions(IEnumerable<KeyValuePair<Type, object>> options,
+			bool cached = false) {
+
 #if NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER
 			this.options = new Dictionary<Type, object>(options);
 #else
 			this.options = options.ToDictionary(o => o.Key, o => o.Value);
 #endif
+
+			Cached = cached;
 		}
 
 

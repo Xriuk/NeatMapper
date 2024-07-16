@@ -18,6 +18,7 @@ namespace NeatMapper {
 
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+
 			return options.GetOptions(typeof(TOptions)) as TOptions;
 		}
 

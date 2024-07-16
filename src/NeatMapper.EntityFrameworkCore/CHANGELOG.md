@@ -1,5 +1,12 @@
 # Changelog
 
+## [4.0.0] - 2024-07-16
+
+### Changed
+
+- Updated NeatMapper dependency version
+
+
 ## [3.1.0] - 2024-04-26
 
 ### Added
@@ -21,6 +28,7 @@
 - `EntityFrameworkCoreMatcher` now correctly handles default values for keys (eg: allows to match an entity with a key with value 0)
 - Fixed `EntityFrameworkCoreProjector`'s `DbContext` retrieval
 
+
 ## [2.2.0] - 2024-02-03
 
 ### Changed
@@ -31,6 +39,7 @@
 
 - `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` now implement respectively `IMapperFactory` and `IAsyncMapperFactory`
 - `EntityFrameworkCoreMatcher` now implements `IMatcherFactory`
+
 
 ## [2.1.0] - 2023-12-05
 
@@ -47,6 +56,7 @@
 ### Fixed
 
 - `EntityFrameworkCoreMatcher` now correctly throws `MapNotFoundException` instead of `MatcherNotFound`
+
 
 ## [2.0.0] - 2023-11-12
 

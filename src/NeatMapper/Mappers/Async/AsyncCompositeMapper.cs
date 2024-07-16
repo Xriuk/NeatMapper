@@ -107,7 +107,7 @@ namespace NeatMapper {
 		public AsyncCompositeMapper(IList<IAsyncMapper> mappers) {
 			_mappers = new List<IAsyncMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers)));
 			_nestedMappingContext = new AsyncNestedMappingContext(this);
-			_optionsCacheNull = GetOrCreateMappingOptions(MappingOptions.Empty);
+			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
 		}
 
 

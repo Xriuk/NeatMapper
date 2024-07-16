@@ -326,7 +326,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				Assert.IsTrue(await _mapper.CanMapAsyncNew<(int, Guid)[], List<CompositePrimitiveKey>>());
 
-				var result = await _mapper.MapAsync<CompositePrimitiveKey[]>(new (int, Guid)[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), default((int, Guid)) });
+				var result = await _mapper.MapAsync<CompositePrimitiveKey[]>(new (int, Guid)[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), default });
 				Assert.AreEqual(2, result.Length);
 				Assert.IsNotNull(result[0]);
 				Assert.IsNull(result[1]);

@@ -2,7 +2,6 @@
 using Microsoft.CodeAnalysis;
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis.Operations;
-using Analyzer.Utilities;
 using System.Threading;
 using System;
 using System.Threading.Tasks;
@@ -49,17 +48,19 @@ namespace NeatMapper.Analyzers {
 
 
 		private void AnalyzeCompilationStart(CompilationStartAnalysisContext context) {
-			var typeProvider = WellKnownTypeProvider.GetOrCreate(context.Compilation);
-			if (!typeProvider.TryGetOrCreateTypeByMetadataName(typeof(CancellationToken).FullName, out INamedTypeSymbol cancellationTokenType)
-				|| !typeProvider.TryGetOrCreateTypeByMetadataName(typeof(ObsoleteAttribute).FullName, out INamedTypeSymbol obsoleteAttribute)
-				|| !typeProvider.TryGetOrCreateTypeByMetadataName("NeatMapper.AsyncMappingContext", out INamedTypeSymbol asyncMappingContextType)) {
-
+			var cancellationTokenType = context.Compilation.GetTypeByMetadataName(typeof(CancellationToken).FullName);
+			if(cancellationTokenType == null)
 				return;
-			}
+			var obsoleteAttribute = context.Compilation.GetTypeByMetadataName(typeof(ObsoleteAttribute).FullName);
+			if(obsoleteAttribute == null)
+				return;
+			var asyncMappingContextType = context.Compilation.GetTypeByMetadataName("NeatMapper.AsyncMappingContext");
+			if(asyncMappingContextType == null)
+				return;
 
 			// We don't care if these symbols are not defined in our compilation. They are used to special case the Task<T> <-> ValueTask<T> logic
-			typeProvider.TryGetOrCreateTypeByMetadataName(typeof(Task<>).Namespace + typeof(Task<>).Name, out INamedTypeSymbol genericTask);
-			typeProvider.TryGetOrCreateTypeByMetadataName(typeof(ValueTask<>).Namespace + typeof(ValueTask<>).Name, out INamedTypeSymbol genericValueTask);
+			var genericTask = context.Compilation.GetTypeByMetadataName(typeof(Task<>).FullName);
+			var genericValueTask = context.Compilation.GetTypeByMetadataName(typeof(ValueTask<>).FullName);
 
 			context.RegisterOperationAction(context1 => {
 				IInvocationOperation invocation = (IInvocationOperation)context1.Operation;

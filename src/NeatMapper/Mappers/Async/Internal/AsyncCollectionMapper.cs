@@ -51,7 +51,7 @@ namespace NeatMapper {
 			_elementsMapper = new AsyncCompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			_asyncCollectionMappersOptions = asyncCollectionMappersOptions ?? new AsyncCollectionMappersOptions();
 			_nestedMappingContext = new AsyncNestedMappingContext(this);
-			_optionsCacheNull = MergeOrCreateMappingOptions(MappingOptions.Empty, out _);
+			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
 		}
 
 

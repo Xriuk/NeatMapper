@@ -65,7 +65,7 @@ namespace NeatMapper {
 
 			_compositeMatcherOptions = new CompositeMatcherOptions(compositeMatcherOptions);
 			_nestedMatchingContext = new NestedMatchingContext(this);
-			_optionsCacheNull = GetOrCreateMappingOptions(MappingOptions.Empty);
+			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
 		}
 
 

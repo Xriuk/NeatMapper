@@ -10,7 +10,7 @@
     <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#310---2024-04-26</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#400---2024-07-16</PackageReleaseNotes>
     <PackAsTool>False</PackAsTool>
     <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
     <IncludeSymbols>True</IncludeSymbols>
@@ -24,8 +24,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="Microsoft.CodeAnalysis.AnalyzerUtilities" Version="3.3.4" />
-		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.3.1" />
+		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.3.1" PrivateAssets="All" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net47' Or '$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'netstandard2.1' Or '$(TargetFramework)' == 'net6.0' Or '$(TargetFramework)' == 'net7.0'">
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[7,8)" />
@@ -75,7 +74,7 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<None Update="..\NeatMapper.Analyzers\tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" />
+		<None Include="..\NeatMapper.Analyzers\tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" Visible="false" />
 		<None Include="..\NeatMapper.Analyzers\bin\$(Configuration)\netstandard2.0\NeatMapper.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 

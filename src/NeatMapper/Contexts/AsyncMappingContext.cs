@@ -66,7 +66,7 @@ namespace NeatMapper {
 		private readonly AsyncMappingContextOptions _options;
 
 		public AsyncMappingContext(AsyncMappingContextOptions options, CancellationToken cancellationToken) {
-			_options = options;
+			_options = options ?? throw new ArgumentNullException(nameof(options));
 			CancellationToken = cancellationToken;
 		}
 
