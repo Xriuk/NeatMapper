@@ -87,12 +87,14 @@ Map your objects by invoking the generic (extension) methods available:
 - `IMapper`
   - `mapper.Map<Destination>(source)`
   - `mapper.Map(source, destination)`
+  - `IEnumerable`/`IEnumerable<T>` extension method `enumerable.Project<Destination>(mapper)`
 - `IAsyncMapper`
   - `asyncMapper.MapAsync<Destination>(source)`
   - `asyncMapper.MapAsync(source, destination)`
+  - `IAsyncEnumerable<T>` extension method `asyncEnumerable.Project<Source, Destination>(asyncMapper)`
 - `IProjector`
   - `projector.Project<Source, Destination>()`
-  - `IEnumerable` extension method `enumerable.Project<Destination>(projector)`
+  - `IQueryable`/`IQueryable<T>` extension method `queryable.Project<Destination>(projector)`
 
 {: .highlight }
 Note that mapping matches types exactly, so parent or derived classes won't work.
