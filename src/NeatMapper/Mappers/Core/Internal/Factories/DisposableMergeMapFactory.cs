@@ -18,19 +18,20 @@ namespace NeatMapper {
 
 
 		protected override void Dispose(bool disposing) {
+			// We are under lock, no one can access the parent so we can safely check if if was disposed without Interlocked
 			lock (_disposables) {
-				base.Dispose(disposing);
-
-				if (disposing) { 
+				if (disposing && _disposed != 1) { 
 					foreach (var disposable in _disposables) {
 						disposable?.Dispose();
 					}
 				}
 			}
+
+			base.Dispose(disposing);
 		}
 	}
 
-	internal class DisposableMergeMapFactory : DisposableMergeMapFactory<object, object> {
+	internal sealed class DisposableMergeMapFactory : DisposableMergeMapFactory<object, object> {
 		internal DisposableMergeMapFactory(Type sourceType, Type destinationType, Func<object, object, object> mapDelegate, params IDisposable[] disposables) :
 			base(sourceType, destinationType, mapDelegate, disposables) {}
 	}

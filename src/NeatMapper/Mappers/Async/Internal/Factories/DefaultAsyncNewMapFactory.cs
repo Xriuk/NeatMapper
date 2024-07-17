@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace NeatMapper {
 	internal class DefaultAsyncNewMapFactory<TSource, TDestination> : AsyncNewMapFactory<TSource, TDestination> {
 		protected int _disposed = 0;
-		protected readonly Func<TSource, CancellationToken, Task<TDestination>> _mapDelegate;
+		private readonly Func<TSource, CancellationToken, Task<TDestination>> _mapDelegate;
 
 		internal DefaultAsyncNewMapFactory(Func<TSource, CancellationToken, Task<TDestination>> mapDelegate) 
 			: this(typeof(TSource), typeof(TDestination), mapDelegate) { }
@@ -32,12 +32,12 @@ namespace NeatMapper {
 		}
 
 		protected override void Dispose(bool disposing) {
-			if (disposing && Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
-				throw new ObjectDisposedException(null);
+			if (disposing)
+				Interlocked.CompareExchange(ref _disposed, 1, 0);
 		}
 	}
 
-	internal class DefaultAsyncNewMapFactory : DefaultAsyncNewMapFactory<object, object> {
+	internal sealed class DefaultAsyncNewMapFactory : DefaultAsyncNewMapFactory<object, object> {
 		internal DefaultAsyncNewMapFactory(Type sourceType, Type destinationType, Func<object, CancellationToken, Task<object>> mapDelegate) :
 			base(sourceType, destinationType, mapDelegate) {}
 	}

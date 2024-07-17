@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.1.0] - Unreleased
+
+### Added
+
+- `IMapper`/`IAsyncMapper` `Map`/`MapAsync` and `MapMergeFactory`/`MapAsyncMergeFactory` extension methods added overloads with `IEqualityComparer` parameter used as matcher when merging collections.
+- All the optional interfaces (`IMapperCanMap`, `IAsyncMapperFactory`, ...) are now also provided as services via DI.
+
+### Fixed
+
+- Disposable pattern implementation is now idempotent, meaning it can be disposed multiple times safely.
+
 ## [4.0.0] - 2024-07-16
 
 ### Changed

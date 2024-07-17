@@ -7,7 +7,7 @@ using System.Linq;
 using System.Linq.Expressions;
 
 namespace NeatMapper {
-	internal class LambdaParameterReplacer : ExpressionVisitor {
+	internal sealed class LambdaParameterReplacer : ExpressionVisitor {
 		private ParameterExpression[] parameters;
 		private readonly Expression[] replacements;
 

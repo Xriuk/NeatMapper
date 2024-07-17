@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	internal class DefaultAsyncMergeMapFactory<TSource, TDestination> : AsyncMergeMapFactory<TSource, TDestination> {
-		private int _disposed = 0;
+		protected int _disposed = 0;
 		private readonly Func<TSource, TDestination, CancellationToken, Task<TDestination>> _mapDelegate;
 
 		internal DefaultAsyncMergeMapFactory(Func<TSource, TDestination, CancellationToken, Task<TDestination>> mapDelegate)
@@ -32,12 +32,12 @@ namespace NeatMapper {
 		}
 
 		protected override void Dispose(bool disposing) {
-			if (disposing && Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
-				throw new ObjectDisposedException(null);
+			if (disposing)
+				Interlocked.CompareExchange(ref _disposed, 1, 0);
 		}
 	}
 
-	internal class DefaultAsyncMergeMapFactory : DefaultAsyncMergeMapFactory<object, object> {
+	internal sealed class DefaultAsyncMergeMapFactory : DefaultAsyncMergeMapFactory<object, object> {
 		internal DefaultAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<object, object, CancellationToken, Task<object>> mapDelegate) :
 			base(sourceType, destinationType, mapDelegate) {}
 	}

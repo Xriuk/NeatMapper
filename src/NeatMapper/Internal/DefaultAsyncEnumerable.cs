@@ -21,7 +21,7 @@ namespace NeatMapper {
 			public ValueTask DisposeAsync() {
 				((IDisposable)this).Dispose();
 #if NET5_0_OR_GREATER
-					return ValueTask.CompletedTask;
+				return ValueTask.CompletedTask;
 #else
 				return default;
 #endif
@@ -29,7 +29,7 @@ namespace NeatMapper {
 
 			public ValueTask<bool> MoveNextAsync() {
 #if NET5_0_OR_GREATER
-					return ValueTask.FromResult(_enumerator.MoveNext());
+				return ValueTask.FromResult(_enumerator.MoveNext());
 #else
 				return new ValueTask<bool>(_enumerator.MoveNext());
 #endif

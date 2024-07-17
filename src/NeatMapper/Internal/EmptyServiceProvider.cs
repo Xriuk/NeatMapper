@@ -5,7 +5,7 @@
 using System;
 
 namespace NeatMapper {
-	internal class EmptyServiceProvider : IServiceProvider {
+	internal sealed class EmptyServiceProvider : IServiceProvider {
 		internal static readonly EmptyServiceProvider Instance = new EmptyServiceProvider();
 
 

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace NeatMapper {
 	public static class AsyncMapperExtensions {
@@ -510,14 +511,22 @@ namespace NeatMapper {
 		#endregion
 
 		#region Collection
+		#region MatchMapDelegate
 		/// <summary>
-		/// Maps a collection to an existing one by matching the elements and returns the result
+		/// Maps a collection to an existing one asynchronously by matching the elements and returns the result.
 		/// </summary>
-		/// <typeparam name="TSourceElement">Type of the elements to be mapped, used to retrieve the available maps</typeparam>
-		/// <typeparam name="TDestinationElement">Type of the destination elements, used to retrieve the available maps</typeparam>
-		/// <param name="source">Collection to be mapped, may be null</param>
-		/// <param name="destination">Collection to map to, may be null</param>
-		/// <param name="matcher">Matching method to be used to match elements of the <paramref name="source"/> and <paramref name="destination"/> collections</param>
+		/// <typeparam name="TSourceElement">
+		/// Type of the elements to be mapped, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestinationElement">
+		/// Type of the destination elements, used to retrieve the available maps.
+		/// </typeparam>
+		/// <param name="source">Collection to be mapped, may be null.</param>
+		/// <param name="destination">Collection to map to, may be null.</param>
+		/// <param name="matcher">
+		/// Matching method to be used to match elements of the <paramref name="source"/>
+		/// and <paramref name="destination"/> collections.
+		/// </param>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
@@ -642,10 +651,133 @@ namespace NeatMapper {
 			IEnumerable
 #endif
 			mappingOptions,
-			CancellationToken cancellationToken) {
+			CancellationToken cancellationToken = default) {
 
 			return mapper.MapAsync<TSourceElement, TDestinationElement>(source, destination, matcher, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
 		}
+		#endregion
+
+		#region IEqualityComparer
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TElement">
+		/// Type of the source and destination elements, used to retrieve the available maps.
+		/// </typeparam>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/param[@name='destination']"/>
+		/// <param name="comparer">
+		/// Comparer to be used to match elements of the <paramref name="source"/>
+		/// and <paramref name="destination"/> collections.
+		/// </param>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/returns"/>
+		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)" path="/exception"/>
+		public static Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TElement>?
+#else
+			ICollection<TElement>
+#endif
+			> MapAsync<TElement>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable<TElement>?
+#else
+			IEnumerable<TElement>
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TElement>?
+#else
+			ICollection<TElement>
+#endif
+			destination,
+			IEqualityComparer<TElement> comparer,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			if (comparer == null)
+				throw new ArgumentNullException(nameof(comparer));
+
+			return mapper.MapAsync<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions, cancellationToken);
+		}
+
+		/// <inheritdoc cref="MapAsync{TElement}(IAsyncMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions, CancellationToken)"/>
+		public static Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TElement>?
+#else
+			ICollection<TElement>
+#endif
+			> MapAsync<TElement>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable<TElement>?
+#else
+			IEnumerable<TElement>
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TElement>?
+#else
+			ICollection<TElement>
+#endif
+			destination,
+			IEqualityComparer<TElement> comparer,
+			CancellationToken cancellationToken) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (comparer == null)
+				throw new ArgumentNullException(nameof(comparer));
+
+			return mapper.MapAsync<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), (MappingOptions)null, cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		/// <inheritdoc cref="MapAsync{TElement}(IAsyncMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions, CancellationToken)"/>
+		public static Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TElement>?
+#else
+			ICollection<TElement>
+#endif
+			> MapAsync<TElement>(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable<TElement>?
+#else
+			IEnumerable<TElement>
+#endif
+			source,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			ICollection<TElement>?
+#else
+			ICollection<TElement>
+#endif
+			destination,
+			IEqualityComparer<TElement> comparer,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			if (comparer == null)
+				throw new ArgumentNullException(nameof(comparer));
+
+			return mapper.MapAsync<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions, cancellationToken);
+		}
+		#endregion
 		#endregion
 		#endregion
 
@@ -951,7 +1083,10 @@ namespace NeatMapper {
 		/// if the given mapper supports <see cref="IAsyncMapperFactory"/> first otherwise will return
 		/// <see cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions, CancellationToken)"/> wrapped in a delegate.
 		/// </summary>
-		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
+		/// <remarks>
+		/// If the mapper does not implement <see cref="IAsyncMapperFactory"/> it is NOT guaranteed
+		/// that the created factory shares the same <see cref="AsyncMappingContext"/>.
+		/// </remarks>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncNewFactory(Type, Type, MappingOptions)"/>
 		public static IAsyncNewMapFactory MapAsyncNewFactory(this IAsyncMapper mapper,
 			Type sourceType,
@@ -1095,7 +1230,10 @@ namespace NeatMapper {
 		/// if the given mapper supports <see cref="IAsyncMapperFactory"/> first otherwise will return
 		/// <see cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/> wrapped in a delegate.
 		/// </summary>
-		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
+		/// <remarks>
+		/// If the mapper does not implement <see cref="IAsyncMapperFactory"/> it is NOT guaranteed
+		/// that the created factory shares the same <see cref="AsyncMappingContext"/>.
+		/// </remarks>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions)"/>
 		public static IAsyncMergeMapFactory MapAsyncMergeFactory(this IAsyncMapper mapper,
 			Type sourceType,
@@ -1233,12 +1371,13 @@ namespace NeatMapper {
 		#endregion
 
 		#region Collection
+		#region MatchMapDelegate
 		/// <summary>
 		/// Creates a factory which can be used to map collections to existing ones asynchronously by matching the elements,
 		/// will check if the given mapper supports <see cref="IAsyncMapperFactory"/> first otherwise will return
 		/// <see cref="IAsyncMapper.MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/> wrapped in a delegate.
 		/// </summary>
-		/// <remarks>It is NOT guaranteed that the created factory shares the same <see cref="AsyncMappingContext"/>.</remarks>
+		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions)" path="/remarks"/>
 		/// <typeparam name="TSourceElement">
 		/// Type of the elements to be mapped, used to retrieve the available maps.
 		/// </typeparam>
@@ -1327,6 +1466,77 @@ namespace NeatMapper {
 
 			return mapper.MapAsyncMergeFactory<TSourceElement, TDestinationElement>(matcher, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
+		#endregion
+
+		#region IEqualityComparer
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)" path="/summary"/>
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)" path="/remarks"/>
+		/// <typeparam name="TElement">
+		/// Type of the source and destination elements, used to retrieve the available maps.
+		/// </typeparam>
+		/// <param name="comparer">
+		/// Comparer to be used to match elements of the source and destination collections.
+		/// </param>
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)" path="/returns"/>
+		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)" path="/exception"/>
+		public static AsyncMergeMapFactory<
+			IEnumerable<TElement>,
+			ICollection<TElement>>
+				MapAsyncMergeFactory<TElement>(this IAsyncMapper mapper,
+			IEqualityComparer<TElement> comparer,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (comparer == null)
+				throw new ArgumentNullException(nameof(comparer));
+
+			return mapper.MapAsyncMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions);
+		}
+
+		/// <inheritdoc cref="MapAsyncMergeFactory{TElement}(IAsyncMapper, IEqualityComparer{TElement}, MappingOptions)"/>
+		public static AsyncMergeMapFactory<
+			IEnumerable<TElement>,
+			ICollection<TElement>>
+				MapAsyncMergeFactory<TElement>(this IAsyncMapper mapper,
+			IEqualityComparer<TElement> comparer,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (comparer == null)
+				throw new ArgumentNullException(nameof(comparer));
+
+			return mapper.MapAsyncMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="MapAsyncMergeFactory{TElement}(IAsyncMapper, IEqualityComparer{TElement}, MappingOptions)"/>
+		public static AsyncMergeMapFactory<
+			IEnumerable<TElement>,
+			ICollection<TElement>>
+				MapAsyncMergeFactory<TElement>(this IAsyncMapper mapper,
+			IEqualityComparer<TElement> comparer,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (comparer == null)
+				throw new ArgumentNullException(nameof(comparer));
+
+			return mapper.MapAsyncMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
 		#endregion
 		#endregion
 	}

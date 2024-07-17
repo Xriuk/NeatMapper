@@ -8,7 +8,7 @@ using System.Threading;
 namespace NeatMapper {
 	internal class DefaultNewMapFactory<TSource, TDestination> : NewMapFactory<TSource, TDestination> {
 		protected int _disposed = 0;
-		protected readonly Func<TSource, TDestination> _mapDelegate;
+		private readonly Func<TSource, TDestination> _mapDelegate;
 
 		internal DefaultNewMapFactory(Func<TSource, TDestination> mapDelegate) 
 			: this(typeof(TSource), typeof(TDestination), mapDelegate) { }
@@ -27,16 +27,17 @@ namespace NeatMapper {
 		public override TDestination Invoke(TSource source) {
 			if(Interlocked.CompareExchange(ref _disposed, 0, 0) == 1)
 				throw new ObjectDisposedException(null);
+
 			return _mapDelegate.Invoke(source);
 		}
 
 		protected override void Dispose(bool disposing) {
-			if (disposing && Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
-				throw new ObjectDisposedException(null);
+			if (disposing)
+				Interlocked.CompareExchange(ref _disposed, 1, 0);
 		}
 	}
 
-	internal class DefaultNewMapFactory : DefaultNewMapFactory<object, object> {
+	internal sealed class DefaultNewMapFactory : DefaultNewMapFactory<object, object> {
 		internal DefaultNewMapFactory(Type sourceType, Type destinationType, Func<object, object> mapDelegate) :
 			base(sourceType, destinationType, mapDelegate) {}
 	}

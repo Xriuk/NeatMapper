@@ -11,10 +11,24 @@ namespace NeatMapper {
 		/// <summary>
 		/// Adds NeatMapper services to the services collection:
 		/// <list type="bullet">
-		/// <item><see cref="IMapper"/></item>
-		/// <item><see cref="IAsyncMapper"/></item>
-		/// <item><see cref="IMatcher"/></item>
-		/// <item><see cref="IProjector"/></item>
+		/// <item>
+		/// <see cref="IMapper"/>, <see cref="IMapperCanMap"/>, <see cref="IMapperFactory"/> -
+		/// <see cref="NewMapper"/>, <see cref="MergeMapper"/>, <see cref="ProjectionMapper"/>,
+		/// <see cref="NewCollectionMapper"/>, <see cref="MergeCollectionMapper"/>, <see cref="CompositeMapper"/>
+		/// </item>
+		/// <item>
+		/// <see cref="IAsyncMapper"/>, <see cref="IAsyncMapperCanMap"/>, <see cref="IAsyncMapperFactory"/> -
+		/// <see cref="AsyncNewMapper"/>, <see cref="AsyncMergeMapper"/>, <see cref="AsyncNewCollectionMapper"/>,
+		/// <see cref="AsyncMergeCollectionMapper"/>, <see cref="AsyncCompositeMapper"/>
+		/// </item>
+		/// <item>
+		/// <see cref="IMatcher"/>, <see cref="IMatcherCanMatch"/>, <see cref="IMatcherFactory"/> -
+		/// <see cref="CustomMatcher"/>, <see cref="HierarchyCustomMatcher"/>, <see cref="CompositeMatcher"/>
+		/// </item>
+		/// <item>
+		/// <see cref="IProjector"/>, <see cref="IProjectorCanProject"/> -
+		/// <see cref="CustomProjector"/>, <see cref="CollectionProjector"/>, <see cref="CompositeProjector"/>
+		/// </item>
 		/// </list>
 		/// </summary>
 		/// <param name="mappersLifetime">
@@ -53,6 +67,7 @@ namespace NeatMapper {
 					o.Matchers.Add(h);
 				});
 
+
 			// Register matcher services
 
 			// Normal matcher
@@ -73,11 +88,16 @@ namespace NeatMapper {
 					s),
 				matchersLifetime));
 
-			// IMatcher (composite matcher)
+			// Composite matcher
 			services.Add(new ServiceDescriptor(
-				typeof(IMatcher),
+				typeof(CompositeMatcher),
 				s => new CompositeMatcher(s.GetService<IOptionsSnapshot<CompositeMatcherOptions>>()?.Value ?? new CompositeMatcherOptions()),
 				matchersLifetime));
+
+			// IMatcher, IMatcherCanMatch, IMatcherFactory
+			services.Add(new ServiceDescriptor(typeof(IMatcher),			s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IMatcherCanMatch),	s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IMatcherFactory), s => s.GetRequiredService<CompositeMatcher>(), matchersLifetime));
 			#endregion
 
 			#region IMapper
@@ -135,11 +155,16 @@ namespace NeatMapper {
 					s),
 				mappersLifetime));
 
-			// IMapper (composite mapper)
+			// Composite mapper
 			services.Add(new ServiceDescriptor(
-				typeof(IMapper),
+				typeof(CompositeMapper),
 				s => new CompositeMapper(s.GetService<IOptionsSnapshot<CompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IMapper>()),
 				mappersLifetime));
+
+			// IMapper, IMapperCanMap, IMapperFactory
+			services.Add(new ServiceDescriptor(typeof(IMapper),			s => s.GetRequiredService<CompositeMapper>(),	mappersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IMapperCanMap),	s => s.GetRequiredService<CompositeMapper>(),	mappersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IMapperFactory),	s => s.GetRequiredService<CompositeMapper>(),	mappersLifetime));
 			#endregion
 
 			#region IAsyncMapper
@@ -161,6 +186,7 @@ namespace NeatMapper {
 						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
 						s));
 				});
+
 
 			// Register mapper services
 
@@ -197,11 +223,16 @@ namespace NeatMapper {
 					s),
 				asyncMappersLifetime));
 
-			// IAsyncMapper (composite mapper)
+			// Composite mapper
 			services.Add(new ServiceDescriptor(
-				typeof(IAsyncMapper),
+				typeof(AsyncCompositeMapper),
 				s => new AsyncCompositeMapper(s.GetService<IOptionsSnapshot<AsyncCompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IAsyncMapper>()),
 				asyncMappersLifetime));
+
+			// IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory
+			services.Add(new ServiceDescriptor(typeof(IAsyncMapper),		s => s.GetRequiredService<AsyncCompositeMapper>(),	asyncMappersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IAsyncMapperCanMap),	s => s.GetRequiredService<AsyncCompositeMapper>(),	asyncMappersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IAsyncMapperFactory),	s => s.GetRequiredService<AsyncCompositeMapper>(),	asyncMappersLifetime));
 			#endregion
 
 			#region IProjector
@@ -232,11 +263,15 @@ namespace NeatMapper {
 				s => new CollectionProjector(s.GetRequiredService<IProjector>()),
 				projectorsLifetime));
 
-			// IProjector (composite projector)
+			// Composite projector
 			services.Add(new ServiceDescriptor(
-				typeof(IProjector),
+				typeof(CompositeProjector),
 				s => new CompositeProjector(s.GetService<IOptionsSnapshot<CompositeProjectorOptions>>()?.Value.Projectors ?? Array.Empty<IProjector>()),
 				projectorsLifetime));
+
+			// IProjector, IProjectorCanProject
+			services.Add(new ServiceDescriptor(typeof(IProjector),				s => s.GetRequiredService<CompositeProjector>(),	projectorsLifetime));
+			services.Add(new ServiceDescriptor(typeof(IProjectorCanProject),	s => s.GetRequiredService<CompositeProjector>(),	projectorsLifetime));
 			#endregion
 
 			return services;
