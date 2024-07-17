@@ -9,7 +9,7 @@
 - `AsyncMappingContext` was converted to a value type to reduce allocations when forwarding the `CancellationToken` parameter while invoking async factories, this allows to separate the provided async context (which can be cached if needed) from the cancellation token (which could change between mappings).
 - `MappingOptions` are now not cached by default, but require to be initialized with cached = true, in this case they will be cached (and all of their variations) in the mapping pipeline where supported.
 - `CompositeMatcher` constructor changed signature to accept a single parameter of type `CompositeMatcherOptions`.
-- `CompositeMatcher` now matches the given types in any order, the exact one is tried first, then the types are reverted. This behaviour can be configured with CompositeMatcherOptions (and CompositeMatcherMappingOptions).
+- `CompositeMatcher` now matches the given types in any order, the exact one is tried first, then the types are reverted. This behaviour can be configured with `CompositeMatcherOptions` (and `CompositeMatcherMappingOptions`).
 
 ### Added
 
