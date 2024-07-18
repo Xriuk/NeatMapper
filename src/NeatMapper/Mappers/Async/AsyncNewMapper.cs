@@ -150,6 +150,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
+
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)

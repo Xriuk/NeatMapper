@@ -59,7 +59,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
+				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
 				var strings = await _mapper.MapAsync<LinkedList<string>>(new[] { 2, -3, 0 }, new object[]{ opts, merge });
 
 				Assert.IsNotNull(strings);
@@ -308,7 +308,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
+				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
 				await _mapper.MapAsync<IList<IEnumerable<string>>>(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }

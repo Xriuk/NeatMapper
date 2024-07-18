@@ -15,11 +15,13 @@ namespace NeatMapper {
 		/// <see cref="IMapper"/>, <see cref="IMapperCanMap"/>, <see cref="IMapperFactory"/> -
 		/// <see cref="NewMapper"/>, <see cref="MergeMapper"/>, <see cref="ProjectionMapper"/>,
 		/// <see cref="NewCollectionMapper"/>, <see cref="MergeCollectionMapper"/>, <see cref="CompositeMapper"/>
+		/// (which also contains <see cref="IdentityMapper"/> in addition to all the previous)
 		/// </item>
 		/// <item>
 		/// <see cref="IAsyncMapper"/>, <see cref="IAsyncMapperCanMap"/>, <see cref="IAsyncMapperFactory"/> -
 		/// <see cref="AsyncNewMapper"/>, <see cref="AsyncMergeMapper"/>, <see cref="AsyncNewCollectionMapper"/>,
 		/// <see cref="AsyncMergeCollectionMapper"/>, <see cref="AsyncCompositeMapper"/>
+		/// (which also contains <see cref="AsyncIdentityMapper"/> in addition to all the previous)
 		/// </item>
 		/// <item>
 		/// <see cref="IMatcher"/>, <see cref="IMatcherCanMatch"/>, <see cref="IMatcherFactory"/> -
@@ -104,6 +106,8 @@ namespace NeatMapper {
 			// Add mappers to composite mapper
 			services.AddOptions<CompositeMapperOptions>()
 				.Configure<NewMapper, MergeMapper, ProjectionMapper, IServiceProvider>((o, n, m, p, s) => {
+					o.Mappers.Add(IdentityMapper.Instance);
+
 					o.Mappers.Add(n);
 					o.Mappers.Add(m);
 
@@ -112,8 +116,7 @@ namespace NeatMapper {
 					o.Mappers.Add(new MergeCollectionMapper(
 						EmptyMapper.Instance,
 						s.GetService<IMatcher>(),
-						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
-						s));
+						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value));
 
 					o.Mappers.Add(p);
 				});
@@ -151,8 +154,7 @@ namespace NeatMapper {
 				s => new MergeCollectionMapper(
 					s.GetRequiredService<IMapper>(),
 					s.GetService<IMatcher>(),
-					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
-					s),
+					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
 				mappersLifetime));
 
 			// Composite mapper
@@ -171,6 +173,8 @@ namespace NeatMapper {
 			// Add mappers to composite mapper
 			services.AddOptions<AsyncCompositeMapperOptions>()
 				.Configure<AsyncNewMapper, AsyncMergeMapper, IServiceProvider>((o, n, m, s) => {
+					o.Mappers.Add(AsyncIdentityMapper.Instance);
+
 					o.Mappers.Add(n);
 					o.Mappers.Add(m);
 
@@ -183,8 +187,7 @@ namespace NeatMapper {
 						AsyncEmptyMapper.Instance,
 						s.GetService<IMatcher>(),
 						asyncOptions,
-						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
-						s));
+						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value));
 				});
 
 
@@ -219,8 +222,7 @@ namespace NeatMapper {
 					s.GetRequiredService<IAsyncMapper>(),
 					s.GetService<IMatcher>(),
 					s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value,
-					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value,
-					s),
+					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
 				asyncMappersLifetime));
 
 			// Composite mapper

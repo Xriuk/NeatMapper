@@ -42,11 +42,6 @@ namespace NeatMapper {
 		/// </summary>
 		private readonly MergeCollectionsOptions _mergeCollectionOptions;
 
-		/// <summary>
-		/// Service provider to be passed to <see cref="MergeCollectionsMappingOptions.Matcher"/>.
-		/// </summary>
-		private readonly IServiceProvider _serviceProvider;
-
 
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncMergeCollectionMapper"/>.
@@ -68,11 +63,6 @@ namespace NeatMapper {
 		/// Additional merging options to apply during mapping, null to use default.<br/>
 		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
 		/// </param>
-		/// <param name="serviceProvider">
-		/// Service provider to be passed to <see cref="MergeCollectionsMappingOptions.Matcher"/>, 
-		/// null to pass an empty service provider.<br/>
-		/// Can be overridden during mapping with <see cref="AsyncMapperOverrideMappingOptions.ServiceProvider"/>.
-		/// </param>
 		public AsyncMergeCollectionMapper(
 			IAsyncMapper elementsMapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -92,14 +82,8 @@ namespace NeatMapper {
 #else
 			MergeCollectionsOptions
 #endif
-			mergeCollectionsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) :
-			base(elementsMapper, asyncCollectionMappersOptions != null ? new AsyncCollectionMappersOptions(asyncCollectionMappersOptions) : null) {
+			mergeCollectionsOptions = null) :
+				base(elementsMapper, asyncCollectionMappersOptions != null ? new AsyncCollectionMappersOptions(asyncCollectionMappersOptions) : null) {
 
 			_originalElementMapper = elementsMapper;
 			_elementsMatcher = elementsMatcher != null ?
@@ -108,7 +92,6 @@ namespace NeatMapper {
 			_mergeCollectionOptions = mergeCollectionsOptions != null ?
 				new MergeCollectionsOptions(mergeCollectionsOptions) :
 				new MergeCollectionsOptions();
-			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
 
@@ -317,7 +300,7 @@ namespace NeatMapper {
 						// Create the matcher (it will never throw because of SafeMatcher)
 						IMatcher elementsMatcher;
 						if (mergeMappingOptions?.Matcher != null)
-							elementsMatcher = new SafeMatcher(new DelegateMatcher(mergeMappingOptions.Matcher, _elementsMatcher, _serviceProvider));
+							elementsMatcher = new SafeMatcher(mergeMappingOptions.Matcher);
 						else
 							elementsMatcher = _elementsMatcher;
 						var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);

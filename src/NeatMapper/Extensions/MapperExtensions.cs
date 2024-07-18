@@ -544,19 +544,8 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
-				m?.RemoveNotMatchedDestinationElements,
-				(s, d, c) => {
-					if ((!(s is TSourceElement) && !object.Equals(s, default(TSourceElement))) ||
-						(!(d is TDestinationElement) && !object.Equals(d, default(TDestinationElement)))) {
-
-						throw new MapNotFoundException((typeof(TSourceElement), typeof(TDestinationElement)));
-					}
-
-					return matcher.Invoke((TSourceElement)s, (TDestinationElement)d, c);
-				}));
-
-			return mapper.Map<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(source, destination, mappingOptions);
+			return mapper.Map<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(source, destination,
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(DelegateMatcher.Create(matcher)));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -668,10 +657,21 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.Map<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions);
+			return mapper.Map<IEnumerable<TElement>, ICollection<TElement>>(source, destination,
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(EqualityComparerMatcher.Create(comparer)));
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <inheritdoc cref="Map{TElement}(IMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions)"/>
@@ -702,10 +702,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions) {
 
-			if (comparer == null)
-				throw new ArgumentNullException(nameof(comparer));
-
-			return mapper.Map<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return mapper.Map<TElement>(source, destination, comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="Map{TElement}(IMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions)"/>
@@ -737,10 +734,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions) {
 
-			if (comparer == null)
-				throw new ArgumentNullException(nameof(comparer));
-
-			return mapper.Map<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return mapper.Map<TElement>(source, destination, comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion
@@ -1396,32 +1390,13 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
-				m?.RemoveNotMatchedDestinationElements,
-				(s, d, c) => {
-					if ((!(s is TSourceElement) && !object.Equals(s, default(TSourceElement))) ||
-						(!(d is TDestinationElement) && !object.Equals(d, default(TDestinationElement)))) {
-
-						throw new MapNotFoundException((typeof(TSourceElement), typeof(TDestinationElement)));
-					}
-
-					return matcher((TSourceElement)s, (TDestinationElement)d, c);
-				}));
-
-			return mapper.MapMergeFactory<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(mappingOptions);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return mapper.MapMergeFactory<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(DelegateMatcher.Create(matcher)));
 		}
 
 
@@ -1483,10 +1458,13 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions);
+			return mapper.MapMergeFactory<IEnumerable<TElement>, ICollection<TElement>>(
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(EqualityComparerMatcher.Create(comparer)));
 		}
 
 		/// <inheritdoc cref="MapMergeFactory{TElement}(IMapper, IEqualityComparer{TElement}, MappingOptions)"/>
@@ -1505,7 +1483,7 @@ namespace NeatMapper {
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return mapper.MapMergeFactory<TElement>(comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="MapMergeFactory{TElement}(IMapper, IEqualityComparer{TElement}, MappingOptions)"/>
@@ -1525,7 +1503,7 @@ namespace NeatMapper {
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return mapper.MapMergeFactory<TElement>(comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

@@ -71,6 +71,7 @@ namespace NeatMapper {
 			}
 		}
 
+		// Forwarding all the methods because we want to check on the wrapper matcher
 		public bool CanMatch(
 			Type sourceType,
 			Type destinationType,
@@ -84,6 +85,7 @@ namespace NeatMapper {
 			return _matcher.CanMatch(sourceType, destinationType, GetOptions(mappingOptions));
 		}
 
+		// Forwarding all the methods because we want to check on the wrapper matcher
 		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,

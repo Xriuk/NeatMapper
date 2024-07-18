@@ -17,9 +17,9 @@
 		/// </param>
 		public MergeCollectionsMappingOptions(bool? removeNotMatchedDestinationElements = null,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MatchMapDelegate<object, object>?
+			IMatcher?
 #else
-			MatchMapDelegate<object, object>
+			IMatcher
 #endif
 			matcher = null) {
 
@@ -41,17 +41,14 @@
 		}
 
 		/// <summary>
-		/// Provides (or overrides) <see cref="IMatchMap{TSource, TDestination}"/> for the outermost collection types.<br/>
-		/// You should use the type-safe extensions <see cref="MapperExtensions"/> or <see cref="AsyncMapperExtensions"/>
-		/// instead of setting this directly.<br/>
-		/// The provided method should throw <see cref="MapNotFoundException"/> if the passed objects are not of expected types.
+		/// <see cref="IMatcher"/> to be used to match elements of the collections.
 		/// </summary>
-		/// <remarks><see langword="null"/> to use the defined <see cref="IMatchMap{TSource, TDestination}"/> (if any).</remarks>
+		/// <remarks><see langword="null"/> to use the default <see cref="IMatcher"/> (if any).</remarks>
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MatchMapDelegate<object, object>?
+			IMatcher?
 #else
-			MatchMapDelegate<object, object>
+			IMatcher
 #endif
 			Matcher {
 				get;

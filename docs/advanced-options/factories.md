@@ -12,13 +12,13 @@ This allows for a greater performance for multiple subsequent maps for the same 
 To create a factory you can use the following extension methods:
 
 - `IMapper`
-  - `.MapNewFactory<Source, Destination>()`
-  - `.MapMergeFactory<Source, Destination>()`
+  - `mapper.MapNewFactory<Source, Destination>()`
+  - `mapper.MapMergeFactory<Source, Destination>()`
 - `IAsyncMapper`
-  - `.MapAsyncNewFactory<Source, Destination>()`
-  - `.MapAsyncMergeFactory<Source, Destination>()`
+  - `asyncMapper.MapAsyncNewFactory<Source, Destination>()`
+  - `asyncMapper.MapAsyncMergeFactory<Source, Destination>()`
 - `IMatcher`
-  - `.MatchFactory<Source, Destination>()`
+  - `matcher.MatchFactory<Source, Destination>()`
 
 Each method accepts the types to map as parameters and returns a factory.
 
@@ -36,10 +36,10 @@ Factories will need to be disposed at the end by invoking the `Dispose()` method
 // Retrieve a factory and wrap it in an using block to dispose it correctly after use
 using(var factory = mapper.MapNewFactory<Product, ProductDto>()){
     // Perform single maps
-    var myProductDto = factory.Invoke(myProduct);
+    var myProductDto = factory.Invoke(myProduct); // Or just factory(myProduct)
 
     // Map collections
-    var myProductsDto = myProducts.Select(p => factory.Invoke(p)).ToArray();
+    var myProductsDto = myProducts.Select(factory).ToArray(); // Implicit cast to Func<Product, ProductDto>
 
     ...
 }

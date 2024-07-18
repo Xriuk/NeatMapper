@@ -2,16 +2,17 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Singleton <see cref="IMapper"/> which cannot map any type.
+	/// Singleton <see cref="IMapper"/> which returns the provided source element (for both new and merge maps).
+	/// Supports only the same source/destination types. Can be used to merge collections of elements of the same type.
 	/// </summary>
-	public sealed class EmptyMapper : IMapper, IMapperCanMap, IMapperFactory {
+	public sealed class IdentityMapper : IMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>
-		public static readonly IMapper Instance = new EmptyMapper();
+		public static readonly IMapper Instance = new IdentityMapper();
 
 
-		internal EmptyMapper() { }
+		internal IdentityMapper() { }
 
 
 		#region IMapper methods
@@ -37,7 +38,12 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			throw new MapNotFoundException((sourceType, destinationType));
+			if (!CanMap(sourceType, destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+			return source;
 		}
 
 		public
@@ -67,8 +73,14 @@ namespace NeatMapper {
 			MappingOptions
 #endif
 			mappingOptions = null) {
-			
-			throw new MapNotFoundException((sourceType, destinationType));
+
+			if (!CanMap(sourceType, destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+			return source;
 		}
 		#endregion
 
@@ -83,7 +95,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return false;
+			return CanMap(sourceType, destinationType);
 		}
 
 		public bool CanMapMerge(
@@ -96,7 +108,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return false;
+			return CanMap(sourceType, destinationType);
 		}
 		#endregion
 
@@ -111,7 +123,14 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			throw new MapNotFoundException((sourceType, destinationType));
+			if (!CanMap(sourceType, destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			return new DefaultNewMapFactory(sourceType, destinationType, source => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+				return source;
+			});
 		}
 
 		public IMergeMapFactory MapMergeFactory(
@@ -124,8 +143,26 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			throw new MapNotFoundException((sourceType, destinationType));
+			if (!CanMap(sourceType, destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			return new DefaultMergeMapFactory(sourceType, destinationType, (source, destination) => {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+				return source;
+			});
 		}
 		#endregion
+
+
+		private bool CanMap(Type sourceType,Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return sourceType == destinationType;
+		}
 	}
 }

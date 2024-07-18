@@ -126,7 +126,7 @@ namespace NeatMapper.Tests.Mapping {
 				var c = new Price();
 				var destination = new List<Price> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
+				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
 				_mapper.Map(new[] { 20m, 15.25m, 0m }, destination, new object[] { opts, merge });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
@@ -421,7 +421,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				var destination = new List<ICollection<string>>();
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions (false, (s, d, c) => false);
+				var merge = new MergeCollectionsMappingOptions (false, EmptyMatcher.Instance);
 				_mapper.Map(new[] {
 					new[]{ 2, -3, 0 },
 					new[]{ 1, 2 }
@@ -616,7 +616,7 @@ namespace NeatMapper.Tests.Mapping {
 				};
 				var destination = new CustomCollection<CategoryDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions (false, (s, d, _) => false);
+				var merge = new MergeCollectionsMappingOptions (false, EmptyMatcher.Instance);
 				_mapper.Map(new[] {
 					new Category {
 						Id = 3,
@@ -784,7 +784,7 @@ namespace NeatMapper.Tests.Mapping {
 				};
 				var destination = new CustomCollection<ProductDto> { a, b, c };
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, (s, d, _) => false);
+				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
 				mapper.Map(new[] {
 					new LimitedProduct {
 						Code = "Test4",

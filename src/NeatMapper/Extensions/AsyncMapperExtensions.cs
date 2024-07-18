@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NeatMapper {
 	public static class AsyncMapperExtensions {
@@ -571,19 +570,9 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
-				m?.RemoveNotMatchedDestinationElements,
-				(s, d, c) => {
-					if ((!(s is TSourceElement) && !object.Equals(s, default(TSourceElement))) ||
-						(!(d is TDestinationElement) && !object.Equals(d, default(TDestinationElement)))) {
-
-						throw new MapNotFoundException((typeof(TSourceElement), typeof(TDestinationElement)));
-					}
-
-					return matcher((TSourceElement)s, (TDestinationElement)d, c);
-				}));
-
-			return mapper.MapAsync<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(source, destination, mappingOptions, cancellationToken);
+			return mapper.MapAsync<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(source, destination,
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(DelegateMatcher.Create(matcher)),
+				cancellationToken);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -700,10 +689,22 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapAsync<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions, cancellationToken);
+			return mapper.MapAsync<IEnumerable<TElement>, ICollection<TElement>>(source, destination,
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(EqualityComparerMatcher.Create(comparer)),
+				cancellationToken);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		/// <inheritdoc cref="MapAsync{TElement}(IAsyncMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions, CancellationToken)"/>
@@ -733,10 +734,7 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			if (comparer == null)
-				throw new ArgumentNullException(nameof(comparer));
-
-			return mapper.MapAsync<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), (MappingOptions)null, cancellationToken);
+			return mapper.MapAsync<TElement>(source, destination, comparer, (MappingOptions)null, cancellationToken);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -772,10 +770,7 @@ namespace NeatMapper {
 			mappingOptions,
 			CancellationToken cancellationToken = default) {
 
-			if (comparer == null)
-				throw new ArgumentNullException(nameof(comparer));
-
-			return mapper.MapAsync<TElement, TElement>(source, destination, (s, d, _) => comparer.Equals(s, d), mappingOptions, cancellationToken);
+			return mapper.MapAsync<TElement>(source, destination, comparer, mappingOptions, cancellationToken);
 		}
 		#endregion
 		#endregion
@@ -1415,19 +1410,8 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(
-				m?.RemoveNotMatchedDestinationElements,
-				(s, d, c) => {
-					if ((!(s is TSourceElement) && !object.Equals(s, default(TSourceElement))) ||
-						(!(d is TDestinationElement) && !object.Equals(d, default(TDestinationElement)))) {
-
-						throw new MapNotFoundException((typeof(TSourceElement), typeof(TDestinationElement)));
-					}
-
-					return matcher((TSourceElement)s, (TDestinationElement)d, c);
-				}));
-
-			return mapper.MapAsyncMergeFactory<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(mappingOptions);
+			return mapper.MapAsyncMergeFactory<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(DelegateMatcher.Create(matcher)));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1492,10 +1476,13 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapAsyncMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions);
+			return mapper.MapAsyncMergeFactory<IEnumerable<TElement>, ICollection<TElement>>(
+				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(EqualityComparerMatcher.Create(comparer)));
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TElement}(IAsyncMapper, IEqualityComparer{TElement}, MappingOptions)"/>
@@ -1514,7 +1501,7 @@ namespace NeatMapper {
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapAsyncMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return mapper.MapAsyncMergeFactory<TElement>(comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TElement}(IAsyncMapper, IEqualityComparer{TElement}, MappingOptions)"/>
@@ -1534,7 +1521,7 @@ namespace NeatMapper {
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapAsyncMergeFactory<TElement, TElement>((s, d, _) => comparer.Equals(s, d), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return mapper.MapAsyncMergeFactory<TElement>(comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

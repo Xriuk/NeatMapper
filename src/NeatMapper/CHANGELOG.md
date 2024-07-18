@@ -1,11 +1,24 @@
 # Changelog
 
-## [4.1.0] - Unreleased
+## [5.0.0] - Unreleased
+
+### Removed
+
+- `IServiceProvider` parameter from `MergeCollectionMapper` and `AsyncMergeCollectionMapper` constructors.
+
+### Changed
+
+- `DelegateMatcher` constructor was made private and it now can be created only via the type-safe static method `Create`.
+- `MergeCollectionsMappingOptions` Matcher was changed from `MatchMapDelegate` to the safer `IMatcher` (which can also be a `CompositeMatcher` to support multiple maps). `IMapper`/`IAsyncMapper` extensions were updated.
 
 ### Added
 
 - `IMapper`/`IAsyncMapper` `Map`/`MapAsync` and `MapMergeFactory`/`MapAsyncMergeFactory` extension methods added overloads with `IEqualityComparer` parameter used as matcher when merging collections.
 - All the optional interfaces (`IMapperCanMap`, `IAsyncMapperFactory`, ...) are now also provided as services via DI.
+- `EqualityComparerMatcher` which allows using an `IEqualityComparer` to match two elements of the same type.
+- `MappingOptions` extension method `AddMergeCollectionMatchers` which allows to Set/Add `IMatcher`s to be used in merge maps.
+- `AsyncEnumerableExtensions`.`Project`'s `MappingOptions` `params object[]` parameter overload.
+- `IdentityMapper` and `AsyncIdentityMapper` which always return the passed source (for both new and merge maps, provided that the mapped types are the same).
 
 ### Fixed
 

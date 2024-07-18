@@ -797,7 +797,7 @@ namespace NeatMapper.Tests.Mapping {
 				MappingOptionsUtils.mergeOptions = null;
 
 				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, (s, d, c) => false);
+				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
 				_mapper.Map<string>(2f, new object[] { opts, merge });
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);

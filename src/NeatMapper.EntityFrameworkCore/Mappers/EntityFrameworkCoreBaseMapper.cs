@@ -584,7 +584,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		protected IMatcher RetrieveMatcher(MappingOptions mappingOptions) {
 			var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
 			if (mergeMappingOptions?.Matcher != null)
-				return new SafeMatcher(new DelegateMatcher(mergeMappingOptions.Matcher, _elementsMatcher, _serviceProvider));
+				return new SafeMatcher(mergeMappingOptions.Matcher);
 			else
 				return _elementsMatcher;
 		}

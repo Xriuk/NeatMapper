@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -143,6 +142,34 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return enumerable.Project<TSource, TDestination>(mapper, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="Project{TSource, TDestination}(IAsyncEnumerable{TSource}, IAsyncMapper, MappingOptions)"/>
+		public static IAsyncEnumerable<
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+#pragma warning disable CS1712
+			> Project<TSource, TDestination>(this IAsyncEnumerable<
+#pragma warning restore CS1712
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			> enumerable,
+			IAsyncMapper mapper,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			return enumerable.Project<TSource, TDestination>(mapper, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

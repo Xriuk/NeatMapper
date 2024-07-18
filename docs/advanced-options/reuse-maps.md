@@ -132,4 +132,4 @@ source => source == null ?
 ```
 
 {: .highlight }
-Be careful with nesting maps as this can lead to complex evaluations when the expression will be parsed/translated.
+Be careful with nesting projections as this can lead to complex evaluations when the expression will be parsed/translated.

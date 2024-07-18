@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper {
 	public static class MappingOptionsExtensions {
@@ -673,7 +674,34 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
-		} 
+		}
 		#endregion
+
+		/// <summary>
+		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
+		/// and adds (or sets) the specified matchers to be used to match elements when merging collections.
+		/// </summary>
+		/// <param name="matchers">Matchers to add to existing ones (or to set if no matcher exists).</param>
+		/// <returns>The new generated options.</returns>
+		public static MappingOptions AddMergeCollectionMatchers(this MappingOptions options, params IMatcher[] matchers) {
+			if (options == null)
+				throw new ArgumentNullException(nameof(options));
+
+			if(matchers?.Length > 0) {
+				return options.ReplaceOrAdd<MergeCollectionsMappingOptions>(m => {
+					var opts = new CompositeMatcherOptions();
+					if(m?.Matcher != null)
+						opts.Matchers.Add(m.Matcher);
+					foreach(var matcher in matchers) {
+						if(matcher != null)
+							opts.Matchers.Add(matcher);
+					}
+
+					return new MergeCollectionsMappingOptions(m?.RemoveNotMatchedDestinationElements, new CompositeMatcher(opts));
+				});
+			}
+			else
+				return options;
+		}
 	}
 }
