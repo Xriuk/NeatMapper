@@ -309,6 +309,7 @@ namespace NeatMapper.Tests.Mapping {
 				IMergeMap<string, int>
 #endif
 				.Map(string source, int destination, MappingContext context) {
+
 				return source?.Length ?? -1;
 			}
 
@@ -322,6 +323,7 @@ namespace NeatMapper.Tests.Mapping {
 				IMergeMap<decimal, int>
 #endif
 				.Map(decimal source, int destination, MappingContext context) {
+
 				return 0;
 			}
 
@@ -336,6 +338,7 @@ namespace NeatMapper.Tests.Mapping {
 				IMatchMap<decimal, int>
 #endif
 				.Match(decimal source, int destination, MatchingContext context) {
+
 				throw new NotImplementedException();
 			}
 

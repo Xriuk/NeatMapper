@@ -13,6 +13,8 @@ You can install the core package directly from Nuget [NeatMapper](https://www.nu
 You have to create one or more classes implementing one of the following mapping interfaces:
 - `INewMap<TSource, TDestination>` to map existing objects to new ones
 - `IMergeMap<TSource, TDestination>` to map and merge objects with others
+- `IMatchMap<TSource, TDestination>` to match objects together (used to merge collections)
+- `IHierarchyMatchMap<TSource, TDestination>` like `IMatchMap<TSource, TDestination>` but matches both exact types and derived ones
 - `IProjectionMap<TSource, TDestination>` to project objects into new ones, this will create an expression which can be used with LINQ or compiled into a NewMap
 
 You can also create `async` maps by implementing the interfaces:
@@ -22,6 +24,8 @@ You can also create `async` maps by implementing the interfaces:
 If you are on .NET 7 or greater you can use the `static` versions of the interfaces above instead:
 - `INewMapStatic<TSource, TDestination>`
 - `IMergeMapStatic<TSource, TDestination>`
+- `IMatchMapStatic<TSource, TDestination>`
+- `IHierarchyMatchMapStatic<TSource, TDestination>`
 - `IProjectionMapStatic<TSource, TDestination>`
 - `IAsyncNewMapStatic<TSource, TDestination>`
 - `IAsyncMergeMapStatic<TSource, TDestination>`
@@ -89,8 +93,8 @@ Map your objects by invoking the generic (extension) methods available:
   - `mapper.Map(source, destination)`
   - `IEnumerable`/`IEnumerable<T>` extension method `enumerable.Project<Destination>(mapper)`
 - `IAsyncMapper`
-  - `asyncMapper.MapAsync<Destination>(source)`
-  - `asyncMapper.MapAsync(source, destination)`
+  - `await asyncMapper.MapAsync<Destination>(source)`
+  - `await asyncMapper.MapAsync(source, destination)`
   - `IAsyncEnumerable<T>` extension method `asyncEnumerable.Project<Source, Destination>(asyncMapper)`
 - `IProjector`
   - `projector.Project<Source, Destination>()`

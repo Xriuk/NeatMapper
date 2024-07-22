@@ -15,19 +15,16 @@ To create a factory you can use the following extension methods:
   - `mapper.MapNewFactory<Source, Destination>()`
   - `mapper.MapMergeFactory<Source, Destination>()`
 - `IAsyncMapper`
-  - `asyncMapper.MapAsyncNewFactory<Source, Destination>()`
-  - `asyncMapper.MapAsyncMergeFactory<Source, Destination>()`
+  - `await asyncMapper.MapAsyncNewFactory<Source, Destination>()`
+  - `await asyncMapper.MapAsyncMergeFactory<Source, Destination>()`
 - `IMatcher`
   - `matcher.MatchFactory<Source, Destination>()`
 
 Each method accepts the types to map as parameters and returns a factory.
 
-Optionally you can specify other `MappingOptions`, and they are applied to the factory **before** creation, so that all the invocations share the same `(Async)Mapping/Matching Context`.
+Optionally you can specify other `MappingOptions`, and they are applied to the factory **before** creation, so that all the invocations share the same `MappingContext`/`AsyncMappingContext`/`MatchingContext`.
 
-{: .highlight }
-This is important for async maps, since the returned factory has a single `CancellationToken` tied to it, so it should be used for a short period of time (eg: a single web request or scope).
-
-To use the factory you just have to invoke the method `Invoke()` and pass the related object(s) to it.
+To use the factory you just have to invoke the method `Invoke()` and pass the related object(s) to it. For async factories you can also provide a `CancellationToken`, this allows each run of the map from the factory to be individually cancelable if needed, and lengthens the lifetime and reusability of the factory.
 
 {: .highlight }
 Factories will need to be disposed at the end by invoking the `Dispose()` method (or wrapping them in an `using` block since they implement `IDisposable`).

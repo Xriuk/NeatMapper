@@ -28,7 +28,7 @@ namespace NeatMapper {
 	/// </summary>
 	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
 	public sealed class AsyncMergeCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
-		// DEV: what is it used for? Try to remove
+		// DEV: what is it used for? Try to remove. Maybe used to check the original mapper capabilities for nested maps, to exclude collections
 		private readonly IAsyncMapper _originalElementMapper;
 
 		/// <summary>
@@ -260,8 +260,8 @@ namespace NeatMapper {
 				// Used in case we create a new collection
 				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);
-
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+				var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 				// At least one of New or Merge mapper is required to map elements
@@ -299,8 +299,14 @@ namespace NeatMapper {
 					try {
 						// Create the matcher (it will never throw because of SafeMatcher)
 						IMatcher elementsMatcher;
-						if (mergeMappingOptions?.Matcher != null)
-							elementsMatcher = new SafeMatcher(mergeMappingOptions.Matcher);
+						if (mergeMappingOptions?.Matcher != null) {
+							// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
+							// so all the others should be available
+							var options = new CompositeMatcherOptions();
+							options.Matchers.Add(mergeMappingOptions.Matcher);
+							options.Matchers.Add(_elementsMatcher);
+							elementsMatcher = new CompositeMatcher(options);
+						}
 						else
 							elementsMatcher = _elementsMatcher;
 						var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
@@ -961,7 +967,7 @@ namespace NeatMapper {
 				var elementTypes = (From: sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
 					To: destinationType.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
 

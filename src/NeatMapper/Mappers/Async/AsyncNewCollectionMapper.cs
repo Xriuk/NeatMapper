@@ -133,7 +133,7 @@ namespace NeatMapper {
 				var elementTypes = (From: sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
 					To: destinationType.IsEnumerable() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
@@ -228,7 +228,7 @@ namespace NeatMapper {
 
 				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To);
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 

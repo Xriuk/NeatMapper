@@ -48,3 +48,16 @@ var expr = projector.Project<Category, CategoryDto>();
 // Or create a new object
 var myCategoryDto = mapper.Map<Category, CategoryDto>(myCategory);
 ```
+
+{: .highlight }
+All projection maps can be compiled by default, if your maps is not suitable for compilation (for example it uses methods which can only be converted to other languages by LINQ providers) you can check if your expression is about to be compiled by checking `ProjectionCompilationContext` inside `MappingOptions`.
+
+```csharp
+Expression<Func<Category?, CategoryDto?>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
+	// Refuse compilation
+	if(context.MappingOptions.GetOption<ProjectionCompilationContext>() != null)
+		MapNotFoundException.Throw<Category, CategoryDto>();
+
+    return source => source == null ? null : new CategoryDto { ... };
+}
+```

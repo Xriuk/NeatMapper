@@ -70,9 +70,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
 				Assert.IsNotNull(MappingOptionsUtils.mergeOptions);
-				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
-				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
+				Assert.AreSame(merge, MappingOptionsUtils.mergeOptions);
 			}
 
 			{
@@ -316,9 +314,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				Assert.AreSame(opts, MappingOptionsUtils.options);
 				Assert.IsNotNull(MappingOptionsUtils.mergeOptions);
-				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
-				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
+				Assert.AreSame(merge, MappingOptionsUtils.mergeOptions);
 			}
 		}
 

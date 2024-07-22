@@ -236,7 +236,8 @@ namespace NeatMapper {
 				// Used in case we create a new collection
 				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out var mergeMappingOptions);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+				var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
 				// At least one of New or Merge mapper is required to map elements
@@ -274,8 +275,14 @@ namespace NeatMapper {
 					try {
 						// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
 						IMatcher elementsMatcher;
-						if (mergeMappingOptions?.Matcher != null)
-							elementsMatcher = new SafeMatcher(mergeMappingOptions.Matcher);
+						if (mergeMappingOptions?.Matcher != null) {
+							// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
+							// so all the others should be available
+							var options = new CompositeMatcherOptions();
+							options.Matchers.Add(mergeMappingOptions.Matcher);
+							options.Matchers.Add(_elementsMatcher);
+							elementsMatcher = new CompositeMatcher(options);
+						}
 						else
 							elementsMatcher = _elementsMatcher;
 						var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
@@ -506,7 +513,7 @@ namespace NeatMapper {
 
 				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions, out _);
+				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
 

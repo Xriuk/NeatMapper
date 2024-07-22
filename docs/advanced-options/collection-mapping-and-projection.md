@@ -7,11 +7,7 @@ parent: "Advanced options"
 
 # Automatic collection maps
 
-When you create a map you can also map collections of the types, even nested, automatically.
-
-When you create an async map, the same happens for async collection maps.
-
-The same applies to projection maps too.
+When you create a map, you can also map collections of the types, even nested, automatically. This applies for normal maps, async maps (including `IAsyncEnumerable<T>`) and projection maps.
 
 ```csharp
 // Create a new list
@@ -26,7 +22,7 @@ mapper.Map<IList<Category>, ICollection<CategoryDto>>(myCategories, myCategoryDt
 
 This works with (mostly) all collections, interfaces, even **read-only** and **custom ones** (provided that they have a parameterless constructor for mapping, or a constructor which accepts an IEnumerable<T> for projections).
 
-The only limitation is that you <u>cannot map</u> to an existing read-only collection (so no merge maps, but you can create it with a new map).
+The only limitation is that you <u>cannot map</u> to an existing read-only collection or a `IAsyncEnumerable<T>` (so no merge maps, but you can create it with a new map).
 
 If you specify an explicit map for two collections this map will be used instead, so you will be in charge of everything.
 
@@ -61,14 +57,14 @@ public class MyMaps :
 }
 ```
 
-# Match elements in collections 
+# Match elements in collections
 
 {: .highlight }
 The section below **does not apply** to projectors.
 
 When merging to an existing collection, by default all the object present are removed and new ones are mapped and added (by using `INewMap<TSource, TDestination>` or `IMergeMap<TSource, TDestination>` in this order).
 
-If you need to match elements and merge them you can implement an `IMatchMap<TSource, TDestination>` (or `IMatchMapStatic<TSource, TDestination>` if you're on .NET 7 or greater) or specify a matching method when mapping.
+If you need to match elements and merge them you can implement an `IMatchMap<TSource, TDestination>` (or `IMatchMapStatic<TSource, TDestination>` if you're on .NET 7 or greater) or specify a matching method or passing an `IEqualityComparer<T>` when mapping.
 
 This way each element is matched with a corresponding element of the destination collection, if found and a `IMergeMap<TSource, TDestination>` is defined it is merged together, otherwise a new element is added to the collection using `INewMap<TSource, TDestination>`.
 
@@ -106,8 +102,11 @@ public class MyMaps :
 // Map to an existing collection using the match map
 mapper.Map<IList<Category>, ICollection<CategoryDto>>(myCategories, myCategoryDtos);
 
-// Map to an existing collection using a custom matching method
+// Map to an existing collection using a custom matching method (the method is used for all types matching in case of nested collections)
 mapper.Map(myCategories, myCategoryDtos, (source, destination, context) => source?.Code == destination?.Code);
+
+// Map to an existing collection using a custom IEqualityComparer<T> (only for matching the same type, used for all types matching in case of nested collections)
+mapper.Map<IList<Category>, ICollection<Category>>(myCategories1, myCategories2, myEqualityComparer);
 ```
 
 You can also match whole hierarchies by creating a `IHierarchyMatchMap<TSource, TDestination>` (or `IHierarchyMatchMapStatic<TSource, TDestination>` if you're on .NET 7 or greater), this will be applied to the specified types and all types derived from them.
@@ -117,20 +116,15 @@ You can also match whole hierarchies by creating a `IHierarchyMatchMap<TSource, 
 {: .highlight }
 The section below **does not apply** to projectors.
 
-Any element in the destination collection which do not have a corresponding element
-in the source collection is removed by default, you can disable this
-(if you need to create an add or update collection for example) via global settings
-or specific for each mapping.
+Any element in the destination collection which does not have a corresponding element in the source collection is removed by default, you can disable this (if you need to create an add or update collection for example) via global settings or specific for each mapping.
 
 ```csharp
 // Global settings via DI
 services.Configure<MergeCollectionsOptions>(o => RemoveNotMatchedDestinationElements = false);
 
 // Single mapping override
-mapper.Map<IList<Category>, ICollection<CategoryDto>>(myCategories, myCategoryDtos, new object[]{
-    new MergeCollectionsMappingOptions{
-        RemoveNotMatchedDestinationElements = false
-    }
+mapper.Map<IList<Category>, ICollection<CategoryDto>>(myCategories, myCategoryDtos, new MergeCollectionsMappingOptions{
+	RemoveNotMatchedDestinationElements = false
 });
 ```
 
@@ -170,7 +164,7 @@ This can be done by configuring `AsyncCollectionMappersOptions` like below or sp
 services.Configure<AsyncCollectionMappersOptions>(o => MaxParallelMappings = 10);
 
 // Single mapping override
-mapper.Map<IList<Entity>, List<EntityDto>>(myEntities, new object[]{
+await asyncMapper.MapAsync<IList<Entity>, List<EntityDto>>(myEntities, new object[]{
     new AsyncCollectionMappersMappingOptions{
         MaxParallelMappings = 10
     }

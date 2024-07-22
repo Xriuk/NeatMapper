@@ -30,7 +30,7 @@ namespace NeatMapper {
 					if (e.From == typeof(TElement) && e.To == typeof(TElement))
 						throw;
 					else
-						throw new MappingException(e, (typeof(TElement), typeof(TElement)));
+						throw new MatcherException(e, (typeof(TElement), typeof(TElement)));
 				}
 				catch (OperationCanceledException) {
 					throw;

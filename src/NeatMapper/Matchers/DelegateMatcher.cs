@@ -48,7 +48,7 @@ namespace NeatMapper {
 						if (e.From == typeof(TSource) && e.To == typeof(TDestination))
 							throw;
 						else
-							throw new MappingException(e, (typeof(TSource), typeof(TDestination)));
+							throw new MatcherException(e, (typeof(TSource), typeof(TDestination)));
 					}
 					catch (OperationCanceledException) {
 						throw;

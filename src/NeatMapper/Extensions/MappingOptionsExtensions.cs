@@ -689,15 +689,19 @@ namespace NeatMapper {
 
 			if(matchers?.Length > 0) {
 				return options.ReplaceOrAdd<MergeCollectionsMappingOptions>(m => {
-					var opts = new CompositeMatcherOptions();
-					if(m?.Matcher != null)
-						opts.Matchers.Add(m.Matcher);
-					foreach(var matcher in matchers) {
-						if(matcher != null)
-							opts.Matchers.Add(matcher);
-					}
+					if(m?.Matcher != null || matchers.Length > 1) { 
+						var opts = new CompositeMatcherOptions();
+						if(m?.Matcher != null)
+							opts.Matchers.Add(m.Matcher);
+						foreach(var matcher in matchers) {
+							if(matcher != null)
+								opts.Matchers.Add(matcher);
+						}
 
-					return new MergeCollectionsMappingOptions(m?.RemoveNotMatchedDestinationElements, new CompositeMatcher(opts));
+						return new MergeCollectionsMappingOptions(m?.RemoveNotMatchedDestinationElements, new CompositeMatcher(opts));
+					}
+					else
+						return new MergeCollectionsMappingOptions(m?.RemoveNotMatchedDestinationElements, matchers[0]);
 				});
 			}
 			else

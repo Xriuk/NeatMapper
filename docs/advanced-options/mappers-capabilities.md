@@ -9,18 +9,18 @@ You can check if a mapper/matcher/projector supports a map for two given types b
 
 `IMapper`:
 
-- `.CanMapNew<Source, Destination>()`
-- `.CanMapMerge<Source, Destination>()`
+- `mapper.CanMapNew<Source, Destination>()`
+- `mapper.CanMapMerge<Source, Destination>()`
 
 `IAsyncMapper`:
-- `.CanMapAsyncNew<Source, Destination>()`
-- `.CanMapAsyncMerge<Source, Destination>()`
+- `await asyncMapper.CanMapAsyncNew<Source, Destination>()`
+- `await asyncMapper.CanMapAsyncMerge<Source, Destination>()`
 
 `IMatcher`:
-- `.CanMatch<Source, Destination>()`
+- `matcher.CanMatch<Source, Destination>()`
 
 `IProjector`:
-- `.CanProject<Source, Destination>()`
+- `projector.CanProject<Source, Destination>()`
 
 This will check and will return true if the mapper/matcher **could** potentially map the two given types (actual mapping can still fail for various reasons).
 

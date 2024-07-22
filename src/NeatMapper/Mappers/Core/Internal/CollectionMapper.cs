@@ -51,28 +51,20 @@ namespace NeatMapper {
 
 
 		// Will override the mapper if not already overridden
-		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options, out MergeCollectionsMappingOptions mergeCollectionsMappingOptions) {
-			if(options == null || options == MappingOptions.Empty) {
-				mergeCollectionsMappingOptions = null;
+		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
+			if(options == null || options == MappingOptions.Empty) 
 				return _optionsCacheNull;
-			}
-			else {
-				mergeCollectionsMappingOptions = options.GetOptions<MergeCollectionsMappingOptions>();
-				if(options.Cached)
-					return _optionsCache.GetOrAdd(options, MergeMappingOptions);
-				else
-					return MergeMappingOptions(options);
-			}
+			else if(options.Cached)
+				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
+			else
+				return MergeMappingOptions(options);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private MappingOptions MergeMappingOptions(MappingOptions options) {
-			// Caching only ReplaceOrAdd (if options are cached aswell) as the first Replace is discarded
-			return options
-				.Replace<MergeCollectionsMappingOptions>(m => new MergeCollectionsMappingOptions(m.RemoveNotMatchedDestinationElements, null), false)
-				.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
-					m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
-					n => n != null ? new NestedMappingContext(_nestedMappingContext.ParentMapper, n) : _nestedMappingContext, options.Cached);
+			return options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
+				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
+				n => n != null ? new NestedMappingContext(_nestedMappingContext.ParentMapper, n) : _nestedMappingContext, options.Cached);
 		}
 	}
 }
