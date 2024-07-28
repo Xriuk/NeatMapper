@@ -10,6 +10,10 @@
 
 - `DelegateMatcher` constructor was made private and it now can be created only via the type-safe static method `Create`.
 - `MergeCollectionsMappingOptions` Matcher was changed from `MatchMapDelegate` to the safer `IMatcher` (which can also be a `CompositeMatcher` to support multiple maps). `IMapper`/`IAsyncMapper` extensions were updated.
+- Extension method `Predicate` for `IMatchMapFactory`/`MatchMapFactory<TSource, TDestination>` now have an optional parameter which allows to dispose the provided factory together with the returned one (or in case of exceptions), this allows to create factories from other factories directly. The parameter is true by default, meaning that the provided factory will be disposed.
+- Improved and cleanup extension method `Predicate` for `IMatcher`.
+- Extension method `Predicate` for `IMatcher`/`IMatchMapFactory`/`MatchMapFactory<TSource, TDestination>` now return `IPredicateFactory`/`PredicateFactory<T>`.
+- `CompositeMapper` now returns both new factories and merge factories for `MapNewFactory()` (like `CompositeMatcher` does for exact and reverse maps), the same applies to `AsyncCompositeMapper` too.
 
 ### Added
 
@@ -19,10 +23,15 @@
 - `MappingOptions` extension method `AddMergeCollectionMatchers` which allows to Set/Add `IMatcher`s to be used in merge maps.
 - `AsyncEnumerableExtensions`.`Project`'s `MappingOptions` `params object[]` parameter overload.
 - `IdentityMapper` and `AsyncIdentityMapper` which always return the passed source (for both new and merge maps, provided that the mapped types are the same).
+- `IMatchMapFactory` overloads to extension method `Predicate`.
+- `MapNewFactory` extension methods for `IMergeMapFactory`/`MergeMapFactory<TSource, TDestination>` and its async counterpart `MapAsyncNewFactory` for `IAsyncMergeMapFactory`/`AsyncMergeMapFactory<TSource, TDestination>`, which allows to create a new factory from a merge factory by creating destination objects.
+- `IPredicateFactory` and `PredicateFactory<T>` types which replaces `NewMapFactory<T, bool>`.
 
 ### Fixed
 
 - Disposable pattern implementation is now idempotent, meaning it can be disposed multiple times safely.
+- Some concurrent locks in `CompositeMapper`/`AsyncCompositeMapper` factories.
+- `AsyncCompositeMapper` missing `IAsyncMapperFactory` interface.
 
 ## [4.0.0] - 2024-07-16
 
@@ -42,7 +51,7 @@
    - `IMapper` extensions (`Map`, `CanMapNew`, `CanMapMerge`, `MapNewFactory` and `MapMergeFactory`).
    - `IAsyncMapper` extensions (`MapAsyncNewFactory` and `MapAsyncMergeFactory`).
    - `IMatcher` extensions (`Match`, `CanMatch`, and `MatchFactory`).
-- `IMatcher` extension method `Predicate`, which allows to compare a single provided value of a given type with other values of a different type repeatedly by returning a predicate (`Func<T, bool>`) which can be used in Linq methods like `Where`, `First`, `Count`, ...
+- `IMatcher` and `MatchMapFactory<TSource, TDestination>` extension method `Predicate`, which allows to compare a single provided value of a given type with other values of a different type repeatedly by returning a predicate (`Func<T, bool>`) which can be used in Linq methods like `Where`, `First`, `Count`, ...
 - Implicit conversions from generic factories (`NewMapFactory`, `MergeMapFactory`, `MatchMapFactory`, `AsyncNewMapFactory` and `AsyncMergeMapFactory`) to corresponding delegates (`Func<...>`).
 - `IAsyncEnumerable<T>` support for `AsyncNewCollectionMapper` for both source and destination and for `AsyncMergeCollectionMapper` only for source.
 - AsyncMappers `IAsyncEnumerable` extension methods `Project`, which creates a lazy projection (just like Linq.Async method `Select()`).

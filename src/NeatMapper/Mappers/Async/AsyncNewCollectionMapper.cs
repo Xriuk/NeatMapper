@@ -245,28 +245,7 @@ namespace NeatMapper {
 				try { 
 					IAsyncNewMapFactory mergeElementsFactory;
 					try {
-						IAsyncMergeMapFactory mergeFactory;
-						try {
-							mergeFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
-						}
-						catch (MapNotFoundException) {
-							throw new MapNotFoundException(types);
-						}
-
-						try { 
-							Func<object> destinationFactory;
-							try {
-								destinationFactory = ObjectFactory.CreateFactory(elementTypes.To);
-							}
-							catch (ObjectCreationException) {
-								throw new MapNotFoundException(types);
-							}
-							mergeElementsFactory = new DisposableAsyncNewMapFactory(elementTypes.From, elementTypes.To, (s, c) => mergeFactory.Invoke(s, destinationFactory.Invoke(), c), mergeFactory);
-						}
-						catch {
-							mergeFactory?.Dispose();
-							throw;
-						}
+						mergeElementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions).MapAsyncNewFactory();
 					}
 					catch (MapNotFoundException) {
 						if (newElementsFactory == null)

@@ -16,6 +16,9 @@ namespace NeatMapper {
 	/// Contains informations about custom defined maps (both in classes and outside, both specific and generic)
 	/// </summary>
 	internal sealed class CustomMapsConfiguration {
+		/// <summary>
+		/// Cache of resolved delegates for each type.
+		/// </summary>
 		readonly ConcurrentDictionary<(Type From, Type To), Delegate> _mapsCache = new ConcurrentDictionary<(Type From, Type To), Delegate>();
 
 		/// <param name="interfaceFilter">
@@ -420,7 +423,6 @@ namespace NeatMapper {
 				return (Func<object, object, AsyncMappingContext, Task<object>>)cacheDeleg;
 		}
 
-
 		private TDelegate RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) {
 			// Try retrieving a regular map
 			{
@@ -481,6 +483,11 @@ namespace NeatMapper {
 
 			return default;
 		}
+
+		internal IEnumerable<(Type From, Type To)> GetMaps() {
+			return Maps.Keys.Concat(GenericMaps.Select(m => (m.From, m.To)));
+		}
+
 
 		private static readonly MethodInfo this_ConvertTask = typeof(CustomMapsConfiguration).GetMethod(nameof(ConvertTask), BindingFlags.Static | BindingFlags.NonPublic)
 			?? throw new InvalidOperationException("Could not find ConvertTask<TSource, TDestination>(task)");

@@ -233,6 +233,7 @@ namespace NeatMapper {
 					return (IMatchMapFactory)null;
 				}))
 				.Where(factory => factory != null));
+
 			HashSet<IMatcher> unavailableMatchersReverse;
 			CachedLazyEnumerable<IMatchMapFactory> factoriesReverse;
 			if(sourceType != destinationType &&

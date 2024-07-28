@@ -30,6 +30,27 @@ namespace NeatMapper.Tests.Mapping {
 			}
 		}
 
+		public class TestMapper2 : IMapper, IMapperFactory {
+			public object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			public object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
+			public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				if(sourceType != typeof(float) || destinationType != typeof(string))
+					throw new MapNotFoundException((sourceType, destinationType));
+
+				return new DefaultMergeMapFactory<float, string>((f, s) => (f * 2f).ToString());
+			}
+
+			public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+		}
+
 
 		/*[TestMethod]
 		public void ShouldForwardNewMapToMergeMapIfNotFound() {
@@ -78,6 +99,15 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsTrue(compositeMapper.CanMapNew<string, int>());
 
 			Assert.AreEqual(4, compositeMapper.MapNewFactory<string, int>().Invoke("Test"));
+		}
+
+		[TestMethod]
+		public void MapNewFactoryShouldReturnMergeToo() {
+			var compositeMapper = new CompositeMapper(new TestMapper2());
+
+			using(var factory = compositeMapper.MapNewFactory<float, string>()) {
+				Assert.AreEqual("4", factory.Invoke(2f));
+			}
 		}
 	}
 }

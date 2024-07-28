@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
@@ -7,7 +9,7 @@ namespace NeatMapper {
 	/// Caches <see cref="MappingContext"/> for each provided <see cref="MappingOptions"/>, so that same options
 	/// will reuse the same context.
 	/// </summary>
-	public sealed class NewMapper : CustomMapper, IMapperCanMap, IMapperFactory {
+	public sealed class NewMapper : CustomMapper, IMapperCanMap, IMapperFactory, IMapperMaps {
 		/// <summary>
 		/// Creates a new instance of <see cref="NewMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -238,6 +240,30 @@ namespace NeatMapper {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
+		}
+		#endregion
+
+		#region IMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _configuration.GetMaps();
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return Enumerable.Empty<(Type, Type)>();
 		}
 		#endregion
 	}

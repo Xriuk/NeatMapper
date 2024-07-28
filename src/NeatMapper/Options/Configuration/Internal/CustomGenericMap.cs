@@ -11,15 +11,15 @@ namespace NeatMapper {
 	/// <remarks>At least one of <see cref="From"/> or <see cref="To"/> is an open generic type</remarks>
 	internal sealed class CustomGenericMap {
 		/// <summary>
-		/// Source type of the map
+		/// Source type of the map.
 		/// </summary>
-		/// <remarks>May be a generic open type</remarks>
+		/// <remarks>May be an open generic type.</remarks>
 		public Type From { get; set; }
 
 		/// <summary>
-		/// Destination type of the map
+		/// Destination type of the map.
 		/// </summary>
-		/// <remarks>May be a generic open type</remarks>
+		/// <remarks>May be an open generic type.</remarks>
 		public Type To { get; set; }
 
 		/// <summary>

@@ -22,8 +22,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.
 		/// </summary>
-		/// <param name="source">Object to be mapped, may be null.</param>
-		/// <param name="destination">Object to map to, may be null.</param>
+		/// <param name="source">Object to be mapped, of type <see cref="SourceType"/>, may be null.</param>
+		/// <param name="destination">Object to map to, of type <see cref="DestinationType"/>, may be null.</param>
 		/// <returns>
 		/// The resulting object of the mapping of type <see cref="DestinationType"/>, can be the same as
 		/// <paramref name="destination"/> or a new one, may be null.

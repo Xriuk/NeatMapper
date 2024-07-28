@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper {
 	public static class MapperExtensions {
@@ -1508,5 +1509,34 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 		#endregion
+
+
+		public static IEnumerable<(Type From, Type To)> GetNewMaps(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if(mapper is IMapperMaps maps)
+				return maps.GetNewMaps(mappingOptions);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		public static IEnumerable<(Type From, Type To)> GetMergeMaps(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (mapper is IMapperMaps maps)
+				return maps.GetMergeMaps(mappingOptions);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
 	}
 }

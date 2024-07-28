@@ -1,13 +1,16 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="IMergeMap{TSource, TDestination}"/>.<br/>
-	/// Supports both merge and new maps (by creating a destination object and forwarding the calls to merge map).<br/>
+	/// Supports both merge and new maps (by creating a destination object and forwarding the calls to merge map
+	/// where possible).<br/>
 	/// Caches <see cref="MappingContext"/> for each provided <see cref="MappingOptions"/>, so that same options
 	/// will share the same context.
 	/// </summary>
-	public sealed class MergeMapper : CustomMapper, IMapperCanMap, IMapperFactory {
+	public sealed class MergeMapper : CustomMapper, IMapperCanMap, IMapperFactory, IMapperMaps {
 		/// <summary>
 		/// Creates a new instance of <see cref="MergeMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -214,31 +217,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			// Forward new map to merge by creating a destination
-			Func<object> destinationFactory;
-			try {
-				destinationFactory = ObjectFactory.CreateFactory(destinationType);
-			}
-			catch (ObjectCreationException) {
-				throw new MapNotFoundException((sourceType, destinationType));
-			}
-
-			var mergeFactory = MapMergeFactory(sourceType, destinationType, mappingOptions);
-
-			return new DisposableNewMapFactory(
-				sourceType, destinationType,
-				source => {
-					object destination;
-					try {
-						destination = destinationFactory.Invoke();
-					}
-					catch (ObjectCreationException e) {
-						throw new MappingException(e, (sourceType, destinationType));
-					}
-
-					return mergeFactory.Invoke(source, destination);
-				},
-				mergeFactory);
+			return MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
 		}
 
 		public IMergeMapFactory MapMergeFactory(
@@ -272,6 +251,30 @@ namespace NeatMapper {
 
 					return result;
 				});
+		}
+		#endregion
+
+		#region IMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return Enumerable.Empty<(Type, Type)>();
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _configuration.GetMaps();
 		}
 		#endregion
 	}

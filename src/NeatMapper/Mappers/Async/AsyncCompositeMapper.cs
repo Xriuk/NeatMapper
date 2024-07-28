@@ -13,7 +13,7 @@ namespace NeatMapper {
 	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.<br/>
 	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
-	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap {
+	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -317,15 +317,17 @@ namespace NeatMapper {
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
-			var unavailableMappers = new HashSet<IAsyncMapper>();
-			var factories = new CachedLazyEnumerable<IAsyncNewMapFactory>(
+			var unavailableMappersNew = new HashSet<IAsyncMapper>();
+			var factoriesNew = new CachedLazyEnumerable<IAsyncNewMapFactory>(
 				_mappers.OfType<IAsyncMapperFactory>()
 				.Select(mapper => {
 					try {
 						return mapper.MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
 					}
 					catch (MapNotFoundException) {
-						unavailableMappers.Add(mapper);
+						lock (unavailableMappersNew) {
+							unavailableMappersNew.Add(mapper);
+						}
 						return null;
 					}
 				})
@@ -337,8 +339,44 @@ namespace NeatMapper {
 
 						try {
 							if (!mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions).Result) {
-								lock (unavailableMappers) {
-									unavailableMappers.Add(mapper);
+								lock (unavailableMappersNew) {
+									unavailableMappersNew.Add(mapper);
+								}
+							}
+							else
+								break;
+						}
+						catch { }
+					}
+
+					return (IAsyncNewMapFactory)e;
+				}))
+				.Where(factory => factory != null));
+
+			var unavailableMappersMerge = new HashSet<IAsyncMapper>();
+			var factoriesMerge = new CachedLazyEnumerable<IAsyncNewMapFactory>(
+				_mappers.OfType<IAsyncMapperFactory>()
+				.Select(mapper => {
+					try {
+						return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
+					}
+					catch (MapNotFoundException) {
+						lock (unavailableMappersMerge) {
+							unavailableMappersMerge.Add(mapper);
+						}
+						return null;
+					}
+				})
+				.Concat(_singleElementArray.Select(e => {
+					// Since we finished the mappers, we check if any mapper left can map the types
+					foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+						if (mapper is IAsyncMapperFactory)
+							continue;
+
+						try {
+							if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result || !ObjectFactory.CanCreate(destinationType)) {
+								lock (unavailableMappersMerge) {
+									unavailableMappersMerge.Add(mapper);
 								}
 							}
 							else
@@ -356,8 +394,16 @@ namespace NeatMapper {
 			return new DisposableAsyncNewMapFactory(
 				sourceType, destinationType,
 				async (source, cancellationToken) => {
-					// Try using the factories, if any
-					foreach (var factory in factories) {
+					// Try using the new factories, if any
+					foreach (var factory in factoriesNew) {
+						try {
+							return await factory.Invoke(source, cancellationToken);
+						}
+						catch (MapNotFoundException) { }
+					}
+
+					// Try using the merge factories, if any
+					foreach (var factory in factoriesMerge) {
 						try {
 							return await factory.Invoke(source, cancellationToken);
 						}
@@ -366,13 +412,19 @@ namespace NeatMapper {
 
 					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
 					// because factories is already fully enumerated)
-					if (unavailableMappers.Count != _mappers.Count)
-						return await MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destinationType, mappingOptions, cancellationToken);
+					if (unavailableMappersNew.Count != _mappers.Count ||
+						unavailableMappersMerge.Count != _mappers.Count) { 
+
+						return await MapInternal(_mappers.Except(unavailableMappersNew.Intersect(unavailableMappersMerge)), source, sourceType, destinationType, mappingOptions, cancellationToken);
+					}
 					else
 						throw new MapNotFoundException((sourceType, destinationType));
 				},
-				factories, new LambdaDisposable(() => {
-					foreach (var factory in factories.Cached) {
+				factoriesNew, factoriesMerge, new LambdaDisposable(() => {
+					foreach (var factory in factoriesNew.Cached) {
+						factory.Dispose();
+					}
+					foreach (var factory in factoriesMerge.Cached) {
 						factory.Dispose();
 					}
 				}));
@@ -411,7 +463,9 @@ namespace NeatMapper {
 						return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions);
 					}
 					catch (MapNotFoundException) {
-						unavailableMappers.Add(mapper);
+						lock (unavailableMappers) {
+							unavailableMappers.Add(mapper);
+						}
 						return null;
 					}
 				})

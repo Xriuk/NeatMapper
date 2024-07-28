@@ -440,7 +440,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		public static NewMapFactory<object, bool> Predicate(this IMatcher matcher,
+		public static IPredicateFactory Predicate(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -456,27 +456,11 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			var factory = matcher.MatchFactory(sourceType, destinationType, mappingOptions);
-			return new DisposableNewMapFactory<object, bool>(destination => factory.Invoke(source, destination), factory);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return matcher.MatchFactory(sourceType, destinationType, mappingOptions).Predicate(source);
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, object, Type, Type, MappingOptions)"/>
-		public static NewMapFactory<object, bool> Predicate(this IMatcher matcher,
+		public static IPredicateFactory Predicate(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -496,7 +480,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, object, Type, Type, MappingOptions)"/>
-		public static NewMapFactory<object, bool> Predicate(this IMatcher matcher,
+		public static IPredicateFactory Predicate(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -534,7 +518,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="destination"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		public static NewMapFactory<object, bool> Predicate(this IMatcher matcher,
+		public static IPredicateFactory Predicate(this IMatcher matcher,
 			Type sourceType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -554,15 +538,11 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
 			var factory = matcher.MatchFactory(sourceType, destinationType, mappingOptions);
-			return new DisposableNewMapFactory<object, bool>(source => factory.Invoke(source, destination), factory);
+			return new DisposablePredicateFactory(
+				factory.DestinationType, factory.SourceType,
+				source => factory.Invoke(source, destination),
+				factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -570,7 +550,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, Type, object, Type, MappingOptions)"/>
-		public static NewMapFactory<object, bool> Predicate(this IMatcher matcher,
+		public static IPredicateFactory Predicate(this IMatcher matcher,
 			Type sourceType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -590,7 +570,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, Type, object, Type, MappingOptions)"/>
-		public static NewMapFactory<object, bool> Predicate(this IMatcher matcher,
+		public static IPredicateFactory Predicate(this IMatcher matcher,
 			Type sourceType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -628,7 +608,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		public static NewMapFactory<TDestination, bool> Predicate<TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination> Predicate<TDestination>(this IMatcher matcher,
 			object source,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -643,11 +623,12 @@ namespace NeatMapper {
 
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
-			if (source == null)
-				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+			if (source == null) { 
+				throw new ArgumentNullException(nameof(source),
+					"Type cannot be inferred from null source, use an overload with an explicit source type");
+			}
 
-			var factory = matcher.MatchFactory(source.GetType(), typeof(TDestination), mappingOptions);
-			return new DisposableNewMapFactory<TDestination, bool>(destination => factory.Invoke(source, destination), factory);
+			return matcher.MatchFactory(source.GetType(), typeof(TDestination), mappingOptions).Predicate<TDestination>(source);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -655,7 +636,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TDestination}(IMatcher, object, MappingOptions)"/>
-		public static NewMapFactory<TDestination, bool> Predicate<TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination> Predicate<TDestination>(this IMatcher matcher,
 			object source,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -668,7 +649,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TDestination}(IMatcher, object, MappingOptions)"/>
-		public static NewMapFactory<TDestination, bool> Predicate<TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination> Predicate<TDestination>(this IMatcher matcher,
 			object source,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -683,6 +664,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
+		#region Source
 		/// <summary>
 		/// Creates a factory which can be used as a predicate to match multiple objects against a single one.
 		/// </summary>
@@ -695,7 +677,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		public static NewMapFactory<TDestination, bool> Predicate<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource?
 #else
@@ -709,23 +691,11 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-
-			var factory = matcher.MatchFactory<TSource, TDestination>(mappingOptions);
-			return new DisposableNewMapFactory<TDestination, bool>(destination => factory.Invoke(source, destination), factory);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return matcher.MatchFactory<TSource, TDestination>(mappingOptions).Predicate(source);
 		}
 
-		/// <inheritdoc cref="Predicate{TDestination}(IMatcher, object, MappingOptions)"/>
-		public static NewMapFactory<TDestination, bool> Predicate<TSource, TDestination>(this IMatcher matcher,
+		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TSource, MappingOptions)"/>
+		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource?
 #else
@@ -742,8 +712,8 @@ namespace NeatMapper {
 			return matcher.Predicate<TSource, TDestination>(source, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="Predicate{TDestination}(IMatcher, object, MappingOptions)"/>
-		public static NewMapFactory<TDestination, bool> Predicate<TSource, TDestination>(this IMatcher matcher,
+		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TSource, MappingOptions)"/>
+		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource?
 #else
@@ -759,7 +729,76 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return matcher.Predicate<TSource, TDestination>(source, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		} 
+		#endregion
+
+		#region Destination
+		/// <summary>
+		/// Creates a factory which can be used as a predicate to match multiple objects against a single one.
+		/// </summary>
+		/// <param name="destination">Object to compare other objects to, may be null.</param>
+		/// <param name="mappingOptions">
+		/// Additional options passed to the context, support depends on the matcher and/or the maps, null to ignore.
+		/// </param>
+		/// <returns>
+		/// A factory which can be used as a predicate to compare objects of type <typeparamref name="TSource"/>
+		/// with the provided object <paramref name="destination"/>.
+		/// </returns>
+		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
+		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return matcher.MatchFactory<TSource, TDestination>(mappingOptions).Predicate(destination);
 		}
+
+		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TDestination, MappingOptions)"/>
+		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return matcher.Predicate<TSource, TDestination>(destination, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TDestination, MappingOptions)"/>
+		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			destination,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			return matcher.Predicate<TSource, TDestination>(destination, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
 		#endregion
 		#endregion
 	}

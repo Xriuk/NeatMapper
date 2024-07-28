@@ -277,7 +277,7 @@ namespace NeatMapper.Tests.Extensions {
 				}
 			});
 
-			var products = new List<Product>() {
+			var products1 = new List<Product>() {
 				new Product {
 					Code = "ABC"
 				},
@@ -288,12 +288,59 @@ namespace NeatMapper.Tests.Extensions {
 					Code = "GHI"
 				}
 			};
-			var match = new ProductDto {
+			var match1 = new ProductDto {
 				Code = "DEF"
 			};
 
-			using(var predicate = matcher.Predicate<Product>(match)) {
-				var matchingProduct = products.First(predicate);
+			var products2 = new List<ProductDto>() {
+				new ProductDto {
+					Code = "ABC"
+				},
+				new ProductDto {
+					Code = "DEF"
+				},
+				new ProductDto {
+					Code = "GHI"
+				}
+			};
+			var match2 = new Product {
+				Code = "DEF"
+			};
+
+			// Runtime
+			using (var predicate = matcher.Predicate(match2, typeof(Product), typeof(ProductDto))) {
+				var matchingProduct = products2.First(p => predicate.Invoke(p));
+
+				Assert.AreEqual("DEF", matchingProduct.Code);
+			}
+			using (var predicate = matcher.Predicate(typeof(Product), match1, typeof(ProductDto))) {
+				var matchingProduct = products1.First(p => predicate.Invoke(p));
+
+				Assert.AreEqual("DEF", matchingProduct.Code);
+			}
+
+			// Explicit destination/source, inferred other
+			using (var predicate = matcher.Predicate<Product>(match1)) {
+				var matchingProduct = products1.First(predicate);
+
+				Assert.AreEqual("DEF", matchingProduct.Code);
+			}
+			using (var predicate = matcher.Predicate<ProductDto>(match2)) {
+				var matchingProduct = products2.First(predicate);
+
+				Assert.AreEqual("DEF", matchingProduct.Code);
+			}
+
+			// Explicit source and destination (destination)
+			using (var predicate = matcher.Predicate<Product, ProductDto>(match1)) {
+				var matchingProduct = products1.First(predicate);
+
+				Assert.AreEqual("DEF", matchingProduct.Code);
+			}
+
+			// Explicit source and destination (source)
+			using (var predicate = matcher.Predicate<Product, ProductDto>(match2)) {
+				var matchingProduct = products2.First(predicate);
 
 				Assert.AreEqual("DEF", matchingProduct.Code);
 			}

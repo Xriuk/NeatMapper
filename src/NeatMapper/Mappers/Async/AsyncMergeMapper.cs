@@ -4,7 +4,11 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IAsyncMapper"/> which maps objects by using <see cref="IAsyncMergeMap{TSource, TDestination}"/>.
+	/// <see cref="IAsyncMapper"/> which maps objects by using <see cref="IAsyncMergeMap{TSource, TDestination}"/>.<br/>
+	/// Supports both merge and new maps (by creating a destination object and forwarding the calls to merge map
+	/// where possible).<br/>
+	/// Caches <see cref="AsyncMappingContextOptions"/> for each provided <see cref="MappingOptions"/>, so that same options
+	/// will share the same context.
 	/// </summary>
 	public sealed class AsyncMergeMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
 		/// <summary>
@@ -228,19 +232,7 @@ namespace NeatMapper {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}
 
-			var mergeFactory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions);
-
-			return new DisposableAsyncNewMapFactory(sourceType, destinationType, (source, cancellationToken) => {
-				object destination;
-				try {
-					destination = destinationFactory.Invoke();
-				}
-				catch (ObjectCreationException e) {
-					throw new MappingException(e, (sourceType, destinationType));
-				}
-
-				return mergeFactory.Invoke(source, destination, cancellationToken);
-			}, mergeFactory);
+			return MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
 		}
 
 		public IAsyncMergeMapFactory MapAsyncMergeFactory(

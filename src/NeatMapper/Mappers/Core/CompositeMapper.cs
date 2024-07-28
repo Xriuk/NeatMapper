@@ -11,7 +11,7 @@ namespace NeatMapper {
 	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.<br/>
 	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
-	public sealed class CompositeMapper : IMapper, IMapperCanMap, IMapperFactory {
+	public sealed class CompositeMapper : IMapper, IMapperCanMap, IMapperFactory, IMapperMaps {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -311,15 +311,17 @@ namespace NeatMapper {
 
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
-			var unavailableMappers = new HashSet<IMapper>();
-			var factories = new CachedLazyEnumerable<INewMapFactory>(
+			var unavailableMappersNew = new HashSet<IMapper>();
+			var factoriesNew = new CachedLazyEnumerable<INewMapFactory>(
 				_mappers.OfType<IMapperFactory>()
 				.Select(mapper => {
 					try {
 						return mapper.MapNewFactory(sourceType, destinationType, mappingOptions);
 					}
 					catch (MapNotFoundException) {
-						unavailableMappers.Add(mapper);
+						lock (unavailableMappersNew) {
+							unavailableMappersNew.Add(mapper);
+						}
 						return null;
 					}
 				})
@@ -331,8 +333,44 @@ namespace NeatMapper {
 
 						try {
 							if (!mapper.CanMapNew(sourceType, destinationType, mappingOptions)) {
-								lock (unavailableMappers) {
-									unavailableMappers.Add(mapper);
+								lock (unavailableMappersNew) {
+									unavailableMappersNew.Add(mapper);
+								}
+							}
+							else
+								break;
+						}
+						catch { }
+					}
+
+					return (INewMapFactory)e;
+				}))
+				.Where(factory => factory != null));
+
+			var unavailableMappersMerge = new HashSet<IMapper>();
+			var factoriesMerge = new CachedLazyEnumerable<INewMapFactory>(
+				_mappers.OfType<IMapperFactory>()
+				.Select(mapper => {
+					try {
+						return mapper.MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
+					}
+					catch (MapNotFoundException) {
+						lock (unavailableMappersMerge) {
+							unavailableMappersMerge.Add(mapper);
+						}
+						return null;
+					}
+				})
+				.Concat(_singleElementArray.Select(e => {
+					// Since we finished the mappers, we check if any mapper left can map the types
+					foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
+						if (mapper is IMapperFactory)
+							continue;
+
+						try {
+							if (!mapper.CanMapMerge(sourceType, destinationType, mappingOptions) || !ObjectFactory.CanCreate(destinationType)) {
+								lock (unavailableMappersMerge) {
+									unavailableMappersMerge.Add(mapper);
 								}
 							}
 							else
@@ -350,8 +388,16 @@ namespace NeatMapper {
 			return new DisposableNewMapFactory(
 				sourceType, destinationType, 
 				source => {
-					// Try using the factories, if any
-					foreach (var factory in factories) {
+					// Try using the new factories, if any
+					foreach (var factory in factoriesNew) {
+						try {
+							return factory.Invoke(source);
+						}
+						catch (MapNotFoundException) { }
+					}
+
+					// Try using the merge factories, if any
+					foreach (var factory in factoriesMerge) {
 						try {
 							return factory.Invoke(source);
 						}
@@ -360,13 +406,19 @@ namespace NeatMapper {
 
 					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
 					// because factories is already fully enumerated)
-					if (unavailableMappers.Count != _mappers.Count)
-						return MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destinationType, mappingOptions);
+					if (unavailableMappersNew.Count != _mappers.Count ||
+						unavailableMappersMerge.Count != _mappers.Count) { 
+
+						return MapInternal(_mappers.Except(unavailableMappersNew.Intersect(unavailableMappersMerge)), source, sourceType, destinationType, mappingOptions);
+					}
 					else
 						throw new MapNotFoundException((sourceType, destinationType));
 				},
-				factories, new LambdaDisposable(() => {
-					foreach(var factory in factories.Cached) {
+				factoriesNew, factoriesMerge, new LambdaDisposable(() => {
+					foreach(var factory in factoriesNew.Cached) {
+						factory.Dispose();
+					}
+					foreach (var factory in factoriesMerge.Cached) {
 						factory.Dispose();
 					}
 				}));
@@ -405,7 +457,9 @@ namespace NeatMapper {
 						return mapper.MapMergeFactory(sourceType, destinationType, mappingOptions);
 					}
 					catch (MapNotFoundException) {
-						unavailableMappers.Add(mapper);
+						lock (unavailableMappers) {
+							unavailableMappers.Add(mapper);
+						}
 						return null;
 					}
 				})
@@ -460,6 +514,32 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+		#endregion
+
+		#region IMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			// Supports both new and merge maps (where destination object can be created)
+			return _mappers.SelectMany(m => m.GetNewMaps(mappingOptions))
+				.Concat(GetMergeMaps(mappingOptions).Where(m => ObjectFactory.CanCreate(m.To)));
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _mappers.SelectMany(m => m.GetMergeMaps(mappingOptions));
 		}
 		#endregion
 

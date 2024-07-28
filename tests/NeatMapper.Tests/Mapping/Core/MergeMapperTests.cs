@@ -812,6 +812,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
+			Assert.IsTrue(_mapper.CanMapMerge<string, ClassWithoutParameterlessConstructor>());
 			Assert.IsFalse(_mapper.CanMapNew<string, ClassWithoutParameterlessConstructor>());
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<ClassWithoutParameterlessConstructor>(""));

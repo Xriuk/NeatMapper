@@ -22,8 +22,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Maps an object into a new one.
 		/// </summary>
-		/// <param name="source">Object to map, may be null.</param>
-		/// <returns>The newly created object of type <see cref="DestinationType"/>, may be null.</returns>
+		/// <param name="source">Object to map, of type <see cref="SourceType"/>, may be null.</param>
+		/// <returns>The newly created object, of type <see cref="DestinationType"/>, may be null.</returns>
 		/// <exception cref="MapNotFoundException">The provided object could not be mapped.</exception>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
