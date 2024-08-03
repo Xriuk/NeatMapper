@@ -311,6 +311,8 @@ namespace NeatMapper {
 
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
+			// DEV: maybe check with CanMap and if returns false throw instead of creating the factory?
+
 			var unavailableMappersNew = new HashSet<IMapper>();
 			var factoriesNew = new CachedLazyEnumerable<INewMapFactory>(
 				_mappers.OfType<IMapperFactory>()
@@ -347,81 +349,84 @@ namespace NeatMapper {
 				}))
 				.Where(factory => factory != null));
 
-			var unavailableMappersMerge = new HashSet<IMapper>();
-			var factoriesMerge = new CachedLazyEnumerable<INewMapFactory>(
-				_mappers.OfType<IMapperFactory>()
-				.Select(mapper => {
-					try {
-						return mapper.MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
-					}
-					catch (MapNotFoundException) {
-						lock (unavailableMappersMerge) {
-							unavailableMappersMerge.Add(mapper);
-						}
-						return null;
-					}
-				})
-				.Concat(_singleElementArray.Select(e => {
-					// Since we finished the mappers, we check if any mapper left can map the types
-					foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
-						if (mapper is IMapperFactory)
-							continue;
-
+			try { 
+				var unavailableMappersMerge = new HashSet<IMapper>();
+				var factoriesMerge = new CachedLazyEnumerable<INewMapFactory>(
+					_mappers.OfType<IMapperFactory>()
+					.Select(mapper => {
 						try {
-							if (!mapper.CanMapMerge(sourceType, destinationType, mappingOptions) || !ObjectFactory.CanCreate(destinationType)) {
-								lock (unavailableMappersMerge) {
-									unavailableMappersMerge.Add(mapper);
+							return mapper.MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
+						}
+						catch (MapNotFoundException) {
+							lock (unavailableMappersMerge) {
+								unavailableMappersMerge.Add(mapper);
+							}
+							return null;
+						}
+					})
+					.Concat(_singleElementArray.Select(e => {
+						// Since we finished the mappers, we check if any mapper left can map the types
+						foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
+							if (mapper is IMapperFactory)
+								continue;
+
+							try {
+								if (!mapper.CanMapMerge(sourceType, destinationType, mappingOptions) || !ObjectFactory.CanCreate(destinationType)) {
+									lock (unavailableMappersMerge) {
+										unavailableMappersMerge.Add(mapper);
+									}
 								}
+								else
+									break;
+							}
+							catch { }
+						}
+
+						return (INewMapFactory)e;
+					}))
+					.Where(factory => factory != null));
+
+				try { 
+					return new DisposableNewMapFactory(
+						sourceType, destinationType, 
+						source => {
+							// Try using the new factories, if any
+							foreach (var factory in factoriesNew) {
+								try {
+									return factory.Invoke(source);
+								}
+								catch (MapNotFoundException) { }
+							}
+
+							// Try using the merge factories, if any
+							foreach (var factory in factoriesMerge) {
+								try {
+									return factory.Invoke(source);
+								}
+								catch (MapNotFoundException) { }
+							}
+
+							// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+							// because factories is already fully enumerated)
+							if (unavailableMappersNew.Count != _mappers.Count ||
+								unavailableMappersMerge.Count != _mappers.Count) { 
+
+								return MapInternal(_mappers.Except(unavailableMappersNew.Intersect(unavailableMappersMerge)), source, sourceType, destinationType, mappingOptions);
 							}
 							else
-								break;
-						}
-						catch { }
-					}
-
-					return (INewMapFactory)e;
-				}))
-				.Where(factory => factory != null));
-
-			// DEV: maybe check with CanMap and if returns false throw instead of creating the factory?
-
-			return new DisposableNewMapFactory(
-				sourceType, destinationType, 
-				source => {
-					// Try using the new factories, if any
-					foreach (var factory in factoriesNew) {
-						try {
-							return factory.Invoke(source);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Try using the merge factories, if any
-					foreach (var factory in factoriesMerge) {
-						try {
-							return factory.Invoke(source);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
-					// because factories is already fully enumerated)
-					if (unavailableMappersNew.Count != _mappers.Count ||
-						unavailableMappersMerge.Count != _mappers.Count) { 
-
-						return MapInternal(_mappers.Except(unavailableMappersNew.Intersect(unavailableMappersMerge)), source, sourceType, destinationType, mappingOptions);
-					}
-					else
-						throw new MapNotFoundException((sourceType, destinationType));
-				},
-				factoriesNew, factoriesMerge, new LambdaDisposable(() => {
-					foreach(var factory in factoriesNew.Cached) {
-						factory.Dispose();
-					}
-					foreach (var factory in factoriesMerge.Cached) {
-						factory.Dispose();
-					}
-				}));
+								throw new MapNotFoundException((sourceType, destinationType));
+						},
+						factoriesNew, factoriesMerge);
+				}
+				catch {
+					factoriesMerge.Dispose();
+					throw;
+				}
+			}
+			catch {
+				factoriesNew.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -449,10 +454,12 @@ namespace NeatMapper {
 
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
+			// DEV: maybe check with CanMap and if returns false throw instead of creating the factory?
+
 			var unavailableMappers = new HashSet<IMapper>();
 			var factories = new CachedLazyEnumerable<IMergeMapFactory>(
 				_mappers.OfType<IMapperFactory>()
-				.Select(mapper => {
+					.Select(mapper => {
 					try {
 						return mapper.MapMergeFactory(sourceType, destinationType, mappingOptions);
 					}
@@ -463,7 +470,7 @@ namespace NeatMapper {
 						return null;
 					}
 				})
-				.Concat(_singleElementArray.Select(_ => {
+					.Concat(_singleElementArray.Select(_ => {
 					// Since we finished the mappers, we check if any mapper left can map the types
 					foreach (var mapper in _mappers.OfType<IMapperCanMap>()) {
 						if (mapper is IMapperFactory)
@@ -483,33 +490,33 @@ namespace NeatMapper {
 
 					return (IMergeMapFactory)null;
 				}))
-				.Where(factory => factory != null));
+					.Where(factory => factory != null));
 
-			// DEV: maybe check with CanMap and if returns false throw instead of creating the factory?
-
-			return new DisposableMergeMapFactory(
-				sourceType, destinationType,
-				(source, destination) => {
-					// Try using the factories, if any
-					foreach (var factory in factories) {
-						try {
-							return factory.Invoke(source, destination);
+			try { 
+				return new DisposableMergeMapFactory(
+					sourceType, destinationType,
+					(source, destination) => {
+						// Try using the factories, if any
+						foreach (var factory in factories) {
+							try {
+								return factory.Invoke(source, destination);
+							}
+							catch (MapNotFoundException) { }
 						}
-						catch (MapNotFoundException) { }
-					}
 
-					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
-					// because factories is already fully enumerated)
-					if (unavailableMappers.Count != _mappers.Count)
-						return MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destination, destinationType, mappingOptions);
-					else
-						throw new MapNotFoundException((sourceType, destinationType));
-				},
-				factories, new LambdaDisposable(() => {
-					foreach (var factory in factories.Cached) {
-						factory.Dispose();
-					}
-				}));
+						// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+						// because factories is already fully enumerated)
+						if (unavailableMappers.Count != _mappers.Count)
+							return MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destination, destinationType, mappingOptions);
+						else
+							throw new MapNotFoundException((sourceType, destinationType));
+					},
+					factories);
+			}
+			catch {
+				factories.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

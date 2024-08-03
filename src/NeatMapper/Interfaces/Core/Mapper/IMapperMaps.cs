@@ -5,7 +5,8 @@ namespace NeatMapper {
 	/// <summary>
 	/// Optional interface to be implemented by mappers, which allows to retrieve a collection of types
 	/// which can be mapped by the mapper. If a mapper maps dynamically it should not implement this interface.<br/>
-	/// In case of partial implementation, <see cref="System.Linq.Enumerable.Empty{TResult}"/> should be returned.
+	/// In case of partial implementation, <see cref="System.Linq.Enumerable.Empty{TResult}"/> should be returned,
+	/// no exceptions should be thrown.
 	/// </summary>
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMapperMaps : IMapper {

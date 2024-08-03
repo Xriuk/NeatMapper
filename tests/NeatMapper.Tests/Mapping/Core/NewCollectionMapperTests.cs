@@ -35,13 +35,15 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(1, MappingOptionsUtils.contexts.Distinct().Count());
 				Assert.IsNull(MappingOptionsUtils.mergeOptions);
 
-				var strings2 = _mapper.MapNewFactory<int[], string[]>().Invoke(new[] { 2, -3, 0 });
+				using(var factory = _mapper.MapNewFactory<int[], string[]>()) { 
+					var strings2 = factory.Invoke(new[] { 2, -3, 0 });
 
-				Assert.IsNotNull(strings);
-				Assert.AreEqual(3, strings.Length);
-				Assert.AreEqual("4", strings[0]);
-				Assert.AreEqual("-6", strings[1]);
-				Assert.AreEqual("0", strings[2]);
+					Assert.IsNotNull(strings2);
+					Assert.AreEqual(3, strings2.Length);
+					Assert.AreEqual("4", strings2[0]);
+					Assert.AreEqual("-6", strings2[1]);
+					Assert.AreEqual("0", strings2[2]);
+				}
 			}
 
 			// Options (no merge)

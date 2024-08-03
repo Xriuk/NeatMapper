@@ -106,10 +106,10 @@ namespace NeatMapper {
 			// Add mappers to composite mapper
 			services.AddOptions<CompositeMapperOptions>()
 				.Configure<NewMapper, MergeMapper, ProjectionMapper, IServiceProvider>((o, n, m, p, s) => {
-					o.Mappers.Add(IdentityMapper.Instance);
-
 					o.Mappers.Add(n);
 					o.Mappers.Add(m);
+
+					o.Mappers.Add(IdentityMapper.Instance);
 
 					// Creating collection mappers with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
 					o.Mappers.Add(new NewCollectionMapper(EmptyMapper.Instance));
@@ -173,10 +173,10 @@ namespace NeatMapper {
 			// Add mappers to composite mapper
 			services.AddOptions<AsyncCompositeMapperOptions>()
 				.Configure<AsyncNewMapper, AsyncMergeMapper, IServiceProvider>((o, n, m, s) => {
-					o.Mappers.Add(AsyncIdentityMapper.Instance);
-
 					o.Mappers.Add(n);
 					o.Mappers.Add(m);
+
+					o.Mappers.Add(AsyncIdentityMapper.Instance);
 
 					// Creating collection mappers with AsyncEmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
 					var asyncOptions = s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value;

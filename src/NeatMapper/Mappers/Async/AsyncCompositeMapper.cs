@@ -317,6 +317,8 @@ namespace NeatMapper {
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
+			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
+
 			var unavailableMappersNew = new HashSet<IAsyncMapper>();
 			var factoriesNew = new CachedLazyEnumerable<IAsyncNewMapFactory>(
 				_mappers.OfType<IAsyncMapperFactory>()
@@ -353,81 +355,84 @@ namespace NeatMapper {
 				}))
 				.Where(factory => factory != null));
 
-			var unavailableMappersMerge = new HashSet<IAsyncMapper>();
-			var factoriesMerge = new CachedLazyEnumerable<IAsyncNewMapFactory>(
-				_mappers.OfType<IAsyncMapperFactory>()
-				.Select(mapper => {
-					try {
-						return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
-					}
-					catch (MapNotFoundException) {
-						lock (unavailableMappersMerge) {
-							unavailableMappersMerge.Add(mapper);
-						}
-						return null;
-					}
-				})
-				.Concat(_singleElementArray.Select(e => {
-					// Since we finished the mappers, we check if any mapper left can map the types
-					foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
-						if (mapper is IAsyncMapperFactory)
-							continue;
-
+			try { 
+				var unavailableMappersMerge = new HashSet<IAsyncMapper>();
+				var factoriesMerge = new CachedLazyEnumerable<IAsyncNewMapFactory>(
+					_mappers.OfType<IAsyncMapperFactory>()
+					.Select(mapper => {
 						try {
-							if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result || !ObjectFactory.CanCreate(destinationType)) {
-								lock (unavailableMappersMerge) {
-									unavailableMappersMerge.Add(mapper);
+							return mapper.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
+						}
+						catch (MapNotFoundException) {
+							lock (unavailableMappersMerge) {
+								unavailableMappersMerge.Add(mapper);
+							}
+							return null;
+						}
+					})
+					.Concat(_singleElementArray.Select(e => {
+						// Since we finished the mappers, we check if any mapper left can map the types
+						foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+							if (mapper is IAsyncMapperFactory)
+								continue;
+
+							try {
+								if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result || !ObjectFactory.CanCreate(destinationType)) {
+									lock (unavailableMappersMerge) {
+										unavailableMappersMerge.Add(mapper);
+									}
 								}
+								else
+									break;
+							}
+							catch { }
+						}
+
+						return (IAsyncNewMapFactory)e;
+					}))
+					.Where(factory => factory != null));
+
+				try { 
+					return new DisposableAsyncNewMapFactory(
+						sourceType, destinationType,
+						async (source, cancellationToken) => {
+							// Try using the new factories, if any
+							foreach (var factory in factoriesNew) {
+								try {
+									return await factory.Invoke(source, cancellationToken);
+								}
+								catch (MapNotFoundException) { }
+							}
+
+							// Try using the merge factories, if any
+							foreach (var factory in factoriesMerge) {
+								try {
+									return await factory.Invoke(source, cancellationToken);
+								}
+								catch (MapNotFoundException) { }
+							}
+
+							// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+							// because factories is already fully enumerated)
+							if (unavailableMappersNew.Count != _mappers.Count ||
+								unavailableMappersMerge.Count != _mappers.Count) { 
+
+								return await MapInternal(_mappers.Except(unavailableMappersNew.Intersect(unavailableMappersMerge)), source, sourceType, destinationType, mappingOptions, cancellationToken);
 							}
 							else
-								break;
-						}
-						catch { }
-					}
-
-					return (IAsyncNewMapFactory)e;
-				}))
-				.Where(factory => factory != null));
-
-			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
-
-			return new DisposableAsyncNewMapFactory(
-				sourceType, destinationType,
-				async (source, cancellationToken) => {
-					// Try using the new factories, if any
-					foreach (var factory in factoriesNew) {
-						try {
-							return await factory.Invoke(source, cancellationToken);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Try using the merge factories, if any
-					foreach (var factory in factoriesMerge) {
-						try {
-							return await factory.Invoke(source, cancellationToken);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
-					// because factories is already fully enumerated)
-					if (unavailableMappersNew.Count != _mappers.Count ||
-						unavailableMappersMerge.Count != _mappers.Count) { 
-
-						return await MapInternal(_mappers.Except(unavailableMappersNew.Intersect(unavailableMappersMerge)), source, sourceType, destinationType, mappingOptions, cancellationToken);
-					}
-					else
-						throw new MapNotFoundException((sourceType, destinationType));
-				},
-				factoriesNew, factoriesMerge, new LambdaDisposable(() => {
-					foreach (var factory in factoriesNew.Cached) {
-						factory.Dispose();
-					}
-					foreach (var factory in factoriesMerge.Cached) {
-						factory.Dispose();
-					}
-				}));
+								throw new MapNotFoundException((sourceType, destinationType));
+						},
+						factoriesNew, factoriesMerge);
+				}
+				catch {
+					factoriesMerge.Dispose();
+					throw;
+				}
+			}
+			catch {
+				factoriesNew.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -454,6 +459,8 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+
+			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
 
 			var unavailableMappers = new HashSet<IAsyncMapper>();
 			var factories = new CachedLazyEnumerable<IAsyncMergeMapFactory>(
@@ -491,31 +498,31 @@ namespace NeatMapper {
 				}))
 				.Where(factory => factory != null));
 
-			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
-
-			return new DisposableAsyncMergeMapFactory(
-				sourceType, destinationType,
-				async (source, destination, cancellationToken) => {
-					// Try using the factories, if any
-					foreach (var factory in factories) {
-						try {
-							return await factory.Invoke(source, destination, cancellationToken);
+			try { 
+				return new DisposableAsyncMergeMapFactory(
+					sourceType, destinationType,
+					async (source, destination, cancellationToken) => {
+						// Try using the factories, if any
+						foreach (var factory in factories) {
+							try {
+								return await factory.Invoke(source, destination, cancellationToken);
+							}
+							catch (MapNotFoundException) { }
 						}
-						catch (MapNotFoundException) { }
-					}
 
-					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
-					// because factories is already fully enumerated)
-					if (unavailableMappers.Count != _mappers.Count)
-						return await MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
-					else
-						throw new MapNotFoundException((sourceType, destinationType));
-				},
-				factories, new LambdaDisposable(() => {
-					foreach (var factory in factories.Cached) {
-						factory.Dispose();
-					}
-				}));
+						// Invoke the default map if there are any mappers left (no locking needed on unavailableMappers
+						// because factories is already fully enumerated)
+						if (unavailableMappers.Count != _mappers.Count)
+							return await MapInternal(_mappers.Except(unavailableMappers), source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+						else
+							throw new MapNotFoundException((sourceType, destinationType));
+					},
+					factories);
+			}
+			catch {
+				factories.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

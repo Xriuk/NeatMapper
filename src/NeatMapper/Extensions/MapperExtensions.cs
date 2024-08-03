@@ -36,6 +36,7 @@ namespace NeatMapper {
 
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
+
 			return mapper.Map(source, sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -222,6 +223,7 @@ namespace NeatMapper {
 
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
+
 			return (TDestination)mapper.Map(source, typeof(TSource), typeof(TDestination), mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1172,7 +1174,13 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapNewFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-			return new DisposableNewMapFactory<TSource, TDestination>(source => (TDestination)factory.Invoke(source), factory);
+			try { 
+				return new DisposableNewMapFactory<TSource, TDestination>(source => (TDestination)factory.Invoke(source), factory);
+			}
+			catch {
+				factory.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1322,7 +1330,13 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapMergeFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-			return new DisposableMergeMapFactory<TSource, TDestination>((source, destination) => (TDestination)factory.Invoke(source, destination), factory);
+			try { 
+				return new DisposableMergeMapFactory<TSource, TDestination>((source, destination) => (TDestination)factory.Invoke(source, destination), factory);
+			}
+			catch {
+				factory.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -1511,6 +1525,13 @@ namespace NeatMapper {
 		#endregion
 
 
+		#region GetNewMaps
+		/// <summary>
+		/// Retrieves a collection of type pairs which can be mapped to create new objects, will check
+		/// if the given mapper supports <see cref="IMapperMaps"/> otherwise will return an empty result.
+		/// It does not guarantee that the actual maps will succeed.
+		/// </summary>
+		/// <inheritdoc cref="IMapperMaps.GetNewMaps(MappingOptions)"/>
 		public static IEnumerable<(Type From, Type To)> GetNewMaps(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -1519,12 +1540,51 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			if(mapper is IMapperMaps maps)
+			if (mapper is IMapperMaps maps)
 				return maps.GetNewMaps(mappingOptions);
 			else
 				return Enumerable.Empty<(Type, Type)>();
 		}
 
+		/// <inheritdoc cref="GetNewMaps(IMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetNewMaps(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (mapper is IMapperMaps maps)
+				return maps.GetNewMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetNewMaps(IMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetNewMaps(this IMapper mapper,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (mapper is IMapperMaps maps)
+				return maps.GetNewMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+		#endregion
+
+		#region GetMergeMaps
+		/// <summary>
+		/// Retrieves a collection of type pairs which can be mapped to merge objects, will check
+		/// if the given mapper supports <see cref="IMapperMaps"/> otherwise will return an empty result.
+		/// It does not guarantee that the actual maps will succeed.
+		/// </summary>
+		/// <inheritdoc cref="IMapperMaps.GetMergeMaps(MappingOptions)"/>
 		public static IEnumerable<(Type From, Type To)> GetMergeMaps(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -1538,5 +1598,37 @@ namespace NeatMapper {
 			else
 				return Enumerable.Empty<(Type, Type)>();
 		}
+
+		/// <inheritdoc cref="GetMergeMaps(IMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetMergeMaps(this IMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (mapper is IMapperMaps maps)
+				return maps.GetMergeMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetMergeMaps(IMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetMergeMaps(this IMapper mapper,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (mapper is IMapperMaps maps)
+				return maps.GetMergeMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+		#endregion
 	}
 }

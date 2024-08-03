@@ -17,6 +17,8 @@
 
 ### Added
 
+- New optional interface `IMapperMaps` which allows discovering mappable types by a given `IMapper`.
+- Extension methods `GetNewMaps` and `GetMergeMaps` for any `IMapper` which will fallback to default `Enumerable.Empty<T>` if `IMapperMaps` is not implemented.
 - `IMapper`/`IAsyncMapper` `Map`/`MapAsync` and `MapMergeFactory`/`MapAsyncMergeFactory` extension methods added overloads with `IEqualityComparer` parameter used as matcher when merging collections.
 - All the optional interfaces (`IMapperCanMap`, `IAsyncMapperFactory`, ...) are now also provided as services via DI.
 - `EqualityComparerMatcher` which allows using an `IEqualityComparer` to match two elements of the same type.

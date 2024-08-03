@@ -8,11 +8,10 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace NeatMapper {
-	internal sealed class CachedLazyEnumerable<T> : IEnumerable<T>, IDisposable {
+	internal sealed class CachedLazyEnumerable<T> : IEnumerable<T>, IDisposable where T : IDisposable {
 		private IEnumerator<T> _enumerator;
 		private readonly ConcurrentBag<T> _cache = new ConcurrentBag<T>();
 
-		public IEnumerable<T> Cached => _cache;
 
 		internal CachedLazyEnumerable(IEnumerable<T> enumerable) {
 			_enumerator = enumerable.GetEnumerator();
@@ -20,12 +19,15 @@ namespace NeatMapper {
 
 
 		public IEnumerator<T> GetEnumerator() {
+			if(_enumerator == null)
+				throw new ObjectDisposedException(null);
+
 			// Enumerate the cache
 			foreach (var cachedElement in _cache) {
 				yield return cachedElement;
 			}
 
-			// Enumerate the collection
+			// Enumerate the collection, cache it and dispose enumerator
 			while (true) {
 				T current;
 				lock (_cache) {
@@ -38,18 +40,32 @@ namespace NeatMapper {
 				yield return current;
 			}
 
-			Dispose();
+			lock (_cache) {
+				DisposeEnumerator();
+			}
 		}
 
 		IEnumerator IEnumerable.GetEnumerator() {
 			return GetEnumerator();
 		}
 
+		private void DisposeEnumerator() {
+			_enumerator?.Dispose();
+			_enumerator = null;
+		}
+
 		private void Dispose(bool disposing) {
 			if (disposing) {
 				lock (_cache) {
-					_enumerator?.Dispose();
-					_enumerator = null;
+					DisposeEnumerator();
+					foreach (var factory in _cache) {
+						factory.Dispose();
+					}
+#if NET47_OR_GREATER
+					
+#else
+					_cache.Clear();
+#endif
 				}
 			}
 		}

@@ -98,7 +98,9 @@ namespace NeatMapper.Tests.Mapping {
 
 			Assert.IsTrue(compositeMapper.CanMapNew<string, int>());
 
-			Assert.AreEqual(4, compositeMapper.MapNewFactory<string, int>().Invoke("Test"));
+			using(var factory = compositeMapper.MapNewFactory<string, int>()) { 
+				Assert.AreEqual(4, factory.Invoke("Test"));
+			}
 		}
 
 		[TestMethod]

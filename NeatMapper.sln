@@ -22,6 +22,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.Analyzers.Vsix",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.Analyzers.Tests", "tests\NeatMapper.Analyzers.Tests\NeatMapper.Analyzers.Tests.csproj", "{D670753D-AE9E-40FD-8CFE-B3FE6F870231}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.Transitive", "src\NeatMapper.Transitive\NeatMapper.Transitive.csproj", "{F6243270-A118-4ADF-8911-3D2AA9144E09}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NeatMapper.Transitive.Tests", "tests\NeatMapper.Transitive.Tests\NeatMapper.Transitive.Tests.csproj", "{21985D54-BC4E-4AD0-9BD2-3A464DC70B39}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +58,14 @@ Global
 		{D670753D-AE9E-40FD-8CFE-B3FE6F870231}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D670753D-AE9E-40FD-8CFE-B3FE6F870231}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D670753D-AE9E-40FD-8CFE-B3FE6F870231}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F6243270-A118-4ADF-8911-3D2AA9144E09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F6243270-A118-4ADF-8911-3D2AA9144E09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F6243270-A118-4ADF-8911-3D2AA9144E09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F6243270-A118-4ADF-8911-3D2AA9144E09}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21985D54-BC4E-4AD0-9BD2-3A464DC70B39}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21985D54-BC4E-4AD0-9BD2-3A464DC70B39}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21985D54-BC4E-4AD0-9BD2-3A464DC70B39}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21985D54-BC4E-4AD0-9BD2-3A464DC70B39}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

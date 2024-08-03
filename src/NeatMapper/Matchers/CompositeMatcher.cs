@@ -200,6 +200,8 @@ namespace NeatMapper {
 
 			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
 
+			// DEV: maybe check with CanMatch and if returns false throw instead of creating the factory?
+
 			var unavailableMatchersExact = new HashSet<IMatcher>();
 			var factoriesExact = new CachedLazyEnumerable<IMatchMapFactory>(
 				_compositeMatcherOptions.Matchers.OfType<IMatcherFactory>()
@@ -234,89 +236,92 @@ namespace NeatMapper {
 				}))
 				.Where(factory => factory != null));
 
-			HashSet<IMatcher> unavailableMatchersReverse;
-			CachedLazyEnumerable<IMatchMapFactory> factoriesReverse;
-			if(sourceType != destinationType &&
-				(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) {
+			try { 
+				HashSet<IMatcher> unavailableMatchersReverse;
+				CachedLazyEnumerable<IMatchMapFactory> factoriesReverse;
+				if(sourceType != destinationType &&
+					(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) {
 				
-				unavailableMatchersReverse = new HashSet<IMatcher>();
-				factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(
-					_compositeMatcherOptions.Matchers.OfType<IMatcherFactory>()
-					.Select(matcher => {
-						try {
-							return matcher.MatchFactory(destinationType, sourceType, mappingOptions);
-						}
-						catch (MapNotFoundException) {
-							unavailableMatchersReverse.Add(matcher);
-							return null;
-						}
-					})
-					.Concat(_singleElementArray.Select(_ => {
-						// Since we finished the mappers, we check if any mapper left can map the types
-						foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
-							if (matcher is IMatchMapFactory)
-								continue;
-
+					unavailableMatchersReverse = new HashSet<IMatcher>();
+					factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(
+						_compositeMatcherOptions.Matchers.OfType<IMatcherFactory>()
+						.Select(matcher => {
 							try {
-								if (!matcher.CanMatch(destinationType, sourceType, mappingOptions)) {
-									lock (unavailableMatchersReverse) {
-										unavailableMatchersReverse.Add(matcher);
-									}
-								}
-								else
-									break;
+								return matcher.MatchFactory(destinationType, sourceType, mappingOptions);
 							}
-							catch { }
-						}
+							catch (MapNotFoundException) {
+								unavailableMatchersReverse.Add(matcher);
+								return null;
+							}
+						})
+						.Concat(_singleElementArray.Select(_ => {
+							// Since we finished the mappers, we check if any mapper left can map the types
+							foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
+								if (matcher is IMatchMapFactory)
+									continue;
 
-						return (IMatchMapFactory)null;
-					}))
-					.Where(factory => factory != null));
+								try {
+									if (!matcher.CanMatch(destinationType, sourceType, mappingOptions)) {
+										lock (unavailableMatchersReverse) {
+											unavailableMatchersReverse.Add(matcher);
+										}
+									}
+									else
+										break;
+								}
+								catch { }
+							}
+
+							return (IMatchMapFactory)null;
+						}))
+						.Where(factory => factory != null));
+				}
+				else {
+					unavailableMatchersReverse = new HashSet<IMatcher>(_compositeMatcherOptions.Matchers);
+					factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(Enumerable.Empty<IMatchMapFactory>());
+				}
+
+				try { 
+					return new DisposableMatchMapFactory(
+						sourceType, destinationType,
+						(source, destination) => {
+							// Try using the exact factories, if any
+							foreach (var factory in factoriesExact) {
+								try {
+									return factory.Invoke(source, destination);
+								}
+								catch (MapNotFoundException) { }
+							}
+
+							// Try using the reverse factories, if any
+							foreach (var factory in factoriesReverse) {
+								try {
+									return factory.Invoke(destination, source);
+								}
+								catch (MapNotFoundException) { }
+							}
+
+							// Invoke the default map if there are any mappers left (no locking needed on unavailableMappersExact/Reverse
+							// because factories is already fully enumerated)
+							if (unavailableMatchersExact.Count != _compositeMatcherOptions.Matchers.Count ||
+								unavailableMatchersReverse.Count != _compositeMatcherOptions.Matchers.Count) { 
+
+								return MatchInternal(_compositeMatcherOptions.Matchers.Except(unavailableMatchersExact.Intersect(unavailableMatchersReverse)), source, sourceType, destination, destinationType, mappingOptions);
+							}
+							else
+								throw new MapNotFoundException((sourceType, destinationType));
+						},
+						factoriesExact, factoriesReverse);
+				}
+				catch {
+					factoriesReverse.Dispose();
+					throw;
+				}
 			}
-			else {
-				unavailableMatchersReverse = new HashSet<IMatcher>(_compositeMatcherOptions.Matchers);
-				factoriesReverse = new CachedLazyEnumerable<IMatchMapFactory>(Enumerable.Empty<IMatchMapFactory>());
+			catch {
+				factoriesExact.Dispose();
+				throw;
 			}
-
-			// DEV: maybe check with CanMatch and if returns false throw instead of creating the factory?
-
-			return new DisposableMatchMapFactory(
-				sourceType, destinationType,
-				(source, destination) => {
-					// Try using the exact factories, if any
-					foreach (var factory in factoriesExact) {
-						try {
-							return factory.Invoke(source, destination);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Try using the reverse factories, if any
-					foreach (var factory in factoriesReverse) {
-						try {
-							return factory.Invoke(destination, source);
-						}
-						catch (MapNotFoundException) { }
-					}
-
-					// Invoke the default map if there are any mappers left (no locking needed on unavailableMappersExact/Reverse
-					// because factories is already fully enumerated)
-					if (unavailableMatchersExact.Count != _compositeMatcherOptions.Matchers.Count ||
-						unavailableMatchersReverse.Count != _compositeMatcherOptions.Matchers.Count) { 
-
-						return MatchInternal(_compositeMatcherOptions.Matchers.Except(unavailableMatchersExact.Intersect(unavailableMatchersReverse)), source, sourceType, destination, destinationType, mappingOptions);
-					}
-					else
-						throw new MapNotFoundException((sourceType, destinationType));
-				},
-				factoriesExact, factoriesReverse, new LambdaDisposable(() => {
-					foreach (var factory in factoriesExact.Cached) {
-						factory.Dispose();
-					}
-					foreach (var factory in factoriesReverse.Cached) {
-						factory.Dispose();
-					}
-				}));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

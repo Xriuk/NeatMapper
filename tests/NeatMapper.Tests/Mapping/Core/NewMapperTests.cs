@@ -425,16 +425,17 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("0", _mapper.Map<int, string>(0));
 
 			// Factories should share the same context
-			var factory = _mapper.MapNewFactory<int, string>();
-			MappingOptionsUtils.context = null;
-			Assert.AreEqual("4", factory.Invoke(2));
-			var context1 = MappingOptionsUtils.context;
-			Assert.IsNotNull(context1);
-			MappingOptionsUtils.context = null;
-			Assert.AreEqual("-6", factory.Invoke(-3));
-			var context2 = MappingOptionsUtils.context;
-			Assert.IsNotNull(context2);
-			Assert.AreSame(context1, context2);
+			using(var factory = _mapper.MapNewFactory<int, string>()) { 
+				MappingOptionsUtils.context = null;
+				Assert.AreEqual("4", factory.Invoke(2));
+				var context1 = MappingOptionsUtils.context;
+				Assert.IsNotNull(context1);
+				MappingOptionsUtils.context = null;
+				Assert.AreEqual("-6", factory.Invoke(-3));
+				var context2 = MappingOptionsUtils.context;
+				Assert.IsNotNull(context2);
+				Assert.AreSame(context1, context2);
+			}
 		}
 
 		[TestMethod]
@@ -447,10 +448,12 @@ namespace NeatMapper.Tests.Mapping {
 					Currency = "EUR"
 				}));
 
-				Assert.AreEqual(20.00m, _mapper.MapNewFactory<Price, decimal>().Invoke(new Price {
-					Amount = 20.00m,
-					Currency = "EUR"
-				}));
+				using(var factory = _mapper.MapNewFactory<Price, decimal>()) { 
+					Assert.AreEqual(20.00m, factory.Invoke(new Price {
+						Amount = 20.00m,
+						Currency = "EUR"
+					}));
+				}
 			}
 
 			{
@@ -464,13 +467,15 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(40f, result.Amount);
 				Assert.AreEqual("EUR", result.Currency);
 
-				var result2 = _mapper.MapNewFactory<Price, PriceFloat>().Invoke(new Price {
-					Amount = 40.00m,
-					Currency = "EUR"
-				});
-				Assert.IsNotNull(result2);
-				Assert.AreEqual(40f, result2.Amount);
-				Assert.AreEqual("EUR", result2.Currency);
+				using(var factory = _mapper.MapNewFactory<Price, PriceFloat>()) { 
+					var result2 = factory.Invoke(new Price {
+						Amount = 40.00m,
+						Currency = "EUR"
+					});
+					Assert.IsNotNull(result2);
+					Assert.AreEqual(40f, result2.Amount);
+					Assert.AreEqual("EUR", result2.Currency);
+				}
 			}
 		}
 
@@ -535,30 +540,32 @@ namespace NeatMapper.Tests.Mapping {
 				// Factory
 				Maps.productOptions = null;
 				Maps.categoryOptions.Clear();
-				var result2 = _mapper.MapNewFactory<Product, ProductDto>().Invoke(new Product {
-					Code = "Test",
-					Categories = new List<Category> {
-						new Category {
-							Id = 2
-						},
-						new Category {
-							Id = 3
+				using (var factory = _mapper.MapNewFactory<Product, ProductDto>()) { 
+					var result2 = factory.Invoke(new Product {
+						Code = "Test",
+						Categories = new List<Category> {
+							new Category {
+								Id = 2
+							},
+							new Category {
+								Id = 3
+							}
 						}
-					}
-				});
+					});
 
-				Assert.IsNotNull(result2);
-				Assert.AreEqual("Test", result2.Code);
-				Assert.IsNotNull(result2.Categories);
-				Assert.AreEqual(2, result2.Categories.Count());
-				Assert.AreEqual(2, result2.Categories.First());
-				Assert.AreEqual(3, result2.Categories.Last());
+					Assert.IsNotNull(result2);
+					Assert.AreEqual("Test", result2.Code);
+					Assert.IsNotNull(result2.Categories);
+					Assert.AreEqual(2, result2.Categories.Count());
+					Assert.AreEqual(2, result2.Categories.First());
+					Assert.AreEqual(3, result2.Categories.Last());
 
-				Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
-				// Should use same context for nested maps
-				Assert.AreEqual(2, Maps.categoryOptions.Count);
-				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
-				Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<NestedMappingContext>());
+					Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
+					// Should use same context for nested maps
+					Assert.AreEqual(2, Maps.categoryOptions.Count);
+					Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
+					Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<NestedMappingContext>());
+				}
 			}
 
 			{ 
