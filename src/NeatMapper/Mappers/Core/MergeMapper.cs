@@ -263,7 +263,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return Enumerable.Empty<(Type, Type)>();
+			return GetMergeMaps().Where(m => ObjectFactory.CanCreate(m.To));
 		}
 
 		public IEnumerable<(Type From, Type To)> GetMergeMaps(

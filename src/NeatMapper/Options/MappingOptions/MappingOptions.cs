@@ -69,6 +69,16 @@ namespace NeatMapper {
 			Cached = cached;
 		}
 
+		/// <inheritdoc cref="MappingOptions(IEnumerable, bool)"/>
+		public MappingOptions(
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			options) : this(options?.Length > 0 ? (IEnumerable)options : null) { }
+
 		// Internal faster constructor
 		internal MappingOptions(IEnumerable<KeyValuePair<Type, object>> options,
 			bool cached = false) {

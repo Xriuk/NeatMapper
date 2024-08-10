@@ -5,6 +5,7 @@
 ### Removed
 
 - `IServiceProvider` parameter from `MergeCollectionMapper` and `AsyncMergeCollectionMapper` constructors.
+- Some ambiguous `params object[]` overloads for `IMapper` `Map` extension methods.
 
 ### Changed
 
@@ -28,6 +29,7 @@
 - `IMatchMapFactory` overloads to extension method `Predicate`.
 - `MapNewFactory` extension methods for `IMergeMapFactory`/`MergeMapFactory<TSource, TDestination>` and its async counterpart `MapAsyncNewFactory` for `IAsyncMergeMapFactory`/`AsyncMergeMapFactory<TSource, TDestination>`, which allows to create a new factory from a merge factory by creating destination objects.
 - `IPredicateFactory` and `PredicateFactory<T>` types which replaces `NewMapFactory<T, bool>`.
+- `params object[]` constructor overload for `MappingOptions`.
 
 ### Fixed
 

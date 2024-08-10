@@ -61,7 +61,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Folder Include="Options\MappingOptions\" />
 	  <Folder Include="Projectors\" />
 	</ItemGroup>
 

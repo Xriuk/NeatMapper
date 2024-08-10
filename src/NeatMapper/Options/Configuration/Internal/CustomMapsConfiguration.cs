@@ -63,6 +63,9 @@ namespace NeatMapper {
 								$"so they cannot be inferred.");
 						}
 						else {
+							// Generic maps can have duplicates only among other generic maps,
+							// if a non-generic maps has compatible types it is picked first,
+							// this allows for specificity
 							var duplicate = genericMaps.FirstOrDefault(m => MatchOpenGenericsRecursive(m.From, interfaceArguments[0]) && 
 								MatchOpenGenericsRecursive(m.To, interfaceArguments[1]));
 							if (duplicate != null) { 

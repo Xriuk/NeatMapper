@@ -154,37 +154,9 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <inheritdoc cref="Map{TDestination}(IMapper, object, MappingOptions)"/>
-		public static
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			Map<TDestination>(this IMapper mapper,
-			object source,
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			mappingOptions) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (source == null)
-				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
-			return (TDestination)mapper.Map(source, source.GetType(), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
+		// No params overload because it may become problematic if people try to use it to merge types
+		// like: mapper.Map<TDestination>(source, destination), in this case destination is actually passed
+		// to mappingOptions
 		#endregion
 
 		#region Explicit source and destination
@@ -265,40 +237,9 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <inheritdoc cref="Map{TSource, TDestination}(IMapper, TSource, MappingOptions)" />
-		public static
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			Map<TSource, TDestination>(this IMapper mapper,
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			mappingOptions) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			return (TDestination)mapper.Map(source, typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
+		// No params overload because it overlaps with merge map with explicit source and destination:
+		// mapper.Map<TSource, TDestination>(source, destination, option1, ...), in this case destination
+		// is actually passed to mappingOptions
 		#endregion
 		#endregion
 

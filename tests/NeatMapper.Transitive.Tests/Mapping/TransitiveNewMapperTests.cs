@@ -49,9 +49,21 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new TransitiveNewMapper(new NewMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(Maps) }
-			}));
+			_mapper = new CompositeMapper(
+				new NewMapper(new CustomMapsOptions {
+					TypesToScan = new List<Type> { typeof(Maps) }
+				}),
+				new TransitiveNewMapper(EmptyMapper.Instance));
+		}
+
+		private void VerifyMappingContext() {
+			Assert.IsNotNull(Maps.NestedMappingContext);
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(CompositeMapper));
+			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext);
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentMapper, typeof(TransitiveNewMapper));
+			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext.ParentContext);
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentContext.ParentMapper, typeof(CompositeMapper));
+			Assert.IsNull(Maps.NestedMappingContext.ParentContext.ParentContext.ParentContext);
 		}
 
 
@@ -64,8 +76,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 			Assert.AreEqual(4m, _mapper.Map<decimal>(4f));
 			Assert.AreEqual(4m, _mapper.Map(4f, typeof(float), typeof(decimal)));
 			Assert.AreEqual(4m, _mapper.Map<float, decimal>(4f));
-			Assert.IsNotNull(Maps.NestedMappingContext);
-			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(TransitiveNewMapper));
+			VerifyMappingContext();
 
 			using (var factory = _mapper.MapNewFactory<float, decimal>()) { 
 				Assert.AreEqual(4m, factory.Invoke(4f));
@@ -83,8 +94,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 			Assert.AreEqual("EUR", result.Currency);
 			Assert.AreEqual(4f, (_mapper.Map(4f, typeof(float), typeof(PriceFloat)) as PriceFloat)?.Amount);
 			Assert.AreEqual(4f, _mapper.Map<float, PriceFloat>(4f)?.Amount);
-			Assert.IsNotNull(Maps.NestedMappingContext);
-			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(TransitiveNewMapper));
+			VerifyMappingContext();
 
 			using (var factory = _mapper.MapNewFactory<float, PriceFloat>()) {
 				Assert.AreEqual(4f, factory.Invoke(4f)?.Amount);
@@ -109,6 +119,9 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 			Assert.AreSame(typeof(Price), result[3]);
 			Assert.AreSame(typeof(PriceFloat), result[4]);
 
+			// Length of 5 should be good
+			Assert.IsNotNull(_mapper.MapNewPreview<float, PriceFloat>(new TransitiveMappingOptions(5)));
+
 			result = _mapper.MapNewPreview<float, double>();
 			Assert.IsNotNull(result);
 			Assert.AreEqual(2, result.Count);
@@ -119,6 +132,21 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 		[TestMethod]
 		public void ShouldReturnNullPreviewIfCannotMap() {
 			Assert.IsNull(_mapper.MapNewPreview<decimal, float>());
+		}
+
+		[TestMethod]
+		public void ShouldRespectLengthIfSpecified() {
+			// Map length is 5, so shorter
+			Assert.IsFalse(_mapper.CanMapNew<float, PriceFloat>(new TransitiveMappingOptions(4)));
+			Assert.ThrowsException<MapNotFoundException>(() => _mapper.Map<float, PriceFloat>(2f, new MappingOptions(new TransitiveMappingOptions(4))));
+			Assert.IsNull(_mapper.MapNewPreview<float, PriceFloat>(new TransitiveMappingOptions(4)));
+
+			// Length of 2 should invoke the map directly, if available
+			Assert.IsTrue(_mapper.CanMapNew<float, double>(new TransitiveMappingOptions(2)));
+
+			// Length of 0, 1 should not map anything
+			Assert.IsFalse(_mapper.CanMapNew<float, double>(new TransitiveMappingOptions(0)));
+			Assert.IsFalse(_mapper.CanMapNew<float, double>(new TransitiveMappingOptions(1)));
 		}
 	}
 }

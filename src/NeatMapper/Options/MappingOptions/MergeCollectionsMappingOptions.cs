@@ -1,7 +1,7 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Mapping options applied to merge mappings (async and normal), these will override any
-	/// configuration options defined in <see cref="MergeCollectionsOptions"/>.
+	/// Options applied to automatic collections merge mappings (async and normal).<br/
+	/// These will override any configuration options defined in <see cref="MergeCollectionsOptions"/>.
 	/// </summary>
 	public sealed class MergeCollectionsMappingOptions{
 		/// <summary>

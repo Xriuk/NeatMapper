@@ -58,11 +58,15 @@ namespace NeatMapper {
 			if (disposing) {
 				lock (_cache) {
 					DisposeEnumerator();
+
 					foreach (var factory in _cache) {
 						factory.Dispose();
 					}
+
 #if NET47_OR_GREATER
-					
+					while (!_cache.IsEmpty){
+						_cache.TryTake(out var _);
+					}
 #else
 					_cache.Clear();
 #endif

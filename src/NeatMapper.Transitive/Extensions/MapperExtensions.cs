@@ -19,7 +19,7 @@ namespace NeatMapper.Transitive {
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
 		/// <returns>
-		/// A chain of type maps which could be used to map the given types or <see langword="null"></see>
+		/// A chain of type maps which could be used to map the given types or <see langword="null"/>
 		/// if the types cannot be mapped.
 		/// The chain will always begin with the provided <paramref name="sourceType"/> and will end with
 		/// the provided <paramref name="destinationType"/>, so it will always have at least 2 elements.
@@ -45,10 +45,7 @@ namespace NeatMapper.Transitive {
 
 			try {
 				using (var factory = mapper.MapNewFactory(sourceType, destinationType, mappingOptions)) {
-					if(factory is ITransitiveNewMapFactory transFactory)
-						return transFactory.Types;
-					else
-						return new[] { sourceType, destinationType };
+					return factory.GetMapTypes();
 				}
 			}
 			catch (MapNotFoundException) {
@@ -104,7 +101,7 @@ namespace NeatMapper.Transitive {
 		/// <typeparam name="TDestination"><inheritdoc cref="MapNewPreview(IMapper, Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
 		/// <inheritdoc cref="MapNewPreview(IMapper, Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
-		/// A chain of type maps which could be used to map the given types or <see langword="null"></see>
+		/// A chain of type maps which could be used to map the given types or <see langword="null"/>
 		/// if the types cannot be mapped.
 		/// The chain will always begin with the provided <typeparamref name="TSource"/> and will end with
 		/// the provided <typeparamref name="TDestination"/>, so it will always have at least 2 elements.
@@ -180,16 +177,16 @@ namespace NeatMapper.Transitive {
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
 		/// <returns>
-		/// A chain of type maps which could be used to map the given types or <see langword="null"></see>
+		/// A collection of chains of type maps which could be used to map the given types or <see langword="null"/>
 		/// if the types cannot be mapped.
-		/// The chain will always begin with the provided <paramref name="sourceType"/> and will end with
-		/// the provided <paramref name="destinationType"/>, so it will always have at least 2 elements.
+		/// The chains will always begin with the provided <paramref name="sourceType"/> and will end with
+		/// the provided <paramref name="destinationType"/>, so they will always have at least 2 elements.
 		/// </returns>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IList<Type>?
+			IEnumerable<IList<Type>>?
 #else
-			IList<Type>
+			IEnumerable<IList<Type>>
 #endif
 			MapMergePreview(this IMapper mapper,
 			Type sourceType,
@@ -206,10 +203,7 @@ namespace NeatMapper.Transitive {
 
 			try {
 				using (var factory = mapper.MapMergeFactory(sourceType, destinationType, mappingOptions)) {
-					if (factory is ITransitiveMergeMapFactory transFactory)
-						return transFactory.Types;
-					else
-						return new[] { sourceType, destinationType };
+					return factory.GetMapTypes();
 				}
 			}
 			catch (MapNotFoundException) {
@@ -220,9 +214,9 @@ namespace NeatMapper.Transitive {
 		/// <inheritdoc cref="MapMergePreview(IMapper, Type, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IList<Type>?
+			IEnumerable<IList<Type>>?
 #else
-			IList<Type>
+			IEnumerable<IList<Type>>
 #endif
 			MapMergePreview(this IMapper mapper,
 			Type sourceType,
@@ -240,9 +234,9 @@ namespace NeatMapper.Transitive {
 		/// <inheritdoc cref="MapMergePreview(IMapper, Type, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IList<Type>?
+			IEnumerable<IList<Type>>?
 #else
-			IList<Type>
+			IEnumerable<IList<Type>>
 #endif
 			MapMergePreview(this IMapper mapper,
 			Type sourceType,
@@ -265,16 +259,16 @@ namespace NeatMapper.Transitive {
 		/// <typeparam name="TDestination"><inheritdoc cref="MapMergePreview(IMapper, Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
 		/// <inheritdoc cref="MapMergePreview(IMapper, Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
-		/// A chain of type maps which could be used to map the given types or <see langword="null"></see>
+		/// A collection of chains of type maps which could be used to map the given types or <see langword="null"/>
 		/// if the types cannot be mapped.
-		/// The chain will always begin with the provided <typeparamref name="TSource"/> and will end with
-		/// the provided <typeparamref name="TDestination"/>, so it will always have at least 2 elements.
+		/// The chains will always begin with the provided <typeparamref name="TSource"/> and will end with
+		/// the provided <typeparamref name="TDestination"/>, so they will always have at least 2 elements.
 		/// </returns>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IList<Type>?
+			IEnumerable<IList<Type>>?
 #else
-			IList<Type>
+			IEnumerable<IList<Type>>
 #endif
 			MapMergePreview<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -290,9 +284,9 @@ namespace NeatMapper.Transitive {
 		/// <inheritdoc cref="MapMergePreview{TSource, TDestination}(IMapper, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IList<Type>?
+			IEnumerable<IList<Type>>?
 #else
-			IList<Type>
+			IEnumerable<IList<Type>>
 #endif
 			MapMergePreview<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -308,9 +302,9 @@ namespace NeatMapper.Transitive {
 		/// <inheritdoc cref="MapMergePreview(IMapper, Type, Type, MappingOptions)"/>
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IList<Type>?
+			IEnumerable<IList<Type>>?
 #else
-			IList<Type>
+			IEnumerable<IList<Type>>
 #endif
 			MapMergePreview<TSource, TDestination>(this IMapper mapper,
 			params
