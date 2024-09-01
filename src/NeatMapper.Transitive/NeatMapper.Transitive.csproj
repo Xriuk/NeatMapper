@@ -60,8 +60,4 @@
 		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Projectors\" />
-	</ItemGroup>
-
 </Project>

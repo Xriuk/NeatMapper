@@ -1,6 +1,6 @@
 ﻿namespace NeatMapper.Transitive {
 	/// <summary>
-	/// Options for transitive mappings (new and merge, async and normal).<br/>
+	/// Options for transitive mappings (new and merge, async and normal) and projections.<br/>
 	/// Can be overridden during mapping with <see cref="TransitiveMappingOptions"/>.
 	/// </summary>
 	public sealed class TransitiveOptions {

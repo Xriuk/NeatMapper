@@ -18,7 +18,9 @@ namespace NeatMapper {
 		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
-		/// <returns>A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.</returns>
+		/// <returns>
+		/// A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.
+		/// </returns>
 		IEnumerable<(Type From, Type To)> GetNewMaps(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -35,7 +37,9 @@ namespace NeatMapper {
 		/// Additional options which would be used to match the types, this helps obtaining more accurate results,
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
-		/// <returns>A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.</returns>
+		/// <returns>
+		/// A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.
+		/// </returns>
 		IEnumerable<(Type From, Type To)> GetMergeMaps(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?

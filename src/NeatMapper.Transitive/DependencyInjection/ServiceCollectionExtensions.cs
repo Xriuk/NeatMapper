@@ -3,6 +3,7 @@
 #endif
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
 
@@ -28,11 +29,22 @@ namespace NeatMapper.Transitive {
 			// Add mappers to composite mapper
 			// Creating mappers with EmptyMapper to avoid recursion, the nested mapper will be overridden by composite mapper
 			services.AddOptions<CompositeMapperOptions>()
-				.Configure(o => o.Mappers.Add(new TransitiveNewMapper(EmptyMapper.Instance)));
+				.Configure(o => {
+					o.Mappers.Add(new TransitiveNewMapper(EmptyMapper.Instance));
+					o.Mappers.Add(new TransitiveMergeMapper(EmptyMapper.Instance));
+				});
 
 			services.Add(new ServiceDescriptor(
 				typeof(TransitiveNewMapper),
-				s => new TransitiveNewMapper(s.GetRequiredService<IMapper>()),
+				s => new TransitiveNewMapper(
+					s.GetRequiredService<IMapper>(),
+					s.GetService<IOptionsSnapshot<TransitiveOptions>>()?.Value),
+				mapper.Lifetime));
+			services.Add(new ServiceDescriptor(
+				typeof(TransitiveMergeMapper),
+				s => new TransitiveMergeMapper(
+					s.GetRequiredService<IMapper>(),
+					s.GetService<IOptionsSnapshot<TransitiveOptions>>()?.Value),
 				mapper.Lifetime));
 			#endregion
 

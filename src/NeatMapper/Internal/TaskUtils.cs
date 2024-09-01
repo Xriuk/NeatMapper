@@ -12,7 +12,10 @@ namespace NeatMapper {
 	/// Helper class to await Tasks and return the result via reflection
 	/// </summary>
 	internal static class TaskUtils {
-		// DEV: convert to delegates?
+		// DEV: convert to delegates?, check that not used inside "using" blocks
+		/// <summary>
+		/// Awaits a generic task and casts the result.
+		/// </summary>
 		public static async Task<TResult> AwaitTask<TResult>(Task task) {
 			await task;
 			if (task.IsFaulted) {
@@ -35,9 +38,6 @@ namespace NeatMapper {
 					throw new Exception("Task contains no result");
 				}
 			}
-		}
-		public static Task<TResult> AwaitTask<TResult>(object valueTask) {
-			return AwaitTask<TResult>((Task)valueTask.GetType().GetMethod(nameof(ValueTask<object>.AsTask)).Invoke(valueTask, Type.EmptyTypes));
 		}
 
 		// https://stackoverflow.com/a/60482164/2672235

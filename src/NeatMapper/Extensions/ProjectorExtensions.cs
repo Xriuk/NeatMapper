@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
 namespace NeatMapper {
@@ -305,6 +307,59 @@ namespace NeatMapper {
 			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
+		#endregion
+
+		#region GetMaps
+		/// <summary>
+		/// Retrieves a collection of type pairs which can be projected to create new objects, will check
+		/// if the given projector supports <see cref="IProjectorMaps"/> otherwise will return an empty result.
+		/// It does not guarantee that the actual projections will succeed.
+		/// </summary>
+		/// <inheritdoc cref="IProjectorMaps.GetMaps(MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetMaps(this IProjector projector,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (projector is IProjectorMaps maps)
+				return maps.GetMaps(mappingOptions);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetMaps(IProjector, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetMaps(this IProjector projector,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (projector is IProjectorMaps maps)
+				return maps.GetMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetMaps(IProjector, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetMaps(this IProjector projector,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (projector is IProjectorMaps maps)
+				return maps.GetMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
 		#endregion
 	}
 }

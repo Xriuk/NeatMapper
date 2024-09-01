@@ -8,9 +8,7 @@ namespace NeatMapper.Transitive {
 	/// <see cref="IMapper"/> which maps types transitively to existing ones by retrieving all the available maps
 	/// from another <see cref="IMapper"/> (via <see cref="IMapperMaps.GetMergeMaps(MappingOptions)"/>),
 	/// the retrieved maps are then tried in order by mapping the source to the merge map source type and then applying
-	/// the merge map itself.<br/>
-	/// The returned factory from <see cref="MapMergeFactory(Type, Type, MappingOptions)"/> will be
-	/// <see cref="ITransitiveMergeMapFactories"/> or a derived type.
+	/// the merge map itself.
 	/// </summary>
 	public sealed class TransitiveMergeMapper : TransitiveMapper, IMapperCanMap, IMapperFactory {
 		/// <summary>
@@ -42,7 +40,10 @@ namespace NeatMapper.Transitive {
 		/// <see cref="IMapper"/> to use to merge map types.<br/>
 		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.Mapper"/>.
 		/// </param>
-		/// <param name="transitiveOptions">Options to apply when mapping types.</param>
+		/// <param name="transitiveOptions">
+		/// Options to apply when mapping types.<br/>
+		/// Can be overridden during mapping with <see cref="TransitiveMappingOptions"/>.
+		/// </param>
 		public TransitiveMergeMapper(IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			TransitiveOptions?
@@ -137,14 +138,12 @@ namespace NeatMapper.Transitive {
 			MappingOptions newMappingOptions = null;
 			foreach (var mergeMap in mapper.GetMergeMaps(mappingOptions).Distinct().Where(m => m.To == destinationType)) {
 				// 2 new map + 1 merge map
-				if (length < 2 + 1) {
-					if(mergeMap.From != sourceType)
-						continue;
-					else {
-						// Since we have unique maps if this one throws MapNotFoundException we cannot try any other map
-						return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
-					}
+				if(mergeMap.From == sourceType) {
+					// Since we have unique maps if this one throws MapNotFoundException we cannot try any other map
+					return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
 				}
+				else if (length < 2 + 1)
+					continue;
 
 				if(newMappingOptions == null)
 					newMappingOptions = MergeOrCreateNewMappingOptions(mappingOptions);
@@ -213,13 +212,13 @@ namespace NeatMapper.Transitive {
 
 			// We cannot map identical types
 			if (sourceType == destinationType)
-				throw new MapNotFoundException((sourceType, destinationType));
+				return false;
 
 			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
 
 			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
 			if (length < 2)
-				throw new MapNotFoundException((sourceType, destinationType));
+				return false;
 
 			var mapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
 				?? _mapper;
@@ -228,12 +227,10 @@ namespace NeatMapper.Transitive {
 			MappingOptions newMappingOptions = null;
 			foreach (var mergeMap in mapper.GetMergeMaps(mappingOptions).Distinct().Where(m => m.To == destinationType)) {
 				// 2 new map + 1 merge map
-				if (length < 2 + 1) {
-					if (mergeMap.From != sourceType)
-						continue;
-					else 
-						return true;
-				}
+				if (mergeMap.From == sourceType)
+					return true;
+				else if (length < 2 + 1)
+					continue;
 
 				if (newMappingOptions == null)
 					newMappingOptions = MergeOrCreateNewMappingOptions(mappingOptions);
@@ -300,10 +297,13 @@ namespace NeatMapper.Transitive {
 			var mapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
 				?? _mapper;
 
-			var factories = new CachedLazyEnumerable<DefaultTransitiveMergeMapFactory>(
+			var factories = new CachedLazyEnumerable<IMergeMapFactory>(
 				mapper.GetMergeMaps(mappingOptions)
 					.Where(m => m.To == destinationType)
 					.Select(mergeMap => {
+						if(mergeMap.From == sourceType)
+							return mapper.MapMergeFactory(mergeMap.From, mergeMap.To, mappingOptions);
+
 						try {
 							var newFactory = mapper.MapNewFactory(sourceType, mergeMap.From, newMappingOptions);
 
@@ -311,9 +311,7 @@ namespace NeatMapper.Transitive {
 								var mergeFactory = mapper.MapMergeFactory(mergeMap.From, mergeMap.To, mappingOptions);
 
 								try {
-									return new DefaultTransitiveMergeMapFactory(sourceType, destinationType,
-										(newFactory is ITransitiveNewMapFactory transNewFactory ? transNewFactory.Types : new[] { sourceType, mergeMap.From })
-											.Concat(new[] { mergeMap.To }).ToArray(),
+									return new DisposableMergeMapFactory(sourceType, destinationType,
 										(source, destination) => {
 											try {
 												return mergeFactory.Invoke(newFactory.Invoke(source), destination);
@@ -350,8 +348,18 @@ namespace NeatMapper.Transitive {
 				if (!factories.Any())
 					throw new MapNotFoundException((sourceType, destinationType));
 
-				return new DefaultTransitiveMergeMapFactories(sourceType, destinationType,
-					factories, factories);
+				return new DisposableMergeMapFactory(sourceType, destinationType,
+					(source, destination) => {
+						// Try using the factories, if any
+						foreach (var factory in factories) {
+							try {
+								return factory.Invoke(source, destination);
+							}
+							catch (MapNotFoundException) { }
+						}
+
+						throw new MapNotFoundException((sourceType, destinationType));
+					}, factories);
 			}
 			catch {
 				factories.Dispose();

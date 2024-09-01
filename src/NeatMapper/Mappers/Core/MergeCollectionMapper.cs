@@ -498,18 +498,8 @@ namespace NeatMapper {
 						return false;
 					}
 				}
-				else if (destination != null) { 
-					var destinationInstanceType = destination.GetType();
-					if (destinationInstanceType.IsArray)
-						return false;
-
-					var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
-						.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-					// If the collection is readonly we cannot map to it
-					if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null))
-						return false;
-				}
+				else if (destination != null && TypeUtils.IsCollectionReadonly(destination)) 
+					return false;
 
 				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
 
@@ -552,15 +542,7 @@ namespace NeatMapper {
 					return true;
 				else if (canMapNested == null && destination != null) {
 					foreach (var element in destination) {
-						var elementInstanceType = element.GetType();
-						if (elementInstanceType.IsArray)
-							return false;
-
-						var interfaceMap = elementInstanceType.GetInterfaceMap(elementInstanceType.GetInterfaces()
-							.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-						// If the collection is readonly we cannot map to it
-						if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(element, null))
+						if(TypeUtils.IsCollectionReadonly(element))
 							return false;
 					}
 

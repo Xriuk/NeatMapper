@@ -56,9 +56,9 @@ namespace NeatMapper.Tests.Extensions {
 					mapper.Map<string, int>("Test", enumerable1);
 					mapper.Map<string, int>("Test", enumerable2);
 
-					// Params
-					mapper.Map<string, int>("Test", option1);
-					mapper.Map<string, int>("Test", option1, option2);
+					// Params (no more params)
+					//mapper.Map<string, int>("Test", option1);
+					//mapper.Map<string, int>("Test", option1, option2);
 				}
 
 				// Explicit destination, inferred source
@@ -77,11 +77,11 @@ namespace NeatMapper.Tests.Extensions {
 					mapper.Map<int>("Test", enumerable2);
 					mapper.Map<int>(strNonNull, enumerable2);
 
-					// Params
-					mapper.Map<int>("Test", option1);
-					mapper.Map<int>(strNonNull, option1);
-					mapper.Map<int>("Test", option1, option2);
-					mapper.Map<int>(strNonNull, option1, option2);
+					// Params (no more params)
+					//mapper.Map<int>("Test", option1);
+					//mapper.Map<int>(strNonNull, option1);
+					//mapper.Map<int>("Test", option1, option2);
+					//mapper.Map<int>(strNonNull, option1, option2);
 				}
 
 				// Runtime

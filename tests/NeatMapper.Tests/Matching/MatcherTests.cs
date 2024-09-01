@@ -148,28 +148,30 @@ namespace NeatMapper.Tests.Matching {
 
 			// Factories should share the same context
 			{ 
-				var factory = _matcher.MatchFactory<int, string>();
-				MappingOptionsUtils.matchingContext = null;
-				Assert.IsTrue(factory.Invoke(2, "4"));
-				var context1 = MappingOptionsUtils.matchingContext;
-				Assert.IsNotNull(context1);
-				MappingOptionsUtils.matchingContext = null;
-				Assert.IsTrue(factory.Invoke(-3, "-6"));
-				var context2 = MappingOptionsUtils.matchingContext;
-				Assert.IsNotNull(context2);
-				Assert.AreSame(context1, context2);
+				using(var factory = _matcher.MatchFactory<int, string>()) { 
+					MappingOptionsUtils.matchingContext = null;
+					Assert.IsTrue(factory.Invoke(2, "4"));
+					var context1 = MappingOptionsUtils.matchingContext;
+					Assert.IsNotNull(context1);
+					MappingOptionsUtils.matchingContext = null;
+					Assert.IsTrue(factory.Invoke(-3, "-6"));
+					var context2 = MappingOptionsUtils.matchingContext;
+					Assert.IsNotNull(context2);
+					Assert.AreSame(context1, context2);
+				}
 			}
 			{
-				var factory = _matcher.MatchFactory<string, int>();
-				MappingOptionsUtils.matchingContext = null;
-				Assert.IsTrue(factory.Invoke("4", 2));
-				var context1 = MappingOptionsUtils.matchingContext;
-				Assert.IsNotNull(context1);
-				MappingOptionsUtils.matchingContext = null;
-				Assert.IsTrue(factory.Invoke("-6", -3));
-				var context2 = MappingOptionsUtils.matchingContext;
-				Assert.IsNotNull(context2);
-				Assert.AreSame(context1, context2);
+				using(var factory = _matcher.MatchFactory<string, int>()) { 
+					MappingOptionsUtils.matchingContext = null;
+					Assert.IsTrue(factory.Invoke("4", 2));
+					var context1 = MappingOptionsUtils.matchingContext;
+					Assert.IsNotNull(context1);
+					MappingOptionsUtils.matchingContext = null;
+					Assert.IsTrue(factory.Invoke("-6", -3));
+					var context2 = MappingOptionsUtils.matchingContext;
+					Assert.IsNotNull(context2);
+					Assert.AreSame(context1, context2);
+				}
 			}
 		}
 

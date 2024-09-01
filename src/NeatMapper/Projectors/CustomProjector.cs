@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -10,7 +11,7 @@ namespace NeatMapper {
 	/// <see cref="IProjector"/> which projects objects by using <see cref="IProjectionMap{TSource, TDestination}"/>,
 	/// also supports nested maps which get expanded into the final map.
 	/// </summary>
-	public sealed class CustomProjector : IProjector, IProjectorCanProject {
+	public sealed class CustomProjector : IProjector, IProjectorCanProject, IProjectorMaps {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -19,7 +20,7 @@ namespace NeatMapper {
 		/// Replaces a nested map invocation with the map itself.
 		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
-			protected static object RetrieveValueRecursively(Expression expr) {
+			private static object RetrieveValueRecursively(Expression expr) {
 				// Navigate up recursively until ConstantExpression and retrieve the projector from it down again
 				if (expr != null) { 
 					object value;
@@ -39,12 +40,15 @@ namespace NeatMapper {
 				throw new InvalidOperationException("The provided expression is not a member access or constant expression");
 			}
 
-			protected static object CompileAndRunExpression(Expression body) {
+			// DEV: find a better way to unwrap expressions
+			private static object CompileAndRunExpression(Expression body) {
 				try { 
 					return Expression.Lambda(body).Compile().DynamicInvoke();
 				}
 				catch(Exception e){
-					throw new InvalidOperationException("Error during expression evaluation, check the inner exception for details. Parameters of the projection expression cannot be referenced in nested projections.", e);
+					throw new InvalidOperationException(
+						"Error during expression evaluation, check the inner exception for details. " +
+						"Parameters of the projection expression cannot be referenced in nested projections.", e);
 				}
 			}
 
@@ -277,6 +281,17 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _configuration.GetMaps();
 		}
 
 

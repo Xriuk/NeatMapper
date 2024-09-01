@@ -87,6 +87,16 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 				new TransitiveMergeMapper(EmptyMapper.Instance));
 		}
 
+		private void VerifyMappingContext() {
+			Assert.IsNotNull(Maps.NestedMappingContext);
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(CompositeMapper));
+			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext);
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentMapper, typeof(TransitiveMergeMapper));
+			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext.ParentContext);
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentContext.ParentMapper, typeof(CompositeMapper));
+			Assert.IsNull(Maps.NestedMappingContext.ParentContext.ParentContext.ParentContext);
+		}
+
 
 		[TestMethod]
 		public void ShouldMapPrimitives() {
@@ -96,8 +106,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 			Maps.NestedMappingContext = null;
 			Assert.AreEqual(4m, _mapper.Map(4f, 0m));
 			Assert.AreEqual(4m, _mapper.Map(4f, typeof(float), 0m, typeof(decimal)));
-			Assert.IsNotNull(Maps.NestedMappingContext);
-			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(TransitiveMergeMapper));
+			VerifyMappingContext();
 
 			using (var factory = _mapper.MapMergeFactory<float, decimal>()) { 
 				Assert.AreEqual(4m, factory.Invoke(4f, 0m));
@@ -114,8 +123,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 			Assert.AreEqual(4f, result.Amount);
 			Assert.AreEqual("EUR", result.Currency);
 			Assert.AreEqual(4f, (_mapper.Map(4f, typeof(float), new PriceFloat(), typeof(PriceFloat)) as PriceFloat)?.Amount);
-			Assert.IsNotNull(Maps.NestedMappingContext);
-			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(TransitiveNewMapper));
+			VerifyMappingContext();
 
 			using (var factory = _mapper.MapMergeFactory<float, PriceFloat>()) {
 				Assert.AreEqual(4f, factory.Invoke(4f, new PriceFloat())?.Amount);
@@ -123,70 +131,19 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldReturnPreviewIfCanMap() {
-			var result = _mapper.MapMergePreview<float, decimal>()?.Single();
-			Assert.IsNotNull(result);
-			Assert.AreEqual(3, result.Count);
-			Assert.AreSame(typeof(float), result[0]);
-			Assert.AreSame(typeof(double), result[1]);
-			Assert.AreSame(typeof(decimal), result[2]);
-
-			result = _mapper.MapMergePreview<float, PriceFloat>()?.Single();
-			Assert.IsNotNull(result);
-			Assert.AreEqual(5, result.Count);
-			Assert.AreSame(typeof(float), result[0]);
-			Assert.AreSame(typeof(double), result[1]);
-			Assert.AreSame(typeof(decimal), result[2]);
-			Assert.AreSame(typeof(Price), result[3]);
-			Assert.AreSame(typeof(PriceFloat), result[4]);
-
-			// Length of 5 should be good
-			Assert.IsNotNull(_mapper.MapMergePreview<float, PriceFloat>(new TransitiveMappingOptions(5)));
-
-			result = _mapper.MapMergePreview<float, double>()?.Single();
-			Assert.IsNotNull(result);
-			Assert.AreEqual(2, result.Count);
-			Assert.AreSame(typeof(float), result[0]);
-			Assert.AreSame(typeof(double), result[1]);
-		}
-
-		[TestMethod]
-		public void ShouldReturnMultiplePreviewIfCanMap() {
-			var result = _mapper.MapMergePreview<string, Price>(4);
-			Assert.IsNotNull(result);
-			// string > decimal > Price
-			// string > decimal > int > Price
-			Assert.AreEqual(2, result.Count());
-			Assert.IsTrue(result.Any(r => r.Count == 3 && r[0] == typeof(string) && r[1] == typeof(decimal) && r[2] == typeof(Price)));
-			Assert.IsTrue(result.Any(r => r.Count == 4 && r[0] == typeof(string) && r[1] == typeof(decimal) && r[2] == typeof(int) && r[3] == typeof(Price)));
-		}
-
-		[TestMethod]
-		public void ShouldReturnNullPreviewIfCannotMap() {
-			Assert.IsNull(_mapper.MapMergePreview<decimal, float>());
-		}
-
-		[TestMethod]
 		public void ShouldRespectLengthIfSpecified() {
-			// Map length is 5, so shorter
-			Assert.IsFalse(_mapper.CanMapMerge<float, PriceFloat>(new TransitiveMappingOptions(4)));
-			Assert.ThrowsException<MapNotFoundException>(() => _mapper.Map<float, PriceFloat>(2f, new PriceFloat(), new MappingOptions(new TransitiveMappingOptions(4))));
-			Assert.IsNull(_mapper.MapMergePreview<float, PriceFloat>(new TransitiveMappingOptions(4)));
+			var mapper = new TransitiveMergeMapper(_mapper);
 
-			// Should return only a single result since the other is long 4
-			var result = _mapper.MapMergePreview<string, Price>(4, new TransitiveMappingOptions(3));
-			Assert.IsNotNull(result);
-			Assert.AreEqual(1, result.Count());
-			Assert.AreSame(typeof(string), result.Single()[0]);
-			Assert.AreSame(typeof(decimal), result.Single()[1]);
-			Assert.AreSame(typeof(Price), result.Single()[2]);
+			// Map length is 5, so shorter
+			Assert.IsFalse(mapper.CanMapMerge<float, PriceFloat>(new TransitiveMappingOptions(4)));
+			Assert.ThrowsException<MapNotFoundException>(() => mapper.Map<float, PriceFloat>(2f, new PriceFloat(), new MappingOptions(new TransitiveMappingOptions(4))));
 
 			// Length of 2 should invoke the map directly, if available
-			Assert.IsTrue(_mapper.CanMapMerge<float, double>(new TransitiveMappingOptions(2)));
+			Assert.IsTrue(mapper.CanMapMerge<float, double>(new TransitiveMappingOptions(2)));
 
 			// Length of 0, 1 should not map anything
-			Assert.IsFalse(_mapper.CanMapMerge<float, double>(new TransitiveMappingOptions(0)));
-			Assert.IsFalse(_mapper.CanMapMerge<float, double>(new TransitiveMappingOptions(1)));
+			Assert.IsFalse(mapper.CanMapMerge<float, double>(new TransitiveMappingOptions(0)));
+			Assert.IsFalse(mapper.CanMapMerge<float, double>(new TransitiveMappingOptions(1)));
 		}
 	}
 }

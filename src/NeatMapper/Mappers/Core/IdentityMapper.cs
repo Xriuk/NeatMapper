@@ -12,7 +12,7 @@ namespace NeatMapper {
 		public static readonly IMapper Instance = new IdentityMapper();
 
 
-		internal IdentityMapper() { }
+		private IdentityMapper() { }
 
 
 		#region IMapper methods

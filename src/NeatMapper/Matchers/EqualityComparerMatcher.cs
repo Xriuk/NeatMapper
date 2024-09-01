@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which matches by invoking a <see cref="IEqualityComparer{T}"/>.
+	/// <see cref="IMatcher"/> which matches by invoking an <see cref="IEqualityComparer{T}"/>.
 	/// </summary>
 	public sealed class EqualityComparerMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
 		/// <summary>
-		/// Creates an instance of <see cref="EqualityComparerMatcher"/> by using the provided
+		/// Creates a new instance of <see cref="EqualityComparerMatcher"/> by using the provided
 		/// <see cref="IEqualityComparer{T}"/>.
 		/// </summary>
 		/// <typeparam name="TElement">Type of the source and destination objects.</typeparam>

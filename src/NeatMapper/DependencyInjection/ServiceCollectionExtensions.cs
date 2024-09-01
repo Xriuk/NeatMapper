@@ -26,10 +26,12 @@ namespace NeatMapper {
 		/// <item>
 		/// <see cref="IMatcher"/>, <see cref="IMatcherCanMatch"/>, <see cref="IMatcherFactory"/> -
 		/// <see cref="CustomMatcher"/>, <see cref="HierarchyCustomMatcher"/>, <see cref="CompositeMatcher"/>
+		/// (which also contains <see cref="EquatableMatcher"/> in addition to all the previous)
 		/// </item>
 		/// <item>
 		/// <see cref="IProjector"/>, <see cref="IProjectorCanProject"/> -
 		/// <see cref="CustomProjector"/>, <see cref="CollectionProjector"/>, <see cref="CompositeProjector"/>
+		/// (which also contains all the previous)
 		/// </item>
 		/// </list>
 		/// </summary>
@@ -67,6 +69,8 @@ namespace NeatMapper {
 				.Configure<CustomMatcher, HierarchyCustomMatcher>((o, m, h) => {
 					o.Matchers.Add(m);
 					o.Matchers.Add(h);
+
+					o.Matchers.Add(EquatableMatcher.Instance);
 				});
 
 
@@ -99,7 +103,7 @@ namespace NeatMapper {
 			// IMatcher, IMatcherCanMatch, IMatcherFactory
 			services.Add(new ServiceDescriptor(typeof(IMatcher),			s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
 			services.Add(new ServiceDescriptor(typeof(IMatcherCanMatch),	s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
-			services.Add(new ServiceDescriptor(typeof(IMatcherFactory), s => s.GetRequiredService<CompositeMatcher>(), matchersLifetime));
+			services.Add(new ServiceDescriptor(typeof(IMatcherFactory),		s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
 			#endregion
 
 			#region IMapper

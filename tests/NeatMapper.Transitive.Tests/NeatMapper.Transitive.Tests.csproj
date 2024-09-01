@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NeatMapper.Transitive\NeatMapper.Transitive.csproj" />
+		<ProjectReference Include="..\NeatMapper.Tests\NeatMapper.Tests.csproj" />
   </ItemGroup>
 
 </Project>

@@ -6,7 +6,6 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
@@ -19,7 +18,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Cache of resolved delegates for each type.
 		/// </summary>
-		readonly ConcurrentDictionary<(Type From, Type To), Delegate> _mapsCache = new ConcurrentDictionary<(Type From, Type To), Delegate>();
+		readonly ConcurrentDictionary<(Type From, Type To), Delegate> _mapsCache =
+			new ConcurrentDictionary<(Type From, Type To), Delegate>();
 
 		/// <param name="interfaceFilter">
 		/// Filter used to retrieve interface(s) for the maps, will receive the declaring type 
@@ -356,7 +356,7 @@ namespace NeatMapper {
 					return (Func<object, object, TContext, object>)cacheDeleg;
 			}
 
-			var mapDeleg = MethodToDelegate<Func<object, object, TContext, object>>(map.Value.Method, "source", "destination", "context");
+			var mapDeleg = TypeUtils.MethodToDelegate<Func<object, object, TContext, object>>(map.Value.Method, "source", "destination", "context");
 #if !NET48
 #pragma warning disable IDE0039 // Use local function
 #endif
@@ -426,11 +426,11 @@ namespace NeatMapper {
 				return (Func<object, object, AsyncMappingContext, Task<object>>)cacheDeleg;
 		}
 
-		private TDelegate RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) {
+		private TDelegate RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) where TDelegate : Delegate {
 			// Try retrieving a regular map
 			{
 				if (Maps.TryGetValue(types, out var map))
-					return MethodToDelegate<TDelegate>(map.Method, parameterNames);
+					return TypeUtils.MethodToDelegate<TDelegate>(map.Method, parameterNames);
 			}
 
 			// Try matching to a generic map
@@ -481,7 +481,7 @@ namespace NeatMapper {
 				if (mapMethod == null)
 					continue;
 
-				return MethodToDelegate<TDelegate>(mapMethod, parameterNames);
+				return TypeUtils.MethodToDelegate<TDelegate>(mapMethod, parameterNames);
 			}
 
 			return default;
@@ -489,46 +489,6 @@ namespace NeatMapper {
 
 		internal IEnumerable<(Type From, Type To)> GetMaps() {
 			return Maps.Keys.Concat(GenericMaps.Select(m => (m.From, m.To)));
-		}
-
-
-		private static readonly MethodInfo this_ConvertTask = typeof(CustomMapsConfiguration).GetMethod(nameof(ConvertTask), BindingFlags.Static | BindingFlags.NonPublic)
-			?? throw new InvalidOperationException("Could not find ConvertTask<TSource, TDestination>(task)");
-		private static async Task<TDestination> ConvertTask<TSource, TDestination>(Task<TSource> task) where TSource : TDestination {
-			var result = await task;
-			return result;
-		}
-		private static TDelegate MethodToDelegate<TDelegate>(MethodInfo method, params string[] parameterNames) {
-			var delegateArguments = typeof(TDelegate).GetGenericArguments();
-			var parameterExpressions = delegateArguments
-				.Zip(parameterNames, (p1, p2) => (p1, p2))
-				.Select(parameters => Expression.Parameter(parameters.p1, parameters.p2))
-				.ToArray();
-			var parametersList = parameterExpressions
-				.Zip(method.GetParameters(), (p1, p2) => (p1, p2))
-				.Select(parameters => {
-					if(parameters.p1.Type == parameters.p2.ParameterType)
-						return parameters.p1;
-					else
-						return (Expression)Expression.Convert(parameters.p1, parameters.p2.ParameterType);
-				});
-			// Method((Type1)arg1, (Type2)arg2, ...)
-			Expression body;
-			if (method.IsStatic)
-				body = Expression.Call(method, parametersList);
-			else {
-				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType)),
-					method, parametersList);
-			}
-			if(method.ReturnType != delegateArguments[delegateArguments.Length - 1]) { 
-				// (Destination)(await task) or
-				// (Destination)result
-				if(method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-					body = Expression.Call(this_ConvertTask.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0], delegateArguments[delegateArguments.Length - 1].GetGenericArguments()[0]), body);
-				else
-					body = Expression.Convert(body, delegateArguments[delegateArguments.Length - 1]);
-			}
-			return Expression.Lambda<TDelegate>(body, parameterExpressions).Compile();
 		}
 
 

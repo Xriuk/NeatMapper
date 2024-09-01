@@ -18,6 +18,7 @@ using System.Linq.Expressions;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// Base class for Entity Framework Core mappers.
@@ -73,26 +74,51 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		/// <summary>
-		/// <see cref="Queryable.Where{TSource}(IQueryable{TSource}, Expression{Func{TSource, bool}})"/>
-		/// </summary>
-		protected static readonly MethodInfo Queryable_Where = typeof(Queryable).GetMethods().First(m => {
-			if (m.Name != nameof(Queryable.Where))
-				return false;
-			var parameters = m.GetParameters();
-			if (parameters.Length == 2 && parameters[1].ParameterType.IsGenericType) {
-				var delegateType = parameters[1].ParameterType.GetGenericArguments()[0];
-				if (delegateType.IsGenericType && delegateType.GetGenericTypeDefinition() == typeof(Func<,>))
-					return true;
-			}
-
-			return false;
-		});
-
-		/// <summary>
 		/// <see cref="Enumerable.Contains{TSource}(IEnumerable{TSource}, TSource)"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_Contains = typeof(Enumerable).GetMethods().First(m => 
-			m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2);
+		private static readonly MethodInfo Enumerable_Contains = typeof(Enumerable).GetMethods()
+			.First(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2);
+
+		/// <summary>
+		/// <see cref="DbContext.Set{TEntity}()"/>
+		/// </summary>
+		private static readonly MethodInfo DbContext_Set = typeof(DbContext).GetMethods()
+			.First(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set) && m.GetParameters().Length == 0);
+
+		/// <summary>
+		/// Delegates which retrieve a new <see cref="DbSet{TEntity}"/>.
+		/// </summary>
+		private static readonly ConcurrentDictionary<Type, Func<DbContext, IQueryable>> _setCache =
+			new ConcurrentDictionary<Type, Func<DbContext, IQueryable>>();
+
+		/// <summary>
+		/// Delegates which retrieve <see cref="DbSet{TEntity}.Local"/> from a <see cref="DbSet{TEntity}"/>.
+		/// </summary>
+		private static readonly ConcurrentDictionary<Type, Func<IQueryable, IEnumerable>> _localCache =
+			new ConcurrentDictionary<Type, Func<IQueryable, IEnumerable>>();
+
+
+
+
+		protected static IQueryable RetrieveDbSet(DbContext context, Type type) {
+			return _setCache.GetOrAdd(type, t => {
+				var param = Expression.Parameter(typeof(DbContext), "dbContext");
+				// dbContext.Set<Type>()
+				var body = Expression.Call(param, DbContext_Set.MakeGenericMethod(t));
+				return Expression.Lambda<Func<DbContext, IQueryable>>(body, param).Compile();
+			}).Invoke(context);
+		}
+
+		protected static IEnumerable GetLocalFromDbSet(IQueryable dbSet) {
+			return _localCache.GetOrAdd(dbSet.ElementType, t => {
+				var param = Expression.Parameter(typeof(IQueryable), "dbSet");
+				var prop = typeof(DbSet<>).MakeGenericType(t).GetProperty(nameof(DbSet<object>.Local))
+					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+				// dbSet.Local
+				var body = Expression.Property(Expression.Convert(param, typeof(DbSet<>).MakeGenericType(t)), prop);
+				return Expression.Lambda<Func<IQueryable, IEnumerable>>(body, param).Compile();
+			}).Invoke(dbSet);
+		}
 
 
 		/// <summary>
@@ -119,25 +145,25 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <see cref="IMatcher"/> which is used to match source elements with destination elements
 		/// to try merging them together.
 		/// </summary>
-		protected readonly IMatcher _elementsMatcher;
+		private readonly IMatcher _elementsMatcher;
 
 		/// <summary>
 		/// Options to apply when merging elements in the collections.
 		/// </summary>
-		protected readonly MergeCollectionsOptions _mergeCollectionOptions;
+		private readonly MergeCollectionsOptions _mergeCollectionOptions;
 
 		/// <summary>
 		/// Delegates which extract values from a key (single or composite), keys are entity key types.
 		/// Composite keys are <see cref="ValueTuple"/>s, so <see cref="Tuple"/>s should be converted with
 		/// the corresponding <see cref="EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(Type)"/> delegate first.
 		/// </summary>
-		protected readonly ConcurrentDictionary<Type, Func<object, object[]>> _keyToValuesCache =
+		private readonly ConcurrentDictionary<Type, Func<object, object[]>> _keyToValuesCache =
 			new ConcurrentDictionary<Type, Func<object, object[]>>();
 
 		/// <summary>
 		/// Delegates which create a new entity and assign key values to corresponding properties, keys are entity types.
 		/// </summary>
-		protected readonly ConcurrentDictionary<Type, AttachEntityDelegate> _createEntityCache =
+		private readonly ConcurrentDictionary<Type, AttachEntityDelegate> _createEntityCache =
 			new ConcurrentDictionary<Type, AttachEntityDelegate>();
 
 
@@ -197,18 +223,8 @@ namespace NeatMapper.EntityFrameworkCore {
 						return false;
 					}
 				}
-				else if (destination != null) {
-					var destinationInstanceType = destination.GetType();
-					if (destinationInstanceType.IsArray)
-						return false;
-
-					var interfaceMap = destinationInstanceType.GetInterfaceMap(destinationInstanceType.GetInterfaces()
-						.First(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>))).TargetMethods;
-
-					// If the collection is readonly we cannot map to it
-					if ((bool)interfaceMap.First(m => m.Name.EndsWith("get_" + nameof(ICollection<object>.IsReadOnly))).Invoke(destination, null))
-						return false;
-				}
+				else if (destination != null && NeatMapper.TypeUtils.IsCollectionReadonly(destination)) 
+					return false;
 
 				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetCollectionElementType());
 			}

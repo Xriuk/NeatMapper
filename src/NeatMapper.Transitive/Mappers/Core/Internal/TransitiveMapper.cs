@@ -49,8 +49,6 @@ namespace NeatMapper.Transitive {
 		internal TransitiveMapper(IMapper mapper, TransitiveOptions transitiveOptions) {
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 			_transitiveOptions = transitiveOptions ?? new TransitiveOptions();
-			if(_transitiveOptions.MaxChainLength < 2)
-				throw new ArgumentException("MaxChainLength should be at least 2.", nameof(transitiveOptions));
 
 			_nestedMappingContext = new NestedMappingContext(this);
 			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);

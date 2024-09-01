@@ -59,14 +59,21 @@ namespace NeatMapper {
 #endif
 			mappingOptions) {
 
-			return queryable.Project(projector, destinationElementType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return queryable.Project(projector, queryable.ElementType, destinationElementType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)"/>
 		public static IQueryable Project(this IQueryable queryable,
-			IProjector projector, Type destinationElementType, params object[] mappingOptions) {
+			IProjector projector, Type destinationElementType,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
 
-			return queryable.Project(projector, destinationElementType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return queryable.Project(projector, queryable.ElementType, destinationElementType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 

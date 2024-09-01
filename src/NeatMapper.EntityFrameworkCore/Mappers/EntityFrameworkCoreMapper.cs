@@ -32,16 +32,53 @@ namespace NeatMapper.EntityFrameworkCore {
 		private static readonly MethodInfo EntityFrameworkQueryableExtensions_Load = typeof(EntityFrameworkQueryableExtensions)
 			.GetMethod(nameof(EntityFrameworkQueryableExtensions.Load))
 				?? throw new InvalidOperationException("Could not find EntityFrameworkQueryableExtensions.Load<T>()");
+
+		private static readonly MethodCacheAction<Type, IQueryable> EntityFrameworkQueryableExtensionsLoad =
+			new MethodCacheAction<Type, IQueryable>(
+				q => q.ElementType,
+				t => EntityFrameworkQueryableExtensions_Load.MakeGenericMethod(t),
+				"queryable");
+
 		/// <summary>
 		/// <see cref="Enumerable.ToArray{TSource}(System.Collections.Generic.IEnumerable{TSource})"/>
 		/// </summary>
 		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
 			?? throw new InvalidOperationException("Could not find Enumerable.ToArray<T>()");
+
+		private static readonly MethodCacheFunc<Type, IEnumerable, IEnumerable> EnumerableToArray =
+			new MethodCacheFunc<Type, IEnumerable, IEnumerable>(
+				e => e.GetType().GetEnumerableElementType(),
+				t => Enumerable_ToArray.MakeGenericMethod(t),
+				"enumerable");
+
 		/// <summary>
 		/// <see cref="Queryable.FirstOrDefault{TSource}(IQueryable{TSource})"/>
 		/// </summary>
 		private static readonly MethodInfo Queryable_FirstOrDefault = typeof(Queryable).GetMethods()
 			.First(m => m.Name == nameof(Queryable.FirstOrDefault) && m.GetParameters().Length == 1);
+
+		private static readonly MethodCacheFunc<Type, IQueryable, object> QueryableFirstOrDefault =
+			new MethodCacheFunc<Type, IQueryable, object>(
+				q => q.ElementType,
+				t => Queryable_FirstOrDefault.MakeGenericMethod(t),
+				"queryable");
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private static bool CheckCollectionMapperNestedContextRecursive(NestedMappingContext context) {
+			if (context == null)
+				return false;
+			if (context.ParentMapper is CollectionMapper)
+				return true;
+			return CheckCollectionMapperNestedContextRecursive(context.ParentContext);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 
 
 		/// <summary>
@@ -254,14 +291,12 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(types.To).FindPrimaryKey();
-			object dbSet;
+			IQueryable dbSet;
 			IEnumerable localView;
 			dbContextSemaphore.Wait();
 			try { 
-				dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
-					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
-				localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
-					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+				dbSet = RetrieveDbSet(dbContext, types.To);
+				localView = GetLocalFromDbSet(dbSet);
 			}
 			finally {
 				dbContextSemaphore.Release();
@@ -328,12 +363,12 @@ namespace NeatMapper.EntityFrameworkCore {
 												.Select(e => keyValuesDelegate.Invoke(e.Key))
 												.ToArray());
 											// Locking shouldn't be needed here because Queryable.Where creates just an Expression.Call
-											var query = Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, filterExpression }) as IQueryable;
+											var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
 
 											dbContextSemaphore.Wait();
 											try {
 												if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
-													EntityFrameworkQueryableExtensions_Load.MakeGenericMethod(types.To).Invoke(null, new object[] { query });
+													EntityFrameworkQueryableExtensionsLoad.Invoke(query);
 													// Not using Where() because the collection changes during iteration
 													foreach (var localAndPredicate in localsAndPredicates) {
 														if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
@@ -345,8 +380,7 @@ namespace NeatMapper.EntityFrameworkCore {
 													}
 												}
 												else {
-													var entities = Enumerable_ToArray.MakeGenericMethod(types.To).Invoke(null, new object[] { query }) as IEnumerable
-														?? throw new InvalidOperationException("Invalid result returned");
+													var entities = EnumerableToArray.Invoke(query);
 													foreach (var localAndPredicate in localsAndPredicates.Where(lp => lp.Key != null)) {
 														localAndPredicate.LocalEntity = entities
 															.Cast<object>()
@@ -439,9 +473,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 									dbContextSemaphore.Wait();
 									try {
-										result = Queryable_FirstOrDefault.MakeGenericMethod(types.To).Invoke(null, new object[] {
-											Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, expr })
-										});
+										result = QueryableFirstOrDefault.Invoke(TypeUtils.QueryableWhere.Invoke(dbSet, expr));
 									}
 									finally {
 										dbContextSemaphore.Release();
@@ -730,13 +762,6 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		override protected bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions) {
 			return CheckCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<NestedMappingContext>());
-		}
-		private bool CheckCollectionMapperNestedContextRecursive(NestedMappingContext context) {
-			if(context == null)
-				return false;
-			if(context.ParentMapper is CollectionMapper)
-				return true;
-			return CheckCollectionMapperNestedContextRecursive(context.ParentContext);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

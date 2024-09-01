@@ -102,51 +102,19 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldReturnPreviewIfCanMap() {
-			var result = _mapper.MapNewPreview<float, decimal>();
-			Assert.IsNotNull(result);
-			Assert.AreEqual(3, result.Count);
-			Assert.AreSame(typeof(float), result[0]);
-			Assert.AreSame(typeof(double), result[1]);
-			Assert.AreSame(typeof(decimal), result[2]);
-
-			result = _mapper.MapNewPreview<float, PriceFloat>();
-			Assert.IsNotNull(result);
-			Assert.AreEqual(5, result.Count);
-			Assert.AreSame(typeof(float), result[0]);
-			Assert.AreSame(typeof(double), result[1]);
-			Assert.AreSame(typeof(decimal), result[2]);
-			Assert.AreSame(typeof(Price), result[3]);
-			Assert.AreSame(typeof(PriceFloat), result[4]);
-
-			// Length of 5 should be good
-			Assert.IsNotNull(_mapper.MapNewPreview<float, PriceFloat>(new TransitiveMappingOptions(5)));
-
-			result = _mapper.MapNewPreview<float, double>();
-			Assert.IsNotNull(result);
-			Assert.AreEqual(2, result.Count);
-			Assert.AreSame(typeof(float), result[0]);
-			Assert.AreSame(typeof(double), result[1]);
-		}
-
-		[TestMethod]
-		public void ShouldReturnNullPreviewIfCannotMap() {
-			Assert.IsNull(_mapper.MapNewPreview<decimal, float>());
-		}
-
-		[TestMethod]
 		public void ShouldRespectLengthIfSpecified() {
+			var mapper = new TransitiveNewMapper(_mapper);
+
 			// Map length is 5, so shorter
-			Assert.IsFalse(_mapper.CanMapNew<float, PriceFloat>(new TransitiveMappingOptions(4)));
-			Assert.ThrowsException<MapNotFoundException>(() => _mapper.Map<float, PriceFloat>(2f, new MappingOptions(new TransitiveMappingOptions(4))));
-			Assert.IsNull(_mapper.MapNewPreview<float, PriceFloat>(new TransitiveMappingOptions(4)));
+			Assert.IsFalse(mapper.CanMapNew<float, PriceFloat>(new TransitiveMappingOptions(4)));
+			Assert.ThrowsException<MapNotFoundException>(() => mapper.Map<float, PriceFloat>(2f, new MappingOptions(new TransitiveMappingOptions(4))));
 
 			// Length of 2 should invoke the map directly, if available
-			Assert.IsTrue(_mapper.CanMapNew<float, double>(new TransitiveMappingOptions(2)));
+			Assert.IsTrue(mapper.CanMapNew<float, double>(new TransitiveMappingOptions(2)));
 
 			// Length of 0, 1 should not map anything
-			Assert.IsFalse(_mapper.CanMapNew<float, double>(new TransitiveMappingOptions(0)));
-			Assert.IsFalse(_mapper.CanMapNew<float, double>(new TransitiveMappingOptions(1)));
+			Assert.IsFalse(mapper.CanMapNew<float, double>(new TransitiveMappingOptions(0)));
+			Assert.IsFalse(mapper.CanMapNew<float, double>(new TransitiveMappingOptions(1)));
 		}
 	}
 }

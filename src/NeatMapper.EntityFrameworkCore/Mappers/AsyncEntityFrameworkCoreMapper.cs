@@ -27,18 +27,55 @@ namespace NeatMapper.EntityFrameworkCore {
 		private static readonly MethodInfo EntityFrameworkQueryableExtensions_LoadAsync = typeof(EntityFrameworkQueryableExtensions)
 			.GetMethod(nameof(EntityFrameworkQueryableExtensions.LoadAsync))
 				?? throw new InvalidOperationException("Could not find EntityFrameworkQueryableExtensions.LoadAsync<T>()");
+
+		private static readonly MethodCacheFunc<Type, IQueryable, CancellationToken, Task> EntityFrameworkQueryableExtensionsLoadAsync =
+			new MethodCacheFunc<Type, IQueryable, CancellationToken, Task>(
+				(q, _) => q.ElementType,
+				t => EntityFrameworkQueryableExtensions_LoadAsync.MakeGenericMethod(t),
+				"queryable", "cancellationToken");
+
 		/// <summary>
 		/// <see cref="EntityFrameworkQueryableExtensions.ToArrayAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
 		/// </summary>
 		private static readonly MethodInfo EntityFrameworkQueryableExtensions_ToArrayAsync = typeof(EntityFrameworkQueryableExtensions)
 			.GetMethod(nameof(EntityFrameworkQueryableExtensions.ToArrayAsync))
 				?? throw new InvalidOperationException("Could not find EntityFrameworkQueryableExtensions.ToArrayAsync<T>()");
+
+		private static readonly MethodCacheFunc<Type, IQueryable, CancellationToken, Task<IEnumerable>> EntityFrameworkQueryableExtensionsToArrayAsync =
+			new MethodCacheFunc<Type, IQueryable, CancellationToken, Task<IEnumerable>>(
+				(q, _) => q.ElementType,
+				t => EntityFrameworkQueryableExtensions_ToArrayAsync.MakeGenericMethod(t),
+				"queryable", "cancellationToken");
+
 		/// <summary>
 		/// <see cref="EntityFrameworkQueryableExtensions.FirstOrDefaultAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
 		/// </summary>
 		private static readonly MethodInfo EntityFrameworkQueryableExtensions_FirstOrDefaultAsync =
 			typeof(EntityFrameworkQueryableExtensions).GetMethods()
 			.First(m => m.Name == nameof(EntityFrameworkQueryableExtensions.FirstOrDefaultAsync) && m.GetParameters().Length == 2);
+
+		private static readonly MethodCacheFunc<Type, IQueryable, CancellationToken, Task<object>> EntityFrameworkQueryableExtensionsFirstOrDefaultAsync =
+			new MethodCacheFunc<Type, IQueryable, CancellationToken, Task<object>>(
+				(q, _) => q.ElementType,
+				t => EntityFrameworkQueryableExtensions_FirstOrDefaultAsync.MakeGenericMethod(t),
+				"queryable", "cancellationToken");
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private static bool CheckAsyncCollectionMapperNestedContextRecursive(AsyncNestedMappingContext context) {
+			if (context == null)
+				return false;
+			if (context.ParentMapper is AsyncCollectionMapper)
+				return true;
+			return CheckAsyncCollectionMapperNestedContextRecursive(context.ParentContext);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 
 
 		/// <summary>
@@ -265,14 +302,12 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(types.To).FindPrimaryKey();
-			object dbSet;
+			IQueryable dbSet;
 			IEnumerable localView;
 			dbContextSemaphore.Wait();
 			try {
-				dbSet = dbContext.GetType().GetMethods().FirstOrDefault(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set)).MakeGenericMethod(types.To).Invoke(dbContext, null)
-					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>");
-				localView = dbSet.GetType().GetProperty(nameof(DbSet<object>.Local)).GetValue(dbSet) as IEnumerable
-					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
+				dbSet = RetrieveDbSet(dbContext, types.To);
+				localView = GetLocalFromDbSet(dbSet);
 			}
 			finally {
 				dbContextSemaphore.Release();
@@ -339,12 +374,12 @@ namespace NeatMapper.EntityFrameworkCore {
 												.Select(e => keyValuesDelegate.Invoke(e.Key))
 												.ToArray());
 											// Locking shouldn't be needed here because Queryable.Where creates just an Expression.Call
-											var query = Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, filterExpression }) as IQueryable;
+											var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
 
 											await dbContextSemaphore.WaitAsync(cancellationToken);
 											try { 
 												if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
-													await (Task)EntityFrameworkQueryableExtensions_LoadAsync.MakeGenericMethod(types.To).Invoke(null, new object[] { query, cancellationToken });
+													await EntityFrameworkQueryableExtensionsLoadAsync.Invoke(query, cancellationToken);
 													// Not using Where() because the collection changes during iteration
 													foreach (var localAndPredicate in localsAndPredicates) {
 														if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
@@ -356,7 +391,7 @@ namespace NeatMapper.EntityFrameworkCore {
 													}
 												}
 												else {
-													var entities = await TaskUtils.AwaitTask<IEnumerable>((Task)EntityFrameworkQueryableExtensions_ToArrayAsync.MakeGenericMethod(types.To).Invoke(null, new object[] { query, cancellationToken }));
+													var entities = await EntityFrameworkQueryableExtensionsToArrayAsync.Invoke(query, cancellationToken);
 													foreach (var localAndPredicate in localsAndPredicates.Where(lp => lp.Key != null)) {
 														localAndPredicate.LocalEntity = entities
 															.Cast<object>()
@@ -449,10 +484,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 									await dbContextSemaphore.WaitAsync(cancellationToken);
 									try {
-										result = await TaskUtils.AwaitTask<object>((Task)EntityFrameworkQueryableExtensions_FirstOrDefaultAsync.MakeGenericMethod(types.To).Invoke(null, new object[] {
-											Queryable_Where.MakeGenericMethod(types.To).Invoke(null, new object[] { dbSet, expr }),
-											cancellationToken
-										}));
+										result = await EntityFrameworkQueryableExtensionsFirstOrDefaultAsync.Invoke(TypeUtils.QueryableWhere.Invoke(dbSet, expr), cancellationToken);
 									}
 									finally {
 										dbContextSemaphore.Release();
@@ -741,13 +773,6 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		override protected bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions) {
 			return CheckAsyncCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<AsyncNestedMappingContext>());
-		}
-		private bool CheckAsyncCollectionMapperNestedContextRecursive(AsyncNestedMappingContext context) {
-			if (context == null)
-				return false;
-			if (context.ParentMapper is AsyncCollectionMapper)
-				return true;
-			return CheckAsyncCollectionMapperNestedContextRecursive(context.ParentContext);
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

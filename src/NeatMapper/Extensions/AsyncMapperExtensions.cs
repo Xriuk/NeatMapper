@@ -1184,8 +1184,8 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapAsyncNewFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-			return new DisposableAsyncNewMapFactory<TSource, TDestination>(async (source, cancellationToken) => (TDestination)await factory.Invoke(source, cancellationToken), factory);
-
+			return new DisposableAsyncNewMapFactory<TSource, TDestination>((source, cancellationToken) => TaskUtils.AwaitTask<TDestination>(factory.Invoke(source, cancellationToken)), factory);
+			
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
@@ -1332,7 +1332,7 @@ namespace NeatMapper {
 #endif
 
 			var factory = mapper.MapAsyncMergeFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-			return new DisposableAsyncMergeMapFactory<TSource, TDestination>(async (source, destination, cancellationToken) => (TDestination)await factory.Invoke(source, destination, cancellationToken), factory);
+			return new DisposableAsyncMergeMapFactory<TSource, TDestination>((source, destination, cancellationToken) => TaskUtils.AwaitTask<TDestination>(factory.Invoke(source, destination, cancellationToken)), factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

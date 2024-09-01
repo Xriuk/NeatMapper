@@ -225,10 +225,9 @@ namespace NeatMapper {
 				else if(destinationType.IsArray || destinationType.IsGenericType) { 
 					return collectionsConversionMethodsCache.GetOrAdd(destinationType, destination => {
 						if (destination.IsArray) {
-							var toArray = Enumerable_ToArray.MakeGenericMethod(destination.GetElementType());
 							var collectionParam = Expression.Parameter(typeof(object), "collection");
 							// ((Type)collection).ToArray()
-							var body = Expression.Call(toArray, Expression.Convert(collectionParam, actualType));
+							var body = Expression.Call(Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()), Expression.Convert(collectionParam, actualType));
 							return Expression.Lambda<Func<object, object>>(Expression.Convert(body, typeof(object)), collectionParam).Compile();
 						}
 						else if (destination.IsGenericType){

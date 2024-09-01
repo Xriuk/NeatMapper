@@ -44,6 +44,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// Values indicating if the given type has at least one shadow key or not, keys are entity types.
 		/// </summary>
+		// DEV: maybe not worth it? Delete?
 		private readonly ConcurrentDictionary<Type, bool> _entityShadowKeyCache = new ConcurrentDictionary<Type, bool>();
 
 		/// <summary>
@@ -340,7 +341,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 						// Convert the tuple if needed
 						if (tupleToValueTupleDelegate != null) 
-							keyObject = tupleToValueTupleDelegate.DynamicInvoke(keyObject);
+							keyObject = tupleToValueTupleDelegate.Invoke(keyObject);
 
 						try { 
 							return entityKeyComparer.Invoke(entityObject, keyObject, dbContextSemaphore, dbContext);

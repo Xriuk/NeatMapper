@@ -15,6 +15,7 @@
 - Improved and cleanup extension method `Predicate` for `IMatcher`.
 - Extension method `Predicate` for `IMatcher`/`IMatchMapFactory`/`MatchMapFactory<TSource, TDestination>` now return `IPredicateFactory`/`PredicateFactory<T>`.
 - `CompositeMapper` now returns both new factories and merge factories for `MapNewFactory()` (like `CompositeMatcher` does for exact and reverse maps), the same applies to `AsyncCompositeMapper` too.
+- Refactored internal reflection usage to create and cache delegates instead of direct invocations for increased performance.
 
 ### Added
 
@@ -30,12 +31,14 @@
 - `MapNewFactory` extension methods for `IMergeMapFactory`/`MergeMapFactory<TSource, TDestination>` and its async counterpart `MapAsyncNewFactory` for `IAsyncMergeMapFactory`/`AsyncMergeMapFactory<TSource, TDestination>`, which allows to create a new factory from a merge factory by creating destination objects.
 - `IPredicateFactory` and `PredicateFactory<T>` types which replaces `NewMapFactory<T, bool>`.
 - `params object[]` constructor overload for `MappingOptions`.
+- `EquatableMatcher` which allows matching types implementing `IEquatable`.
 
 ### Fixed
 
 - Disposable pattern implementation is now idempotent, meaning it can be disposed multiple times safely.
 - Some concurrent locks in `CompositeMapper`/`AsyncCompositeMapper` factories.
 - `AsyncCompositeMapper` missing `IAsyncMapperFactory` interface.
+- `Project` `IQueryable<T>` extension method `params object[]` overload nullability.
 
 ## [4.0.0] - 2024-07-16
 

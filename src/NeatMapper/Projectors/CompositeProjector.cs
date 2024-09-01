@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// this allows to combine different projection capabilities.<br/>
 	/// Each projector is invoked in order and the first one to succeed in projection is returned.
 	/// </summary>
-	public sealed class CompositeProjector : IProjector, IProjectorCanProject {
+	public sealed class CompositeProjector : IProjector, IProjectorCanProject, IProjectorMaps {
 		/// <summary>
 		/// List of <see cref="IProjector"/>s to be tried in order when projecting types.
 		/// </summary>
@@ -120,6 +120,17 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _projectors.SelectMany(m => m.GetMaps(mappingOptions));
 		}
 
 
