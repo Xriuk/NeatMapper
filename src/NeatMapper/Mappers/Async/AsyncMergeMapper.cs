@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,7 +12,7 @@ namespace NeatMapper {
 	/// Caches <see cref="AsyncMappingContextOptions"/> for each provided <see cref="MappingOptions"/>, so that same options
 	/// will share the same context.
 	/// </summary>
-	public sealed class AsyncMergeMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncMergeMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory, IAsyncMapperMaps {
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncMergeMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -264,6 +266,30 @@ namespace NeatMapper {
 
 				return result;
 			});
+		}
+		#endregion
+
+		#region IAsyncMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return GetAsyncMergeMaps().Where(m => ObjectFactory.CanCreate(m.To));
+		}
+
+		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _configuration.GetMaps();
 		}
 		#endregion
 	}

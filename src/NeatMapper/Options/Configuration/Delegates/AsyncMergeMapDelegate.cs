@@ -19,7 +19,7 @@ namespace NeatMapper {
 #else
 		TDestination
 #endif
-		> AsyncMergeMapDelegate<TSource, TDestination>(
+		> AsyncMergeMapDelegate<in TSource, TDestination>(
 #if NET5_0_OR_GREATER
 		TSource?
 #else

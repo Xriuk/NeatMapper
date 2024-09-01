@@ -10,7 +10,7 @@ namespace NeatMapper {
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).<br/>
 	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
-	public interface IMatchMapStatic<TSource, TDestination> {
+	public interface IMatchMapStatic<in TSource, in TDestination> {
 		/// <summary>
 		/// Checks if two objects are equivalent (usually by comparing the keys of the two).
 		/// </summary>

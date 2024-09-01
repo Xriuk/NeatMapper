@@ -5,7 +5,7 @@
 	/// <typeparam name="TSource">Source type, can be an open generic.</typeparam>
 	/// <typeparam name="TDestination">Destination type, can be an open generic.</typeparam>
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
-	public interface INewMap<TSource, TDestination> {
+	public interface INewMap<in TSource, out TDestination> {
 		/// <summary>
 		/// Maps an object to a new one.
 		/// </summary>

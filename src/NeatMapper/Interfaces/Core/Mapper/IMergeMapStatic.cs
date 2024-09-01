@@ -10,7 +10,7 @@ namespace NeatMapper {
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).<br/>
 	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
-	public interface IMergeMapStatic<TSource, TDestination> {
+	public interface IMergeMapStatic<in TSource, TDestination> {
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.
 		/// </summary>

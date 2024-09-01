@@ -17,7 +17,7 @@
 #else
 		TDestination
 #endif
-		MergeMapDelegate<TSource, TDestination>(
+		MergeMapDelegate<in TSource, TDestination>(
 #if NET5_0_OR_GREATER
 		TSource?
 #else

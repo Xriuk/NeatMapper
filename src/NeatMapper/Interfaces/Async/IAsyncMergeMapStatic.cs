@@ -12,7 +12,7 @@ namespace NeatMapper {
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).<br/>
 	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
-	public interface IAsyncMergeMapStatic<TSource, TDestination> {
+	public interface IAsyncMergeMapStatic<in TSource, TDestination> {
 		/// <summary>
 		/// Maps an object to an existing one asynchronously and returns the result
 		/// </summary>

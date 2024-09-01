@@ -15,7 +15,7 @@ namespace NeatMapper {
 #else
 		TDestination
 #endif
-		> AsyncNewMapDelegate<TSource, TDestination>(
+		> AsyncNewMapDelegate<in TSource, TDestination>(
 #if NET5_0_OR_GREATER
 		TSource?
 #else

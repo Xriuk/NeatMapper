@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// This interface is the same as <see cref="IHierarchyMatchMap{TSource, TDestination}"/>, but allows greater flexibility:
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).
 	/// </remarks>
-	public interface IHierarchyMatchMapStatic<TSource, TDestination> {
+	public interface IHierarchyMatchMapStatic<in TSource, in TDestination> {
 		/// <summary>
 		/// Checks if two objects are equivalent (usually by comparing the keys of the two).
 		/// </summary>

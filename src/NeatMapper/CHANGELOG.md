@@ -16,11 +16,12 @@
 - Extension method `Predicate` for `IMatcher`/`IMatchMapFactory`/`MatchMapFactory<TSource, TDestination>` now return `IPredicateFactory`/`PredicateFactory<T>`.
 - `CompositeMapper` now returns both new factories and merge factories for `MapNewFactory()` (like `CompositeMatcher` does for exact and reverse maps), the same applies to `AsyncCompositeMapper` too.
 - Refactored internal reflection usage to create and cache delegates instead of direct invocations for increased performance.
+- All delegates and interfaces (where applicable) now have the correct co/contra-variance specified on their parameters.
 
 ### Added
 
-- New optional interface `IMapperMaps` which allows discovering mappable types by a given `IMapper`.
-- Extension methods `GetNewMaps` and `GetMergeMaps` for any `IMapper` which will fallback to default `Enumerable.Empty<T>` if `IMapperMaps` is not implemented.
+- New optional interfaces `IMapperMaps`, `IAsyncMapperMaps` and `IProjectorMaps` which allows discovering types which can be mapped by a given `IMapper`/`IAsyncMapper`/`IProjector`.
+- Extension methods `GetNewMaps` and `GetMergeMaps` for any `IMapper`, `GetAsyncNewMaps` and `GetAsyncMergeMaps` for any `IAsyncMapper` and `GetMaps` for any `IProjector` which will fallback to default `Enumerable.Empty<T>` if the corresponding interface (`IMapperMaps`/`IAsyncMapperMaps`/`IProjectorMaps`) is not implemented.
 - `IMapper`/`IAsyncMapper` `Map`/`MapAsync` and `MapMergeFactory`/`MapAsyncMergeFactory` extension methods added overloads with `IEqualityComparer` parameter used as matcher when merging collections.
 - All the optional interfaces (`IMapperCanMap`, `IAsyncMapperFactory`, ...) are now also provided as services via DI.
 - `EqualityComparerMatcher` which allows using an `IEqualityComparer` to match two elements of the same type.

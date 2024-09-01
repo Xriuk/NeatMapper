@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,7 +8,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which maps objects by using <see cref="IAsyncNewMap{TSource, TDestination}"/>.
 	/// </summary>
-	public sealed class AsyncNewMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncNewMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory, IAsyncMapperMaps {
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncNewMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -223,6 +225,30 @@ namespace NeatMapper {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
+		}
+		#endregion
+
+		#region IAsyncMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _configuration.GetMaps();
+		}
+
+		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return Enumerable.Empty<(Type, Type)>();
 		}
 		#endregion
 	}

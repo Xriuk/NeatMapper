@@ -13,7 +13,7 @@
 #else
 		TDestination
 #endif
-		NewMapDelegate<TSource, TDestination>(
+		NewMapDelegate<in TSource, out TDestination>(
 #if NET5_0_OR_GREATER
 		TSource?
 #else

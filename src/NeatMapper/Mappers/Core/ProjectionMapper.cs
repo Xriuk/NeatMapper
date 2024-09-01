@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
@@ -12,7 +13,7 @@ namespace NeatMapper {
 	/// to the projector the first time the map is created.<br/>
 	/// Supports only new maps and not merge maps.
 	/// </summary>
-	public sealed class ProjectionMapper : IMapper, IMapperCanMap, IMapperFactory {
+	public sealed class ProjectionMapper : IMapper, IMapperCanMap, IMapperFactory, IMapperMaps {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -241,6 +242,30 @@ namespace NeatMapper {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
+		}
+		#endregion
+
+		#region IMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _projector.GetMaps(mappingOptions);
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return Enumerable.Empty<(Type, Type)>();
 		}
 		#endregion
 	}

@@ -4,7 +4,7 @@
 	/// </summary>
 	/// <typeparam name="TSource">Source type, includes derived types.</typeparam>
 	/// <typeparam name="TDestination">Destination type, includes derived types.</typeparam>
-	public interface IHierarchyMatchMap<TSource, TDestination> {
+	public interface IHierarchyMatchMap<in TSource, in TDestination> {
 		/// <summary>
 		/// Checks if two objects are equivalent (usually by comparing the keys of the two).
 		/// </summary>

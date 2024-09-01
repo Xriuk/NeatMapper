@@ -13,7 +13,7 @@ namespace NeatMapper {
 	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.<br/>
 	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
-	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory, IAsyncMapperMaps {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -527,6 +527,32 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+		#endregion
+
+		#region IAsyncMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			// Supports both new and merge maps (where destination object can be created)
+			return _mappers.SelectMany(m => m.GetAsyncNewMaps(mappingOptions))
+				.Concat(GetAsyncMergeMaps(mappingOptions).Where(m => ObjectFactory.CanCreate(m.To)));
+		}
+
+		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _mappers.SelectMany(m => m.GetAsyncMergeMaps(mappingOptions));
 		}
 		#endregion
 

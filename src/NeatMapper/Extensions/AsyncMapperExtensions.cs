@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -1525,6 +1526,113 @@ namespace NeatMapper {
 		}
 		#endregion
 		#endregion
+		#endregion
+
+
+		#region GetAsyncNewMaps
+		/// <summary>
+		/// Retrieves a collection of type pairs which can be mapped to create new objects asynchronously, will check
+		/// if the given mapper supports <see cref="IAsyncMapperMaps"/> otherwise will return an empty result.
+		/// It does not guarantee that the actual maps will succeed.
+		/// </summary>
+		/// <inheritdoc cref="IAsyncMapperMaps.GetAsyncNewMaps(MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetAsyncNewMaps(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (mapper is IAsyncMapperMaps maps)
+				return maps.GetAsyncNewMaps(mappingOptions);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetAsyncNewMaps(IAsyncMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetAsyncNewMaps(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (mapper is IAsyncMapperMaps maps)
+				return maps.GetAsyncNewMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetAsyncNewMaps(IAsyncMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetAsyncNewMaps(this IAsyncMapper mapper,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (mapper is IAsyncMapperMaps maps)
+				return maps.GetAsyncNewMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+		#endregion
+
+		#region GetAsyncMergeMaps
+		/// <summary>
+		/// Retrieves a collection of type pairs which can be mapped to merge objects asynchronously, will check
+		/// if the given mapper supports <see cref="IAsyncMapperMaps"/> otherwise will return an empty result.
+		/// It does not guarantee that the actual maps will succeed.
+		/// </summary>
+		/// <inheritdoc cref="IAsyncMapperMaps.GetAsyncMergeMaps(MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (mapper is IAsyncMapperMaps maps)
+				return maps.GetAsyncMergeMaps(mappingOptions);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetAsyncMergeMaps(IAsyncMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(this IAsyncMapper mapper,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (mapper is IAsyncMapperMaps maps)
+				return maps.GetAsyncMergeMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
+
+		/// <inheritdoc cref="GetAsyncMergeMaps(IAsyncMapper, MappingOptions)"/>
+		public static IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(this IAsyncMapper mapper,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (mapper is IAsyncMapperMaps maps)
+				return maps.GetAsyncMergeMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			else
+				return Enumerable.Empty<(Type, Type)>();
+		}
 		#endregion
 	}
 }
