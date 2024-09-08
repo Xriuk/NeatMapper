@@ -42,22 +42,14 @@ namespace NeatMapper.EntityFrameworkCore {
 				_mapDelegate.Invoke(destination, source, sourceEntities);
 			}
 
-			private void Dispose(bool disposing) {
-				if(!disposing)
-					return;
-
+			public void Dispose() {
 				lock (_disposables) {
-					if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
-						throw new ObjectDisposedException(null);
-
-					foreach (var disposable in _disposables) {
-						disposable?.Dispose();
+					if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 0) { 
+						foreach (var disposable in _disposables) {
+							disposable?.Dispose();
+						}
 					}
 				}
-			}
-			public void Dispose() {
-				Dispose(true);
-				GC.SuppressFinalize(this);
 			}
 		}
 
