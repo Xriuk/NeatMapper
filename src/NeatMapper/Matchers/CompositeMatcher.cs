@@ -12,7 +12,7 @@ namespace NeatMapper {
 	/// Each matcher is invoked in order (in the exact order of types first, then with the types reverted)
 	/// and the first one to succeed in matching is returned.
 	/// </summary>
-	public sealed class CompositeMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class CompositeMatcher : IMatcher, IMatcherFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -59,6 +59,81 @@ namespace NeatMapper {
 		}
 
 
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			// Check if any mapper can match, if one of them throws it means that the map can be checked only when mapping,
+			// we also try reversing source and destination if needed
+			var undeterminateMatchers = new HashSet<IMatcher>();
+			foreach (var matcher in _compositeMatcherOptions.Matchers) {
+				try {
+					if (matcher.CanMatch(sourceType, destinationType, mappingOptions))
+						return true;
+				}
+				catch (InvalidOperationException) {
+					undeterminateMatchers.Add(matcher);
+				}
+			}
+			if (sourceType != destinationType &&
+				(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) {
+
+				foreach (var matcher in _compositeMatcherOptions.Matchers) {
+					try {
+						if (matcher.CanMatch(destinationType, sourceType, mappingOptions))
+							return true;
+					}
+					catch (InvalidOperationException) {
+						undeterminateMatchers.Add(matcher);
+					}
+				}
+			}
+
+			// Try creating default source and destination objects and try matching them
+			if (undeterminateMatchers.Count > 0) {
+				object source;
+				object destination;
+				try {
+					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
+					destination = ObjectFactory.GetOrCreateCached(destinationType) ?? throw new Exception(); // Just in case
+				}
+				catch {
+					throw new InvalidOperationException("Cannot verify if the matcher supports the given match because unable to create the objects to test it");
+				}
+
+				try {
+					MatchInternal(undeterminateMatchers, source, sourceType, destination, destinationType, mappingOptions);
+					return true;
+				}
+				catch (MapNotFoundException) { }
+
+				throw new InvalidOperationException("Cannot verify if the matcher supports the given match");
+			}
+			else
+				return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -82,82 +157,6 @@ namespace NeatMapper {
 			mappingOptions = null) {
 
 			return MatchInternal(_compositeMatcherOptions.Matchers, source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions));
-		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
-			var undeterminateMatchers = new HashSet<IMatcher>();
-			foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
-				try {
-					if (matcher.CanMatch(sourceType, destinationType, mappingOptions))
-						return true;
-				}
-				catch (InvalidOperationException) {
-					undeterminateMatchers.Add(matcher);
-				}
-			}
-			if(sourceType != destinationType &&
-				(mappingOptions.GetOptions<CompositeMatcherMappingOptions>()?.ReverseTypes ?? _compositeMatcherOptions.ReverseTypes)) {
-
-				foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
-					try {
-						if (matcher.CanMatch(destinationType, sourceType, mappingOptions))
-							return true;
-					}
-					catch (InvalidOperationException) {
-						undeterminateMatchers.Add(matcher);
-					}
-				}
-			}
-
-			// Try creating default source and destination objects and try matching them
-			var matchersLeft = _compositeMatcherOptions.Matchers.Where(m => !(m is IMatcherCanMatch) || undeterminateMatchers.Contains(m));
-			if (matchersLeft.Any()) {
-				object source;
-				object destination;
-				try {
-					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-					destination = ObjectFactory.GetOrCreateCached(destinationType) ?? throw new Exception(); // Just in case
-				}
-				catch {
-					throw new InvalidOperationException("Cannot verify if the matcher supports the given match because unable to create the objects to test it");
-				}
-
-				try {
-					MatchInternal(matchersLeft, source, sourceType, destination, destinationType, mappingOptions);
-					return true;
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			if (undeterminateMatchers.Count > 0)
-				throw new InvalidOperationException("Cannot verify if the matcher supports the given match");
-			else
-				return false;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		public IMatchMapFactory MatchFactory(
@@ -197,7 +196,7 @@ namespace NeatMapper {
 				})
 				.Concat(_singleElementArray.Select(_ => {
 					// Since we finished the mappers, we check if any mapper left can map the types
-					foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
+					foreach (var matcher in _compositeMatcherOptions.Matchers) {
 						if (matcher is IMatchMapFactory)
 							continue;
 
@@ -237,7 +236,7 @@ namespace NeatMapper {
 						})
 						.Concat(_singleElementArray.Select(_ => {
 							// Since we finished the mappers, we check if any mapper left can map the types
-							foreach (var matcher in _compositeMatcherOptions.Matchers.OfType<IMatcherCanMatch>()) {
+							foreach (var matcher in _compositeMatcherOptions.Matchers) {
 								if (matcher is IMatchMapFactory)
 									continue;
 

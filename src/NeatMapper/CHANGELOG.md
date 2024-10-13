@@ -9,6 +9,7 @@
 
 ### Changed
 
+- `IMapperCanMap`/`IAsyncMapperCanMap`/`IMatcherCanMatch`/`IProjectorCanProject` interfaces were integrated into their parent interfaces (`IMapper`/`IAsyncMapper`/`IMatcher`/`IProjector`) and removed, all implementing classes and extension methods were adjusted.
 - `DelegateMatcher` constructor was made private and it now can be created only via the type-safe static method `Create`.
 - `MergeCollectionsMappingOptions` Matcher was changed from `MatchMapDelegate` to the safer `IMatcher` (which can also be a `CompositeMatcher` to support multiple maps). `IMapper`/`IAsyncMapper` extensions were updated.
 - Extension method `Predicate` for `IMatchMapFactory`/`MatchMapFactory<TSource, TDestination>` now have an optional parameter which allows to dispose the provided factory together with the returned one (or in case of exceptions), this allows to create factories from other factories directly. The parameter is true by default, meaning that the provided factory will be disposed.

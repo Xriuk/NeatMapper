@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,7 +11,7 @@ namespace NeatMapper {
 	/// Each mapper is invoked in order and the first one to succeed in mapping is returned.<br/>
 	/// For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 	/// </summary>
-	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory, IAsyncMapperMaps {
+	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperFactory, IAsyncMapperMaps {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -99,6 +97,124 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		public async Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
+			var undeterminateMappers = new List<IAsyncMapper>();
+			foreach (var mapper in _mappers) {
+				try {
+					if (await mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken))
+						return true;
+				}
+				catch (InvalidOperationException) {
+					undeterminateMappers.Add(mapper);
+				}
+			}
+
+			// Try creating a default source object and try mapping it
+			if (undeterminateMappers.Count > 0) {
+				object source;
+				try {
+					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
+				}
+				catch {
+					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create an object to test it");
+				}
+
+				foreach (var mapper in undeterminateMappers) {
+					try {
+						await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
+						return true;
+					}
+					catch (MapNotFoundException) { }
+				}
+
+				throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
+			}
+			else
+				return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		public async Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
+			var undeterminateMappers = new List<IAsyncMapper>();
+			foreach (var mapper in _mappers) {
+				try {
+					if (await mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken))
+						return true;
+				}
+				catch (InvalidOperationException) {
+					undeterminateMappers.Add(mapper);
+				}
+			}
+
+			// Try creating two default source and destination objects and try mapping them
+			if (undeterminateMappers.Count > 0) {
+				object source;
+				object destination;
+				try {
+					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
+					destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
+				}
+				catch {
+					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create the objects to test it");
+				}
+
+				foreach (var mapper in undeterminateMappers) {
+					try {
+						await mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+						return true;
+					}
+					catch (MapNotFoundException) { }
+				}
+
+				throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
+			}
+			else
+				return false;
+		}
+
 		public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -158,130 +274,6 @@ namespace NeatMapper {
 		}
 		#endregion
 
-		#region IAsyncMapperCanMap methods
-		public async Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
-			var undeterminateMappers = new List<IAsyncMapper>();
-			foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
-				try { 
-					if(await mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken))
-						return true;
-				}
-				catch (InvalidOperationException) {
-					undeterminateMappers.Add(mapper);
-				}
-			}
-
-			// Try creating a default source object and try mapping it
-			var mappersLeft = _mappers.Where(m => !(m is IAsyncMapperCanMap) || undeterminateMappers.IndexOf(m) != -1);
-			if (mappersLeft.Any()) {
-				object source;
-				try {
-					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-				}
-				catch {
-					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create an object to test it");
-				}
-
-				foreach (var mapper in mappersLeft) {
-					try {
-						await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
-						return true;
-					}
-					catch (MapNotFoundException) {}
-				}
-			}
-
-			if(undeterminateMappers.Count > 0)
-				throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
-			else
-				return false;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public async Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
-			var undeterminateMappers = new List<IAsyncMapper>();
-			foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
-				try {
-					if (await mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken))
-						return true;
-				}
-				catch (InvalidOperationException) {
-					undeterminateMappers.Add(mapper);
-				}
-			}
-
-			// Try creating two default source and destination objects and try mapping them
-			var mappersLeft = _mappers.Where(m => !(m is IAsyncMapperCanMap) || undeterminateMappers.IndexOf(m) != -1);
-			if (mappersLeft.Any()) {
-				object source;
-				object destination;
-				try {
-					source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-					destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
-				}
-				catch {
-					throw new InvalidOperationException("Cannot verify if the mapper supports the given map because unable to create the objects to test it");
-				}
-
-				foreach (var mapper in mappersLeft) {
-					try {
-						await mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
-						return true;
-					}
-					catch (MapNotFoundException) { }
-				}
-			}
-
-			if (undeterminateMappers.Count > 0)
-				throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
-			else
-				return false;
-		}
-		#endregion
-
 		#region IAsyncMapperFactory methods
 		public IAsyncNewMapFactory MapAsyncNewFactory(
 			Type sourceType,
@@ -322,7 +314,7 @@ namespace NeatMapper {
 				})
 				.Concat(_singleElementArray.Select(e => {
 					// Since we finished the mappers, we check if any mapper left can map the types
-					foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+					foreach (var mapper in _mappers) {
 						if (mapper is IAsyncMapperFactory)
 							continue;
 
@@ -359,7 +351,7 @@ namespace NeatMapper {
 					})
 					.Concat(_singleElementArray.Select(e => {
 						// Since we finished the mappers, we check if any mapper left can map the types
-						foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+						foreach (var mapper in _mappers) {
 							if (mapper is IAsyncMapperFactory)
 								continue;
 
@@ -465,7 +457,7 @@ namespace NeatMapper {
 				})
 				.Concat(_singleElementArray.Select(_ => {
 					// Since we finished the mappers, we check if any mapper left can map the types
-					foreach (var mapper in _mappers.OfType<IAsyncMapperCanMap>()) {
+					foreach (var mapper in _mappers) {
 						if (mapper is IAsyncMapperFactory)
 							continue;
 

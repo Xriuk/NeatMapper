@@ -10,7 +10,7 @@ namespace NeatMapper.Transitive {
 	/// the retrieved maps are then tried in order by mapping the source to the merge map source type and then applying
 	/// the merge map itself.
 	/// </summary>
-	public sealed class TransitiveMergeMapper : TransitiveMapper, IMapperCanMap, IMapperFactory {
+	public sealed class TransitiveMergeMapper : TransitiveMapper, IMapperFactory {
 		/// <summary>
 		/// Options to apply to new maps when mapping types, these will have
 		/// <see cref="TransitiveOptions.MaxChainLength"/> with one level less.
@@ -58,6 +58,75 @@ namespace NeatMapper.Transitive {
 
 
 		#region IMapper methods
+		override public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
+		override public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// We cannot map identical types
+			if (sourceType == destinationType)
+				return false;
+
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
+			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
+			if (length < 2)
+				return false;
+
+			var mapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
+				?? _mapper;
+
+			// Retrieve all the merge maps with the selected destination type
+			MappingOptions newMappingOptions = null;
+			foreach (var mergeMap in mapper.GetMergeMaps(mappingOptions).Distinct().Where(m => m.To == destinationType)) {
+				// 2 new map + 1 merge map
+				if (mergeMap.From == sourceType)
+					return true;
+				else if (length < 2 + 1)
+					continue;
+
+				if (newMappingOptions == null)
+					newMappingOptions = MergeOrCreateNewMappingOptions(mappingOptions);
+
+				// Try creating a new maps path to the retrieved source type of the merge map
+				if (mapper.CanMapNew(sourceType, mergeMap.From, newMappingOptions))
+					return true;
+			}
+
+			return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -170,77 +239,6 @@ namespace NeatMapper.Transitive {
 
 			
 			throw new MapNotFoundException((sourceType, destinationType));
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return false;
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We cannot map identical types
-			if (sourceType == destinationType)
-				return false;
-
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
-
-			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
-			if (length < 2)
-				return false;
-
-			var mapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
-				?? _mapper;
-
-			// Retrieve all the merge maps with the selected destination type
-			MappingOptions newMappingOptions = null;
-			foreach (var mergeMap in mapper.GetMergeMaps(mappingOptions).Distinct().Where(m => m.To == destinationType)) {
-				// 2 new map + 1 merge map
-				if (mergeMap.From == sourceType)
-					return true;
-				else if (length < 2 + 1)
-					continue;
-
-				if (newMappingOptions == null)
-					newMappingOptions = MergeOrCreateNewMappingOptions(mappingOptions);
-
-				// Try creating a new maps path to the retrieved source type of the merge map
-				if (mapper.CanMapNew(sourceType, mergeMap.From, newMappingOptions))
-					return true;
-			}
-
-			return false;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

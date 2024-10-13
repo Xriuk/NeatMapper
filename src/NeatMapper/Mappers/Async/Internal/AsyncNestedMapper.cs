@@ -6,7 +6,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which wraps another <see cref="IAsyncMapper"/> and overrides some <see cref="MappingOptions"/>.
 	/// </summary>
-	internal sealed class AsyncNestedMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	internal sealed class AsyncNestedMapper : IAsyncMapper, IAsyncMapperFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -59,6 +59,34 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return _mapper.CanMapAsyncNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
+		}
+
+		public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return _mapper.CanMapAsyncMerge(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
+		}
+
 		public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -115,36 +143,6 @@ namespace NeatMapper {
 			CancellationToken cancellationToken = default) {
 
 			return _mapper.MapAsync(source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return _mapper.CanMapAsyncNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
-		}
-
-		public Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return _mapper.CanMapAsyncMerge(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
 		}
 		#endregion
 

@@ -25,7 +25,7 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// Any external concurrent use of the <see cref="DbContext"/> instance is not monitored and could throw exceptions,
 	/// so you should not be accessing the context externally while matching.
 	/// </remarks>
-	public sealed class EntityFrameworkCoreMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class EntityFrameworkCoreMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Db model, shared between instances of the same DbContext type.
 		/// </summary>

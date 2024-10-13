@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// this allows to combine different projection capabilities.<br/>
 	/// Each projector is invoked in order and the first one to succeed in projection is returned.
 	/// </summary>
-	public sealed class CompositeProjector : IProjector, IProjectorCanProject, IProjectorMaps {
+	public sealed class CompositeProjector : IProjector, IProjectorMaps {
 		/// <summary>
 		/// List of <see cref="IProjector"/>s to be tried in order when projecting types.
 		/// </summary>
@@ -45,6 +45,59 @@ namespace NeatMapper {
 		}
 
 
+		public bool CanProject(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			// Check if any projector implements IProjectorCanProject, if one of them throws it means that the map can be checked only when projecting
+			var undeterminateProjectors = new List<IProjector>();
+			foreach (var projector in _projectors) {
+				try {
+					if (projector.CanProject(sourceType, destinationType, mappingOptions))
+						return true;
+				}
+				catch (InvalidOperationException) {
+					undeterminateProjectors.Add(projector);
+				}
+			}
+
+			// Try projecting the types
+			if (undeterminateProjectors.Count > 0) {
+				foreach (var projector in undeterminateProjectors) {
+					try {
+						projector.Project(sourceType, destinationType, mappingOptions);
+						return true;
+					}
+					catch (MapNotFoundException) { }
+				}
+
+				throw new InvalidOperationException("Cannot verify if the projector supports the given map");
+			}
+			else
+				return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
 		public LambdaExpression Project(
 			Type sourceType,
 			Type destinationType,
@@ -69,61 +122,6 @@ namespace NeatMapper {
 			}
 
 			throw new MapNotFoundException((sourceType, destinationType));
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			// Check if any projector implements IProjectorCanProject, if one of them throws it means that the map can be checked only when projecting
-			var undeterminateProjectors = new List<IProjector>();
-			foreach (var projector in _projectors.OfType<IProjectorCanProject>()) {
-				try {
-					if (projector.CanProject(sourceType, destinationType, mappingOptions))
-						return true;
-				}
-				catch (InvalidOperationException) {
-					undeterminateProjectors.Add(projector);
-				}
-			}
-
-			// Try projecting the types
-			var projectorsLeft = _projectors.Where(p => !(p is IProjectorCanProject) || undeterminateProjectors.IndexOf(p) != -1);
-			if (projectorsLeft.Any()) {
-				foreach (var projector in projectorsLeft) {
-					try {
-						projector.Project(sourceType, destinationType, mappingOptions);
-						return true;
-					}
-					catch (MapNotFoundException) { }
-				}
-			}
-
-			if (undeterminateProjectors.Count > 0)
-				throw new InvalidOperationException("Cannot verify if the projector supports the given map");
-			else
-				return false;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

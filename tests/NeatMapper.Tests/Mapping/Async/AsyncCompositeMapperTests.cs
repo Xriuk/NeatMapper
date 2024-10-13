@@ -7,6 +7,14 @@ namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
 	public class AsyncCompositeMapperTests {
 		public class TestMapper1 : IAsyncMapper, IAsyncMapperFactory {
+			public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
+				throw new NotImplementedException();
+			}
+
+			public Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
+				throw new NotImplementedException();
+			}
+
 			public Task<object> MapAsync(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}

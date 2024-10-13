@@ -8,7 +8,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IAsyncMapper"/> which maps objects by using <see cref="IAsyncNewMap{TSource, TDestination}"/>.
 	/// </summary>
-	public sealed class AsyncNewMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory, IAsyncMapperMaps {
+	public sealed class AsyncNewMapper : AsyncCustomMapper, IAsyncMapperFactory, IAsyncMapperMaps {
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncNewMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -67,6 +67,45 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		override public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			try {
+				_configuration.GetSingleMapAsync((sourceType, destinationType));
+				return Task.FromResult(true);
+			}
+			catch (MapNotFoundException) {
+				return Task.FromResult(false);
+			}
+		}
+
+		override public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return Task.FromResult(false);
+		}
+
 		override public async Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -138,47 +177,6 @@ namespace NeatMapper {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			try {
-				_configuration.GetSingleMapAsync((sourceType, destinationType));
-				return Task.FromResult(true);
-			}
-			catch (MapNotFoundException) {
-				return Task.FromResult(false);
-			}
-		}
-
-		public Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return Task.FromResult(false);
 		}
 		#endregion
 

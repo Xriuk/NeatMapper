@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches by invoking a delegate.
 	/// </summary>
-	public sealed class DelegateMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class DelegateMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Creates an instance of <see cref="DelegateMatcher"/> by using the provided delegate.
 		/// </summary>
@@ -130,6 +130,24 @@ namespace NeatMapper {
 		}
 
 
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return sourceType == _sourceType && destinationType == _destinationType;
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -155,24 +173,6 @@ namespace NeatMapper {
 			using (var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
 				return factory.Invoke(source, destination);
 			}
-		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return sourceType == _sourceType && destinationType == _destinationType;
 		}
 
 		public IMatchMapFactory MatchFactory(

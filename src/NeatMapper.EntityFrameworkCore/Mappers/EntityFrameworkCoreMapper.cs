@@ -25,7 +25,7 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// Any external concurrent use of the <see cref="DbContext"/> instance is not monitored and could throw exceptions,
 	/// so you should not be accessing the context externally while mapping.
 	/// </remarks>
-	public sealed class EntityFrameworkCoreMapper : EntityFrameworkCoreBaseMapper, IMapper, IMapperCanMap, IMapperFactory {
+	public sealed class EntityFrameworkCoreMapper : EntityFrameworkCoreBaseMapper, IMapper, IMapperFactory {
 		/// <summary>
 		/// <see cref="EntityFrameworkQueryableExtensions.Load{TSource}(IQueryable{TSource})"/>
 		/// </summary>
@@ -134,6 +134,62 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		#region IMapper methods
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			// Prevent being used by a collection mapper
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions))
+				return false;
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// We could also map collections of keys/entities
+			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsEnumerable() && destinationType != typeof(string)) {
+				if (!ObjectFactory.CanCreateCollection(destinationType))
+					return false;
+
+				sourceType = sourceType.GetEnumerableElementType();
+				destinationType = destinationType.GetEnumerableElementType();
+			}
+
+			// We can only map from key to entity so we check source and destination types
+			if (!sourceType.IsKeyType() && !sourceType.IsCompositeKeyType())
+				return false;
+
+			return CanMap(destinationType, sourceType);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CanMapMerge(sourceType, destinationType, null, mappingOptions);
+		}
+
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -192,64 +248,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			using (var factory = MapMergeFactory(sourceType, destinationType, mappingOptions)) {
 				return factory.Invoke(source, destination);
 			}
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			// Prevent being used by a collection mapper
-			if (CheckCollectionMapperNestedContextRecursive(mappingOptions))
-				return false;
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We could also map collections of keys/entities
-			if(sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsEnumerable() && destinationType != typeof(string)) {
-				if(!ObjectFactory.CanCreateCollection(destinationType))
-					return false;
-
-				sourceType = sourceType.GetEnumerableElementType();
-				destinationType = destinationType.GetEnumerableElementType();
-			}
-
-			// We can only map from key to entity so we check source and destination types
-			if (!sourceType.IsKeyType() && !sourceType.IsCompositeKeyType())
-				return false;
-
-			return CanMap(destinationType, sourceType);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return CanMapMerge(sourceType, destinationType, null, mappingOptions);
 		}
 		#endregion
 

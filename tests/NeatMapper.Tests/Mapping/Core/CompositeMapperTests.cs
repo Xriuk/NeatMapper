@@ -4,7 +4,15 @@ using System;
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
 	public class CompositeMapperTests {
-		public class TestMapper1 : IMapper, IMapperFactory, IMapperCanMap {
+		public class TestMapper1 : IMapper, IMapperFactory {
+			public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				return true;
+			}
+
+			public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new NotImplementedException();
+			}
+
 			public object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
@@ -20,17 +28,17 @@ namespace NeatMapper.Tests.Mapping {
 			public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
-
-			public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
-				return true;
-			}
-
-			public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
-				throw new NotImplementedException();
-			}
 		}
 
 		public class TestMapper2 : IMapper, IMapperFactory {
+			public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new NotImplementedException();
+			}
+
+			public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new NotImplementedException();
+			}
+
 			public object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new MapNotFoundException((sourceType, destinationType));
 			}

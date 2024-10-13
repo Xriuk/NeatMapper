@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches by invoking an <see cref="IEqualityComparer{T}"/>.
 	/// </summary>
-	public sealed class EqualityComparerMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class EqualityComparerMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Creates a new instance of <see cref="EqualityComparerMatcher"/> by using the provided
 		/// <see cref="IEqualityComparer{T}"/>.
@@ -71,6 +71,24 @@ namespace NeatMapper {
 		}
 
 
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return sourceType == _comparerType && destinationType == _comparerType;
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -105,24 +123,6 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
-		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return sourceType == _comparerType && destinationType == _comparerType;
 		}
 
 		public IMatchMapFactory MatchFactory(

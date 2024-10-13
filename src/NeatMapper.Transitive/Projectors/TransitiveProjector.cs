@@ -11,7 +11,7 @@ namespace NeatMapper.Transitive {
 	/// the retrieved maps are combined into a graph and the shortest path is solved by using
 	/// the Dijkstra algorithm, the resulting expressions are then merged each into the next one by replacing them.
 	/// </summary>
-	public sealed class TransitiveProjector : IProjector, IProjectorCanProject {
+	public sealed class TransitiveProjector : IProjector {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -100,6 +100,26 @@ namespace NeatMapper.Transitive {
 		}
 
 
+		public bool CanProject(Type sourceType, Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// We cannot project identical types
+			if (sourceType == destinationType)
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions)) != null;
+		}
+
 		public LambdaExpression Project(Type sourceType, Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -139,26 +159,6 @@ namespace NeatMapper.Transitive {
 			catch (Exception e) {
 				throw new ProjectionException(e, (sourceType, destinationType));
 			}
-		}
-
-		public bool CanProject(Type sourceType, Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We cannot project identical types
-			if (sourceType == destinationType)
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions)) != null;
 		}
 
 

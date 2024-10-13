@@ -12,7 +12,7 @@ namespace NeatMapper {
 	/// Caches <see cref="AsyncMappingContextOptions"/> for each provided <see cref="MappingOptions"/>, so that same options
 	/// will share the same context.
 	/// </summary>
-	public sealed class AsyncMergeMapper : AsyncCustomMapper, IAsyncMapperCanMap, IAsyncMapperFactory, IAsyncMapperMaps {
+	public sealed class AsyncMergeMapper : AsyncCustomMapper, IAsyncMapperFactory, IAsyncMapperMaps {
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncMergeMapper"/>.<br/>
 		/// At least one between <paramref name="mapsOptions"/> and <paramref name="additionalMapsOptions"/>
@@ -71,6 +71,52 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		override public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			// Source type null checked in CanMapAsyncMerge
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (!ObjectFactory.CanCreate(destinationType))
+				return Task.FromResult(false);
+
+			return CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken);
+		}
+
+		override public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			try {
+				_configuration.GetDoubleMapAsync((sourceType, destinationType));
+				return Task.FromResult(true);
+			}
+			catch (MapNotFoundException) {
+				return Task.FromResult(false);
+			}
+		}
+
 		override public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -158,54 +204,6 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(result, destinationType);
 
 			return result;
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			// Source type null checked in CanMapAsyncMerge
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if(!ObjectFactory.CanCreate(destinationType))
-				return Task.FromResult(false);
-
-			return CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken);
-		}
-
-		public Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			try {
-				_configuration.GetDoubleMapAsync((sourceType, destinationType));
-				return Task.FromResult(true);
-			}
-			catch (MapNotFoundException) {
-				return Task.FromResult(false);
-			}
 		}
 		#endregion
 

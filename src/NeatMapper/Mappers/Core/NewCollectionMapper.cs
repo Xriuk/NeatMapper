@@ -15,7 +15,7 @@ namespace NeatMapper {
 	/// </list>
 	/// </summary>
 	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
-	public sealed class NewCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
+	public sealed class NewCollectionMapper : CollectionMapper, IMapperFactory {
 		/// <summary>
 		/// Creates a new instance of <see cref="NewCollectionMapper"/>.
 		/// </summary>
@@ -24,9 +24,69 @@ namespace NeatMapper {
 		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.Mapper"/>.
 		/// </param>
 		public NewCollectionMapper(IMapper elementsMapper) : base(elementsMapper) { }
-		
+
 
 		#region IMapper methods
+		override public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (sourceType.IsEnumerable() && destinationType.IsEnumerable() && ObjectFactory.CanCreateCollection(destinationType)) {
+				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
+
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
+				bool cannotVerifyNew = false;
+				try {
+					if (elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
+						return true;
+				}
+				catch (InvalidOperationException) {
+					cannotVerifyNew = true;
+				}
+
+				if (ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
+					return true;
+				else if (cannotVerifyNew)
+					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
+			}
+
+			return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		override public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -84,68 +144,6 @@ namespace NeatMapper {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (sourceType.IsEnumerable() && destinationType.IsEnumerable() && ObjectFactory.CanCreateCollection(destinationType)) {
-				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
-
-				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
-
-				bool cannotVerifyNew = false;
-				try {
-					if(elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions))
-						return true;
-				}
-				catch(InvalidOperationException) {
-					cannotVerifyNew = true;
-				}
-
-				if (ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions))
-					return true;
-				else if(cannotVerifyNew)
-					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
-			}
-
-			return false;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return false;
 		}
 		#endregion
 

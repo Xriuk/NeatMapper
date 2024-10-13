@@ -4,7 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which wraps another <see cref="IMatcher"/> and overrides some <see cref="MappingOptions"/>.
 	/// </summary>
-	internal sealed class NestedMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	internal sealed class NestedMatcher : IMatcher, IMatcherFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -57,6 +57,19 @@ namespace NeatMapper {
 		}
 
 
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _matcher.CanMatch(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -80,19 +93,6 @@ namespace NeatMapper {
 			mappingOptions = null) {
 
 			return _matcher.Match(source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions));
-		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return _matcher.CanMatch(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 
 		public IMatchMapFactory MatchFactory(

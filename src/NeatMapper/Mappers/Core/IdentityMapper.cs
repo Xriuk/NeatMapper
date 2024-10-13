@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// Singleton <see cref="IMapper"/> which returns the provided source element (for both new and merge maps).
 	/// Supports only the same source/destination types. Can be used to merge collections of elements of the same type.
 	/// </summary>
-	public sealed class IdentityMapper : IMapper, IMapperCanMap, IMapperFactory {
+	public sealed class IdentityMapper : IMapper, IMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>
@@ -16,6 +16,32 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CanMap(sourceType, destinationType);
+		}
+
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CanMap(sourceType, destinationType);
+		}
+
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -81,34 +107,6 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 			return source;
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return CanMap(sourceType, destinationType);
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return CanMap(sourceType, destinationType);
 		}
 		#endregion
 

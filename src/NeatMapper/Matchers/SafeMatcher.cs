@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <see cref="IMatcher"/> which wraps another <see cref="IMatcher"/>
 	/// and returns false in case it throws <see cref="MapNotFoundException"/>.
 	/// </summary>
-	public sealed class SafeMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class SafeMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Matcher to which delegate all the operations.
 		/// </summary>
@@ -41,6 +41,20 @@ namespace NeatMapper {
 #endif
 
 
+		// Forwarding all the methods because we want to check on the wrapper matcher
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _matcher.CanMatch(sourceType, destinationType, GetOptions(mappingOptions));
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -69,20 +83,6 @@ namespace NeatMapper {
 			catch(MapNotFoundException){
 				return false;
 			}
-		}
-
-		// Forwarding all the methods because we want to check on the wrapper matcher
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return _matcher.CanMatch(sourceType, destinationType, GetOptions(mappingOptions));
 		}
 
 		// Forwarding all the methods because we want to check on the wrapper matcher

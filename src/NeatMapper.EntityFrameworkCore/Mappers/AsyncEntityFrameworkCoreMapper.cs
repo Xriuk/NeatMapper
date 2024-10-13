@@ -20,7 +20,7 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// (and <see cref="EntityFrameworkCoreMappingOptions.EntitiesRetrievalMode"/>).
 	/// </summary>
 	/// <inheritdoc cref="EntityFrameworkCoreMapper" path="/remarks"/>
-	public sealed class AsyncEntityFrameworkCoreMapper : EntityFrameworkCoreBaseMapper, IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncEntityFrameworkCoreMapper : EntityFrameworkCoreBaseMapper, IAsyncMapper, IAsyncMapperFactory {
 		/// <summary>
 		/// <see cref="EntityFrameworkQueryableExtensions.LoadAsync{TSource}(IQueryable{TSource}, CancellationToken)"/>
 		/// </summary>
@@ -131,70 +131,6 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		#region IAsyncMapper methods
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions)) {
-				return await factory.Invoke(source, cancellationToken);
-			}
-		}
-
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions)) {
-				return await factory.Invoke(source, destination, cancellationToken);
-			}
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
 		public Task<bool> CanMapAsyncNew(
 			Type sourceType,
 			Type destinationType,
@@ -261,6 +197,68 @@ namespace NeatMapper.EntityFrameworkCore {
 			CancellationToken cancellationToken = default) {
 
 			return Task.FromResult(CanMapMerge(sourceType, destinationType, null, mappingOptions));
+		}
+
+		public async Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> MapAsync(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			using (var factory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions)) {
+				return await factory.Invoke(source, cancellationToken);
+			}
+		}
+
+		public async Task<
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			> MapAsync(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions)) {
+				return await factory.Invoke(source, destination, cancellationToken);
+			}
 		}
 		#endregion
 

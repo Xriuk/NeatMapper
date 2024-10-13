@@ -25,7 +25,7 @@ namespace NeatMapper {
 	/// <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
 	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
-	public sealed class MergeCollectionMapper : CollectionMapper, IMapperCanMap, IMapperFactory {
+	public sealed class MergeCollectionMapper : CollectionMapper, IMapperFactory {
 		// DEV: what is it used for? Try to remove
 		private readonly IMapper _originalElementMapper;
 
@@ -81,6 +81,32 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
+		override public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
+		override public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CanMapMerge(sourceType, destinationType, null, mappingOptions);
+		}
+
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -138,33 +164,6 @@ namespace NeatMapper {
 			using (var factory = MapMergeFactory(sourceType, destinationType, mappingOptions)) {
 				return factory.Invoke(source, destination);
 			}
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-			return false;
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return CanMapMerge(sourceType, destinationType, null, mappingOptions);
 		}
 		#endregion
 

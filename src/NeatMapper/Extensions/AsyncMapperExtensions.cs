@@ -780,67 +780,7 @@ namespace NeatMapper {
 
 		#region CanMapAsyncNew
 		#region Runtime
-		/// <summary>
-		/// Checks if the mapper could create a new object from a given one asynchronously, will check if the given mapper
-		/// supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source object (cached) and try to map it.
-		/// It does not guarantee that the actual map will succeed.
-		/// </summary>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
-		public static async Task<bool> CanMapAsyncNew(this IAsyncMapper mapper,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Check if the mapper implements IAsyncMapperCanMap, if it throws it means that the map can be checked only when mapping
-			if (mapper is IAsyncMapperCanMap mapperCanMap)
-				return await mapperCanMap.CanMapAsyncNew(sourceType, destinationType, mappingOptions, cancellationToken);
-
-			// Try creating a default source object and try mapping it
-			object source;
-			try {
-				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-			}
-			catch {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because unable to create a dummy object to test it.");
-			}
-
-			try {
-				await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
-			catch (Exception e) {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because it threw an exception while trying to map a dummy object. " +
-					"Check inner exception for details.", e);
-			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		/// <inheritdoc cref="CanMapAsyncNew(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncNew(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -854,7 +794,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <inheritdoc cref="CanMapAsyncNew(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncNew(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -871,17 +811,17 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns <see langword="true"/> if an object of type
 		/// <typeparamref name="TDestination"/> can be created from a parameter of type
 		/// <typeparamref name="TSource"/>.
 		/// </returns>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -925,70 +865,7 @@ namespace NeatMapper {
 
 		#region CanMapAsyncMerge
 		#region Runtime
-		/// <summary>
-		/// Checks if the mapper could merge an object into an existing one asynchronously, will check
-		/// if the given mapper supports <see cref="IAsyncMapperCanMap"/> first or will create a dummy source (cached)
-		/// and destination (not cached) objects and try to map them. It does not guarantee that the actual map will succeed.
-		/// </summary>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
-		public static async Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Check if the mapper implements IAsyncMapperCanMap, if it throws it means that the map can be checked only when mapping
-			if (mapper is IAsyncMapperCanMap mapperCanMap)
-				return await mapperCanMap.CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken);
-
-			// Try creating two default source and destination objects and try mapping them,
-			// cannot create a cached destination because it could be modified by the map so we could not reuse it
-			object source;
-			object destination;
-			try {
-				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-				destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
-			}
-			catch {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because unable to create dummy objects to test it.");
-			}
-
-			try {
-				await mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
-			catch (Exception e) {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because it threw an exception while trying to map dummy objects. " +
-					"Check inner exception for details.", e);
-			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		/// <inheritdoc cref="CanMapAsyncMerge(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1002,7 +879,7 @@ namespace NeatMapper {
 #endif
 		}
 
-		/// <inheritdoc cref="CanMapAsyncMerge(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
 		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1019,17 +896,17 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <inheritdoc cref="CanMapAsyncMerge(IAsyncMapper, Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns <see langword="true"/> if an object of type
 		/// <typeparamref name="TSource"/> can be merged into an object of type
 		/// <typeparamref name="TDestination"/>.
 		/// </returns>
-		/// <inheritdoc cref="IAsyncMapperCanMap.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -1112,16 +989,14 @@ namespace NeatMapper {
 			// Check if the mapper can map the types (we don't do it via the extension method above because
 			// it may require actually mapping the two types if the interface is not implemented,
 			// and as the returned factory may still throw MapNotFoundException we are still compliant)
-			if (mapper is IAsyncMapperCanMap mapperCanMap) {
-				try {
-					if (!mapperCanMap.CanMapAsyncNew(sourceType, destinationType, mappingOptions).Result)
-						throw new MapNotFoundException((sourceType, destinationType));
-				}
-				catch (MapNotFoundException) {
-					throw;
-				}
-				catch { }
+			try {
+				if (!mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions).Result)
+					throw new MapNotFoundException((sourceType, destinationType));
 			}
+			catch (MapNotFoundException) {
+				throw;
+			}
+			catch { }
 
 			// Return the map wrapped
 			return new DefaultAsyncNewMapFactory(sourceType, destinationType, (source, cancellationToken) => mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken));
@@ -1259,16 +1134,14 @@ namespace NeatMapper {
 			// Check if the mapper can map the types (we don't do it via the extension method above because
 			// it may require actually mapping the two types if the interface is not implemented,
 			// and as the returned factory may still throw MapNotFoundException we are still compliant)
-			if (mapper is IAsyncMapperCanMap mapperCanMap) {
-				try {
-					if (!mapperCanMap.CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result)
-						throw new MapNotFoundException((sourceType, destinationType));
-				}
-				catch (MapNotFoundException) {
-					throw;
-				}
-				catch { }
+			try {
+				if (!mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result)
+					throw new MapNotFoundException((sourceType, destinationType));
 			}
+			catch (MapNotFoundException) {
+				throw;
+			}
+			catch { }
 
 			// Return the map wrapped
 			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, (source, destination, cancellationToken) => mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken));

@@ -4,7 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// Singleton <see cref="IMapper"/> which cannot map any type.
 	/// </summary>
-	public sealed class EmptyMapper : IMapper, IMapperCanMap, IMapperFactory {
+	public sealed class EmptyMapper : IMapper, IMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>
@@ -15,6 +15,32 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -69,34 +95,6 @@ namespace NeatMapper {
 			mappingOptions = null) {
 			
 			throw new MapNotFoundException((sourceType, destinationType));
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return false;
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return false;
 		}
 		#endregion
 

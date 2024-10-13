@@ -19,7 +19,7 @@ namespace NeatMapper {
 	/// </list>
 	/// </summary>
 	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
-	public sealed class AsyncNewCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncNewCollectionMapper : AsyncCollectionMapper, IAsyncMapperFactory {
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncNewCollectionMapper"/>.
 		/// </summary>
@@ -43,6 +43,73 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		override public async Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if ((sourceType.IsEnumerable() || sourceType.IsAsyncEnumerable()) &&
+				(destinationType.IsEnumerable() || destinationType.IsAsyncEnumerable()) &&
+				ObjectFactory.CanCreateCollection(destinationType)) {
+
+				var elementTypes = (From: sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
+					To: destinationType.IsEnumerable() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType());
+
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+
+				bool cannotVerifyNew = false;
+				try {
+					if (await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
+						return true;
+				}
+				catch (InvalidOperationException) {
+					cannotVerifyNew = true;
+				}
+
+				if (ObjectFactory.CanCreate(elementTypes.To) && await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
+					return true;
+				else if (cannotVerifyNew)
+					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
+			}
+
+			return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
+
+		override public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return Task.FromResult(false);
+		}
+
 		override public async Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -102,75 +169,6 @@ namespace NeatMapper {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
-		public async Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if ((sourceType.IsEnumerable() || sourceType.IsAsyncEnumerable()) &&
-				(destinationType.IsEnumerable() || destinationType.IsAsyncEnumerable()) &&
-				ObjectFactory.CanCreateCollection(destinationType)) {
-
-				var elementTypes = (From: sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
-					To: destinationType.IsEnumerable() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType());
-
-				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
-
-				bool cannotVerifyNew = false;
-				try {
-					if(await elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
-						return true;
-				}
-				catch(InvalidOperationException) {
-					cannotVerifyNew = true;
-				}
-
-				if (ObjectFactory.CanCreate(elementTypes.To) && await elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions, cancellationToken))
-					return true;
-				else if(cannotVerifyNew)
-					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
-			}
-
-			return false;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return Task.FromResult(false);
 		}
 		#endregion
 

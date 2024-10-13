@@ -23,7 +23,7 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// Any external concurrent use of the <see cref="DbContext"/> instance is not monitored and could throw exceptions,
 	/// so you should not be accessing the context externally while projecting.
 	/// </remarks>
-	public sealed class EntityFrameworkCoreProjector : IProjector, IProjectorCanProject {
+	public sealed class EntityFrameworkCoreProjector : IProjector {
 		/// <summary>
 		/// Db model, shared between instances of the same DbContext type.
 		/// </summary>
@@ -73,6 +73,61 @@ namespace NeatMapper.EntityFrameworkCore {
 #endif
 		}
 
+
+		public bool CanProject(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// We only project entities to keys
+			if (!sourceType.IsClass || (!destinationType.IsKeyType() && !destinationType.IsCompositeKeyType()))
+				return false;
+
+			// Check if the entity is in the model
+			var modelEntity = _model.FindEntityType(sourceType);
+			if (modelEntity == null || modelEntity.IsOwned())
+				return false;
+
+			// Check that the entity has a key and that it matches the key type
+			var key = modelEntity.FindPrimaryKey();
+			if (key == null || key.Properties.Count < 1)
+				return false;
+			if (destinationType.IsCompositeKeyType()) {
+				var keyTypes = destinationType.UnwrapNullable().GetGenericArguments();
+				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
+					return false;
+			}
+			else if (key.Properties.Count != 1 || key.Properties[0].ClrType != destinationType.UnwrapNullable())
+				return false;
+
+			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
+			// or we have a db context to retrieve the tracked instances
+			if (key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
+				RetrieveDbContext(mappingOptions) == null) {
+
+				return false;
+			}
+
+			return true;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
 
 		public LambdaExpression Project(
 			Type sourceType,
@@ -224,61 +279,6 @@ namespace NeatMapper.EntityFrameworkCore {
 				Expression.Default(body.Type));
 
 			return Expression.Lambda(body, entityParam);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We only project entities to keys
-			if(!sourceType.IsClass || (!destinationType.IsKeyType() && !destinationType.IsCompositeKeyType()))
-				return false;
-
-			// Check if the entity is in the model
-			var modelEntity = _model.FindEntityType(sourceType);
-			if (modelEntity == null || modelEntity.IsOwned())
-				return false;
-
-			// Check that the entity has a key and that it matches the key type
-			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1)
-				return false;
-			if (destinationType.IsCompositeKeyType()) {
-				var keyTypes = destinationType.UnwrapNullable().GetGenericArguments();
-				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
-					return false;
-			}
-			else if (key.Properties.Count != 1 || key.Properties[0].ClrType != destinationType.UnwrapNullable())
-				return false;
-
-			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
-			// or we have a db context to retrieve the tracked instances
-			if (key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
-				RetrieveDbContext(mappingOptions) == null) {
-
-				return false;
-			}
-
-			return true;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

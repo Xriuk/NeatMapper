@@ -23,6 +23,14 @@ namespace NeatMapper.Tests.Extensions {
 		}
 
 		private class CustomMapper : IMapper, IMapperFactory {
+			public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new NotImplementedException();
+			}
+
+			public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
+				throw new NotImplementedException();
+			}
+
 			object IMapper.Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions) {
 				throw new NotImplementedException();
 			}

@@ -11,7 +11,7 @@ namespace NeatMapper {
 	/// <see cref="IEnumerable{T}"/> by projecting elements with another <see cref="IProjector"/>.
 	/// Also supports mapping <see cref="IQueryable{T}"/>s between them.
 	/// </summary>
-	public sealed class CollectionProjector : IProjector, IProjectorCanProject {
+	public sealed class CollectionProjector : IProjector {
 		/// <summary>
 		/// <see cref="Queryable.Select{TSource, TResult}(IQueryable{TSource}, Expression{Func{TSource, TResult}})"/>
 		/// </summary>
@@ -131,6 +131,46 @@ namespace NeatMapper {
 			_nestedProjectionContext = new NestedProjectionContext(this);
 		}
 
+
+		public bool CanProject(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (sourceType.IsEnumerable() && destinationType.IsEnumerable()) {
+				// Check if we are mapping IQueryable<T>
+				bool isQueryable = sourceType.IsGenericType && sourceType.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
+					destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IQueryable<>);
+				if (isQueryable || CanProjectCollection(destinationType)) {
+					var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
+
+					mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+					var elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector ?? _elementsProjector;
+
+					return elementsProjector.CanProject(elementTypes.From, elementTypes.To, mappingOptions);
+				}
+			}
+
+			return false;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
+		}
 
 		public LambdaExpression Project(
 			Type sourceType,
@@ -307,46 +347,6 @@ namespace NeatMapper {
 					Expression.Lambda(typeof(Func<,>).MakeGenericType(elementType, elementType.GetGenericArguments()[1]), valueProperty, param2));
 #endif
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		public bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (sourceType.IsEnumerable() && destinationType.IsEnumerable()) {
-				// Check if we are mapping IQueryable<T>
-				bool isQueryable = sourceType.IsGenericType && sourceType.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
-					destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IQueryable<>);
-				if (isQueryable || CanProjectCollection(destinationType)) { 
-					var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
-
-					mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
-					var elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector ?? _elementsProjector;
-
-					return elementsProjector.CanProject(elementTypes.From, elementTypes.To, mappingOptions);
-				}
-			}
-
-			return false;
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

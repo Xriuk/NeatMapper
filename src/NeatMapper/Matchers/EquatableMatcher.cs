@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// The types are matched in the provided order: source type is checked for matching implementations of
 	/// <see cref="IEquatable{T}"/> (so multiple types can be matched too).
 	/// </summary>
-	public sealed class EquatableMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class EquatableMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Cached map delegates.
 		/// </summary>
@@ -39,6 +39,24 @@ namespace NeatMapper {
 
 		private EquatableMatcher() { }
 
+
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return sourceType.GetInterfaces().Contains(typeof(IEquatable<>).MakeGenericType(destinationType));
+		}
 
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -74,24 +92,6 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
-		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return sourceType.GetInterfaces().Contains(typeof(IEquatable<>).MakeGenericType(destinationType));
 		}
 
 		public IMatchMapFactory MatchFactory(

@@ -4,7 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// Singleton <see cref="IMatcher"/> which just returns false for every match.
 	/// </summary>
-	public sealed class EmptyMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class EmptyMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Singleton instance of the matcher
 		/// </summary>
@@ -13,6 +13,19 @@ namespace NeatMapper {
 
 		internal EmptyMatcher() { }
 
+
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
 
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -28,19 +41,6 @@ namespace NeatMapper {
 			object
 #endif
 			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return false;
-		}
-
-		public bool CanMatch(
-			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?

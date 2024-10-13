@@ -688,66 +688,7 @@ namespace NeatMapper {
 
 		#region CanMapNew
 		#region Runtime
-		/// <summary>
-		/// Checks if the mapper could create a new object from a given one, will check if the given mapper supports
-		/// <see cref="IMapperCanMap"/> first otherwise will create a dummy source object (cached) and try to map it.
-		/// It does not guarantee that the actual map will succeed.
-		/// </summary>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)"/>
-		public static bool CanMapNew(this IMapper mapper,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
-			if (mapper is IMapperCanMap mapperCanMap)
-				return mapperCanMap.CanMapNew(sourceType, destinationType, mappingOptions);
-
-			// Try creating a default source object and try mapping it
-			object source;
-			try {
-				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-			}
-			catch {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because unable to create a dummy object to test it.");
-			}
-
-			try {
-				mapper.Map(source, sourceType, destinationType, mappingOptions);
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
-			catch (Exception e){
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because it threw an exception while trying to map a dummy object. " +
-					"Check inner exception for details.", e);
-			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		/// <inheritdoc cref="CanMapNew(IMapper, Type, Type, MappingOptions)"/>
+		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)"/>
 		public static bool CanMapNew(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -761,7 +702,7 @@ namespace NeatMapper {
 			return mapper.CanMapNew(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="CanMapNew(IMapper, Type, Type, MappingOptions)"/>
+		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)"/>
 		public static bool CanMapNew(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -778,15 +719,15 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <inheritdoc cref="CanMapNew(IMapper, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created
 		/// from a parameter of type <typeparamref name="TSource"/>.
 		/// </returns>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)" path="/exception"/>
 		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -798,15 +739,7 @@ namespace NeatMapper {
 			return mapper.CanMapNew(typeof(TSource), typeof(TDestination), mappingOptions);
 		}
 
-		/// <inheritdoc cref="CanMapNew(IMapper, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created
-		/// from a parameter of type <typeparamref name="TSource"/>.
-		/// </returns>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="CanMapNew{TSource, TDestination}(IMapper, MappingOptions)"/>
 		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -818,15 +751,7 @@ namespace NeatMapper {
 			return mapper.CanMapNew(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="CanMapNew(IMapper, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created
-		/// from a parameter of type <typeparamref name="TSource"/>.
-		/// </returns>
-		/// <inheritdoc cref="IMapperCanMap.CanMapNew(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="CanMapNew{TSource, TDestination}(IMapper, MappingOptions)"/>
 		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -843,69 +768,7 @@ namespace NeatMapper {
 
 		#region CanMapMerge
 		#region Runtime
-		/// <summary>
-		/// Checks if the mapper could merge an object into an existing one, will check if the given mapper supports
-		/// <see cref="IMapperCanMap"/> first otherwise will create a dummy source (cached)
-		/// and destination (not cached) objects and try to map them. It does not guarantee that the actual map will succeed.
-		/// </summary>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)"/>
-		public static bool CanMapMerge(this IMapper mapper,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (mapper == null)
-				throw new ArgumentNullException(nameof(mapper));
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Check if the mapper implements IMapperCanMap, if it throws it means that the map can be checked only when mapping
-			if (mapper is IMapperCanMap mapperCanMap)
-				return mapperCanMap.CanMapMerge(sourceType, destinationType, mappingOptions);
-
-			// Try creating two default source and destination objects and try mapping them,
-			// cannot create a cached destination because it could be modified by the map so we could not reuse it
-			object source;
-			object destination;
-			try {
-				source = ObjectFactory.GetOrCreateCached(sourceType) ?? throw new Exception(); // Just in case
-				destination = ObjectFactory.Create(destinationType) ?? throw new Exception(); // Just in case
-			}
-			catch {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because unable to create dummy objects to test it.");
-			}
-
-			try {
-				mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
-			catch (Exception e) {
-				throw new InvalidOperationException(
-					"Cannot verify if the mapper supports the given map because it threw an exception while trying to map dummy objects. " +
-					"Check inner exception for details.", e);
-			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
-		/// <inheritdoc cref="CanMapMerge(IMapper, Type, Type, MappingOptions)"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)"/>
 		public static bool CanMapMerge(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -919,7 +782,7 @@ namespace NeatMapper {
 			return mapper.CanMapMerge(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="CanMapMerge(IMapper, Type, Type, MappingOptions)"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)"/>
 		public static bool CanMapMerge(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -936,15 +799,15 @@ namespace NeatMapper {
 		#endregion
 
 		#region Explicit source and destination
-		/// <inheritdoc cref="CanMapMerge(IMapper, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object
 		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
 		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -956,15 +819,15 @@ namespace NeatMapper {
 			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination), mappingOptions);
 		}
 
-		/// <inheritdoc cref="CanMapMerge(IMapper, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object
 		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
 		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -976,15 +839,15 @@ namespace NeatMapper {
 			return mapper.CanMapMerge(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="CanMapMerge(IMapper, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object
 		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
-		/// <inheritdoc cref="IMapperCanMap.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
 		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1040,16 +903,14 @@ namespace NeatMapper {
 			// Check if the mapper can map the types (we don't do it via the extension method above because
 			// it may require actually mapping the two types if the interface is not implemented,
 			// and as the returned factory may still throw MapNotFoundException we are still compliant)
-			if (mapper is IMapperCanMap mapperCanMap) {
-				try {
-					if(!mapperCanMap.CanMapNew(sourceType, destinationType, mappingOptions))
-						throw new MapNotFoundException((sourceType, destinationType));
-				}
-				catch (MapNotFoundException) {
-					throw;
-				}
-				catch { }
+			try {
+				if(!mapper.CanMapNew(sourceType, destinationType, mappingOptions))
+					throw new MapNotFoundException((sourceType, destinationType));
 			}
+			catch (MapNotFoundException) {
+				throw;
+			}
+			catch { }
 
 			// Return the map wrapped
 			return new DefaultNewMapFactory(
@@ -1196,16 +1057,14 @@ namespace NeatMapper {
 			// Check if the mapper can map the types (we don't do it via the extension method above because
 			// it may require actually mapping the two types if the interface is not implemented,
 			// and as the returned factory may still throw MapNotFoundException we are still compliant)
-			if (mapper is IMapperCanMap mapperCanMap) {
-				try {
-					if (!mapperCanMap.CanMapMerge(sourceType, destinationType, mappingOptions))
-						throw new MapNotFoundException((sourceType, destinationType));
-				}
-				catch (MapNotFoundException) {
-					throw;
-				}
-				catch { }
+			try {
+				if (!mapper.CanMapMerge(sourceType, destinationType, mappingOptions))
+					throw new MapNotFoundException((sourceType, destinationType));
 			}
+			catch (MapNotFoundException) {
+				throw;
+			}
+			catch { }
 
 			// Return the map wrapped
 			return new DefaultMergeMapFactory(

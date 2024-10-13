@@ -4,7 +4,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches objects by using <see cref="IMatchMap{TSource, TDestination}"/>.
 	/// </summary>
-	public sealed class CustomMatcher : IMatcher, IMatcherCanMatch, IMatcherFactory {
+	public sealed class CustomMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Configuration for class and additional maps for the matcher.
 		/// </summary>
@@ -80,6 +80,31 @@ namespace NeatMapper {
 		}
 
 
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			try {
+				// Try retrieving a regular map
+				_configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
+				return true;
+			}
+			catch (MapNotFoundException) {
+				return false;
+			}
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -127,31 +152,6 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
-		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			try {
-				// Try retrieving a regular map
-				_configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
 		}
 
 		public IMatchMapFactory MatchFactory(

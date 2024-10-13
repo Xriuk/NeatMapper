@@ -27,7 +27,7 @@ namespace NeatMapper {
 	/// <see cref="MergeCollectionsOptions"/> (and overrides).
 	/// </summary>
 	/// <remarks>Collections are NOT mapped lazily, all source elements are evaluated during the map.</remarks>
-	public sealed class AsyncMergeCollectionMapper : AsyncCollectionMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncMergeCollectionMapper : AsyncCollectionMapper, IAsyncMapperFactory {
 		// DEV: what is it used for? Try to remove. Maybe used to check the original mapper capabilities for nested maps, to exclude collections
 		private readonly IAsyncMapper _originalElementMapper;
 
@@ -96,6 +96,34 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		override public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return Task.FromResult(false);
+		}
+
+		override public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return CanMapMerge(sourceType, destinationType, null, mappingOptions, cancellationToken);
+		}
+
 		override public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -155,36 +183,6 @@ namespace NeatMapper {
 			using (var factory = MapAsyncMergeFactory(sourceType, destinationType, mappingOptions)) {
 				return await factory.Invoke(source, destination, cancellationToken);
 			}
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return Task.FromResult(false);
-		}
-
-		public Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return CanMapMerge(sourceType, destinationType, null, mappingOptions, cancellationToken);
 		}
 		#endregion
 

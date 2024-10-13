@@ -8,7 +8,7 @@ namespace NeatMapper.Transitive {
 	/// the retrieved maps are combined into a graph and the shortest path is solved by using
 	/// the Dijkstra algorithm.
 	/// </summary>
-	public sealed class TransitiveNewMapper : TransitiveMapper, IMapperCanMap, IMapperFactory {
+	public sealed class TransitiveNewMapper : TransitiveMapper, IMapperFactory {
 		/// <summary>
 		/// Instance used to create and retrieve type chains.
 		/// </summary>
@@ -41,6 +41,41 @@ namespace NeatMapper.Transitive {
 
 
 		#region IMapper methods
+		override public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// We cannot map identical types
+			if (sourceType == destinationType)
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions)) != null;
+		}
+
+		override public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return false;
+		}
+
 		override public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -133,43 +168,6 @@ namespace NeatMapper.Transitive {
 
 			// Not mapping merge
 			throw new MapNotFoundException((sourceType, destinationType));
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We cannot map identical types
-			if (sourceType == destinationType)
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions)) != null;
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return false;
 		}
 		#endregion
 

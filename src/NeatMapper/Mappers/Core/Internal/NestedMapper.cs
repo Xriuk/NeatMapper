@@ -5,7 +5,7 @@ namespace NeatMapper {
 	/// <see cref="IMapper"/> which wraps another <see cref="IMapper"/> and overrides <see cref="MappingOptions"/>
 	/// (and caches them).
 	/// </summary>
-	internal sealed class NestedMapper : IMapper, IMapperCanMap, IMapperFactory {
+	internal sealed class NestedMapper : IMapper, IMapperFactory {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -58,6 +58,32 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
+		public bool CanMapNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _mapper.CanMapNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
+		}
+
+		public bool CanMapMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _mapper.CanMapMerge(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
+		}
+
 		public
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -112,34 +138,6 @@ namespace NeatMapper {
 			mappingOptions = null) {
 
 			return _mapper.Map(source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions));
-		}
-		#endregion
-
-		#region IMapperCanMap methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return _mapper.CanMapNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
-		}
-
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return _mapper.CanMapMerge(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 		#endregion
 

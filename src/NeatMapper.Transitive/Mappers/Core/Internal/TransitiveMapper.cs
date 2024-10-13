@@ -55,6 +55,8 @@ namespace NeatMapper.Transitive {
 		}
 
 
+		public abstract bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
+		public abstract bool CanMapNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
 		public abstract object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
 		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null);
 

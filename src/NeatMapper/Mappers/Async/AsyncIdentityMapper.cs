@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// Singleton <see cref="IAsyncMapper"/> which returns the provided source element (for both new and merge maps).
 	/// Supports only the same source/destination types. Can be used to merge collections of elements of the same type.
 	/// </summary>
-	public sealed class AsyncIdentityMapper : IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory {
+	public sealed class AsyncIdentityMapper : IAsyncMapper, IAsyncMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>
@@ -18,6 +18,34 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
+		public Task<bool> CanMapAsyncNew(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return Task.FromResult(CanMap(sourceType, destinationType));
+		}
+
+		public Task<bool> CanMapAsyncMerge(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return Task.FromResult(CanMap(sourceType, destinationType));
+		}
+
 		public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -85,36 +113,6 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 			return Task.FromResult(source);
-		}
-		#endregion
-
-		#region IAsyncMapperCanMap methods
-		public Task<bool> CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return Task.FromResult(CanMap(sourceType, destinationType));
-		}
-
-		public Task<bool> CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
-
-			return Task.FromResult(CanMap(sourceType, destinationType));
 		}
 		#endregion
 
