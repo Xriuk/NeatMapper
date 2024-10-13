@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace NeatMapper {
 	/// <summary>
@@ -261,7 +260,7 @@ namespace NeatMapper {
 				// Used in case we create a new collection
 				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 				var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
@@ -958,7 +957,7 @@ namespace NeatMapper {
 				var elementTypes = (From: sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
 					To: destinationType.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 				var elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
 

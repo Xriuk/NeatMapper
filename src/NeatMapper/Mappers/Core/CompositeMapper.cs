@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -76,19 +74,9 @@ namespace NeatMapper {
 		private readonly NestedMappingContext _nestedMappingContext;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
-		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
-		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
+		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
-			new ConcurrentDictionary<MappingOptions, MappingOptions>();
-
-		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
-		/// also provides faster access since locking isn't needed for thread-safety.
-		/// </summary>
-		private readonly MappingOptions _optionsCacheNull;
+		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
 		/// <summary>
@@ -105,7 +93,9 @@ namespace NeatMapper {
 		public CompositeMapper(IList<IMapper> mappers) {
 			_mappers = new List<IMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers)));
 			_nestedMappingContext = new NestedMappingContext(this);
-			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
+				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext, options.Cached));
 		}
 
 
@@ -132,7 +122,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return MapInternal(_mappers, source, sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+			return MapInternal(_mappers, source, sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 
 		public
@@ -163,7 +153,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			return MapInternal(_mappers, source, sourceType, destination, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+			return MapInternal(_mappers, source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 		#endregion
 
@@ -187,7 +177,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMappers = new List<IMapper>();
@@ -246,7 +236,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMappers = new List<IMapper>();
@@ -309,7 +299,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// DEV: maybe check with CanMap and if returns false throw instead of creating the factory?
 
@@ -452,7 +442,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// DEV: maybe check with CanMap and if returns false throw instead of creating the factory?
 
@@ -549,32 +539,5 @@ namespace NeatMapper {
 			return _mappers.SelectMany(m => m.GetMergeMaps(mappingOptions));
 		}
 		#endregion
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Will override the mapper if not already overridden
-		private MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			if (options == null || options == MappingOptions.Empty)
-				return _optionsCacheNull;
-			else if(options.Cached)
-				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
-			else
-				return MergeMappingOptions(options);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private MappingOptions MergeMappingOptions(MappingOptions options) {
-			// Caching (if options are cached aswell)
-			return options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
-				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
-				n => n != null ? new NestedMappingContext(this, n) : _nestedMappingContext, options.Cached);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

@@ -73,24 +73,9 @@ namespace NeatMapper {
 		private readonly IList<IAsyncMapper> _mappers;
 
 		/// <summary>
-		/// Cached <see cref="AsyncNestedMappingContext"/> to provide, if not already provided in <see cref="MappingOptions"/>.
+		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
-		private readonly AsyncNestedMappingContext _nestedMappingContext;
-
-		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
-		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
-		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
-		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
-			new ConcurrentDictionary<MappingOptions, MappingOptions>();
-
-		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
-		/// also provides faster access since locking isn't needed for thread-safety.
-		/// </summary>
-		private readonly MappingOptions _optionsCacheNull;
+		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
 		/// <summary>
@@ -106,8 +91,10 @@ namespace NeatMapper {
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public AsyncCompositeMapper(IList<IAsyncMapper> mappers) {
 			_mappers = new List<IAsyncMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers)));
-			_nestedMappingContext = new AsyncNestedMappingContext(this);
-			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
+			var nestedMappingContext = new AsyncNestedMappingContext(this);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
+				m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new AsyncNestedMappingContext(this, n) : nestedMappingContext, options.Cached));
 		}
 
 
@@ -135,7 +122,7 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			return MapInternal(_mappers, source, sourceType, destinationType, GetOrCreateMappingOptions(mappingOptions), cancellationToken);
+			return MapInternal(_mappers, source, sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
 		}
 
 		public Task<
@@ -167,7 +154,7 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			return MapInternal(_mappers, source, sourceType, destination, destinationType, GetOrCreateMappingOptions(mappingOptions), cancellationToken);
+			return MapInternal(_mappers, source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
 		}
 		#endregion
 
@@ -192,7 +179,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMappers = new List<IAsyncMapper>();
@@ -252,7 +239,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Check if any mapper implements IAsyncMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMappers = new List<IAsyncMapper>();
@@ -315,7 +302,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
 
@@ -458,7 +445,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// DEV: maybe check with CanMapAsync and if returns false throw instead of creating the factory?
 
@@ -555,32 +542,5 @@ namespace NeatMapper {
 			return _mappers.SelectMany(m => m.GetAsyncMergeMaps(mappingOptions));
 		}
 		#endregion
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Will override the mapper if not already overridden
-		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
-			if (options == null || options == MappingOptions.Empty)
-				return _optionsCacheNull;
-			else if(options.Cached)
-				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
-			else
-				return MergeMappingOptions(options);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private MappingOptions MergeMappingOptions(MappingOptions options) {
-			// Caching (if options are cached aswell)
-			return options.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
-				m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(this, m?.ServiceProvider),
-				n => n != null ? new AsyncNestedMappingContext(this, n) : _nestedMappingContext, options.Cached);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

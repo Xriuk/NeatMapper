@@ -95,6 +95,19 @@ namespace NeatMapper {
 			return CreateFactory(objectType).Invoke();
 		}
 
+		public static bool TryCreate(Type objectType, out object instance) {
+			if (CanCreate(objectType)) {
+				try { 
+					instance = Create(objectType);
+					return true;
+				}
+				catch { }
+			}
+
+			instance = null;
+			return false;
+		}
+
 		public static bool CanCreate(Type objectType) {
 			if (objectType == typeof(string))
 				return true;

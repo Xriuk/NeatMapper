@@ -151,7 +151,7 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
-			var context = GetOrCreateMappingContextOptions(mappingOptions);
+			var context = _contextsCache.GetOrCreate(mappingOptions);
 			var result = await map.Invoke(source, destination, new AsyncMappingContext(context, cancellationToken));
 
 			// Should not happen
@@ -253,7 +253,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
-			var contextOptions = GetOrCreateMappingContextOptions(mappingOptions);
+			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, async (source, destination, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));

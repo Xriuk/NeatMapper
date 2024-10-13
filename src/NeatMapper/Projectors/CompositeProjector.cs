@@ -20,6 +20,11 @@ namespace NeatMapper {
 		/// </summary>
 		private readonly NestedProjectionContext _nestedProjectionContext;
 
+		/// <summary>
+		/// Cached input and output <see cref="MappingOptions"/>.
+		/// </summary>
+		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CompositeProjector"/>.
@@ -34,6 +39,9 @@ namespace NeatMapper {
 		public CompositeProjector(IList<IProjector> projectors) {
 			_projectors = new List<IProjector>(projectors ?? throw new ArgumentNullException(nameof(projectors)));
 			_nestedProjectionContext = new NestedProjectionContext(this);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
+				p => p?.Projector != null ? p : new ProjectorOverrideMappingOptions(this, p?.ServiceProvider),
+				n => n != null ? new NestedProjectionContext(this, n) : _nestedProjectionContext));
 		}
 
 
@@ -51,7 +59,7 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			foreach (var projector in _projectors) {
 				try {
@@ -86,7 +94,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Check if any projector implements IProjectorCanProject, if one of them throws it means that the map can be checked only when projecting
 			var undeterminateProjectors = new List<IProjector>();
@@ -132,21 +140,5 @@ namespace NeatMapper {
 
 			return _projectors.SelectMany(m => m.GetMaps(mappingOptions));
 		}
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Will override a projector if not already overridden
-		MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			return (options ?? MappingOptions.Empty).ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
-				p => p?.Projector != null ? p : new ProjectorOverrideMappingOptions(this, p?.ServiceProvider),
-				n => n != null ? new NestedProjectionContext(this, n) : _nestedProjectionContext);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

@@ -102,7 +102,7 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions);
+			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			var result = map.Invoke(source, context);
 
@@ -208,7 +208,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions);
+			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultNewMapFactory(
 				sourceType, destinationType,

@@ -74,6 +74,7 @@ namespace NeatMapper {
 
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
+
 			return mapper.Map(source, sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

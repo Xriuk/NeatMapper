@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using System;
-using System.Collections.Concurrent;
 
 namespace NeatMapper {
 	/// <summary>
@@ -18,18 +17,9 @@ namespace NeatMapper {
 		private readonly IServiceProvider _serviceProvider;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
-		/// <see langword="true"/>) and output <see cref="MatchingContext"/>.
+		/// Cached input <see cref="MappingOptions"/> and output <see cref="MatchingContext"/>.
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MatchingContext> _contextsCache
-			= new ConcurrentDictionary<MappingOptions, MatchingContext>();
-
-		/// <summary>
-		/// Cached output <see cref="MatchingContext"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/>,
-		/// also provides faster access since locking isn't needed for thread-safety.
-		/// </summary>
-		private readonly MatchingContext _contextsCacheNull;
+		private readonly MappingOptionsFactoryCache<MatchingContext> _contextsCache;
 
 
 		/// <summary>
@@ -80,7 +70,15 @@ namespace NeatMapper {
 				additionalMapsOptions?._maps.Values
 			);
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
-			_contextsCacheNull = new MatchingContext(_serviceProvider, this, this, MappingOptions.Empty);
+			_contextsCache = new MappingOptionsFactoryCache<MatchingContext>(options => {
+				var overrideOptions = options.GetOptions<MatcherOverrideMappingOptions>();
+				return new MatchingContext(
+					overrideOptions?.ServiceProvider ?? _serviceProvider,
+					overrideOptions?.Matcher ?? this,
+					this,
+					options
+				);
+			});
 		}
 
 
@@ -151,13 +149,7 @@ namespace NeatMapper {
 			var comparer = _configuration.GetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), m =>
 				m.Key.From.IsAssignableFrom(sourceType) &&
 				m.Key.To.IsAssignableFrom(destinationType));
-			MatchingContext context;
-			if (mappingOptions == null)
-				context = _contextsCacheNull;
-			else if(mappingOptions.Cached)
-				context = _contextsCache.GetOrAdd(mappingOptions, CreateMatchingContext);
-			else 
-				context = CreateMatchingContext(mappingOptions);
+			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -175,24 +167,5 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private MatchingContext CreateMatchingContext(MappingOptions options) {
-			var overrideOptions = options.GetOptions<MatcherOverrideMappingOptions>();
-			return new MatchingContext(
-				overrideOptions?.ServiceProvider ?? _serviceProvider,
-				overrideOptions?.Matcher ?? this,
-				this,
-				options
-			);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

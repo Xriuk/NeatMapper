@@ -3,8 +3,6 @@
 #endif
 
 using System;
-using System.Collections.Concurrent;
-using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -19,52 +17,21 @@ namespace NeatMapper {
 		protected readonly IMapper _elementsMapper;
 
 		/// <summary>
-		/// Cached nested context with no parents.
+		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
-		private readonly NestedMappingContext _nestedMappingContext;
-
-		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
-		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
-		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
-		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
-			new ConcurrentDictionary<MappingOptions, MappingOptions>();
-
-		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
-		/// also provides faster access since locking isn't needed for thread-safety.
-		/// </summary>
-		private readonly MappingOptions _optionsCacheNull;
+		protected readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
 		internal CollectionMapper(IMapper elementsMapper) {
 			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
-			_nestedMappingContext = new NestedMappingContext(this);
-			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
+			var nestedMappingContext = new NestedMappingContext(this);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
+				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
+				n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, options.Cached));
 		}
 
 
 		public abstract object Map(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
 		public abstract object Map(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null);
-
-
-		// Will override the mapper if not already overridden
-		protected MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			if(options == null || options == MappingOptions.Empty) 
-				return _optionsCacheNull;
-			else if(options.Cached)
-				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
-			else
-				return MergeMappingOptions(options);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private MappingOptions MergeMappingOptions(MappingOptions options) {
-			return options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
-				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
-				n => n != null ? new NestedMappingContext(_nestedMappingContext.ParentMapper, n) : _nestedMappingContext, options.Cached);
-		}
 	}
 }

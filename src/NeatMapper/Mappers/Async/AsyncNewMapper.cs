@@ -98,7 +98,7 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 			var map = _configuration.GetSingleMapAsync((sourceType, destinationType));
-			var contextOptions = GetOrCreateMappingContextOptions(mappingOptions);
+			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
 			var result = await map.Invoke(source, new AsyncMappingContext(contextOptions, cancellationToken));
 
 			// Should not happen
@@ -199,7 +199,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetSingleMapAsync((sourceType, destinationType));
-			var contextOptions = GetOrCreateMappingContextOptions(mappingOptions);
+			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultAsyncNewMapFactory(sourceType, destinationType, async (source, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));

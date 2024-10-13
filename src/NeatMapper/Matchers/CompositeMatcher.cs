@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -40,19 +38,9 @@ namespace NeatMapper {
 		private readonly NestedMatchingContext _nestedMatchingContext;
 
 		/// <summary>
-		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
-		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
-		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
+		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
-			new ConcurrentDictionary<MappingOptions, MappingOptions>();
-
-		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
-		/// also provides faster access since locking isn't needed for thread-safety.
-		/// </summary>
-		private readonly MappingOptions _optionsCacheNull;
+		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
 		/// <summary>
@@ -65,7 +53,9 @@ namespace NeatMapper {
 
 			_compositeMatcherOptions = new CompositeMatcherOptions(compositeMatcherOptions);
 			_nestedMatchingContext = new NestedMatchingContext(this);
-			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
+				m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
+				n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext, options.Cached));
 		}
 
 
@@ -91,16 +81,7 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
-			return MatchInternal(_compositeMatcherOptions.Matchers, source, sourceType, destination, destinationType, mappingOptions);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return MatchInternal(_compositeMatcherOptions.Matchers, source, sourceType, destination, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 
 		public bool CanMatch(
@@ -122,7 +103,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Check if any mapper implements IMapperCanMap, if one of them throws it means that the map can be checked only when mapping
 			var undeterminateMatchers = new HashSet<IMatcher>();
@@ -198,7 +179,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			mappingOptions = GetOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// DEV: maybe check with CanMatch and if returns false throw instead of creating the factory?
 
@@ -332,24 +313,6 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
-
-		// Will override the matcher if not already overridden
-		private MappingOptions GetOrCreateMappingOptions(MappingOptions options) {
-			if (options == null || options == MappingOptions.Empty)
-				return _optionsCacheNull;
-			else if(options.Cached)
-				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
-			else
-				return MergeMappingOptions(options);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private MappingOptions MergeMappingOptions(MappingOptions options) {
-			// Caching (if options are cached aswell)
-			return options.ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
-				m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
-				n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext, options.Cached);
-		}
 
 		private bool MatchInternal(IEnumerable<IMatcher> matchers,
 			object source, Type sourceType, object destination, Type destinationType,

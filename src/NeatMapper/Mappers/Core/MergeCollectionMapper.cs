@@ -236,7 +236,7 @@ namespace NeatMapper {
 				// Used in case we create a new collection
 				var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 				var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
@@ -503,7 +503,7 @@ namespace NeatMapper {
 
 				var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
 
-				mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 				var elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _originalElementMapper;
 

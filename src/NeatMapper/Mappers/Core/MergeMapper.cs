@@ -147,7 +147,7 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions);
+			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			var result = map.Invoke(source, destination, context);
 
@@ -236,7 +236,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
-			var context = GetOrCreateMappingContext(mappingOptions);
+			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMergeMapFactory(
 				sourceType, destinationType,
