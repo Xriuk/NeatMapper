@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class MatcherExtensions {
@@ -30,6 +31,7 @@ namespace NeatMapper {
 
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
+
 			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
@@ -59,6 +61,7 @@ namespace NeatMapper {
 
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
+
 			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
@@ -89,6 +92,7 @@ namespace NeatMapper {
 
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
+
 			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
 		}
 
@@ -115,6 +119,7 @@ namespace NeatMapper {
 
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
+
 			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
@@ -126,6 +131,7 @@ namespace NeatMapper {
 		#region CanMatch
 		#region Runtime
 		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMatch(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
@@ -140,6 +146,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMatch(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
@@ -165,6 +172,7 @@ namespace NeatMapper {
 		/// with an object of type <typeparamref name="TSource"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -177,6 +185,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMatch{TSource, TDestination}(IMatcher, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -189,6 +198,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMatch{TSource, TDestination}(IMatcher, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -258,6 +268,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IMatchMapFactory MatchFactory(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
@@ -272,6 +283,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IMatchMapFactory MatchFactory(this IMatcher matcher,
 			Type sourceType,
 			Type destinationType,
@@ -316,6 +328,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MatchFactory{TSource, TDestination}(IMatcher, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MatchMapFactory<TSource, TDestination> MatchFactory<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -328,6 +341,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MatchFactory{TSource, TDestination}(IMatcher, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MatchMapFactory<TSource, TDestination> MatchFactory<TSource, TDestination>(this IMatcher matcher,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -361,6 +375,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IPredicateFactory Predicate(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -381,6 +396,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, object, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IPredicateFactory Predicate(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -401,6 +417,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, object, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IPredicateFactory Predicate(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -471,6 +488,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, Type, object, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IPredicateFactory Predicate(this IMatcher matcher,
 			Type sourceType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -491,6 +509,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate(IMatcher, Type, object, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IPredicateFactory Predicate(this IMatcher matcher,
 			Type sourceType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -557,6 +576,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TDestination}(IMatcher, object, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TDestination> Predicate<TDestination>(this IMatcher matcher,
 			object source,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -570,6 +590,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TDestination}(IMatcher, object, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TDestination> Predicate<TDestination>(this IMatcher matcher,
 			object source,
 			params
@@ -598,6 +619,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource?
@@ -616,6 +638,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TSource, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource?
@@ -634,6 +657,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TSource, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TSource?
@@ -650,7 +674,7 @@ namespace NeatMapper {
 			mappingOptions) {
 
 			return matcher.Predicate<TSource, TDestination>(source, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-		} 
+		}
 		#endregion
 
 		#region Destination
@@ -666,6 +690,7 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="destination"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -684,6 +709,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TDestination, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -702,6 +728,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TDestination, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
 #if NET5_0_OR_GREATER
 			TDestination?

@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class MapperExtensions {
@@ -498,6 +499,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Map{TSourceElement, TDestinationElement}(IMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TDestinationElement>?
@@ -529,6 +531,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Map{TSourceElement, TDestinationElement}(IMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TDestinationElement>?
@@ -620,6 +623,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Map{TElement}(IMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TElement>?
@@ -651,6 +655,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Map{TElement}(IMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TElement>?
@@ -689,6 +694,7 @@ namespace NeatMapper {
 		#region CanMapNew
 		#region Runtime
 		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapNew(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -703,6 +709,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapNew(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -728,6 +735,7 @@ namespace NeatMapper {
 		/// from a parameter of type <typeparamref name="TSource"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -740,6 +748,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMapNew{TSource, TDestination}(IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -752,6 +761,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMapNew{TSource, TDestination}(IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapNew<TSource, TDestination>(this IMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -769,6 +779,7 @@ namespace NeatMapper {
 		#region CanMapMerge
 		#region Runtime
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapMerge(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -783,6 +794,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapMerge(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -808,6 +820,7 @@ namespace NeatMapper {
 		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -828,6 +841,7 @@ namespace NeatMapper {
 		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -848,6 +862,7 @@ namespace NeatMapper {
 		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMapMerge<TSource, TDestination>(this IMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -923,6 +938,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static INewMapFactory MapNewFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -937,6 +953,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapNewFactory(IMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static INewMapFactory MapNewFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -991,6 +1008,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapNewFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static NewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -1003,6 +1021,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapNewFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static NewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this IMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1077,6 +1096,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapMergeFactory(IMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IMergeMapFactory MapMergeFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1091,6 +1111,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapMergeFactory(IMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IMergeMapFactory MapMergeFactory(this IMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1145,6 +1166,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapMergeFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<TSource, TDestination> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -1157,6 +1179,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapMergeFactory{TSource, TDestination}(IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<TSource, TDestination> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1217,6 +1240,7 @@ namespace NeatMapper {
 
 
 		/// <inheritdoc cref="MapMergeFactory{TSourceElement, TDestinationElement}(IMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<
 			IEnumerable<TSourceElement>,
 			ICollection<TDestinationElement>>
@@ -1233,6 +1257,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapMergeFactory{TSourceElement, TDestinationElement}(IMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<
 			IEnumerable<TSourceElement>,
 			ICollection<TDestinationElement>>

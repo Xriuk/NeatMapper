@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class EnumerableExtensions {
@@ -55,6 +56,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IEnumerable, IMapper, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable Project(this IEnumerable enumerable,
 			IMapper mapper,
 			Type destinationElementType,
@@ -69,6 +71,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IEnumerable, IMapper, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable Project(this IEnumerable enumerable,
 			IMapper mapper, Type destinationElementType, params object[] mappingOptions) {
 
@@ -120,6 +123,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IEnumerable, IMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable Project(this IEnumerable enumerable,
 			IMapper mapper,
 			Type sourceElementType,
@@ -135,6 +139,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IEnumerable, IMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable Project(this IEnumerable enumerable,
 			IMapper mapper, Type sourceElementType, Type destinationElementType, params object[] mappingOptions) {
 
@@ -179,6 +184,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(IEnumerable, IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -198,6 +204,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(IEnumerable, IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -218,6 +225,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="Project{TDestination}(IEnumerable, IMapper, MappingOptions)" path="/returns"/>
 		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -245,6 +253,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IEnumerable{TSource}, IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -270,6 +279,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IEnumerable{TSource}, IMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?

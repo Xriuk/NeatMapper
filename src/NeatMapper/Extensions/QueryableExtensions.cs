@@ -3,6 +3,7 @@ using System.Collections;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class QueryableExtensions {
@@ -35,6 +36,7 @@ namespace NeatMapper {
 		/// The actual elements may be null.
 		/// </returns>
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type destinationElementType,
@@ -49,6 +51,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type destinationElementType,
@@ -63,6 +66,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector, Type destinationElementType,
 			params
@@ -122,6 +126,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type sourceElementType,
@@ -137,6 +142,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector, Type sourceElementType, Type destinationElementType, params object[] mappingOptions) {
 
@@ -151,6 +157,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>The projected queryable, the actual elements may be null.</returns>
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -170,6 +177,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -189,6 +197,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -209,6 +218,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)" path="/returns"/>
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -236,6 +246,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IQueryable{TSource}, IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -261,6 +272,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IQueryable{TSource}, IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable<
 #if NET5_0_OR_GREATER
 			TDestination?

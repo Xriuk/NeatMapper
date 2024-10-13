@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class ProjectorExtensions {
@@ -26,6 +27,7 @@ namespace NeatMapper {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
+
 			return projector.Project(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -51,6 +53,7 @@ namespace NeatMapper {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
+
 			return projector.Project(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -97,6 +100,7 @@ namespace NeatMapper {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
+
 			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -133,6 +137,7 @@ namespace NeatMapper {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
+
 			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -170,6 +175,7 @@ namespace NeatMapper {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
+
 			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -182,6 +188,7 @@ namespace NeatMapper {
 		#region CanProject
 		#region Runtime
 		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanProject(this IProjector projector,
 			Type sourceType,
 			Type destinationType,
@@ -196,6 +203,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanProject(this IProjector projector,
 			Type sourceType,
 			Type destinationType,
@@ -221,6 +229,7 @@ namespace NeatMapper {
 		/// to an object of type <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanProject<TSource, TDestination>(this IProjector projector,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -233,6 +242,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanProject<TSource, TDestination>(this IProjector projector,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -245,6 +255,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanProject<TSource, TDestination>(this IProjector projector,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

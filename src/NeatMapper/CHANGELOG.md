@@ -18,6 +18,7 @@
 - `CompositeMapper` now returns both new factories and merge factories for `MapNewFactory()` (like `CompositeMatcher` does for exact and reverse maps), the same applies to `AsyncCompositeMapper` too.
 - Refactored internal reflection usage to create and cache delegates instead of direct invocations for increased performance.
 - All delegates and interfaces (where applicable) now have the correct co/contra-variance specified on their parameters.
+- One-liner extension methods should now be inlined.
 
 ### Added
 

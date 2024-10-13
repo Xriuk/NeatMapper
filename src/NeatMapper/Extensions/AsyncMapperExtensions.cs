@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -581,6 +582,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TDestinationElement>?
@@ -615,6 +617,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TDestinationElement>?
@@ -709,6 +712,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsync{TElement}(IAsyncMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TElement>?
@@ -743,6 +747,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsync{TElement}(IAsyncMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			ICollection<TElement>?
@@ -781,6 +786,7 @@ namespace NeatMapper {
 		#region CanMapAsyncNew
 		#region Runtime
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncNew(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -795,6 +801,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncNew(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -822,6 +829,7 @@ namespace NeatMapper {
 		/// <typeparamref name="TSource"/>.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -835,6 +843,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMapAsyncNew{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -849,6 +858,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMapAsyncNew{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncNew<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -866,6 +876,7 @@ namespace NeatMapper {
 		#region CanMapAsyncMerge
 		#region Runtime
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper, Type sourceType, Type destinationType, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -880,6 +891,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncMerge(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -907,6 +919,7 @@ namespace NeatMapper {
 		/// <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions, CancellationToken)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			MappingOptions?
@@ -920,6 +933,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMapAsyncMerge{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper, CancellationToken cancellationToken) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -934,6 +948,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="CanMapAsyncMerge{TSource, TDestination}(IAsyncMapper, MappingOptions, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static Task<bool> CanMapAsyncMerge<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -1007,6 +1022,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IAsyncNewMapFactory MapAsyncNewFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1021,6 +1037,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IAsyncNewMapFactory MapAsyncNewFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1068,6 +1085,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory{TSource, TDestination}(IAsyncMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static AsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -1080,6 +1098,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncNewFactory{TSource, TDestination}(IAsyncMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static AsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this IAsyncMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1152,6 +1171,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IAsyncMergeMapFactory MapAsyncMergeFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1166,6 +1186,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory(IAsyncMapper, Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IAsyncMergeMapFactory MapAsyncMergeFactory(this IAsyncMapper mapper,
 			Type sourceType,
 			Type destinationType,
@@ -1214,6 +1235,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TSource, TDestination}(IAsyncMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static AsyncMergeMapFactory<TSource, TDestination> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			IEnumerable?
@@ -1226,6 +1248,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TSource, TDestination}(IAsyncMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static AsyncMergeMapFactory<TSource, TDestination> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
 			params
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -1293,6 +1316,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static AsyncMergeMapFactory<
 			IEnumerable<TSourceElement>,
 			ICollection<TDestinationElement>>
@@ -1309,6 +1333,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MapAsyncMergeFactory{TSourceElement, TDestinationElement}(IAsyncMapper, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static AsyncMergeMapFactory<
 			IEnumerable<TSourceElement>,
 			ICollection<TDestinationElement>>

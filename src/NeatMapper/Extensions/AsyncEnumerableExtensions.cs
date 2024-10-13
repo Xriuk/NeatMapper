@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -118,6 +119,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IAsyncEnumerable{TSource}, IAsyncMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IAsyncEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?
@@ -145,6 +147,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IAsyncEnumerable{TSource}, IAsyncMapper, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IAsyncEnumerable<
 #if NET5_0_OR_GREATER
 			TDestination?
