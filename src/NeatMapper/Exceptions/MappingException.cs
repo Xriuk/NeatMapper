@@ -2,7 +2,7 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Exception thrown when an exception was thrown inside a map
+	/// Exception thrown to wrap an exception thrown inside a map.
 	/// </summary>
 	public sealed class MappingException : TypesException {
 		public MappingException(Exception exception, (Type From, Type To) types) :

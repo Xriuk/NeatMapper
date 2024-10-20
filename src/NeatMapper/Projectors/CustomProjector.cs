@@ -207,13 +207,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			try {
-				_configuration.GetContextMap<ProjectionContext>((sourceType, destinationType));
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
+			return _configuration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out _);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
@@ -239,16 +233,14 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var map = _configuration.GetContextMap<ProjectionContext>((sourceType, destinationType));
+			if(!_configuration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			object result;
 			try {
 				result = map.Invoke(context);
-			}
-			catch (MapNotFoundException) {
-				throw;
 			}
 			catch(MappingException e) {
 				throw new ProjectionException(e.InnerException, (sourceType, destinationType));

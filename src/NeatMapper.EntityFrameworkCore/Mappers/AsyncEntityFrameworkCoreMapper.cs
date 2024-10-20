@@ -131,7 +131,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		#region IAsyncMapper methods
-		public Task<bool> CanMapAsyncNew(
+		public bool CanMapAsyncNew(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -139,26 +139,26 @@ namespace NeatMapper.EntityFrameworkCore {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
 
-			// Prevent being used by a collection mapper
-			if (CheckAsyncCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<AsyncNestedMappingContext>()))
-				return Task.FromResult(false);
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			// Prevent being used by a collection mapper
+			if (CheckAsyncCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<AsyncNestedMappingContext>()))
+				return false;
+
 			// We could also map collections of keys/entities
 			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsEnumerable() && destinationType != typeof(string)) {
 				if (!ObjectFactory.CanCreateCollection(destinationType))
-					return Task.FromResult(false);
+					return false;
 
 				sourceType = sourceType.GetEnumerableElementType();
 				destinationType = destinationType.GetEnumerableElementType();
@@ -176,16 +176,16 @@ namespace NeatMapper.EntityFrameworkCore {
 				entityType = sourceType;
 			}
 			else
-				return Task.FromResult(false);
+				return false;
 
-			return Task.FromResult(CanMap(entityType, keyType));
+			return CanMap(entityType, keyType);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
 		}
 
-		public Task<bool> CanMapAsyncMerge(
+		public bool CanMapAsyncMerge(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -193,10 +193,9 @@ namespace NeatMapper.EntityFrameworkCore {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return Task.FromResult(CanMapMerge(sourceType, destinationType, null, mappingOptions));
+			return CanMapMerge(sourceType, destinationType, null, mappingOptions);
 		}
 
 		public async Task<
@@ -282,7 +281,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (!CanMapAsyncNew(sourceType, destinationType, mappingOptions).Result)
+			if (!CanMapAsyncNew(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			(Type From, Type To)? collectionElementTypes = destinationType.IsEnumerable() && destinationType != typeof(string) ?
@@ -537,7 +536,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (!CanMapAsyncMerge(sourceType, destinationType, mappingOptions).Result)
+			if (!CanMapAsyncMerge(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			var efCoreOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();

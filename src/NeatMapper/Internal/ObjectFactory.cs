@@ -38,6 +38,8 @@ namespace NeatMapper {
 			new ConcurrentDictionary<Type, Func<object, CancellationToken, IAsyncDisposable>>();
 		private static readonly ConcurrentDictionary<Type, Func<IAsyncDisposable, ValueTask<bool>>> asyncMoveNextMethodsCache =
 			new ConcurrentDictionary<Type, Func<IAsyncDisposable, ValueTask<bool>>>();
+		private static readonly ConcurrentDictionary<Type, Func<IAsyncDisposable, object>> asyncCurrentMethodsCache =
+			new ConcurrentDictionary<Type, Func<IAsyncDisposable, object>>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -247,7 +249,7 @@ namespace NeatMapper {
 							ConstructorInfo constr = null;
 							if (destination.IsAsyncEnumerable()) {
 								constr = typeof(DefaultAsyncEnumerable<>).MakeGenericType(destination.GetAsyncEnumerableElementType()).GetConstructors()
-										.Single();
+									.Single();
 							}
 							else { 
 								var collectionDefinition = destination.GetGenericTypeDefinition();
@@ -307,6 +309,15 @@ namespace NeatMapper {
 				// ((IAsyncEnumerator<Type>)enumerator).MoveNextAsync()
 				var body = Expression.Call(Expression.Convert(enumeratorParam, enumeratorType), enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync)));
 				return Expression.Lambda<Func<IAsyncDisposable, ValueTask<bool>>>(body, enumeratorParam).Compile();
+			});
+		}
+		public static Func<IAsyncDisposable, object> GetAsyncEnumeratorCurrent(Type elementType) {
+			return asyncCurrentMethodsCache.GetOrAdd(elementType, type => {
+				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
+				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
+				// ((IAsyncEnumerator<Type>)enumerator).Current
+				var body = Expression.Property(Expression.Convert(enumeratorParam, enumeratorType), enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current)));
+				return Expression.Lambda<Func<IAsyncDisposable, object>>(body, enumeratorParam).Compile();
 			});
 		}
 	}

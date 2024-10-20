@@ -17,7 +17,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// No options
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], string[]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], string[]>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -35,7 +35,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// Options (no merge)
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], IList<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], IList<string>>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -54,7 +54,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// Options (merge with matcher)
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], LinkedList<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], LinkedList<string>>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -74,7 +74,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], Queue<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], Queue<string>>());
 
 				var strings = await _mapper.MapAsync<Queue<string>>(new[] { 2, -3, 0 });
 
@@ -86,7 +86,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<string[], SortedList<string, int>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<string[], SortedList<string, int>>());
 
 				var strings = await _mapper.MapAsync<SortedList<string, int>>(new[] { "A", "BB", "CCC" });
 
@@ -98,7 +98,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], Stack<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], Stack<string>>());
 
 				var strings = await _mapper.MapAsync<Stack<string>>(new[] { 2, -3, 0 });
 
@@ -111,7 +111,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<string[], ReadOnlyDictionary<string, int>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<string[], ReadOnlyDictionary<string, int>>());
 
 				var strings = await _mapper.MapAsync<ReadOnlyDictionary<string, int>>(new[] { "A", "BB", "CCC" });
 
@@ -123,7 +123,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], CustomCollection<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], CustomCollection<string>>());
 
 				var strings = await _mapper.MapAsync<CustomCollection<string>>(new[] { 2, -3, 0 });
 
@@ -135,7 +135,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<IList<int>, string>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<IList<int>, string>());
 
 				var str = await _mapper.MapAsync<string>(new[] { 104, 101, 108, 108, 111 });
 
@@ -143,7 +143,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<string, float[]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<string, float[]>());
 
 				var result = await _mapper.MapAsync<float[]>("world");
 
@@ -168,14 +168,14 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldNotMapCollectionsIfCannotCreateDestination() {
-			Assert.IsFalse(await _mapper.CanMapAsyncNew<int[], CustomCollectionWithoutParameterlessConstructor<string>>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<int[], CustomCollectionWithoutParameterlessConstructor<string>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<CustomCollectionWithoutParameterlessConstructor<string>>(new[] { 2, -3, 0 }));
 		}
 
 		[TestMethod]
 		public async Task ShouldNotMapCollectionsWithoutElementsMap() {
-			Assert.IsFalse(await _mapper.CanMapAsyncNew<int[], IEnumerable<Category>>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<int[], IEnumerable<Category>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<Category>>(new[] { 2 }));
 		}
@@ -259,7 +259,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapCollectionsOfCollections() {
 			// No options
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[][], IList<IEnumerable<string>>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[][], IList<IEnumerable<string>>>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -285,7 +285,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// Options (no merge)
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[][], string[][]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[][], string[][]>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -321,7 +321,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldNotMapMultidimensionalArrays() {
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncNew<int[,], string[]>());
+				Assert.IsFalse(_mapper.CanMapAsyncNew<int[,], string[]>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<string[]>(new[,] {
 					{ 2, -3, 0 },
@@ -330,7 +330,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncNew<int[][], string[,]>());
+				Assert.IsFalse(_mapper.CanMapAsyncNew<int[][], string[,]>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<string[,]>(new[] {
 					new[]{ 2, -3, 0 },
@@ -339,7 +339,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncNew<int[,], string[,]>());
+				Assert.IsFalse(_mapper.CanMapAsyncNew<int[,], string[,]>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<string[,]>(new[,] {
 					{ 2, -3, 0 },
@@ -353,7 +353,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Not awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<float[], double[]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<float[], double[]>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<double[]>(new[] { 1f }));
 				Assert.AreEqual(typeof(float[]), exc.From);
@@ -363,7 +363,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<double[], float[]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<double[], float[]>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<float[]>(new[] { 1d }));
 				Assert.AreEqual(typeof(double[]), exc.From);
@@ -376,7 +376,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapAsyncEnumerable() {
 			// From
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<IAsyncEnumerable<int>, string[]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<IAsyncEnumerable<int>, string[]>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -394,7 +394,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// To
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int[], IAsyncEnumerable<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int[], IAsyncEnumerable<string>>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -421,7 +421,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// Both
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<IAsyncEnumerable<int>, IAsyncEnumerable<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<IAsyncEnumerable<int>, IAsyncEnumerable<string>>());
 
 				MappingOptionsUtils.options = null;
 				MappingOptionsUtils.mergeOptions = null;
@@ -524,7 +524,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {
-			Assert.IsFalse(await _mapper.CanMapAsyncNew<string[], IEnumerable<ClassWithoutParameterlessConstructor>>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<string[], IEnumerable<ClassWithoutParameterlessConstructor>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<ClassWithoutParameterlessConstructor>>(new[] { "" }));
 		}
@@ -607,16 +607,16 @@ namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
 	public class AsyncNewCollectionMapperCanMapTests {
 		[TestMethod]
-		public async Task ShouldUseMappingOptions() {
+		public void ShouldUseMappingOptions() {
 			var mapper = new AsyncNewCollectionMapper(new AsyncNewMapper());
 
-			Assert.IsFalse(await mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>());
+			Assert.IsFalse(mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>());
 
 			var options = new CustomAsyncNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => Task.FromResult(0));
 			var mapper2 = new AsyncNewMapper(null, options);
 
-			Assert.IsTrue(await mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
+			Assert.IsTrue(mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
 		}
 	}
 }

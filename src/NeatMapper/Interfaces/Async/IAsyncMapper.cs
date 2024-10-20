@@ -25,13 +25,11 @@ namespace NeatMapper {
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations.</param>
 		/// <returns>
-		/// A task which when completed returns <see langword="true"/> if an object of type
-		/// <paramref name="destinationType"/> can be created from a parameter of type <paramref name="sourceType"/>.
+		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created
+		/// from a parameter of type <paramref name="sourceType"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types.</exception>
-		Task<bool> CanMapAsyncNew(
+		bool CanMapAsyncNew(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -39,8 +37,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default);
+			mappingOptions = null);
 
 		/// <summary>
 		/// Checks if the mapper can merge an object into an existing one asynchronously.
@@ -53,13 +50,11 @@ namespace NeatMapper {
 		/// Additional options which would be used to map the types, this helps obtaining more accurate results,
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
-		/// <param name="cancellationToken">Cancellation token used to interrupt asynchronous operations.</param>
 		/// <returns>
-		/// A task which when completed returns <see langword="true"/> if an object of type
-		/// <paramref name="sourceType"/> can be merged into an object of type <paramref name="destinationType"/>.
+		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged
+		/// into an object of type <paramref name="destinationType"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types.</exception>
-		Task<bool> CanMapAsyncMerge(
+		bool CanMapAsyncMerge(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -67,8 +62,7 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default);
+			mappingOptions = null);
 
 		/// <summary>
 		/// Maps an object to a new one asynchronously.

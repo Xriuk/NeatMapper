@@ -472,7 +472,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// No constraints
 				{
-					Assert.IsTrue(await _mapper.CanMapAsyncNew<IEnumerable<string>, IList<string>>());
+					Assert.IsTrue(_mapper.CanMapAsyncNew<IEnumerable<string>, IList<string>>());
 
 					var source = new[] { "Test" };
 					var result = await _mapper.MapAsync<IEnumerable<string>, IList<string>>(source);
@@ -489,7 +489,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
 
-					Assert.IsTrue(await mapper.CanMapAsyncNew<IEnumerable<Product>, int>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<IEnumerable<Product>, int>());
 
 					Assert.AreEqual(1, await mapper.MapAsync<IEnumerable<Product>, int>(new[] { new Product() }));
 				}
@@ -499,7 +499,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Different
 				{
-					Assert.IsTrue(await _mapper.CanMapAsyncNew<Tuple<string, int>, ValueTuple<int, string>>());
+					Assert.IsTrue(_mapper.CanMapAsyncNew<Tuple<string, int>, ValueTuple<int, string>>());
 
 					var result = await _mapper.MapAsync<Tuple<string, int>, ValueTuple<int, string>>(new Tuple<string, int>("Test", 4));
 					Assert.AreEqual(4, result.Item1);
@@ -508,7 +508,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Equal
 				{
-					Assert.IsTrue(await _mapper.CanMapAsyncNew<Tuple<string, string>, ValueTuple<string, string>>());
+					Assert.IsTrue(_mapper.CanMapAsyncNew<Tuple<string, string>, ValueTuple<string, string>>());
 
 					var result = await _mapper.MapAsync<Tuple<string, string>, ValueTuple<string, string>>(new Tuple<string, string>("Test1", "Test2"));
 					Assert.AreEqual("Test2", result.Item1);
@@ -520,7 +520,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Shared
 				{
-					Assert.IsTrue(await _mapper.CanMapAsyncNew<Tuple<string, int>, ValueTuple<string, int, bool>>());
+					Assert.IsTrue(_mapper.CanMapAsyncNew<Tuple<string, int>, ValueTuple<string, int, bool>>());
 
 					var result = await _mapper.MapAsync<Tuple<string, int>, ValueTuple<string, int, bool>>(new Tuple<string, int>("Test", 2));
 					Assert.AreEqual("Test", result.Item1);
@@ -533,7 +533,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldNotMapNotMatchingGenericTypes() {
 			// Types should be the same
-			Assert.IsFalse(await _mapper.CanMapAsyncNew<IEnumerable<string>, IList<int>>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<IEnumerable<string>, IList<int>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<string>, IList<int>>(new[] { "Test" }));
 		}
@@ -546,8 +546,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
-				Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Product>, int>());
-				Assert.IsTrue(await mapper.CanMapAsyncNew<IList<Guid>, int>());
+				Assert.IsFalse(mapper.CanMapAsyncNew<IList<Product>, int>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<IList<Guid>, int>());
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, int>(new List<Product>()));
 				await mapper.MapAsync<IList<Guid>, int>(new List<Guid>());
@@ -561,8 +561,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
-				Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Guid>, int>());
-				Assert.IsTrue(await mapper.CanMapAsyncNew<IList<Product>, int>());
+				Assert.IsFalse(mapper.CanMapAsyncNew<IList<Guid>, int>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<IList<Product>, int>());
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Guid>, int>(new List<Guid>()));
 				await mapper.MapAsync<IList<Product>, int>(new List<Product>());
@@ -578,9 +578,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
-				Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Product>, int>());
-				Assert.IsFalse(await mapper.CanMapAsyncNew<IList<ManagedTest>, int>());
-				Assert.IsTrue(await mapper.CanMapAsyncNew<IList<UnmanagedTest>, int>());
+				Assert.IsFalse(mapper.CanMapAsyncNew<IList<Product>, int>());
+				Assert.IsFalse(mapper.CanMapAsyncNew<IList<ManagedTest>, int>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<IList<UnmanagedTest>, int>());
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, int>(new List<Product>()));
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<ManagedTest>, int>(new List<ManagedTest>()));
@@ -595,8 +595,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
-				Assert.IsFalse(await mapper.CanMapAsyncNew<IList<ClassWithoutParameterlessConstructor>, int>());
-				Assert.IsTrue(await mapper.CanMapAsyncNew<IList<Product>, int>());
+				Assert.IsFalse(mapper.CanMapAsyncNew<IList<ClassWithoutParameterlessConstructor>, int>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<IList<Product>, int>());
 
 				await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<ClassWithoutParameterlessConstructor>, int>(new List<ClassWithoutParameterlessConstructor>()));
 				await mapper.MapAsync<IList<Product>, int>(new List<Product>());
@@ -610,8 +610,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
-					Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Category>, int>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<IList<Product>, int>());
+					Assert.IsFalse(mapper.CanMapAsyncNew<IList<Category>, int>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<IList<Product>, int>());
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, int>(new List<Category>()));
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<List<Product>, int>(new List<Product>()));
@@ -625,9 +625,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
-					Assert.IsFalse(await mapper.CanMapAsyncNew<Queue<Category>, Category>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<CustomCollection<Category>, Category>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<BaseClassTest, Category>());
+					Assert.IsFalse(mapper.CanMapAsyncNew<Queue<Category>, Category>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<CustomCollection<Category>, Category>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<BaseClassTest, Category>());
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<Queue<Category>, Category>(new Queue<Category>()));
 					await mapper.MapAsync<CustomCollection<Category>, Category>(new CustomCollection<Category>());
@@ -643,8 +643,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
-					Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Category>, int>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<IList<DisposableTest>, int>());
+					Assert.IsFalse(mapper.CanMapAsyncNew<IList<Category>, int>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<IList<DisposableTest>, int>());
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, int>(new List<Category>()));
 					await mapper.MapAsync<IList<DisposableTest>, int>(new List<DisposableTest>());
@@ -656,8 +656,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
-					Assert.IsFalse(await mapper.CanMapAsyncNew<IList<CustomCollection<Category>>, Category>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<IList<EquatableTest>, Product>());
+					Assert.IsFalse(mapper.CanMapAsyncNew<IList<CustomCollection<Category>>, Category>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<IList<EquatableTest>, Product>());
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<CustomCollection<Category>>, Category>(new List<CustomCollection<Category>>()));
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Queue<Category>>, Category>(new List<Queue<Category>>()));
@@ -673,8 +673,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
-					Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Category>, Product>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<IList<CustomCollection<int>>, List<int>>());
+					Assert.IsFalse(mapper.CanMapAsyncNew<IList<Category>, Product>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<IList<CustomCollection<int>>, List<int>>());
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, Product>(new List<Category>()));
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, LimitedProduct>(new List<Product>()));
@@ -689,8 +689,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
-					Assert.IsFalse(await mapper.CanMapAsyncNew<IList<Category>, Queue<Product>>());
-					Assert.IsTrue(await mapper.CanMapAsyncNew<IList<LimitedProduct>, Queue<Product>>());
+					Assert.IsFalse(mapper.CanMapAsyncNew<IList<Category>, Queue<Product>>());
+					Assert.IsTrue(mapper.CanMapAsyncNew<IList<LimitedProduct>, Queue<Product>>());
 
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Category>, Queue<Product>>(new List<Category>()));
 					await TestUtils.AssertMapNotFound(() => mapper.MapAsync<IList<Product>, Queue<LimitedProduct>>(new List<Product>()));
@@ -705,14 +705,14 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapSingleGenericType() {
 			// Generic source
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<IEnumerable<int>, string>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<IEnumerable<int>, string>());
 
 				Assert.AreEqual("Elements: 2", await _mapper.MapAsync<IEnumerable<int>, string>(new[] { 1, 2 }));
 			}
 
 			// Generic destination
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<int, IList<string>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int, IList<string>>());
 
 				var list = await _mapper.MapAsync<int, IList<string>>(3);
 				Assert.IsNotNull(list);
@@ -724,7 +724,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapDeepGenerics() {
-			Assert.IsTrue(await _mapper.CanMapAsyncNew<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>());
+			Assert.IsTrue(_mapper.CanMapAsyncNew<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>());
 
 			// Does not throw
 			await _mapper.MapAsync<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<bool>>(new Dictionary<string, IDictionary<int, IList<bool>>>());
@@ -733,7 +733,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldNotMapNotMatchingDeepGenerics() {
 			// Types should be the same
-			Assert.IsFalse(await _mapper.CanMapAsyncNew<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IDictionary<string, IDictionary<int, IList<bool>>>, IEnumerable<float>>(new Dictionary<string, IDictionary<int, IList<bool>>>()));
 		}
@@ -765,7 +765,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Not awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<float[], double[]>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<float[], double[]>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<double[]>(new []{ 1f }));
 				Assert.AreEqual(typeof(float[]), exc.From);
@@ -775,7 +775,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<List<double>, List<float>>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<List<double>, List<float>>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<List<float>>(new List<double> { 1d }));
 				Assert.AreEqual(typeof(List<double>), exc.From);
@@ -789,7 +789,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			var mapper = new AsyncNewCollectionMapper(_mapper);
 
 			{
-				Assert.IsTrue(await mapper.CanMapAsyncNew<Tuple<string, int>[], ValueTuple<int, string>[]>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<Tuple<string, int>[], ValueTuple<int, string>[]>());
 
 				var tuples = await mapper.MapAsync<ValueTuple<int, string>[]>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
@@ -802,7 +802,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await mapper.CanMapAsyncNew<Tuple<string, int>[], IList<ValueTuple<int, string>>>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<Tuple<string, int>[], IList<ValueTuple<int, string>>>());
 
 				var tuples = await mapper.MapAsync<IList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
@@ -815,7 +815,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await mapper.CanMapAsyncNew<Tuple<string, int>[], LinkedList<ValueTuple<int, string>>>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<Tuple<string, int>[], LinkedList<ValueTuple<int, string>>>());
 
 				var tuples = await mapper.MapAsync<LinkedList<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
@@ -828,7 +828,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await mapper.CanMapAsyncNew<Tuple<string, int>[], Queue<ValueTuple<int, string>>>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<Tuple<string, int>[], Queue<ValueTuple<int, string>>>());
 
 				var tuples = await mapper.MapAsync<Queue<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
@@ -841,7 +841,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await mapper.CanMapAsyncNew<Tuple<string, int>[], Stack<ValueTuple<int, string>>>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<Tuple<string, int>[], Stack<ValueTuple<int, string>>>());
 
 				var tuples = await mapper.MapAsync<Stack<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 
@@ -855,7 +855,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await mapper.CanMapAsyncNew<IEnumerable<Tuple<string, int>>, CustomCollection<ValueTuple<int, string>>>());
+				Assert.IsTrue(mapper.CanMapAsyncNew<IEnumerable<Tuple<string, int>>, CustomCollection<ValueTuple<int, string>>>());
 
 				var tuples = await mapper.MapAsync<CustomCollection<ValueTuple<int, string>>>(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) });
 

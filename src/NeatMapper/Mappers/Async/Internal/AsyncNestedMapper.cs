@@ -59,7 +59,7 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
-		public Task<bool> CanMapAsyncNew(
+		public bool CanMapAsyncNew(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -67,13 +67,12 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return _mapper.CanMapAsyncNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
+			return _mapper.CanMapAsyncNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 
-		public Task<bool> CanMapAsyncMerge(
+		public bool CanMapAsyncMerge(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -81,10 +80,9 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
-			return _mapper.CanMapAsyncMerge(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions), cancellationToken);
+			return _mapper.CanMapAsyncMerge(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 
 		public Task<

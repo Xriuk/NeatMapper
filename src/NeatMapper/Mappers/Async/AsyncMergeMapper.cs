@@ -71,7 +71,7 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
-		override public Task<bool> CanMapAsyncNew(
+		override public bool CanMapAsyncNew(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -79,20 +79,16 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			// Source type null checked in CanMapAsyncMerge
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (!ObjectFactory.CanCreate(destinationType))
-				return Task.FromResult(false);
-
-			return CanMapAsyncMerge(sourceType, destinationType, mappingOptions, cancellationToken);
+			return ObjectFactory.CanCreate(destinationType) && CanMapAsyncMerge(sourceType, destinationType, mappingOptions);
 		}
 
-		override public Task<bool> CanMapAsyncMerge(
+		override public bool CanMapAsyncMerge(
 			Type sourceType,
 			Type destinationType,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -100,21 +96,14 @@ namespace NeatMapper {
 #else
 			MappingOptions
 #endif
-			mappingOptions = null,
-			CancellationToken cancellationToken = default) {
+			mappingOptions = null) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			try {
-				_configuration.GetDoubleMapAsync((sourceType, destinationType));
-				return Task.FromResult(true);
-			}
-			catch (MapNotFoundException) {
-				return Task.FromResult(false);
-			}
+			return _configuration.TryGetDoubleMapAsync((sourceType, destinationType), out _);
 		}
 
 		override public Task<
@@ -145,21 +134,14 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
 			// Forward new map to merge by creating a destination
-			object destination;
-			try {
-				destination = ObjectFactory.Create(destinationType);
-			}
-			catch (ObjectCreationException) {
+			if (!ObjectFactory.CanCreate(destinationType))
 				throw new MapNotFoundException((sourceType, destinationType));
-			}
 
-			return MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
+			return MapAsync(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions, cancellationToken);
 		}
 
-		override public async Task<
+		override public Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
 #else
@@ -193,17 +175,16 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			if(!_configuration.TryGetDoubleMapAsync((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
-			var context = _contextsCache.GetOrCreate(mappingOptions);
-			var result = await map.Invoke(source, destination, new AsyncMappingContext(context, cancellationToken));
+			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
 
-			// Should not happen
-			TypeUtils.CheckObjectType(result, destinationType);
-
-			return result;
+			// Not checking the returned type, so that we save an async/await state machine
+			return map.Invoke(source, destination, new AsyncMappingContext(contextOptions, cancellationToken));
 		}
 		#endregion
 
@@ -217,20 +198,6 @@ namespace NeatMapper {
 			MappingOptions
 #endif
 			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Forward new map to merge by creating a destination
-			Func<object> destinationFactory;
-			try {
-				destinationFactory = ObjectFactory.CreateFactory(destinationType);
-			}
-			catch (ObjectCreationException) {
-				throw new MapNotFoundException((sourceType, destinationType));
-			}
 
 			return MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
 		}
@@ -250,19 +217,17 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var map = _configuration.GetDoubleMapAsync((sourceType, destinationType));
+			if(!_configuration.TryGetDoubleMapAsync((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
 
-			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, async (source, destination, cancellationToken) => {
+			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, (source, destination, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-				var result = await map.Invoke(source, destination, new AsyncMappingContext(contextOptions, cancellationToken));
-
-				// Should not happen
-				TypeUtils.CheckObjectType(result, destinationType);
-
-				return result;
+				// Not checking the returned type, so that we save an async/await state machine
+				return map.Invoke(source, destination, new AsyncMappingContext(contextOptions, cancellationToken));
 			});
 		}
 		#endregion

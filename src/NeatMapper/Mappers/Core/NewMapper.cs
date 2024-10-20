@@ -83,13 +83,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			try {
-				_configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
+			return _configuration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out _);
 		}
 
 		override public bool CanMapMerge(
@@ -101,6 +95,7 @@ namespace NeatMapper {
 			MappingOptions
 #endif
 			mappingOptions = null) {
+
 			return false;
 		}
 
@@ -135,9 +130,11 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			if(!_configuration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			var result = map.Invoke(source, context);
@@ -205,7 +202,9 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var map = _configuration.GetSingleMap<MappingContext>((sourceType, destinationType));
+			if(!_configuration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultNewMapFactory(

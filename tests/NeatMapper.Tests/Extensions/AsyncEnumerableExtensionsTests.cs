@@ -25,11 +25,11 @@ namespace NeatMapper.Tests.Extensions {
 		}
 
 		private class CustomMapper : IAsyncMapper, IAsyncMapperFactory {
-			public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
+			public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
 
-			public Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
+			public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
 

@@ -58,21 +58,17 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		protected abstract IAsyncMapper GetElementsMapper(params Type[] additionalTypes);
 
-		protected abstract int GetParallelMappings();
-
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new AsyncMergeCollectionMapper(GetElementsMapper(), new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(AsyncMergeMapperTests.Maps) }
-			}), new AsyncCollectionMappersOptions {
-				MaxParallelMappings = GetParallelMappings()
-			});
+			}));
 		}
 
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithoutElementsComparer() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<decimal[], List<Price>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<decimal[], List<Price>>());
 
 			// Should forward options except merge.matcher
 
@@ -130,7 +126,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<string, List<float>>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<string, List<float>>());
 
 				var result = await _mapper.MapAsync("world", new List<float>());
 
@@ -152,7 +148,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldNotMapCollectionsWithoutElementsMap() {
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<bool[], List<int>>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<bool[], List<int>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { false }, new List<int>()));
 		}
@@ -184,7 +180,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldNotMapReadonlyCollectionDestinationWithoutExplicitMap() {
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<decimal[], Price[]>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<decimal[], Price[]>());
 
 				var a = new Price {
 					Amount = 12m,
@@ -211,7 +207,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			{
 				// Cannot determine
-				await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _mapper.CanMapAsyncMerge<IEnumerable<decimal>, ICollection<Price>>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<decimal>, ICollection<Price>>());
 
 				var a = new Price {
 					Amount = 12m,
@@ -237,7 +233,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<decimal[], ReadOnlyCollection<Price>>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<decimal[], ReadOnlyCollection<Price>>());
 
 				var a = new Price {
 					Amount = 12m,
@@ -263,7 +259,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<IList<int>, string>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<IList<int>, string>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { 104, 101, 108, 108, 111 }, ""));
 			}
@@ -271,11 +267,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldNotMapReadonlyCollectionDestinationNestedWithoutExplicitMap() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<IEnumerable<Category[]>, List<List<CategoryDto>>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<Category[]>, List<List<CategoryDto>>>());
 
 			// Cannot determine if mappable
-			await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _mapper.CanMapAsyncMerge<IEnumerable<Category[]>, ICollection<IList<CategoryDto>>>());
-			await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _mapper.CanMapAsyncMerge<IEnumerable<Category[]>, List<IList<CategoryDto>>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<Category[]>, ICollection<IList<CategoryDto>>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<Category[]>, List<IList<CategoryDto>>>());
 
 			var a1 = new CategoryDto {
 				Id = 2,
@@ -369,7 +365,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldMapCollectionsOfCollectionsWithoutElementsComparer() {
 			// Cannot determine
-			await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _mapper.CanMapAsyncMerge<int[][], List<ICollection<string>>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<int[][], List<ICollection<string>>>());
 
 			// No options
 			{
@@ -549,7 +545,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Not awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<float[], List<double>>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<float[], List<double>>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<List<double>>(new[] { 1f }));
 				Assert.AreEqual(typeof(float[]), exc.From);
@@ -559,7 +555,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<double[], List<float>>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<double[], List<float>>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<List<float>>(new[] { 1d }));
 				Assert.AreEqual(typeof(double[]), exc.From);
@@ -570,7 +566,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapAsyncEnumerable() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<IAsyncEnumerable<int>, List<string>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<IAsyncEnumerable<int>, List<string>>());
 
 			MappingOptionsUtils.options = null;
 			MappingOptionsUtils.mergeOptions = null;
@@ -974,9 +970,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				var mapper = new AsyncMergeCollectionMapper(GetElementsMapper(), new CustomMatcher(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MergeMapperTests.Maps) }
-				}), new AsyncCollectionMappersOptions {
-					MaxParallelMappings = GetParallelMappings()
-				}, new MergeCollectionsOptions {
+				}), new MergeCollectionsOptions {
 					RemoveNotMatchedDestinationElements = false
 				});
 
@@ -1126,164 +1120,39 @@ namespace NeatMapper.Tests.Mapping.Async {
 	}
 
 	[TestClass]
-	public class AsyncMergeCollectionMapperNotParallelWithAsyncNewMapperTests : AsyncMergeCollectionMapperTests {
+	public class AsyncMergeCollectionMapperWithAsyncNewMapperTests : AsyncMergeCollectionMapperTests {
 		protected override IAsyncMapper GetElementsMapper(params Type[] additionalTypes) {
 			return new AsyncNewMapper(new CustomMapsOptions {
 				TypesToScan = additionalTypes.Concat(new [] { typeof(AsyncNewMapperTests.Maps) }).ToList()
 			});
 		}
-
-		protected override int GetParallelMappings() {
-			return 1;
-		}
 	}
 
 	[TestClass]
-	public class AsyncMergeCollectionMapperNotParallelWithAsyncMergeMapperTests : AsyncMergeMapperMergeCollectionMapperTests {
+	public class AsyncMergeCollectionMapperWithAsyncMergeMapperTests : AsyncMergeMapperMergeCollectionMapperTests {
 		protected override IAsyncMapper GetElementsMapper(params Type[] additionalTypes) {
 			return new AsyncMergeMapper(new CustomMapsOptions {
 				TypesToScan = additionalTypes.Concat(new [] { typeof(AsyncMergeMapperTests.Maps) }).ToList()
 			});
 		}
 
-		protected override int GetParallelMappings() {
-			return 1;
-		}
-
 
 		[TestMethod]
 		public async Task ShouldNotMapCollectionsIfCannotCreateElement() {
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<string[], List<ClassWithoutParameterlessConstructor>>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<string[], List<ClassWithoutParameterlessConstructor>>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { "" }, new List<ClassWithoutParameterlessConstructor>()));
 		}
 	}
 
 	[TestClass]
-	public class AsyncMergeCollectionMapperNotParallelWithAsyncNewAndMergeMappersTests : AsyncMergeMapperMergeCollectionMapperTests {
+	public class AsyncMergeCollectionMapperWithAsyncNewAndMergeMappersTests : AsyncMergeMapperMergeCollectionMapperTests {
 		protected override IAsyncMapper GetElementsMapper(params Type[] additionalTypes) {
 			return new AsyncCompositeMapper(new AsyncNewMapper(new CustomMapsOptions {
 				TypesToScan = additionalTypes.Concat(new[] { typeof(AsyncNewMapperTests.Maps) }).ToList()
 			}), new AsyncMergeMapper(new CustomMapsOptions {
 				TypesToScan = additionalTypes.Concat(new[] { typeof(AsyncMergeMapperTests.Maps) }).ToList() 
 			}));
-		}
-
-		protected override int GetParallelMappings() {
-			return 1;
-		}
-
-
-		[TestMethod]
-		public async Task ShouldPreferMergeMapForElementsToUpdateAndNewMapForElementsToAddInCollections() {
-			var destination = new List<string> { "3", "7", "0" };
-			var result = await _mapper.MapAsync(new[] { 7m, 4m, 3m }, destination, (s, d, _) => s.ToString() == d);
-
-			Assert.IsNotNull(result);
-			Assert.AreSame(destination, result);
-			Assert.AreEqual(3, result.Count);
-			Assert.AreEqual("MergeMap", result.ElementAt(0));
-			Assert.AreEqual("NewMap", result.ElementAt(1));
-			Assert.AreEqual("MergeMap", result.ElementAt(2));
-		}
-	}
-
-	[TestClass]
-	public class AsyncMergeCollectionMapperParallelWithAsyncNewMapperTests : AsyncMergeCollectionMapperTests {
-		protected override IAsyncMapper GetElementsMapper(params Type[] additionalTypes) {
-			return new AsyncNewMapper(new CustomMapsOptions {
-				TypesToScan = additionalTypes.Concat(new[] { typeof(AsyncNewMapperTests.Maps) }).ToList()
-			});
-		}
-
-		protected override int GetParallelMappings() {
-			return 10;
-		}
-
-		private static int mapped = 0;
-
-		[TestMethod]
-		public async Task ShouldCancelParallelMappingsOnException() {
-			var options = new CustomAsyncNewAdditionalMapsOptions();
-			mapped = 0;
-			options.AddMap<int, string>(async (s, c) => {
-				await Task.Delay(s, c.CancellationToken);
-				if (s % 2 == 0)
-					throw new Exception();
-				else
-					Interlocked.Increment(ref mapped);
-				return "";
-			});
-
-			var mapper = new AsyncMergeCollectionMapper(new AsyncNewMapper(null, options), null, new AsyncCollectionMappersOptions {
-				MaxParallelMappings = 10
-			});
-
-			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, ICollection<string>>(new[] { 1, 51, 100, 201 }, new List<string>()));
-			await Task.Delay(300);
-
-			Assert.AreEqual(2, mapped);
-		}
-	}
-
-	[TestClass]
-	public class AsyncMergeCollectionMapperParallelWithAsyncMergeMapperTests : AsyncMergeMapperMergeCollectionMapperTests {
-		protected override IAsyncMapper GetElementsMapper(params Type[] additionalTypes) {
-			return new AsyncMergeMapper(new CustomMapsOptions {
-				TypesToScan = additionalTypes.Concat(new[] { typeof(AsyncMergeMapperTests.Maps) }).ToList()
-			});
-		}
-
-		protected override int GetParallelMappings() {
-			return 10;
-		}
-
-
-		[TestMethod]
-		public async Task ShouldNotMapCollectionsIfCannotCreateElement() {
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<string[], List<ClassWithoutParameterlessConstructor>>());
-
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { "" }, new List<ClassWithoutParameterlessConstructor>()));
-		}
-
-		private static int mapped = 0;
-
-		[TestMethod]
-		public async Task ShouldCancelParallelMappingsOnException() {
-			var options = new CustomAsyncMergeAdditionalMapsOptions();
-			mapped = 0;
-			options.AddMap<int, string>(async (s, d, c) => {
-				await Task.Delay(s, c.CancellationToken);
-				if (s % 2 == 0)
-					throw new Exception();
-				else
-					Interlocked.Increment(ref mapped);
-				return "";
-			});
-
-			var mapper = new AsyncMergeCollectionMapper(new AsyncMergeMapper(null, options), null, new AsyncCollectionMappersOptions {
-				MaxParallelMappings = 10
-			});
-
-			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, ICollection<string>>(new[] { 1, 51, 100, 201 }, new List<string>()));
-			await Task.Delay(300);
-
-			Assert.AreEqual(2, mapped);
-		}
-	}
-
-	[TestClass]
-	public class AsyncMergeCollectionMapperParallelWithAsyncNewAndMergeMappersTests : AsyncMergeMapperMergeCollectionMapperTests {
-		protected override IAsyncMapper GetElementsMapper(params Type[] additionalTypes) {
-			return new AsyncCompositeMapper(new AsyncNewMapper(new CustomMapsOptions {
-				TypesToScan = additionalTypes.Concat(new[] { typeof(AsyncNewMapperTests.Maps) }).ToList()
-			}), new AsyncMergeMapper(new CustomMapsOptions {
-				TypesToScan = additionalTypes.Concat(new[] { typeof(AsyncMergeMapperTests.Maps) }).ToList()
-			}));
-		}
-
-		protected override int GetParallelMappings() {
-			return 10;
 		}
 
 
@@ -1304,16 +1173,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
 	public class AsyncMergeCollectionMapperCanMapTests {
 		[TestMethod]
-		public async Task ShouldUseMappingOptions() {
+		public void ShouldUseMappingOptions() {
 			var mapper = new AsyncMergeCollectionMapper(new AsyncNewMapper());
 
-			Assert.IsFalse(await mapper.CanMapAsyncMerge<IEnumerable<string>, List<int>>());
+			Assert.IsFalse(mapper.CanMapAsyncMerge<IEnumerable<string>, List<int>>());
 
 			var options = new CustomAsyncNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => Task.FromResult(0));
 			var mapper2 = new AsyncNewMapper(null, options);
 
-			Assert.IsTrue(await mapper.CanMapAsyncMerge<IEnumerable<string>, List<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
+			Assert.IsTrue(mapper.CanMapAsyncMerge<IEnumerable<string>, List<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
 		}
 	}
+
+	// DEV: test matching to edited elements (via previous elements mapping) and newly added elements)
 }

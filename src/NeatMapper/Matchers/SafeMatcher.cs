@@ -108,14 +108,16 @@ namespace NeatMapper {
 				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
 			}
 
-			return new DisposableMatchMapFactory(sourceType, destinationType, (source, destination) => {
-				try {
-					return factory.Invoke(source, destination);
-				}
-				catch (MapNotFoundException) {
-					return false;
-				}
-			}, factory);
+			return new DisposableMatchMapFactory(
+				sourceType, destinationType,
+				(source, destination) => {
+					try {
+						return factory.Invoke(source, destination);
+					}
+					catch (MapNotFoundException) {
+						return false;
+					}
+				}, factory);
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

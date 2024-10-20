@@ -480,8 +480,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapPrimitives() {
-			Assert.IsTrue(await _mapper.CanMapAsyncNew<int, string>());
-			Assert.IsTrue(await _mapper.CanMapAsyncNew(typeof(int), typeof(string)));
+			Assert.IsTrue(_mapper.CanMapAsyncNew<int, string>());
+			Assert.IsTrue(_mapper.CanMapAsyncNew(typeof(int), typeof(string)));
 
 			Assert.AreEqual("4", await _mapper.MapAsync<string>(2));
 			Assert.AreEqual("-6", (string)await _mapper.MapAsync(-3, typeof(int), typeof(string)));
@@ -505,7 +505,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		[TestMethod]
 		public async Task ShouldMapClasses() {
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<Price, decimal>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<Price, decimal>());
 
 				Assert.AreEqual(20.00m, await _mapper.MapAsync<decimal>(new Price {
 					Amount = 20.00m,
@@ -519,7 +519,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<Price, PriceFloat>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<Price, PriceFloat>());
 
 				var result = await _mapper.MapAsync<PriceFloat>(new Price {
 					Amount = 40.00m,
@@ -541,7 +541,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapChildClassAsParent() {
-			Assert.IsTrue(await _mapper.CanMapAsyncNew<Product, ProductDto>());
+			Assert.IsTrue(_mapper.CanMapAsyncNew<Product, ProductDto>());
 
 			var result = await _mapper.MapAsync<Product, ProductDto>(new LimitedProduct {
 				Code = "Test",
@@ -558,7 +558,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldNotMapWithoutMap() {
-			Assert.IsFalse(await _mapper.CanMapAsyncNew<bool, int>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<bool, int>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int>(false));
 		}
@@ -675,7 +675,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			options.AddMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0));
 			var mapper = new AsyncNewMapper(null, options);
 
-			Assert.IsTrue(await mapper.CanMapAsyncNew<string, int>());
+			Assert.IsTrue(mapper.CanMapAsyncNew<string, int>());
 
 			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
 		}
@@ -685,7 +685,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Not awaited
 			{ 
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<float, double>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<float, double>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<double>(1f));
 				Assert.AreEqual(typeof(float), exc.From);
@@ -695,7 +695,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			// Awaited
 			{
 				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(await _mapper.CanMapAsyncNew<double, float>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<double, float>());
 
 				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<float>(1d));
 				Assert.AreEqual(typeof(double), exc.From);

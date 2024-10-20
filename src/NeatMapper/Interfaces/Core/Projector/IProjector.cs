@@ -23,9 +23,6 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be projected
 		/// to an object of type <paramref name="destinationType"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">
-		/// Could not verify if the projector supports the given types.
-		/// </exception>
 		bool CanProject(
 			Type sourceType,
 			Type destinationType,

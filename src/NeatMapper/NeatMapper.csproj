@@ -98,7 +98,7 @@
   </ItemGroup>
 
 	<ItemGroup>
-		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig"/>
+		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig" />
 	</ItemGroup>
 	
 </Project>

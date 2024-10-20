@@ -19,7 +19,6 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be matched
 		/// with an object of type <paramref name="sourceType"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the matcher supports the given types.</exception>
 		bool CanMatch(
 			Type sourceType,
 			Type destinationType,

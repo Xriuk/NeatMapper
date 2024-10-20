@@ -101,13 +101,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			try {
-				_configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
+			return _configuration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out _);
 		}
 
 		override public
@@ -137,18 +131,11 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
 			// Forward new map to merge by creating a destination
-			object destination;
-			try {
-				destination = ObjectFactory.Create(destinationType);
-			}
-			catch (ObjectCreationException) {
+			if (!ObjectFactory.CanCreate(destinationType))
 				throw new MapNotFoundException((sourceType, destinationType));
-			}
 
-			return Map(source, sourceType, destination, destinationType, mappingOptions);
+			return Map(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions);
 		}
 
 		override public
@@ -184,10 +171,12 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			if(!_configuration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			var result = map.Invoke(source, destination, context);
@@ -210,11 +199,6 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
 			return MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
 		}
 
@@ -233,7 +217,9 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var map = _configuration.GetDoubleMap<MappingContext>((sourceType, destinationType));
+			if(!_configuration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMergeMapFactory(

@@ -5,7 +5,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Exception thrown when no suitable map was found for the given types
+	/// Exception thrown when no suitable map was found for the given types.
 	/// </summary>
 	public sealed class MapNotFoundException : Exception {
 		public MapNotFoundException((Type From, Type To) types) :

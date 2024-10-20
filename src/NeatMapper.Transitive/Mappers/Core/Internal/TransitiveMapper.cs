@@ -46,7 +46,7 @@ namespace NeatMapper.Transitive {
 		private readonly MappingOptions _optionsCacheNull;
 
 
-		internal TransitiveMapper(IMapper mapper, TransitiveOptions transitiveOptions) {
+		internal protected TransitiveMapper(IMapper mapper, TransitiveOptions transitiveOptions) {
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 			_transitiveOptions = transitiveOptions ?? new TransitiveOptions();
 

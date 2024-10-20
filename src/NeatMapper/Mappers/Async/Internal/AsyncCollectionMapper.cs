@@ -20,19 +20,13 @@ namespace NeatMapper {
 		protected readonly IAsyncMapper _elementsMapper;
 
 		/// <summary>
-		/// Default async options.
-		/// </summary>
-		protected readonly AsyncCollectionMappersOptions _asyncCollectionMappersOptions;
-
-		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
 		protected readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
-		internal AsyncCollectionMapper(IAsyncMapper elementsMapper, AsyncCollectionMappersOptions asyncCollectionMappersOptions = null) {
+		internal protected AsyncCollectionMapper(IAsyncMapper elementsMapper) {
 			_elementsMapper = new AsyncCompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
-			_asyncCollectionMappersOptions = asyncCollectionMappersOptions ?? new AsyncCollectionMappersOptions();
 			var nestedMappingContext = new AsyncNestedMappingContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
 				m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(_elementsMapper, m?.ServiceProvider),
@@ -40,8 +34,8 @@ namespace NeatMapper {
 		}
 
 
-		public abstract Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default);
-		public abstract Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default);
+		public abstract bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
+		public abstract bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null);
 		public abstract Task<object> MapAsync(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default);
 		public abstract Task<object> MapAsync(object source, Type sourceType, object destination, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default);
 	}

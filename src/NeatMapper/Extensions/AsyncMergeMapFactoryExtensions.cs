@@ -20,13 +20,10 @@ namespace NeatMapper {
 
 			try {
 				// Try creating a destination and forward to merge map
-				Func<object> destinationFactory;
-				try {
-					destinationFactory = ObjectFactory.CreateFactory(factory.DestinationType);
-				}
-				catch (ObjectCreationException) {
+				if (!ObjectFactory.CanCreate(factory.DestinationType))
 					throw new MapNotFoundException((factory.SourceType, factory.DestinationType));
-				}
+
+				var destinationFactory = ObjectFactory.CreateFactory(factory.DestinationType);
 
 				return new DisposableAsyncNewMapFactory(
 					factory.SourceType, factory.DestinationType,

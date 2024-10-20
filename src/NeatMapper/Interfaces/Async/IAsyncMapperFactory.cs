@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Threading;
 
 namespace NeatMapper {
 	/// <summary>
 	/// Optional interface to be implemented by asynchronous mappers, which allows to create a factory to map objects
 	/// of given types, instead of mapping them directly. The created factories should share the same
-	/// <see cref="AsyncMappingContext"/> (and thus the same <see cref="CancellationToken"/> too).<br/>
+	/// <see cref="AsyncMappingContextOptions"/>.<br/>
 	/// The implementation should be more efficient than calling IAsyncMapper.MapAsync() multiple times,
 	/// and thus can be used for collections.
 	/// </summary>

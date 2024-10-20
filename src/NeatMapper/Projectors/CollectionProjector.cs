@@ -114,9 +114,9 @@ namespace NeatMapper {
 		private readonly IProjector _elementsProjector;
 
 		/// <summary>
-		/// Cached nested context with no parents.
+		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
-		private readonly NestedProjectionContext _nestedProjectionContext;
+		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
 		/// <summary>
@@ -128,7 +128,10 @@ namespace NeatMapper {
 		/// </param>
 		public CollectionProjector(IProjector elementsProjector) {
 			_elementsProjector = new CompositeProjector(elementsProjector ?? throw new ArgumentNullException(nameof(elementsProjector)), this);
-			_nestedProjectionContext = new NestedProjectionContext(this);
+			var nestedProjectionContext = new NestedProjectionContext(this);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
+				p => p?.Projector != null ? p : new ProjectorOverrideMappingOptions(_elementsProjector, p?.ServiceProvider),
+				n => n != null ? new NestedProjectionContext(this, n) : nestedProjectionContext, options.Cached));
 		}
 
 
@@ -158,7 +161,7 @@ namespace NeatMapper {
 				if (isQueryable || CanProjectCollection(destinationType)) {
 					var elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
 
-					mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 					var elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector ?? _elementsProjector;
 
 					return elementsProjector.CanProject(elementTypes.From, elementTypes.To, mappingOptions);
@@ -201,7 +204,7 @@ namespace NeatMapper {
 				if(isQueryable || CanProjectCollection(types.To)) {
 					var elementTypes = (From: types.From.GetEnumerableElementType(), To: types.To.GetEnumerableElementType());
 
-					mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 					var elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector ?? _elementsProjector;
 
 					Expression elementProjection;
@@ -352,22 +355,5 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Will override a projector if not already overridden
-		private MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			return (options ?? MappingOptions.Empty)
-				.ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
-					p => p?.Projector != null ? p : new ProjectorOverrideMappingOptions(_elementsProjector, p?.ServiceProvider),
-					n => n != null ? new NestedProjectionContext(this, n) : _nestedProjectionContext);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

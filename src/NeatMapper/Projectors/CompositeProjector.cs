@@ -55,10 +55,6 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -66,36 +62,7 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			// Check if any projector implements IProjectorCanProject, if one of them throws it means that the map can be checked only when projecting
-			var undeterminateProjectors = new List<IProjector>();
-			foreach (var projector in _projectors) {
-				try {
-					if (projector.CanProject(sourceType, destinationType, mappingOptions))
-						return true;
-				}
-				catch (InvalidOperationException) {
-					undeterminateProjectors.Add(projector);
-				}
-			}
-
-			// Try projecting the types
-			if (undeterminateProjectors.Count > 0) {
-				foreach (var projector in undeterminateProjectors) {
-					try {
-						projector.Project(sourceType, destinationType, mappingOptions);
-						return true;
-					}
-					catch (MapNotFoundException) { }
-				}
-
-				throw new InvalidOperationException("Cannot verify if the projector supports the given map");
-			}
-			else
-				return false;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return _projectors.Any(p => p.CanProject(sourceType, destinationType, mappingOptions));
 		}
 
 		public LambdaExpression Project(
@@ -112,16 +79,18 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			foreach (var projector in _projectors) {
-				try {
-					return projector.Project(sourceType, destinationType, mappingOptions);
-				}
-				catch (MapNotFoundException) { }
-			}
-
-			throw new MapNotFoundException((sourceType, destinationType));
+			var projector = _projectors.FirstOrDefault(p => p.CanProject(sourceType, destinationType, mappingOptions));
+			if (projector != null)
+				return projector.Project(sourceType, destinationType, mappingOptions);
+			else
+				throw new MapNotFoundException((sourceType, destinationType));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

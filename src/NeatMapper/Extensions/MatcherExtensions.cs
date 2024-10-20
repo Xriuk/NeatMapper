@@ -4,130 +4,6 @@ using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class MatcherExtensions {
-		#region Match
-		#region Runtime
-		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
-		public static bool Match(this IMatcher matcher,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-
-			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-		}
-
-		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
-		public static bool Match(this IMatcher matcher,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			mappingOptions) {
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-
-			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-		}
-		#endregion
-
-		#region Explicit source and destination
-		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		public static bool Match<TSource, TDestination>(this IMatcher matcher,
-#if NET5_0_OR_GREATER
-			TSource? 
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination? 
-#else
-			TDestination
-#endif
-			destination,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-
-			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
-		}
-
-		/// <inheritdoc cref="Match{TSource, TDestination}(IMatcher, TSource, TDestination, MappingOptions)"/>
-		public static bool Match<TSource, TDestination>(this IMatcher matcher,
-#if NET5_0_OR_GREATER
-			TSource? 
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination? 
-#else
-			TDestination
-#endif
-			destination,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-			if (matcher == null)
-				throw new ArgumentNullException(nameof(matcher));
-
-			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-		}
-
-		// DEV: cannot have a "params object[] mappingOptions" overload because causes ambiguity with Runtime overloads
-		// (with "IEnumerable mappingOptions") when types are not specified (which is a farly-widely used case)
-		#endregion
-		#endregion
-
 		#region CanMatch
 		#region Runtime
 		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions)"/>
@@ -171,7 +47,6 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be matched
 		/// with an object of type <typeparamref name="TSource"/>.
 		/// </returns>
-		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static bool CanMatch<TSource, TDestination>(this IMatcher matcher,
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -210,6 +85,134 @@ namespace NeatMapper {
 
 			return matcher.CanMatch(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
+		#endregion
+		#endregion
+
+		#region Match
+		#region Runtime
+		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Match(this IMatcher matcher,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (matcher == null)
+				throw new ArgumentNullException(nameof(matcher));
+
+			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Match(this IMatcher matcher,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			source,
+			Type sourceType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?
+#else
+			object
+#endif
+			destination,
+			Type destinationType,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			if (matcher == null)
+				throw new ArgumentNullException(nameof(matcher));
+
+			return matcher.Match(source, sourceType, destination, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IMatcher.Match(object, Type, object, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Match<TSource, TDestination>(this IMatcher matcher,
+#if NET5_0_OR_GREATER
+			TSource? 
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination? 
+#else
+			TDestination
+#endif
+			destination,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			if (matcher == null)
+				throw new ArgumentNullException(nameof(matcher));
+
+			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions);
+		}
+
+		/// <inheritdoc cref="Match{TSource, TDestination}(IMatcher, TSource, TDestination, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool Match<TSource, TDestination>(this IMatcher matcher,
+#if NET5_0_OR_GREATER
+			TSource? 
+#else
+			TSource
+#endif
+			source,
+#if NET5_0_OR_GREATER
+			TDestination? 
+#else
+			TDestination
+#endif
+			destination,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			if (matcher == null)
+				throw new ArgumentNullException(nameof(matcher));
+
+			return matcher.Match(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		// DEV: cannot have a "params object[] mappingOptions" overload because causes ambiguity with Runtime overloads
+		// (with "IEnumerable mappingOptions") when types are not specified (which is a farly-widely used case)
 		#endregion
 		#endregion
 
@@ -320,7 +323,13 @@ namespace NeatMapper {
 #endif
 
 			var factory = matcher.MatchFactory(typeof(TSource), typeof(TDestination), mappingOptions);
-			return new DisposableMatchMapFactory<TSource, TDestination>((source, destination) => factory.Invoke(source, destination), factory);
+			try {
+				return new DisposableMatchMapFactory<TSource, TDestination>((source, destination) => factory.Invoke(source, destination), factory);
+			}
+			catch {
+				factory.Dispose();
+				throw;
+			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable

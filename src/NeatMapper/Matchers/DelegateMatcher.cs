@@ -44,12 +44,6 @@ namespace NeatMapper {
 					try {
 						return matchDelegate.Invoke((TSource)source, (TDestination)destination, context);
 					}
-					catch (MapNotFoundException e) {
-						if (e.From == typeof(TSource) && e.To == typeof(TDestination))
-							throw;
-						else
-							throw new MatcherException(e, (typeof(TSource), typeof(TDestination)));
-					}
 					catch (OperationCanceledException) {
 						throw;
 					}
@@ -170,9 +164,20 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using (var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
-				return factory.Invoke(source, destination);
-			}
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (!CanMatch(sourceType, destinationType, mappingOptions))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			var context = GetContext(mappingOptions);
+
+			return _matchDelegate.Invoke(source, destination, context);
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public IMatchMapFactory MatchFactory(
@@ -192,20 +197,26 @@ namespace NeatMapper {
 			if (!CanMatch(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			// Not caching context (for now), because DelegateMatcher is pretty short-lived and created when needed (or at least it should be)
-			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
-			var context = new MatchingContext(
-				overrideOptions?.ServiceProvider ?? _serviceProvider,
-				overrideOptions?.Matcher ?? _nestedMatcher,
-				this,
-				mappingOptions ?? MappingOptions.Empty
-			);
+			var context = GetContext(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => _matchDelegate.Invoke(source, destination, context));
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
+		}
+
+
+
+		// Not caching context (for now), because DelegateMatcher is pretty short-lived and created when needed (or at least it should be)
+		private MatchingContext GetContext(MappingOptions mappingOptions) {
+			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
+			return new MatchingContext(
+				overrideOptions?.ServiceProvider ?? _serviceProvider,
+				overrideOptions?.Matcher ?? _nestedMatcher,
+				this,
+				mappingOptions ?? MappingOptions.Empty
+			);
 		}
 	}
 }

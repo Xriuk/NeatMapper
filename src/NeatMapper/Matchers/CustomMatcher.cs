@@ -95,14 +95,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			try {
-				// Try retrieving a regular map
-				_configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
-				return true;
-			}
-			catch (MapNotFoundException) {
-				return false;
-			}
+			return _configuration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out _);
 		}
 
 		public bool Match(
@@ -136,14 +129,16 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			if(!_configuration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-			var comparer = _configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			try {
-				return (bool)comparer.Invoke(source, destination, context);
+				return (bool)map.Invoke(source, destination, context);
 			}
 			catch (MappingException e) {
 				throw new MatcherException(e.InnerException, (sourceType, destinationType));
@@ -173,7 +168,9 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var comparer = _configuration.GetDoubleMap<MatchingContext>((sourceType, destinationType));
+			if(!_configuration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out var map))
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
@@ -181,7 +178,7 @@ namespace NeatMapper {
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 				try {
-					return (bool)comparer.Invoke(source, destination, context);
+					return (bool)map.Invoke(source, destination, context);
 				}
 				catch (MappingException e) {
 					throw new MatcherException(e.InnerException, (sourceType, destinationType));

@@ -90,8 +90,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			new ConcurrentDictionary<Type, Func<IQueryable, IEnumerable>>();
 
 
-
-
 		protected static IQueryable RetrieveDbSet(DbContext context, Type type) {
 			return _setCache.GetOrAdd(type, t => {
 				var param = Expression.Parameter(typeof(DbContext), "dbContext");
@@ -159,7 +157,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			new ConcurrentDictionary<Type, AttachEntityDelegate>();
 
 
-		internal EntityFrameworkCoreBaseMapper(
+		internal protected EntityFrameworkCoreBaseMapper(
 			IModel model,
 			Type dbContextType,
 			IServiceProvider serviceProvider,

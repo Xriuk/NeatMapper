@@ -10,6 +10,8 @@
 ### Changed
 
 - `IMapperCanMap`/`IAsyncMapperCanMap`/`IMatcherCanMatch`/`IProjectorCanProject` interfaces were integrated into their parent interfaces (`IMapper`/`IAsyncMapper`/`IMatcher`/`IProjector`) and removed, all implementing classes and extension methods were adjusted.
+- `IAsyncMapper` `CanMapAsync*` methods now return `bool` instead of `Task<bool>` and the `CancellationToken` parameter has been removed.
+- `CanMap*`/`CanMapAsync*`/`CanMatch`/`CanProject` methods now should never throw, if an interface type can be mapped true will be returned, and if the object provided does not respect expectations (eg: passing a readonly collection) a mapping exception will be thrown.
 - `DelegateMatcher` constructor was made private and it now can be created only via the type-safe static method `Create`.
 - `MergeCollectionsMappingOptions` Matcher was changed from `MatchMapDelegate` to the safer `IMatcher` (which can also be a `CompositeMatcher` to support multiple maps). `IMapper`/`IAsyncMapper` extensions were updated.
 - Extension method `Predicate` for `IMatchMapFactory`/`MatchMapFactory<TSource, TDestination>` now have an optional parameter which allows to dispose the provided factory together with the returned one (or in case of exceptions), this allows to create factories from other factories directly. The parameter is true by default, meaning that the provided factory will be disposed.
@@ -19,6 +21,10 @@
 - Refactored internal reflection usage to create and cache delegates instead of direct invocations for increased performance.
 - All delegates and interfaces (where applicable) now have the correct co/contra-variance specified on their parameters.
 - One-liner extension methods should now be inlined.
+- `AsyncCollectionMappersMappingOptions` `MaxParallelMappings` are now also supported for `IAsyncEnumerable` too.
+- `AsyncMergeCollectionMapper` does not support anymore `AsyncCollectionMappersMappingOptions` `MaxParallelMappings`, constructor has been updated to remove the parameter.
+- `MapNotFoundException` can no longer be thrown from mapper/maps on its own, a map cannot refuse itself based on provided objects.
+- `CompositeMapper` and `AsyncCompositeMapper` will not try following mappers on exceptions.
 
 ### Added
 
@@ -42,6 +48,7 @@
 - Some concurrent locks in `CompositeMapper`/`AsyncCompositeMapper` factories.
 - `AsyncCompositeMapper` missing `IAsyncMapperFactory` interface.
 - `Project` `IQueryable<T>` extension method `params object[]` overload nullability.
+- `MergeCollectionMapper` and `AsyncMergeCollectionMapper` now correctly return the destination collection if source collection is null.
 
 ## [4.0.0] - 2024-07-16
 

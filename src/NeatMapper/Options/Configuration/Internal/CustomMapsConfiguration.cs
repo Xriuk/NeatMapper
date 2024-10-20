@@ -182,8 +182,8 @@ namespace NeatMapper {
 		internal IEnumerable<CustomGenericMap> GenericMaps { get; }
 
 
-		internal Func<TContext, object> GetContextMap<TContext>((Type From, Type To) types) {
-			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+		internal bool TryGetContextMap<TContext>((Type From, Type To) types, out Func<TContext, object> map) {
+			map = (Func<TContext, object>)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<TContext, object>>(types, "context");
 				if (mapDeleg != null) {
 #if !NET48
@@ -193,12 +193,6 @@ namespace NeatMapper {
 						try {
 							return mapDeleg.Invoke(context);
 						}
-						catch (MapNotFoundException e) {
-							if (e.From == types.From && e.To == types.To)
-								throw;
-							else
-								throw new MappingException(e, types);
-						}
 						catch (OperationCanceledException) {
 							throw;
 						}
@@ -215,14 +209,11 @@ namespace NeatMapper {
 
 				return null;
 			});
-			if (cacheDeleg == null)
-				throw new MapNotFoundException(types);
-			else
-				return (Func<TContext, object>)cacheDeleg;
+			return map != null;
 		}
 
-		internal Func<object, TContext, object> GetSingleMap<TContext>((Type From, Type To) types) {
-			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+		internal bool TryGetSingleMap<TContext>((Type From, Type To) types, out Func<object, TContext, object> map) {
+			map = (Func<object, TContext, object>)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, TContext, object>>(types, "source", "context");
 				if(mapDeleg != null) {
 #if !NET48
@@ -232,12 +223,6 @@ namespace NeatMapper {
 						try {
 							return mapDeleg.Invoke(source, context);
 						}
-						catch (MapNotFoundException e) {
-							if (e.From == types.From && e.To == types.To)
-								throw;
-							else
-								throw new MappingException(e, types);
-						}
 						catch (OperationCanceledException) {
 							throw;
 						}
@@ -254,13 +239,10 @@ namespace NeatMapper {
 
 				return null;
 			});
-			if (cacheDeleg == null)
-				throw new MapNotFoundException(types);
-			else
-				return (Func<object, TContext, object>)cacheDeleg;
+			return map != null;
 		}
-		internal Func<object, AsyncMappingContext, Task<object>> GetSingleMapAsync((Type From, Type To) types) {
-			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+		internal bool TryGetSingleMapAsync((Type From, Type To) types, out Func<object, AsyncMappingContext, Task<object>> map) {
+			map = (Func<object, AsyncMappingContext, Task<object>>)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, AsyncMappingContext, Task<object>>>(types, "source", "context");
 				if (mapDeleg != null) {
 #if !NET48
@@ -270,12 +252,6 @@ namespace NeatMapper {
 						try {
 							return await mapDeleg.Invoke(source, context);
 						}
-						catch (MapNotFoundException e) {
-							if (e.From == types.From && e.To == types.To)
-								throw;
-							else
-								throw new MappingException(e, types);
-						}
 						catch (OperationCanceledException) {
 							throw;
 						}
@@ -292,14 +268,11 @@ namespace NeatMapper {
 
 				return null;
 			});
-			if (cacheDeleg == null)
-				throw new MapNotFoundException(types);
-			else
-				return (Func<object, AsyncMappingContext, Task<object>>)cacheDeleg;
+			return map != null;
 		}
 
-		internal Func<object, object, TContext, object> GetDoubleMap<TContext>((Type From, Type To) types) {
-			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+		internal bool TryGetDoubleMap<TContext>((Type From, Type To) types, out Func<object, object, TContext, object> map) {
+			map = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, object, TContext, object>>(types, "source", "destination", "context");
 				if (mapDeleg != null) {
 #if !NET48
@@ -309,12 +282,6 @@ namespace NeatMapper {
 						try {
 							return mapDeleg.Invoke(source, destination, context);
 						}
-						catch (MapNotFoundException e) {
-							if (e.From == types.From && e.To == types.To)
-								throw;
-							else
-								throw new MappingException(e, types);
-						}
 						catch (OperationCanceledException) {
 							throw;
 						}
@@ -331,17 +298,12 @@ namespace NeatMapper {
 
 				return null;
 			});
-			if (cacheDeleg == null)
-				throw new MapNotFoundException(types);
-			else
-				return (Func<object, object, TContext, object>)cacheDeleg;
+			return map != null;
 		}
-		internal Func<object, object, TContext, object> GetDoubleMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate) {
+		internal bool TryGetDoubleMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate, out Func<object, object, TContext, object> mapResult) {
 			if(_mapsCache.TryGetValue(types, out var cacheDeleg)){
-				if (cacheDeleg == null)
-					throw new MapNotFoundException(types);
-				else
-					return (Func<object, object, TContext, object>)cacheDeleg;
+				mapResult = (Func<object, object, TContext, object>)cacheDeleg;
+				return mapResult != null;
 			}
 
 			KeyValuePair<(Type From, Type To), CustomMap> map;
@@ -349,11 +311,8 @@ namespace NeatMapper {
 				map = Maps.First(predicate);
 			}
 			catch {
-				cacheDeleg = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => (Delegate)null);
-				if(cacheDeleg == null)
-					throw new MapNotFoundException(types);
-				else
-					return (Func<object, object, TContext, object>)cacheDeleg;
+				mapResult = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => (Delegate)null);
+				return mapResult != null;
 			}
 
 			var mapDeleg = TypeUtils.MethodToDelegate<Func<object, object, TContext, object>>(map.Value.Method, "source", "destination", "context");
@@ -363,12 +322,6 @@ namespace NeatMapper {
 			Func<object, object, TContext, object> deleg = (source, destination, context) => {
 				try {
 					return mapDeleg.Invoke(source, destination, context);
-				}
-				catch (MapNotFoundException e) {
-					if (e.From == types.From && e.To == types.To)
-						throw;
-					else
-						throw new MappingException(e, types);
 				}
 				catch (OperationCanceledException) {
 					throw;
@@ -381,14 +334,11 @@ namespace NeatMapper {
 #pragma warning restore IDE0039 // Use local function
 #endif
 
-			cacheDeleg = _mapsCache.GetOrAdd(types, _ => deleg);
-			if (cacheDeleg == null)
-				throw new MapNotFoundException(types);
-			else
-				return (Func<object, object, TContext, object>)cacheDeleg;
+			mapResult = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => deleg);
+			return mapResult != null;
 		}
-		internal Func<object, object, AsyncMappingContext, Task<object>> GetDoubleMapAsync((Type From, Type To) types) {
-			var cacheDeleg = _mapsCache.GetOrAdd(types, _ => {
+		internal bool TryGetDoubleMapAsync((Type From, Type To) types, out Func<object, object, AsyncMappingContext, Task<object>> map) {
+			map = (Func<object, object, AsyncMappingContext, Task<object>>)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object, object, AsyncMappingContext, Task<object>>>(types, "source", "destination", "context");
 				if (mapDeleg != null) {
 #if !NET48
@@ -397,12 +347,6 @@ namespace NeatMapper {
 					Func<object, object, AsyncMappingContext, Task<object>> deleg = async (source, destination, context) => {
 						try {
 							return await mapDeleg.Invoke(source, destination, context);
-						}
-						catch (MapNotFoundException e) {
-							if (e.From == types.From && e.To == types.To)
-								throw;
-							else
-								throw new MappingException(e, types);
 						}
 						catch (OperationCanceledException) {
 							throw;
@@ -420,10 +364,7 @@ namespace NeatMapper {
 
 				return null;
 			});
-			if (cacheDeleg == null)
-				throw new MapNotFoundException(types);
-			else
-				return (Func<object, object, AsyncMappingContext, Task<object>>)cacheDeleg;
+			return map != null;
 		}
 
 		private TDelegate RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) where TDelegate : Delegate {

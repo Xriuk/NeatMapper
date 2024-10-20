@@ -16,7 +16,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public async Task ShouldMapKeyToEntity() {
 			// Not null key
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<int, IntKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<int, IntKey>());
 
 				// Null destination does not throw
 				Assert.IsNotNull(await _mapper.MapAsync<int, IntKey>(2, (IntKey)null));
@@ -40,7 +40,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			// Null key
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<string, StringKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<string, StringKey>());
 
 				// Null destination does not throw
 				Assert.IsNull(await _mapper.MapAsync<string, StringKey>(null, (StringKey)null));
@@ -53,7 +53,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapNullableKeyToEntity() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<int?, IntKey>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<int?, IntKey>());
 
 			// Not null key
 			{
@@ -87,8 +87,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public async Task ShouldMapCompositeKeyToEntity() {
 			// Tuple
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<Tuple<int, Guid>, CompositePrimitiveKey>());
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<Tuple<int, string>, CompositeClassKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<Tuple<int, Guid>, CompositePrimitiveKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<Tuple<int, string>, CompositeClassKey>());
 
 				// Not null key
 				{
@@ -125,8 +125,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			// ValueTuple
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<(int, Guid), CompositePrimitiveKey>());
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<(int, string), CompositeClassKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<(int, Guid), CompositePrimitiveKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<(int, string), CompositeClassKey>());
 
 				// Not null key
 				{
@@ -154,8 +154,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapNullableCompositeKeyToEntity() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<(int, Guid)?, CompositePrimitiveKey>());
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<(int, string)?, CompositeClassKey>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<(int, Guid)?, CompositePrimitiveKey>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<(int, string)?, CompositeClassKey>());
 
 			// Not null key
 			{
@@ -194,8 +194,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public async Task ShouldNotMapCompositeKeyToEntityIfOrderIsWrong() {
 			// Tuple
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<Tuple<Guid, int>, CompositePrimitiveKey>());
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<Tuple<string, int>, CompositeClassKey>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<Tuple<Guid, int>, CompositePrimitiveKey>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<Tuple<string, int>, CompositeClassKey>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create(new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), (CompositePrimitiveKey)null));
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create("Test", 2), (CompositeClassKey)null));
@@ -203,14 +203,14 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			// ValueTuple
 			{
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<(Guid, int), CompositePrimitiveKey>());
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<(string, int), CompositeClassKey>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<(Guid, int), CompositePrimitiveKey>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<(string, int), CompositeClassKey>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), (CompositePrimitiveKey)null));
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(("Test", 2), (CompositeClassKey)null));
 				
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<(Guid, int)?, CompositePrimitiveKey>());
-				Assert.IsFalse(await _mapper.CanMapAsyncMerge<(string, int)?, CompositeClassKey>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<(Guid, int)?, CompositePrimitiveKey>());
+				Assert.IsFalse(_mapper.CanMapAsyncMerge<(string, int)?, CompositeClassKey>());
 
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<(Guid, int)?, CompositePrimitiveKey>((new Guid("56033406-E593-4076-B48A-70988C9F9190"), 2), (CompositePrimitiveKey)null));
 				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<(string, int)?, CompositeClassKey>(("Test", 2), (CompositeClassKey)null));
@@ -219,28 +219,28 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapShadowKeyToEntities() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<int, ShadowIntKey>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<int, ShadowIntKey>());
 
 			Assert.IsNotNull(await _mapper.MapAsync(1, (ShadowIntKey)null));
 
 
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<Tuple<int, string>, ShadowCompositeKey>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<Tuple<int, string>, ShadowCompositeKey>());
 
 			Assert.IsNotNull(await _mapper.MapAsync(Tuple.Create(2, "Test"), (ShadowCompositeKey)null));
 		}
 
 		[TestMethod]
 		public async Task ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<int, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<int, OwnedEntity>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(2, (OwnedEntity)null));
 
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<Tuple<string, int>, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<Tuple<string, int>, OwnedEntity>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create("Test", 2), (OwnedEntity)null));
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create(2, 2), (OwnedEntity)null));
 
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<(string, int), OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<(string, int), OwnedEntity>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(("Test", 2), (OwnedEntity)null));
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync((2, 2), (OwnedEntity)null));
@@ -249,7 +249,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 		[TestMethod]
 		public async Task ShouldNotMapKeylessEntities() {
-			Assert.IsFalse(await _mapper.CanMapAsyncMerge<int, Keyless>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<int, Keyless>());
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(2, (Keyless)null));
 		}
@@ -258,8 +258,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapKeysCollectionToEntitiesCollection() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<int[], List<IntKey>>());
-			await Assert.ThrowsExceptionAsync<InvalidOperationException>(() => _mapper.CanMapAsyncMerge<int[], ICollection<IntKey>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<int[], List<IntKey>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<int[], ICollection<IntKey>>());
 
 			// Normal
 			{
@@ -305,7 +305,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapNullableKeysCollectioToEntitiesCollection() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<IEnumerable<int?>, List<IntKey>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<int?>, List<IntKey>>());
 
 			{
 				var result = await _mapper.MapAsync(new int?[] { 2, null }, new List<IntKey>());
@@ -326,7 +326,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public async Task ShouldMapCompositeKeysCollectionToEntitiesCollection() {
 			// Tuple
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<IEnumerable<Tuple<int, Guid>>, List<CompositePrimitiveKey>>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<Tuple<int, Guid>>, List<CompositePrimitiveKey>>());
 
 				var result = await _mapper.MapAsync(new Tuple<int, Guid>[] { null, Tuple.Create(2, new Guid("56033406-E593-4076-B48A-70988C9F9190")) }, new List<CompositePrimitiveKey>());
 				Assert.AreEqual(2, result.Count);
@@ -336,7 +336,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			// ValueTuple
 			{
-				Assert.IsTrue(await _mapper.CanMapAsyncMerge<(int, Guid)[], List<CompositePrimitiveKey>>());
+				Assert.IsTrue(_mapper.CanMapAsyncMerge<(int, Guid)[], List<CompositePrimitiveKey>>());
 
 				var result = await _mapper.MapAsync(new (int, Guid)[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), default((int, Guid)) }, new List<CompositePrimitiveKey>());
 				Assert.AreEqual(2, result.Count);
@@ -347,7 +347,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldMapNullableCompositeKeysCollectionToEntitiesCollection() {
-			Assert.IsTrue(await _mapper.CanMapAsyncMerge<(int, Guid)?[], List<CompositePrimitiveKey>>());
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<(int, Guid)?[], List<CompositePrimitiveKey>>());
 
 			var result = await _mapper.MapAsync(new (int, Guid)?[] { (2, new Guid("56033406-E593-4076-B48A-70988C9F9190")), null }, new List<CompositePrimitiveKey>());
 			Assert.AreEqual(2, result.Count);

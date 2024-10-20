@@ -7,6 +7,91 @@ using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class ProjectorExtensions {
+
+		#region CanProject
+		#region Runtime
+		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool CanProject(this IProjector projector,
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return projector.CanProject(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool CanProject(this IProjector projector,
+			Type sourceType,
+			Type destinationType,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			return projector.CanProject(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TDestination"><inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
+		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <returns>
+		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be projected
+		/// to an object of type <typeparamref name="TDestination"/>.
+		/// </returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool CanProject<TSource, TDestination>(this IProjector projector,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions);
+		}
+
+		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool CanProject<TSource, TDestination>(this IProjector projector,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			IEnumerable?
+#else
+			IEnumerable
+#endif
+			mappingOptions) {
+
+			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool CanProject<TSource, TDestination>(this IProjector projector,
+			params
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			object?[]?
+#else
+			object[]
+#endif
+			mappingOptions) {
+
+			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+		#endregion
+
 		#region Project
 		#region Runtime
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)"/>
@@ -181,91 +266,6 @@ namespace NeatMapper {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable enable
 #endif
-		}
-		#endregion
-		#endregion
-
-		#region CanProject
-		#region Runtime
-		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)"/>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool CanProject(this IProjector projector,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-			return projector.CanProject(sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-		}
-
-		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)"/>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool CanProject(this IProjector projector,
-			Type sourceType,
-			Type destinationType,
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			mappingOptions) {
-
-			return projector.CanProject(sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
-		}
-		#endregion
-
-		#region Explicit source and destination
-		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/param[@name='destinationType']"/></typeparam>
-		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
-		/// <returns>
-		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be projected
-		/// to an object of type <typeparamref name="TDestination"/>.
-		/// </returns>
-		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions)" path="/exception"/>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool CanProject<TSource, TDestination>(this IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions);
-		}
-
-		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool CanProject<TSource, TDestination>(this IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
-		}
-
-		/// <inheritdoc cref="CanProject{TSource, TDestination}(IProjector, MappingOptions)"/>
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool CanProject<TSource, TDestination>(this IProjector projector,
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			mappingOptions) {
-
-			return projector.CanProject(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

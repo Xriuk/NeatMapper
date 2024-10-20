@@ -3,6 +3,7 @@
 #endif
 
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,6 +43,39 @@ namespace NeatMapper {
 					var result = await task.ConfigureAwait(false);
 					results[index] = result;
 					if (Interlocked.Decrement(ref remaining) == 0) 
+						tcs.TrySetResult(results);
+				}
+				catch (OperationCanceledException) {
+					tcs.TrySetCanceled();
+				}
+				catch (Exception ex) {
+					tcs.TrySetException(ex);
+				}
+			}
+		}
+		public static Task<TResult[]> WhenAllFailFast<TResult>(List<Task<TResult>> tasks) {
+			if (tasks is null)
+				throw new ArgumentNullException(nameof(tasks));
+			if (tasks.Count == 0)
+				return Task.FromResult(Array.Empty<TResult>());
+
+			var results = new TResult[tasks.Count];
+			var remaining = tasks.Count;
+			var tcs = new TaskCompletionSource<TResult[]>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+			for (int i = 0; i < tasks.Count; i++) {
+				var task = tasks[i]
+					?? throw new ArgumentException($"The {nameof(tasks)} argument included a null value.", nameof(tasks));
+				HandleCompletion(task, i);
+			}
+			return tcs.Task;
+
+
+			async void HandleCompletion(Task<TResult> task, int index) {
+				try {
+					var result = await task.ConfigureAwait(false);
+					results[index] = result;
+					if (Interlocked.Decrement(ref remaining) == 0)
 						tcs.TrySetResult(results);
 				}
 				catch (OperationCanceledException) {

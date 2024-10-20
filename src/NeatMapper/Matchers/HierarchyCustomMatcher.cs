@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System;
+﻿using System;
 
 namespace NeatMapper {
 	/// <summary>
@@ -97,7 +96,9 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			return _configuration.Maps.Any(m => m.Key.From.IsAssignableFrom(sourceType) && m.Key.To.IsAssignableFrom(destinationType));
+			return _configuration.TryGetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), m =>
+				m.Key.From.IsAssignableFrom(sourceType) &&
+				m.Key.To.IsAssignableFrom(destinationType), out _);
 		}
 
 		public bool Match(
@@ -122,9 +123,37 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using (var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
-				return factory.Invoke(source, destination);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (!_configuration.TryGetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), m =>
+				m.Key.From.IsAssignableFrom(sourceType) &&
+				m.Key.To.IsAssignableFrom(destinationType), out var map)) {
+
+				throw new MapNotFoundException((sourceType, destinationType));
 			}
+
+			var context = _contextsCache.GetOrCreate(mappingOptions);
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+			try {
+				return (bool)map.Invoke(source, destination, context);
+			}
+			catch (MappingException e) {
+				throw new MatcherException(e.InnerException, (sourceType, destinationType));
+			}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public IMatchMapFactory MatchFactory(
@@ -146,9 +175,13 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			var comparer = _configuration.GetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), m =>
+			if(!_configuration.TryGetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), m =>
 				m.Key.From.IsAssignableFrom(sourceType) &&
-				m.Key.To.IsAssignableFrom(destinationType));
+				m.Key.To.IsAssignableFrom(destinationType), out var map)) {
+
+				throw new MapNotFoundException((sourceType, destinationType));
+			}
+
 			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
@@ -156,7 +189,7 @@ namespace NeatMapper {
 				TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
 				try {
-					return (bool)comparer.Invoke(source, destination, context);
+					return (bool)map.Invoke(source, destination, context);
 				}
 				catch (MappingException e) {
 					throw new MatcherException(e.InnerException, (sourceType, destinationType));

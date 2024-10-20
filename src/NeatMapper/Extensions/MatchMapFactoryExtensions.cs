@@ -117,7 +117,7 @@ namespace NeatMapper {
 				else {
 					throw new ArgumentException($"The provided comparer type {typeof(TComparer).FullName ?? typeof(TComparer).Name} " +
 						$"is not one of {factory.SourceType.FullName ?? factory.SourceType.Name} or " +
-						$"{factory.DestinationType.FullName ?? factory.DestinationType.Name}.", nameof(TComparer));
+						$"{factory.DestinationType.FullName ?? factory.DestinationType.Name} factory types.", nameof(TComparer));
 				}
 			}
 			catch {

@@ -28,7 +28,6 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created
 		/// from a parameter of type <paramref name="sourceType"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types.</exception>
 		bool CanMapNew(
 			Type sourceType,
 			Type destinationType,
@@ -53,7 +52,6 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged
 		/// into an object of type <paramref name="destinationType"/>.
 		/// </returns>
-		/// <exception cref="InvalidOperationException">Could not verify if the mapper supports the given types.</exception>
 		bool CanMapMerge(
 			Type sourceType,
 			Type destinationType,

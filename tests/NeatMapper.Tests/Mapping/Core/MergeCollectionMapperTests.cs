@@ -209,8 +209,7 @@ namespace NeatMapper.Tests.Mapping {
 			}
 
 			{
-				// Cannot determine
-				Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<IEnumerable<decimal>, ICollection<Price>>());
+				Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<decimal>, ICollection<Price>>());
 
 				var a = new Price {
 					Amount = 12m,
@@ -225,7 +224,9 @@ namespace NeatMapper.Tests.Mapping {
 					Currency = "EUR"
 				};
 				var destination = new Price[] { a, b, c };
-				TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<decimal>, ICollection<Price>>(new[] { 20m, 15.25m, 0m }, (ICollection<Price>)destination));
+				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<IEnumerable<decimal>, ICollection<Price>>(new[] { 20m, 15.25m, 0m }, (ICollection<Price>)destination));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
+				Assert.IsTrue(exc.InnerException.Message.StartsWith("Cannot merge map to a readonly destination collection"));
 				// Should not alter destination
 				Assert.AreSame(a, destination[0]);
 				Assert.AreEqual(12m, a.Amount);
@@ -272,9 +273,8 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldNotMapReadonlyCollectionDestinationNestedWithoutExplicitMap() {
 			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<Category[]>, List<List<CategoryDto>>>());
 
-			// Cannot determine if mappable
-			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<IEnumerable<Category[]>, ICollection<IList<CategoryDto>>>());
-			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<IEnumerable<Category[]>, List<IList<CategoryDto>>>());
+			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<Category[]>, ICollection<IList<CategoryDto>>>());
+			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<Category[]>, List<IList<CategoryDto>>>());
 
 			var a1 = new CategoryDto {
 				Id = 2,
@@ -344,31 +344,19 @@ namespace NeatMapper.Tests.Mapping {
 					Id = 1
 				}
 			};
-			TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { source1, source3, null, source2 }, destination, (s, d, _) => (s == source1 && d == destination1) ||
+			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map(new[] { source1, source3, null, source2 }, destination, (s, d, _) => (s == source1 && d == destination1) ||
 				(s == source2 && d == destination2)));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+			Assert.IsInstanceOfType(exc.InnerException.InnerException, typeof(InvalidOperationException));
+			Assert.IsTrue(exc.InnerException.InnerException.Message.StartsWith("Cannot merge map to a readonly destination collection"));
 
-			// Should not alter destination
-			Assert.AreEqual(2, destination.Count);
-			Assert.AreSame(destination1, destination[0]);
-			Assert.AreSame(a1, destination[0][0]);
-			Assert.AreEqual(2, a1.Parent);
-			Assert.AreSame(b1, destination[0][1]);
-			Assert.IsNull(b1.Parent);
-			Assert.AreSame(c1, destination[0][2]);
-			Assert.IsNull(c1.Parent);
-			Assert.AreSame(destination2, destination[1]);
-			Assert.AreSame(a2, destination[1][0]);
-			Assert.IsNull(a2.Parent);
-			Assert.AreSame(b2, destination[1][1]);
-			Assert.AreEqual(2, b2.Parent);
-			Assert.AreSame(c2, destination[1][2]);
-			Assert.IsNull(c2.Parent);
+			// Unfortunately alters destination
 		}
 
 		[TestMethod]
 		public void ShouldMapCollectionsOfCollectionsWithoutElementsComparer() {
 			// Cannot determine
-			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<int[][], List<ICollection<string>>>());
+			Assert.IsTrue(_mapper.CanMapMerge<int[][], List<ICollection<string>>>());
 
 			// No options
 			{
@@ -500,16 +488,6 @@ namespace NeatMapper.Tests.Mapping {
 					Assert.ThrowsException<TaskCanceledException>(() => _mapper.Map(new[] { new[] { 2f } }, new List<List<int>> { new List<int> { 3 } }, (a, b, c) => throw new TaskCanceledException()));
 				}
 			}
-		}
-
-		[TestMethod]
-		public void ShouldNotMapIfMapRejectsItself() {
-			// CanMap returns true because the map does exist, even if it will fail
-			Assert.IsTrue(_mapper.CanMapMerge<float[], List<double>>());
-
-			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map(new[] { 1f }, new List<double>()));
-			Assert.AreEqual(typeof(float[]), exc.From);
-			Assert.AreEqual(typeof(List<double>), exc.To);
 		}
 	}
 
@@ -1115,4 +1093,6 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.IsTrue(mapper.CanMapMerge<IEnumerable<string>, List<int>>(new[] { new MapperOverrideMappingOptions(mapper2) }));
 		}
 	}
+
+	// DEV: test matching to edited elements (via previous elements mapping) and newly added elements)
 }

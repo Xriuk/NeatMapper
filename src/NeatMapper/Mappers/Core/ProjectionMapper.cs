@@ -108,9 +108,33 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
-			using(var factory = MapNewFactory(sourceType, destinationType, mappingOptions)) { 
-				return factory.Invoke(source);
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+			var map = GetMap(sourceType, destinationType, mappingOptions);
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+			object result;
+			try {
+				result = map.Invoke(source);
 			}
+			catch (OperationCanceledException) {
+				throw;
+			}
+			catch (ProjectionException e) {
+				throw new MappingException(e.InnerException, (sourceType, destinationType));
+			}
+
+			// Should not happen
+			TypeUtils.CheckObjectType(result, destinationType);
+
+			return result;
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 		}
 
 		public
@@ -161,60 +185,20 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			var deleg = _mapsCache.GetOrAdd((sourceType, destinationType), types => {
-				// Retrieve the projection from the projector
-				LambdaExpression projection;
-				try {
-					projection = _projector.Project(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
-				}
-				catch (ProjectionException e) {
-					throw new MappingException(e.InnerException, (sourceType, destinationType));
-				}
-				catch (MapNotFoundException) {
-					return null;
-				}
-				catch (OperationCanceledException) {
-					throw;
-				}
-
-				// Convert the expression to accept and return object types
-				var param = Expression.Parameter(typeof(object), "source");
-				projection = Expression.Lambda(
-					Expression.Convert(new LambdaParameterReplacer(Expression.Convert(param, projection.Parameters.Single().Type)).SetupAndVisitBody(projection), typeof(object)),
-					param);
-
-				// Compile the expression and wrap it to catch exceptions
-				return (Func<object, object>)projection.Compile();
-			});
-			if (deleg == null)
-				throw new MapNotFoundException((sourceType, destinationType));
+			var map = GetMap(sourceType, destinationType, mappingOptions);
 
 			return new DefaultNewMapFactory(sourceType, destinationType, source => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 				object result;
 				try {
-					result = deleg.Invoke(source);
-				}
-				catch (ProjectionException e) {
-					throw new MappingException(e.InnerException, (sourceType, destinationType));
-				}
-				catch (MapNotFoundException e) {
-					if (e.From == sourceType && e.To == destinationType)
-						throw;
-					else
-						throw new MappingException(e, (sourceType, destinationType));
+					result = map.Invoke(source);
 				}
 				catch (OperationCanceledException) {
 					throw;
 				}
-				catch (Exception e) {
-					throw new MappingException(e, (sourceType, destinationType));
+				catch (ProjectionException e) {
+					throw new MappingException(e.InnerException, (sourceType, destinationType));
 				}
 
 				// Should not happen
@@ -266,5 +250,47 @@ namespace NeatMapper {
 			return Enumerable.Empty<(Type, Type)>();
 		}
 		#endregion
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private Func<object, object> GetMap(Type sourceType, Type destinationType, MappingOptions mappingOptions) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return _mapsCache.GetOrAdd((sourceType, destinationType), types => {
+				// Retrieve the projection from the projector
+				LambdaExpression projection;
+				try {
+					projection = _projector.Project(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+				}
+				catch (ProjectionException e) {
+					throw new MappingException(e.InnerException, (sourceType, destinationType));
+				}
+				catch (MapNotFoundException) {
+					return null;
+				}
+				catch (OperationCanceledException) {
+					throw;
+				}
+
+				// Convert the expression to accept and return object types
+				var param = Expression.Parameter(typeof(object), "source");
+				projection = Expression.Lambda(
+					Expression.Convert(new LambdaParameterReplacer(Expression.Convert(param, projection.Parameters.Single().Type)).SetupAndVisitBody(projection), typeof(object)),
+					param);
+
+				// Compile the expression and wrap it to catch exceptions
+				return (Func<object, object>)projection.Compile();
+			}) ?? throw new MapNotFoundException((sourceType, destinationType));
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

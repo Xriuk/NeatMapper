@@ -2,7 +2,7 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Exception thrown when an exception was thrown inside a projection
+	/// Exception thrown to wrap an exception thrown inside a projection.
 	/// </summary>
 	public sealed class ProjectionException : TypesException {
 		public ProjectionException(Exception exception, (Type From, Type To) types) :

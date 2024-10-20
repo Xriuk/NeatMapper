@@ -22,7 +22,7 @@ namespace NeatMapper {
 		protected readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
-		internal CollectionMapper(IMapper elementsMapper) {
+		internal protected CollectionMapper(IMapper elementsMapper) {
 			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			var nestedMappingContext = new NestedMappingContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(

@@ -7,11 +7,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
 	public class AsyncCompositeMapperTests {
 		public class TestMapper1 : IAsyncMapper, IAsyncMapperFactory {
-			public Task<bool> CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
+			public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
 
-			public Task<bool> CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
+			public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
 				throw new NotImplementedException();
 			}
 
@@ -44,7 +44,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			var compositeMapper = new AsyncCompositeMapper(mapper);
 
-			Assert.IsTrue(await compositeMapper.CanMapAsyncNew<string, int>());
+			Assert.IsTrue(compositeMapper.CanMapAsyncNew<string, int>());
 
 			Assert.AreEqual(4, await compositeMapper.MapAsync<int>("Test"));
 		}
@@ -71,7 +71,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			var compositeMapper = new AsyncCompositeMapper(mapper1, mapper2, mapper3);
 
-			Assert.IsTrue(await compositeMapper.CanMapAsyncNew<string, int>());
+			Assert.IsTrue(compositeMapper.CanMapAsyncNew<string, int>());
 
 			Assert.AreEqual(4, await compositeMapper.MapAsync<int>("Test"));
 		}
