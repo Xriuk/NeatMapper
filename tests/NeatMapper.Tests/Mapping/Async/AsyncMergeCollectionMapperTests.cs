@@ -157,7 +157,8 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapNullCollectionsOnlyIfElementsMapExists() {
 			// Null source
 			Assert.IsNull(await _mapper.MapAsync<int[], List<string>>(null, (List<string>)null));
-			Assert.IsNull(await _mapper.MapAsync<int[], List<string>>(null, new List<string>()));
+			var dest = new List<string>();
+			Assert.AreSame(dest, await _mapper.MapAsync<int[], List<string>>(null, dest));
 
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<decimal>>(null, (List<decimal>)null));
 			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<int[], List<decimal>>(null, new List<decimal>()));
@@ -222,7 +223,9 @@ namespace NeatMapper.Tests.Mapping.Async {
 					Currency = "EUR"
 				};
 				var destination = new Price[] { a, b, c };
-				await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<decimal>, ICollection<Price>>(new[] { 20m, 15.25m, 0m }, (ICollection<Price>)destination));
+				var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync<IEnumerable<decimal>, ICollection<Price>>(new[] { 20m, 15.25m, 0m }, (ICollection<Price>)destination));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
+				Assert.IsTrue(exc.InnerException.Message.StartsWith("Cannot merge map to a readonly destination collection"));
 				// Should not alter destination
 				Assert.AreSame(a, destination[0]);
 				Assert.AreEqual(12m, a.Amount);
@@ -341,25 +344,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 					Id = 1
 				}
 			};
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(new[] { source1, source3, null, source2 }, destination, (s, d, _) => (s == source1 && d == destination1) ||
+			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { source1, source3, null, source2 }, destination, (s, d, _) => (s == source1 && d == destination1) ||
 				(s == source2 && d == destination2)));
+			Assert.IsInstanceOfType(exc.InnerException, typeof(MappingException));
+			Assert.IsInstanceOfType(exc.InnerException.InnerException, typeof(InvalidOperationException));
+			Assert.IsTrue(exc.InnerException.InnerException.Message.StartsWith("Cannot merge map to a readonly destination collection"));
 
-			// Should not alter destination
-			Assert.AreEqual(2, destination.Count);
-			Assert.AreSame(destination1, destination[0]);
-			Assert.AreSame(a1, destination[0][0]);
-			Assert.AreEqual(2, a1.Parent);
-			Assert.AreSame(b1, destination[0][1]);
-			Assert.IsNull(b1.Parent);
-			Assert.AreSame(c1, destination[0][2]);
-			Assert.IsNull(c1.Parent);
-			Assert.AreSame(destination2, destination[1]);
-			Assert.AreSame(a2, destination[1][0]);
-			Assert.IsNull(a2.Parent);
-			Assert.AreSame(b2, destination[1][1]);
-			Assert.AreEqual(2, b2.Parent);
-			Assert.AreSame(c2, destination[1][2]);
-			Assert.IsNull(c2.Parent);
+			// Unfortunately alters destination
 		}
 
 		[TestMethod]

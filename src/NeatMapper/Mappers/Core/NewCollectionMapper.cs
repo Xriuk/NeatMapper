@@ -124,13 +124,10 @@ namespace NeatMapper {
 						throw new MapNotFoundException(types);
 					}
 
-					object result;
 					try {
 						foreach (var sourceElement in sourceEnumerable) {
 							addDelegate.Invoke(destination, elementsFactory.Invoke(sourceElement));
 						}
-
-						result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 					}
 					catch (OperationCanceledException) {
 						throw;
@@ -138,6 +135,8 @@ namespace NeatMapper {
 					catch (Exception e) {
 						throw new MappingException(e, types);
 					}
+
+					var result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 
 					// Should not happen
 					TypeUtils.CheckObjectType(result, types.To);

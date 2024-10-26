@@ -324,15 +324,5 @@ namespace NeatMapper.Tests.Projection {
 			Expression<Func<string, int>> expr = s => s != null ? s.Length : 0;
 			TestUtils.AssertExpressionsEqual(expr, projector.Project<string, int>());
 		}
-
-		[TestMethod]
-		public void ShouldNotProjectIfMapRejectsItself() {
-			// CanProject returns true because the map does exist, even if it will fail
-			Assert.IsTrue(_projector.CanProject<float, double>());
-
-			var exc = TestUtils.AssertMapNotFound(() => _projector.Project<float, double>());
-			Assert.AreEqual(typeof(float), exc.From);
-			Assert.AreEqual(typeof(double), exc.To);
-		}
 	}
 }

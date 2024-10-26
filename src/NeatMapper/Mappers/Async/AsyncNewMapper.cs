@@ -131,7 +131,7 @@ namespace NeatMapper {
 			if(!_configuration.TryGetSingleMapAsync((sourceType, destinationType), out var map))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
+			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return map.Invoke(source, new AsyncMappingContext(contextOptions, cancellationToken));
@@ -190,7 +190,7 @@ namespace NeatMapper {
 			if(!_configuration.TryGetSingleMapAsync((sourceType, destinationType), out var map))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
+			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return new DefaultAsyncNewMapFactory(sourceType, destinationType, (source, cancellationToken) => {

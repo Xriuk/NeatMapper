@@ -741,16 +741,6 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(32, (boolList as List<bool>)?.Capacity);
 		}
 
-		[TestMethod]
-		public void ShouldNotMapIfMapRejectsItself() {
-			// CanMap returns true because the map does exist, even if it will fail
-			Assert.IsTrue(_mapper.CanMapNew<float[], double[]>());
-
-			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double[]>(new []{ 1f }));
-			Assert.AreEqual(typeof(float[]), exc.From);
-			Assert.AreEqual(typeof(double[]), exc.To);
-		}
-
 
 		[TestMethod]
 		public void ShouldMapCollections() {

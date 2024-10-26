@@ -213,7 +213,7 @@ namespace NeatMapper {
 						var options = new CompositeMatcherOptions();
 						options.Matchers.Add(mergeMappingOptions.Matcher);
 						options.Matchers.Add(_elementsMatcher);
-						elementsMatcher = new CompositeMatcher(options);
+						elementsMatcher = new SafeMatcher(new CompositeMatcher(options));
 					}
 					else
 						elementsMatcher = _elementsMatcher;
@@ -426,7 +426,7 @@ namespace NeatMapper {
 						var options = new CompositeMatcherOptions();
 						options.Matchers.Add(mergeMappingOptions.Matcher);
 						options.Matchers.Add(_elementsMatcher);
-						elementsMatcher = new CompositeMatcher(options);
+						elementsMatcher = new SafeMatcher(new CompositeMatcher(options));
 					}
 					else
 						elementsMatcher = _elementsMatcher;

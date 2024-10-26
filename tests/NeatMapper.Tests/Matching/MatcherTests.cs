@@ -299,19 +299,5 @@ namespace NeatMapper.Tests.Matching {
 			Assert.IsTrue(matcher.Match("Test", 4));
 			Assert.IsFalse(matcher.Match("Test", 2));
 		}
-
-		[TestMethod]
-		public void ShouldNotMatchIfMapRejectsItself() {
-			// CanMatch returns true because the map does exist, even if it will fail
-			Assert.IsTrue(_matcher.CanMatch<float, double>());
-			Assert.IsTrue(_matcher.CanMatch<double, float>());
-
-			var exc1 = TestUtils.AssertMapNotFound(() => _matcher.Match(1f, 2d));
-			Assert.AreEqual(typeof(float), exc1.From);
-			Assert.AreEqual(typeof(double), exc1.To);
-			var exc2 = TestUtils.AssertMapNotFound(() => _matcher.Match(2d, 1f));
-			Assert.AreEqual(typeof(double), exc2.From);
-			Assert.AreEqual(typeof(float), exc2.To);
-		}
 	}
 }

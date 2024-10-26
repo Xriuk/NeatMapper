@@ -159,6 +159,8 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
 			var mapper = _mappers.FirstOrDefault(m => m.CanMapMerge(sourceType, destinationType, mappingOptions));
 			if (mapper != null)
 				return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);

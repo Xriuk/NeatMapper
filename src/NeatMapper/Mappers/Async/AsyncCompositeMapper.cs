@@ -107,6 +107,11 @@ namespace NeatMapper {
 			mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
 			var newMappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var mapper = _mappers.FirstOrDefault(m => m.CanMapAsyncNew(sourceType, destinationType, newMappingOptions));
@@ -152,6 +157,8 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var mapper = _mappers.FirstOrDefault(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
 			if (mapper != null)

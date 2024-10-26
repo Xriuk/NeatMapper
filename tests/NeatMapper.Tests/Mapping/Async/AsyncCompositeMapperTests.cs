@@ -8,11 +8,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 	public class AsyncCompositeMapperTests {
 		public class TestMapper1 : IAsyncMapper, IAsyncMapperFactory {
 			public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
-				throw new NotImplementedException();
+				return sourceType == typeof(float) && destinationType == typeof(string);
 			}
 
 			public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions mappingOptions = null) {
-				throw new NotImplementedException();
+				return false;
 			}
 
 			public Task<object> MapAsync(object source, Type sourceType, Type destinationType, MappingOptions mappingOptions = null, CancellationToken cancellationToken = default) {
@@ -35,46 +35,6 @@ namespace NeatMapper.Tests.Mapping.Async {
 			}
 		}
 
-
-		[TestMethod]
-		public async Task ShouldForwardNewMapToMergeMapIfNotFound() {
-			var additionalMaps = new CustomAsyncMergeAdditionalMapsOptions();
-			additionalMaps.AddMap<string, int>((s, d, c) => Task.FromResult(s?.Length ?? 0));
-			var mapper = new AsyncMergeMapper(null, additionalMaps);
-
-			var compositeMapper = new AsyncCompositeMapper(mapper);
-
-			Assert.IsTrue(compositeMapper.CanMapAsyncNew<string, int>());
-
-			Assert.AreEqual(4, await compositeMapper.MapAsync<int>("Test"));
-		}
-
-		[TestMethod]
-		public async Task ShouldFallbackToNextMapperIfMapRejectsItself() {
-			// Rejects itself (not awaited)
-			var additionalMaps1 = new CustomAsyncNewAdditionalMapsOptions();
-			additionalMaps1.AddMap<string, int>((s, c) => throw new MapNotFoundException((typeof(string), typeof(int))));
-			var mapper1 = new AsyncNewMapper(null, additionalMaps1);
-
-			// Rejects itself (awaited)
-			var additionalMaps2 = new CustomAsyncNewAdditionalMapsOptions();
-			additionalMaps2.AddMap<string, int>(async (s, c) => {
-				await Task.Delay(0);
-				throw new MapNotFoundException((typeof(string), typeof(int)));
-			});
-			var mapper2 = new AsyncNewMapper(null, additionalMaps2);
-
-			// Result
-			var additionalMaps3 = new CustomAsyncNewAdditionalMapsOptions();
-			additionalMaps3.AddMap<string, int>((s, c) => Task.FromResult(s?.Length ?? 0));
-			var mapper3 = new AsyncNewMapper(null, additionalMaps3);
-
-			var compositeMapper = new AsyncCompositeMapper(mapper1, mapper2, mapper3);
-
-			Assert.IsTrue(compositeMapper.CanMapAsyncNew<string, int>());
-
-			Assert.AreEqual(4, await compositeMapper.MapAsync<int>("Test"));
-		}
 
 		[TestMethod]
 		public async Task MapAsyncNewFactoryShouldReturnMergeToo() {

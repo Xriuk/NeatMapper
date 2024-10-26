@@ -182,14 +182,6 @@ namespace NeatMapper {
 												try {
 													return await elementsFactory.Invoke(sourceElement, cancellationSource.Token);
 												}
-												catch (OperationCanceledException) {
-													throw;
-												}
-												catch {
-													// Cancel all the tasks
-													cancellationSource.Cancel();
-													throw;
-												}
 												finally {
 													semaphore.Release();
 												}
@@ -199,8 +191,19 @@ namespace NeatMapper {
 									finally {
 										await asyncEnumerator.DisposeAsync();
 									}
+									try {
+										await TaskUtils.WhenAllFailFast(tasks);
+									}
+									catch (Exception e) {
+										// Cancel all the tasks
+										cancellationSource.Cancel();
+
+										if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
+											throw;
+										else
+											throw a.InnerException;
+									}
 								}
-								await TaskUtils.WhenAllFailFast(tasks);
 
 								// Add the results to the destination
 								foreach (var task in tasks) {
@@ -229,29 +232,35 @@ namespace NeatMapper {
 					}
 					else {
 						if (source is IEnumerable sourceEnumerable) {
-							if(parallelMappings > 1) { 
-								// Create and await all the tasks
-								var tasks = new List<Task<object>>();
-								using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
-									foreach (var sourceElement in sourceEnumerable) {
-										await semaphore.WaitAsync(cancellationSource.Token);
+							if(parallelMappings > 1) {
+								try { 
+									// Create and await all the tasks
+									var tasks = new List<Task<object>>();
+									using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
+										foreach (var sourceElement in sourceEnumerable) {
+											await semaphore.WaitAsync(cancellationSource.Token);
 
-										tasks.Add(Task.Run(async () => {
-											try {
-												return await elementsFactory.Invoke(sourceElement, cancellationSource.Token);
-											}
-											catch (OperationCanceledException) {
+											tasks.Add(Task.Run(async () => {
+												try {
+													return await elementsFactory.Invoke(sourceElement, cancellationSource.Token);
+												}
+												finally {
+													semaphore.Release();
+												}
+											}, cancellationSource.Token));
+										}
+										try {
+											await TaskUtils.WhenAllFailFast(tasks);
+										}
+										catch (Exception e) {
+											// Cancel all the tasks
+											cancellationSource.Cancel();
+
+											if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
 												throw;
-											}
-											catch {
-												// Cancel all the tasks
-												cancellationSource.Cancel();
-												throw;
-											}
-											finally {
-												semaphore.Release();
-											}
-										}, cancellationSource.Token));
+											else
+												throw a.InnerException;
+										}
 									}
 
 									// Add the results to the destination
@@ -259,7 +268,12 @@ namespace NeatMapper {
 										addDelegate.Invoke(destination, task.Result);
 									}
 								}
-								await TaskUtils.WhenAllFailFast(tasks);
+								catch (OperationCanceledException) {
+									throw;
+								}
+								catch (Exception e) {
+									throw new MappingException(e, types);
+								}
 							}
 							else {
 								try {
@@ -280,13 +294,7 @@ namespace NeatMapper {
 					}
 				}
 
-				object result;
-				try{ 
-					result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
-				}
-				catch (Exception e) {
-					throw new MappingException(e, types);
-				}
+				var result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 
 				// Should not happen
 				TypeUtils.CheckObjectType(result, types.To);
@@ -434,14 +442,6 @@ namespace NeatMapper {
 															try {
 																return await elementsFactory.Invoke(sourceElement, cancellationSource.Token);
 															}
-															catch (OperationCanceledException) {
-																throw;
-															}
-															catch {
-																// Cancel all the tasks
-																cancellationSource.Cancel();
-																throw;
-															}
 															finally {
 																semaphore.Release();
 															}
@@ -451,8 +451,19 @@ namespace NeatMapper {
 												finally {
 													await asyncEnumerator.DisposeAsync();
 												}
+												try {
+													await TaskUtils.WhenAllFailFast(tasks);
+												}
+												catch (Exception e) {
+													// Cancel all the tasks
+													cancellationSource.Cancel();
+
+													if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
+														throw;
+													else
+														throw a.InnerException;
+												}
 											}
-											await TaskUtils.WhenAllFailFast(tasks);
 
 											var destination = collectionFactory.Invoke();
 
@@ -548,21 +559,24 @@ namespace NeatMapper {
 														try {
 															return await elementsFactory.Invoke(sourceElement, cancellationSource.Token);
 														}
-														catch (OperationCanceledException) {
-															throw;
-														}
-														catch {
-															// Cancel all the tasks
-															cancellationSource.Cancel();
-															throw;
-														}
 														finally {
 															semaphore.Release();
 														}
 													}, cancellationSource.Token));
 												}
+												try {
+													await TaskUtils.WhenAllFailFast(tasks);
+												}
+												catch (Exception e) {
+													// Cancel all the tasks
+													cancellationSource.Cancel();
+
+													if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
+														throw;
+													else
+														throw a.InnerException;
+												}
 											}
-											await TaskUtils.WhenAllFailFast(tasks);
 
 											var destination = collectionFactory.Invoke();
 

@@ -111,26 +111,5 @@ namespace NeatMapper.Tests.Mapping {
 			var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int>(2f));
 			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}
-
-		[TestMethod]
-		public void ShouldNotMapIfMapRejectsItself() {
-			{ 
-				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(_mapper.CanMapNew<float, double>());
-
-				var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double>(1f));
-				Assert.AreEqual(typeof(float), exc.From);
-				Assert.AreEqual(typeof(double), exc.To);
-			}
-
-			{
-				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(_mapper.CanMapNew<double, float>());
-
-				var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<float>(1d));
-				Assert.AreEqual(typeof(double), exc.From);
-				Assert.AreEqual(typeof(float), exc.To);
-			}
-		}
 	}
 }

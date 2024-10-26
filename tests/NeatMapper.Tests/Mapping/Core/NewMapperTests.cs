@@ -611,16 +611,6 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual(4, mapper.Map<int>("Test"));
 		}
 
-		[TestMethod]
-		public void ShouldNotMapIfMapRejectsItself() {
-			// CanMap returns true because the map does exist, even if it will fail
-			Assert.IsTrue(_mapper.CanMapNew<float, double>());
-
-			var exc = TestUtils.AssertMapNotFound(() => _mapper.Map<double>(1f));
-			Assert.AreEqual(typeof(float), exc.From);
-			Assert.AreEqual(typeof(double), exc.To);
-		}
-
 		// DEV: factories should not affect each other, create 2 factories and invoke them in reverse order
 	}
 }

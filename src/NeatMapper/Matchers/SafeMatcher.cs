@@ -27,20 +27,6 @@ namespace NeatMapper {
 		}
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private MappingOptions GetOptions(MappingOptions mappingOptions) {
-			return (mappingOptions ?? MappingOptions.Empty)
-				.ReplaceOrAdd<NestedMatchingContext>(n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-
-
 		// Forwarding all the methods because we want to check on the wrapper matcher
 		public bool CanMatch(
 			Type sourceType,
@@ -77,8 +63,13 @@ namespace NeatMapper {
 #endif
 			mappingOptions = null) {
 
+			mappingOptions = GetOptions(mappingOptions);
+
+			if(!_matcher.CanMatch(sourceType, destinationType, mappingOptions))
+				return false;
+
 			try {
-				return _matcher.Match(source, sourceType, destination, destinationType, GetOptions(mappingOptions));
+				return _matcher.Match(source, sourceType, destination, destinationType, mappingOptions);
 			}
 			catch(MapNotFoundException){
 				return false;
@@ -100,9 +91,14 @@ namespace NeatMapper {
 #nullable disable
 #endif
 
+			mappingOptions = GetOptions(mappingOptions);
+
+			if (!_matcher.CanMatch(sourceType, destinationType, mappingOptions))
+				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
+
 			IMatchMapFactory factory;
 			try { 
-				factory = _matcher.MatchFactory(sourceType, destinationType, GetOptions(mappingOptions));
+				factory = _matcher.MatchFactory(sourceType, destinationType, mappingOptions);
 			}
 			catch (MapNotFoundException) {
 				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
@@ -123,5 +119,19 @@ namespace NeatMapper {
 #nullable enable
 #endif
 		}
+
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable disable
+#endif
+
+		private MappingOptions GetOptions(MappingOptions mappingOptions) {
+			return (mappingOptions ?? MappingOptions.Empty)
+				.ReplaceOrAdd<NestedMatchingContext>(n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
+		}
+
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+#nullable enable
+#endif
 	}
 }

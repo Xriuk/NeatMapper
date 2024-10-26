@@ -24,7 +24,7 @@
 - `AsyncCollectionMappersMappingOptions` `MaxParallelMappings` are now also supported for `IAsyncEnumerable` too.
 - `AsyncMergeCollectionMapper` does not support anymore `AsyncCollectionMappersMappingOptions` `MaxParallelMappings`, constructor has been updated to remove the parameter.
 - `MapNotFoundException` can no longer be thrown from mapper/maps on its own, a map cannot refuse itself based on provided objects.
-- `CompositeMapper` and `AsyncCompositeMapper` will not try following mappers on exceptions.
+- `CompositeMapper` and `AsyncCompositeMapper` will not try following mappers anymore on `MapNotFoundException`s.
 
 ### Added
 

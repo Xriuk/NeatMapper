@@ -957,28 +957,5 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			Assert.AreEqual(4, await mapper.MapAsync("Test", 2));
 		}
-
-		[TestMethod]
-		public async Task ShouldNotMapIfMapRejectsItself() {
-			// Not awaited
-			{
-				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(_mapper.CanMapAsyncMerge<float, double>());
-
-				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(1f, 2d));
-				Assert.AreEqual(typeof(float), exc.From);
-				Assert.AreEqual(typeof(double), exc.To);
-			}
-
-			// Awaited
-			{
-				// CanMap returns true because the map does exist, even if it will fail
-				Assert.IsTrue(_mapper.CanMapAsyncMerge<double, float>());
-
-				var exc = await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(1d, 2f));
-				Assert.AreEqual(typeof(double), exc.From);
-				Assert.AreEqual(typeof(float), exc.To);
-			}
-		}
 	}
 }

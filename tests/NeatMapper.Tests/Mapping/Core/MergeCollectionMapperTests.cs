@@ -160,7 +160,8 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldMapNullCollectionsOnlyIfElementsMapExists() {
 			// Null source
 			Assert.IsNull(_mapper.Map<int[], List<string>>(null, (List<string>)null));
-			Assert.IsNull(_mapper.Map<int[], List<string>>(null, new List<string>()));
+			var dest = new List<string>();
+			Assert.AreSame(dest, _mapper.Map<int[], List<string>>(null, dest));
 
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int[], List<float>>(null, (List<float>)null));
 			TestUtils.AssertMapNotFound(() => _mapper.Map<int[], List<float>>(null, new List<float>()));

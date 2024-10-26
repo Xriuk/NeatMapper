@@ -298,7 +298,10 @@ namespace NeatMapper {
 				var enumerableParam = Expression.Parameter(typeof(object), "enumerable");
 				var cancellationParam = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
 				// ((IAsyncEnumerator<Type>)enumerable).GetAsyncEnumerator(cancellationToken)
-				var body = Expression.Call(Expression.Convert(enumerableParam, enumerableType), enumerableType.GetMethod(nameof(IAsyncEnumerable<object>.GetAsyncEnumerator)), cancellationParam);
+				var body = Expression.Call(
+					Expression.Convert(enumerableParam, enumerableType),
+					enumerableType.GetMethod(nameof(IAsyncEnumerable<object>.GetAsyncEnumerator)),
+					cancellationParam);
 				return Expression.Lambda<Func<object, CancellationToken, IAsyncDisposable>>(body, enumerableParam, cancellationParam).Compile();
 			});
 		}
@@ -307,7 +310,9 @@ namespace NeatMapper {
 				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
 				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
 				// ((IAsyncEnumerator<Type>)enumerator).MoveNextAsync()
-				var body = Expression.Call(Expression.Convert(enumeratorParam, enumeratorType), enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync)));
+				var body = Expression.Call(
+					Expression.Convert(enumeratorParam, enumeratorType),
+					enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync)));
 				return Expression.Lambda<Func<IAsyncDisposable, ValueTask<bool>>>(body, enumeratorParam).Compile();
 			});
 		}
@@ -315,8 +320,12 @@ namespace NeatMapper {
 			return asyncCurrentMethodsCache.GetOrAdd(elementType, type => {
 				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
 				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
-				// ((IAsyncEnumerator<Type>)enumerator).Current
-				var body = Expression.Property(Expression.Convert(enumeratorParam, enumeratorType), enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current)));
+				// (object)((IAsyncEnumerator<Type>)enumerator).Current
+				var body = Expression.Convert(
+					Expression.Property(
+						Expression.Convert(enumeratorParam, enumeratorType),
+						enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current))),
+					typeof(object));
 				return Expression.Lambda<Func<IAsyncDisposable, object>>(body, enumeratorParam).Compile();
 			});
 		}

@@ -181,7 +181,7 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
+			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return map.Invoke(source, destination, new AsyncMappingContext(contextOptions, cancellationToken));
@@ -220,7 +220,7 @@ namespace NeatMapper {
 			if(!_configuration.TryGetDoubleMapAsync((sourceType, destinationType), out var map))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			var contextOptions = _contextsCache.GetOrCreate(mappingOptions);
+			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, (source, destination, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));

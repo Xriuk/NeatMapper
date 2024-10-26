@@ -25,13 +25,13 @@ namespace NeatMapper {
 		/// <summary>
 		/// Cached input <see cref="MappingOptions"/> and output <see cref="AsyncMappingContextOptions"/>.
 		/// </summary>
-		protected readonly MappingOptionsFactoryCache<AsyncMappingContextOptions> _contextsCache;
+		protected readonly MappingOptionsFactoryCache<AsyncMappingContextOptions> _contextsOptionsCache;
 
 
 		internal AsyncCustomMapper(CustomMapsConfiguration configuration, IServiceProvider serviceProvider = null) {
 			_configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
-			_contextsCache = new MappingOptionsFactoryCache<AsyncMappingContextOptions>(options => {
+			_contextsOptionsCache = new MappingOptionsFactoryCache<AsyncMappingContextOptions>(options => {
 				var overrideOptions = options.GetOptions<AsyncMapperOverrideMappingOptions>();
 				return new AsyncMappingContextOptions(
 					overrideOptions?.ServiceProvider ?? _serviceProvider,
