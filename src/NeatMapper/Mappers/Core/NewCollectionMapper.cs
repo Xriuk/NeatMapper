@@ -330,8 +330,10 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (sourceType.IsEnumerable() && destinationType.IsEnumerable() && ObjectFactory.CanCreateCollection(destinationType)) {
-				elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
+			if (sourceType.IsEnumerable() && destinationType.IsEnumerable() &&
+				ObjectFactory.CanCreateCollection(destinationType)) {
+
+				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
 				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 				elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 

@@ -25,7 +25,6 @@ namespace NeatMapper {
 		/// True if the provided object matches with the fixed object of type <see cref="ComparandType"/>,
 		/// false otherwise.
 		/// </returns>
-		/// <exception cref="MapNotFoundException">The provided object could not be matched.</exception>
 		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
 		bool Invoke(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

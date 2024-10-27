@@ -139,8 +139,8 @@ namespace NeatMapper.Transitive {
 			if (!path.IsFounded)
 				return null;
 
-			var typesPath = path.GetPath().Select(p => graph.Graph[p].Item).ToArray();
-			if (typesPath.Length < 2 || typesPath.Length > length || typesPath[0] != sourceType || typesPath[typesPath.Length - 1] != destinationType)
+			var typesPath = path.GetPath().Select(p => graph.Graph[p].Item).ToList();
+			if (typesPath.Count < 2 || typesPath.Count > length || typesPath[0] != sourceType || typesPath[typesPath.Count - 1] != destinationType)
 				throw new InvalidOperationException("Returned types are invalid");
 
 			return typesPath;

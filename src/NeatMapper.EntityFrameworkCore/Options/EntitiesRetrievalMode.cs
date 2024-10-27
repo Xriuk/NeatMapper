@@ -6,7 +6,7 @@
 		/// <summary>
 		/// Only local entities will be returned, null will be returned if not found.
 		/// </summary>
-		Local,
+		LocalOnly,
 		/// <summary>
 		/// <para>
 		/// Local entities will be searched first and those missing will be attached to the context
@@ -26,11 +26,6 @@
 		/// <summary>
 		/// Local entities will be searched first and those missing will be queried from the db, null will be returned if not found.
 		/// </summary>
-		LocalOrRemote,
-		/// <summary>
-		/// Entities will be queried directly from the db, the context will then handle merging them together with local ones, 
-		/// null will be returned if not found.
-		/// </summary>
-		Remote
+		LocalOrRemote
 	}
 }

@@ -1,30 +1,40 @@
 # Changelog
 
+
 ## [5.0.0] - Unreleased
+
+### Removed
+
+- `EntitiesRetrievalMode.Remote` value removed.
 
 ### Changed
 
-- Updated NeatMapper dependency version and corrected breaking changes (see NeatMapper changelog)
+- `EntitiesRetrievalMode.Local` value renamed to `EntitiesRetrievalMode.LocalOnly`.
+- Updated NeatMapper dependency version and corrected breaking changes (see NeatMapper changelog).
+
+### Fixed
+
+- `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` when mapping collections now correctly return the destination collection if source collection is null.
 
 ## [4.0.0] - 2024-07-16
 
 ### Changed
 
-- Updated NeatMapper dependency version
+- Updated NeatMapper dependency version.
 
 
 ## [3.1.0] - 2024-04-26
 
 ### Added
 
-- .NET 8.0 support
+- .NET 8.0 support.
 
 ### Changed
 
-- Updated NeatMapper dependency version
-- `EntityFrameworkCoreMatcher` now handles shadow keys too, and now it requires a `DbContext` type and optionally a `ServiceProvider` in its constructor
-- Instead of `TaskCanceledException` which where caught and re-thrown directly by maps and mappers (instead of being wrapped in `MappingException` like the others) now `OperationCanceledException`s are caught and re-thrown, this is backwards compatible, since `TaskCanceledException` is derived from it, but now other exceptions can be caught too
-- `EntityFrameworkCoreProjector` no longer throws `MapNotFoundException` in case of a disposed `DbContext`, instead the exception is now wrapped in a `ProjectionException`
+- Updated NeatMapper dependency version.
+- `EntityFrameworkCoreMatcher` now handles shadow keys too, and now it requires a `DbContext` type and optionally a `ServiceProvider` in its constructor.
+- Instead of `TaskCanceledException` which where caught and re-thrown directly by maps and mappers (instead of being wrapped in `MappingException` like the others) now `OperationCanceledException`s are caught and re-thrown, this is backwards compatible, since `TaskCanceledException` is derived from it, but now other exceptions can be caught too.
+- `EntityFrameworkCoreProjector` no longer throws `MapNotFoundException` in case of a disposed `DbContext`, instead the exception is now wrapped in a `ProjectionException`.
 
 ### Fixed
 
@@ -39,31 +49,31 @@
 
 ### Changed
 
-- Updated NeatMapper dependency version
+- Updated NeatMapper dependency version.
 
 ### Added
 
-- `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` now implement respectively `IMapperFactory` and `IAsyncMapperFactory`
-- `EntityFrameworkCoreMatcher` now implements `IMatcherFactory`
+- `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` now implement respectively `IMapperFactory` and `IAsyncMapperFactory`.
+- `EntityFrameworkCoreMatcher` now implements `IMatcherFactory`.
 
 
 ## [2.1.0] - 2023-12-05
 
 ### Changed
 
-- `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` will now map only keys to entities
-- Dependency Injection (DI) extension methods with lifetime parameters are now marked as obsolete, and will be removed in the next major version. The lifetime of the EF Core mappers/matcher/projector is now the same as the one of the corresponding core service (eg: `EntityFrameworkCoreMapper` will have the same lifetime as `IMapper` and all the other core mappers)
-- Updated NeatMapper dependency version
+- `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` will now map only keys to entities.
+- Dependency Injection (DI) extension methods with lifetime parameters are now marked as obsolete, and will be removed in the next major version. The lifetime of the EF Core mappers/matcher/projector is now the same as the one of the corresponding core service (eg: `EntityFrameworkCoreMapper` will have the same lifetime as `IMapper` and all the other core mappers).
+- Updated NeatMapper dependency version.
 
 ### Added
 
-- `EntityFrameworkCoreProjector` which projects entities into their keys (even shadow ones), it is also used in `ProjectionMapper` and enables also mapping entities into their keys
+- `EntityFrameworkCoreProjector` which projects entities into their keys (even shadow ones), it is also used in `ProjectionMapper` and enables also mapping entities into their keys.
 
 ### Fixed
 
-- `EntityFrameworkCoreMatcher` now correctly throws `MapNotFoundException` instead of `MatcherNotFound`
+- `EntityFrameworkCoreMatcher` now correctly throws `MapNotFoundException` instead of `MatcherNotFound`.
 
 
 ## [2.0.0] - 2023-11-12
 
-- Initial version (version matching NeatMapper package)
+- Initial version (version matching NeatMapper package).

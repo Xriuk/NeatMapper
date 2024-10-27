@@ -25,7 +25,6 @@ namespace NeatMapper {
 		/// <param name="source">Source object, may be null.</param>
 		/// <param name="destination">Destination object, may be null.</param>
 		/// <returns><see langword="true"/> if the two objects match.</returns>
-		/// <exception cref="MapNotFoundException">The provided object could not be matched.</exception>
 		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
 		bool Invoke(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

@@ -258,7 +258,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		[TestMethod]
 		public void ShouldMapKeysCollectionToEntitiesCollection() {
 			Assert.IsTrue(_mapper.CanMapMerge<int[], List<IntKey>>());
-			Assert.ThrowsException<InvalidOperationException>(() => _mapper.CanMapMerge<int[], ICollection<IntKey>>());
+			Assert.IsTrue(_mapper.CanMapMerge<int[], ICollection<IntKey>>());
 
 			// Normal
 			{
@@ -359,7 +359,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			var destination = new IntKey {
 				Id = 3
 			};
-			var result = _mapper.Map<int, IntKey>(3, destination, new[] { new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOrAttach) });
+			var result = _mapper.Map<int, IntKey>(3, destination, new[] { new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOrAttach	) });
 			Assert.AreSame(destination, result);
 		}
 

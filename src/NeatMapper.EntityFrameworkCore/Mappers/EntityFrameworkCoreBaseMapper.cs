@@ -18,6 +18,7 @@ using System.Linq.Expressions;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
@@ -61,8 +62,6 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			public object LocalEntity { get; set; }
 		}
-
-		protected delegate void AttachEntityDelegate(ref object entity, object[] keyValues, SemaphoreSlim dbContextSemaphore, DbContext dbContext);
 
 
 		/// <summary>
@@ -110,6 +109,49 @@ namespace NeatMapper.EntityFrameworkCore {
 			}).Invoke(dbSet);
 		}
 
+		protected static LambdaExpression GetEntitiesPredicate(Type keyType, Type entityType, IKey key, IEnumerable<object[]> keysValues) {
+			var param = Expression.Parameter(entityType, "entity");
+			if (key.Properties.Count == 1) {
+				bool hasOne;
+				try {
+					keysValues.Single();
+					hasOne = true;
+				}
+				catch {
+					hasOne = false;
+				}
+
+				if (!hasOne) {
+					var prop = key.Properties[0];
+					// new []{ key1, key2, ... }.Contains(EF.Property<KeyType>(entity, "Key"))
+					// new []{ key1, key2, ... }.Contains(entity.Key)
+					return Expression.Lambda(
+						Expression.Call(Enumerable_Contains.MakeGenericMethod(prop.ClrType),
+							// DEV: check if Expression.Constant of object array is valid
+							Expression.NewArrayInit(prop.ClrType, keysValues.Select(values => Expression.Constant(values[0], prop.ClrType))),
+							prop.IsShadowProperty() ?
+								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
+								Expression.Property(param, prop.PropertyInfo)),
+						param);
+				}
+			}
+
+			var tupleToValueTuple = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType);
+
+			// entity.Key1 == key1 && ...
+			// EF.Property<KeyType1>(entity, "Key1") == key1 && ...
+			return Expression.Lambda(
+				keysValues.Select(values => key.Properties
+						.Select((prop, i) => (Expression)Expression.Equal(
+							prop.IsShadowProperty() ?
+								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
+								Expression.Property(param, prop.PropertyInfo),
+							Expression.Constant(values[i], prop.ClrType)))
+						.Aggregate(Expression.AndAlso))
+					.Aggregate(Expression.OrElse),
+				param);
+		}
+
 
 		/// <summary>
 		/// Db model, shared between instances of the same DbContext type.
@@ -153,8 +195,8 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// Delegates which create a new entity and assign key values to corresponding properties, keys are entity types.
 		/// </summary>
-		private readonly ConcurrentDictionary<Type, AttachEntityDelegate> _createEntityCache =
-			new ConcurrentDictionary<Type, AttachEntityDelegate>();
+		private readonly ConcurrentDictionary<Type, Func<object[], DbContext, object>> _createEntityCache =
+			new ConcurrentDictionary<Type, Func<object[], DbContext, object>>();
 
 
 		internal protected EntityFrameworkCoreBaseMapper(
@@ -181,29 +223,63 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 
-		protected bool CanMapMerge(
+		protected abstract bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions);
+
+		protected bool CanMapNewInternal(
 			Type sourceType,
 			Type destinationType,
-			IEnumerable destination = null,
-			MappingOptions mappingOptions = null) {
-
-			// Prevent being used by a collection mapper
-			if (CheckCollectionMapperNestedContextRecursive(mappingOptions))
-				return false;
+			MappingOptions mappingOptions,
+			out bool isCollection,
+			out (Type Key, Type Entity) elementTypes) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			(Type From, Type To) elementTypes;
-			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsCollection() && !destinationType.IsArray) {
+			// Prevent being used by a collection mapper
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions)) { 
+				isCollection = false;
+				elementTypes = default;
+
+				return false;
+			}
+
+			// We could also map collections of keys/entities
+			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsEnumerable() && destinationType != typeof(string)) {
+				isCollection = true;
+				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
+
 				if (!ObjectFactory.CanCreateCollection(destinationType))
+					return false;
+			}
+			else { 
+				isCollection = false;
+				elementTypes = (sourceType, destinationType);
+			}
+
+			// We can only map from key to entity so we check source and destination types
+			if (!elementTypes.Key.IsKeyType() && !elementTypes.Key.IsCompositeKeyType())
+				return false;
+
+			return CanMapEntityKey(elementTypes.Entity, elementTypes.Key);
+		}
+
+		protected bool CanMapMergeInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions mappingOptions,
+			out bool isCollection,
+			out (Type Key, Type Entity) elementTypes) {
+
+			if(!CanMapNewInternal(sourceType, destinationType, mappingOptions, out isCollection, out elementTypes))
+				return false;
+
+			if (isCollection) {
+				if(!destinationType.IsCollection() || destinationType.IsArray)
 					return false;
 
 				// If the destination type is not an interface, check if it is not readonly
-				// If the destination type is not an interface, check if it is not readonly
-				// Otherwise check the destination if provided
 				if (!destinationType.IsInterface && destinationType.IsGenericType) {
 					var collectionDefinition = destinationType.GetGenericTypeDefinition();
 					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
@@ -213,35 +289,12 @@ namespace NeatMapper.EntityFrameworkCore {
 						return false;
 					}
 				}
-				else if (destination != null && NeatMapper.TypeUtils.IsCollectionReadonly(destination)) 
-					return false;
-
-				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetCollectionElementType());
 			}
-			else
-				elementTypes = (sourceType, destinationType);
 
-			// We can only map from key to entity so we check source and destination types
-			if (!elementTypes.From.IsKeyType() && !elementTypes.From.IsCompositeKeyType())
-				return false;
-
-			if (CanMap(elementTypes.To, elementTypes.From)) {
-				if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsCollection() && !destinationType.IsArray) {
-					if (!destinationType.IsInterface || destination != null)
-						return true;
-
-					throw new InvalidOperationException("Cannot verify if the mapper supports the given map");
-				}
-				else
-					return true;
-			}
-			else
-				return false;
+			return true;
 		}
 
-		protected abstract bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions);
-
-		protected bool CanMap(Type entityType, Type keyType) {
+		private bool CanMapEntityKey(Type entityType, Type keyType) {
 			if (!entityType.IsClass)
 				return false;
 
@@ -287,11 +340,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			});
 		}
 
-		protected AttachEntityDelegate GetOrCreateAttachEntityDelegate(Type entityType, IKey key) {
+		protected Func<object[], DbContext, object> GetOrCreateAttachEntityDelegate(Type entityType, IKey key) {
 			return _createEntityCache.GetOrAdd(entityType, type => {
-				var entityParam = Expression.Parameter(typeof(object).MakeByRefType(), "entity");
 				var keyValuesParam = Expression.Parameter(typeof(object[]), "keyValues");
-				var dbContextSemaphoreParam = Expression.Parameter(typeof(SemaphoreSlim), "dbContextSemaphore");
 				var dbContextParam = Expression.Parameter(typeof(DbContext), "dbContext");
 
 				// new Type{ Prop1 = (Type1)key[0], Prop2 = (Type2)key[1], ... }
@@ -301,12 +352,13 @@ namespace NeatMapper.EntityFrameworkCore {
 						.Where(kpi => !kpi.kp.IsShadowProperty())
 						.Select(kpi => Expression.Bind(kpi.kp.PropertyInfo, Expression.Convert(Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i)), kpi.kp.ClrType))));
 
+				var entityVar = Expression.Variable(typeof(object), "entity");
 				var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
 				var blockExprs = new List<Expression>() {
 					// var entityEntry = dbContext.Entry(entity)
 					Expression.Assign(
 						entityEntryVar,
-						Expression.Call(dbContextParam, EfCoreUtils.DbContext_Entry, entityParam)),
+						Expression.Call(dbContextParam, EfCoreUtils.DbContext_Entry, entityVar)),
 
 					// entityEntry.State = EntityState.Unchanged
 					Expression.Assign(
@@ -335,18 +387,14 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 
 				body = Expression.Block(
+					new[] { entityVar },
 					// entity = new ...
-					Expression.Assign(entityParam, body),
-
-					// dbContextSemaphore.Wait()
-					Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Wait),
-					Expression.TryFinally(
-						Expression.Block(new[] { entityEntryVar }, blockExprs),
-						// dbContextSemaphore.Release()
-						Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Release))
+					Expression.Assign(entityVar, body),
+					Expression.Block(new[] { entityEntryVar }, blockExprs),
+					entityVar
 				);
 
-				return Expression.Lambda<AttachEntityDelegate>(body, entityParam, keyValuesParam, dbContextSemaphoreParam, dbContextParam).Compile();
+				return Expression.Lambda<Func<object[], DbContext, object>> (body, keyValuesParam, dbContextParam).Compile();
 			});
 		}
 
@@ -361,7 +409,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			var removeNotMatchedDestinationElements = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>()?.RemoveNotMatchedDestinationElements
 				?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
 
-			var tupleToValueTupleDelegate = types.From.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From) : null;
+			var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From);
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
 			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(types.To, key);
@@ -369,112 +417,108 @@ namespace NeatMapper.EntityFrameworkCore {
 			var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
 			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher), may contain semaphore
-			var elementsMatcherFactory = RetrieveMatcher(mappingOptions).MatchFactory(types.From, types.To, mappingOptions);
+			var elementsMatcherFactory = GetMatcher(mappingOptions).MatchFactory(types.From, types.To, mappingOptions);
 
 			return new DisposableMergeCollectionFactory(
 				(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable) => {
-					var elementsToRemove = new List<object>();
+					// DEV: use pool?
 					var elementsToAdd = new List<object>();
+					var elementsToRemove = new List<object>();
 
 					try {
 						// Deleted elements
-						if (removeNotMatchedDestinationElements) {
-							foreach (var destinationElement in destinationEnumerable) {
-								bool found = false;
-								foreach (var sourceElement in sourceEnumerable) {
-									if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
-										found = true;
+						var matchedDestinations = removeNotMatchedDestinationElements ?
+							new List<object>() :
+							null;
+
+						if(entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && dbContext != null)
+							dbContextSemaphore.Wait();
+						try {
+							// Added/updated elements, also attach entities if needed
+							foreach (var sourceElement in sourceEnumerable) {
+								// Retrieve matching destination element
+								bool destinationFound = false;
+								object matchingDestinationElement = null;
+								foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
+									if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+										!elementsToRemove.Contains(destinationElement)) {
+
+										matchingDestinationElement = destinationElement;
+										matchedDestinations?.Add(matchingDestinationElement);
+										destinationFound = true;
 										break;
 									}
 								}
 
-								if (!found)
-									elementsToRemove.Add(destinationElement);
-							}
-						}
-
-						// Added/updated elements
-						foreach (var sourceElement in sourceEnumerable) {
-							// Retrieve matching key
-							bool destinationFound = false;
-							object matchingDestinationElement = null;
-							foreach (var destinationElement in destinationEnumerable) {
-								if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-									!elementsToRemove.Contains(destinationElement)) {
-
-									matchingDestinationElement = destinationElement;
-									destinationFound = true;
-									break;
+								// Retrieve matching mapped element
+								bool sourceEntityFound = false;
+								object matchingSourceEntityElement = null;
+								foreach (var sourceEntityElement in sourceEntitiesEnumerable) {
+									if (elementsMatcherFactory.Invoke(sourceElement, sourceEntityElement)) {
+										matchingSourceEntityElement = sourceEntityElement;
+										sourceEntityFound = true;
+										break;
+									}
 								}
-							}
 
-							// Retrieve matching mapped element
-							bool sourceEntityFound = false;
-							object matchingSourceEntityElement = null;
-							foreach (var sourceEntityElement in sourceEntitiesEnumerable) {
-								if (elementsMatcherFactory.Invoke(sourceElement, sourceEntityElement)) {
-									matchingSourceEntityElement = sourceEntityElement;
-									sourceEntityFound = true;
-									break;
-								}
-							}
-
-							if (destinationFound) {
-								if (!sourceEntityFound || matchingDestinationElement != matchingSourceEntityElement) {
-									if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && (!sourceEntityFound || matchingSourceEntityElement == null)) {
-										if(dbContextSemaphore != null) { 
-											if (matchingDestinationElement != null) {
-												dbContextSemaphore.Wait();
-												try {
+								if (destinationFound) {
+									if (!sourceEntityFound || matchingDestinationElement != matchingSourceEntityElement) {
+										if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && (!sourceEntityFound || matchingSourceEntityElement == null)) {
+											if(dbContext != null) { 
+												if (matchingDestinationElement != null) 
 													dbContext.Attach(matchingDestinationElement);
-												}
-												finally {
-													dbContextSemaphore.Release();
+												else {
+													var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+														tupleToValueTupleDelegate.Invoke(sourceElement) :
+														sourceElement);
+
+													matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+
+													elementsToRemove.Add(matchingDestinationElement);
+													elementsToAdd.Add(matchingSourceEntityElement);
 												}
 											}
+											else
+												throw new InvalidOperationException("DbContext to attach entities not provided");
+										}
+										else {
+											if (throwOnDuplicateEntity) {
+												if (sourceEntityFound && matchingSourceEntityElement != null) {
+													var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+														tupleToValueTupleDelegate.Invoke(sourceElement) :
+														sourceElement);
+													throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+												}
+												else
+													throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
+											}
 											else {
-												var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-													tupleToValueTupleDelegate.Invoke(sourceElement) :
-													sourceElement);
-
-												attachEntityDelegate.Invoke(ref matchingSourceEntityElement, keyValues, dbContextSemaphore, dbContext);
-
 												elementsToRemove.Add(matchingDestinationElement);
 												elementsToAdd.Add(matchingSourceEntityElement);
 											}
 										}
-										else
-											throw new InvalidOperationException("DbContext to attach entities not provided");
-									}
-									else {
-										if (throwOnDuplicateEntity) {
-											if (sourceEntityFound && matchingSourceEntityElement != null) {
-												var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-													tupleToValueTupleDelegate.Invoke(sourceElement) :
-													sourceElement);
-												throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
-											}
-											else
-												throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
-										}
-										else {
-											elementsToRemove.Add(matchingDestinationElement);
-											elementsToAdd.Add(matchingSourceEntityElement);
-										}
 									}
 								}
-							}
-							else {
-								if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && (!sourceEntityFound || matchingSourceEntityElement == null)) {
-									var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-										tupleToValueTupleDelegate.Invoke(sourceElement) :
-										sourceElement);
+								else {
+									if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && (!sourceEntityFound || matchingSourceEntityElement == null)) {
+										var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+											tupleToValueTupleDelegate.Invoke(sourceElement) :
+											sourceElement);
 
-									attachEntityDelegate.Invoke(ref matchingSourceEntityElement, keyValues, dbContextSemaphore, dbContext);
+										matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+									}
+									elementsToAdd.Add(matchingSourceEntityElement);
 								}
-								elementsToAdd.Add(matchingSourceEntityElement);
 							}
 						}
+						finally {
+							if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && dbContext != null)
+								dbContextSemaphore.Release();
+						}
+
+						// Deleted elements
+						if (removeNotMatchedDestinationElements)
+							elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
 
 						// Update destination collection
 						foreach (var element in elementsToRemove) {
@@ -498,56 +542,38 @@ namespace NeatMapper.EntityFrameworkCore {
 				elementsMatcherFactory);
 		}
 
-		protected LambdaExpression GetEntitiesPredicate(Type keyType, Type entityType, IKey key, IEnumerable<object[]> keysValues) {
-			var param = Expression.Parameter(entityType, "entity");
-			if(key.Properties.Count == 1) {
-				bool hasOne;
-				try {
-					keysValues.Single();
-					hasOne = true;
-				}
-				catch {
-					hasOne = false;
-				}
-
-				if (!hasOne) {
-					var prop = key.Properties[0];
-					// new []{ key1, key2, ... }.Contains(EF.Property<KeyType>(entity, "Key"))
-					// new []{ key1, key2, ... }.Contains(entity.Key)
-					return Expression.Lambda(
-						Expression.Call(Enumerable_Contains.MakeGenericMethod(prop.ClrType),
-							// DEV: check if Expression.Constant of object array is valid
-							Expression.NewArrayInit(prop.ClrType, keysValues.Select(values => Expression.Constant(values[0], prop.ClrType))),
-							prop.IsShadowProperty() ?
-								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
-								Expression.Property(param, prop.PropertyInfo)),
-						param);
-				}
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private IMatcher GetMatcher(MappingOptions mappingOptions) {
+			var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
+			if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
+				// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
+				// so all the others should be available
+				var options = new CompositeMatcherOptions();
+				options.Matchers.Add(mergeMappingOptions.Matcher);
+				options.Matchers.Add(_elementsMatcher);
+				return new SafeMatcher(new CompositeMatcher(options));
 			}
+			else
+				return _elementsMatcher;
+		}
 
-			var tupleToValueTuple = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType) : null;
-
-			// entity.Key1 == key1 && ...
-			// EF.Property<KeyType1>(entity, "Key1") == key1 && ...
-			return Expression.Lambda(
-				keysValues.Select(values => key.Properties
-						.Select((prop, i) => (Expression)Expression.Equal(
-							prop.IsShadowProperty() ?
-								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
-								Expression.Property(param, prop.PropertyInfo),
-							Expression.Constant(values[i], prop.ClrType)))
-						.Aggregate(Expression.AndAlso))
-					.Aggregate(Expression.OrElse),
-				param);
+		/// <summary>
+		/// Normalizes <see cref="Tuple"/> key types to <see cref="ValueTuple"/>
+		/// </summary>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions mappingOptions) {
+			return GetMatcher(mappingOptions).MatchFactory(types.Key.TupleToValueTuple(), types.Entity, mappingOptions);
 		}
 
 		// Elements matched factory should be provided with NestedSemaphoreContext options set
 		/// <remarks>Returned factory contains semaphore</remarks>
 		internal Func<object, EntityMappingInfo> RetrieveLocalAndPredicateFactory(
 			Type keyType, Type entityType,
-			IKey key, EntitiesRetrievalMode retrievalMode, IEnumerable localView, DbContext dbContext, IMatchMapFactory elementsMatcherFactory) {
+			IKey key, EntitiesRetrievalMode retrievalMode,
+			IEnumerable localView, DbContext dbContext,
+			IMatchMapFactory elementsMatcherFactory) {
 
-			var tupleToValueTupleDelegate = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType) : null;
+			var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType);
 			var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(keyType);
 
 			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(entityType, key);
@@ -563,7 +589,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				var keyValues = keyToValuesDelegate.Invoke(sourceElement);
 
 				object localEntity;
-				if (retrievalMode != EntitiesRetrievalMode.Remote) {
+				if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) {
 					dbContextSemaphore.Wait();
 					try {
 						localEntity = localView
@@ -574,8 +600,8 @@ namespace NeatMapper.EntityFrameworkCore {
 						dbContextSemaphore.Release();
 					}
 
-					if (localEntity == null && retrievalMode == EntitiesRetrievalMode.LocalOrAttach) 
-						attachEntityDelegate.Invoke(ref localEntity, keyValues, dbContextSemaphore, dbContext);
+					if (localEntity == null && retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
+						localEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
 				}
 				else
 					localEntity = null;
@@ -587,19 +613,5 @@ namespace NeatMapper.EntityFrameworkCore {
 			};
 		}
 
-		protected IMatcher RetrieveMatcher(MappingOptions mappingOptions) {
-			var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
-			if (mergeMappingOptions?.Matcher != null)
-				return new SafeMatcher(mergeMappingOptions.Matcher);
-			else
-				return _elementsMatcher;
-		}
-
-		/// <summary>
-		/// Normalizes <see cref="Tuple"/> key types to <see cref="ValueTuple"/>
-		/// </summary>
-		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions mappingOptions) {
-			return RetrieveMatcher(mappingOptions).MatchFactory(types.Key.IsTuple() ? TupleUtils.GetValueTupleConstructor(types.Key.GetGenericArguments()).DeclaringType : types.Key, types.Entity, mappingOptions);
-		}
 	}
 }

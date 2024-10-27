@@ -32,7 +32,6 @@ namespace NeatMapper {
 		/// A task which when completed returns the newly created object of type <see cref="DestinationType"/>,
 		/// which may be null.
 		/// </returns>
-		/// <exception cref="MapNotFoundException">The provided object could not be mapped.</exception>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
 		Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

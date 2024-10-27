@@ -346,9 +346,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 
 	[TestClass]
-	public class KeyToEntityAsyncLocalTests : KeyToEntityAsyncBase {
+	public class KeyToEntityAsyncLocalOnlyTests : KeyToEntityAsyncBase {
 		protected override void Configure(EntityFrameworkCoreOptions options) {
-			options.EntitiesRetrievalMode = EntitiesRetrievalMode.Local;
+			options.EntitiesRetrievalMode = EntitiesRetrievalMode.LocalOnly;
 		}
 
 
@@ -502,70 +502,6 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNull(await _mapper.MapAsync<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-
-		[TestMethod]
-		public async Task ShouldFindNotLoadedMultipleEntities() {
-			var result = await _mapper.MapAsync<IList<IntKey>>(new int[] { 2, 3 });
-			Assert.AreEqual(2, result.Count);
-			Assert.IsNotNull(result[0]);
-			Assert.IsNull(result[1]);
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-
-		[TestMethod]
-		public async Task ShouldFindLoadedMultipleEntities() {
-			_db.Find<IntKey>(2);
-
-			var result = await _mapper.MapAsync<IList<IntKey>>(new int[] { 2, 3 });
-			Assert.AreEqual(2, result.Count);
-			Assert.IsNotNull(result[0]);
-			Assert.IsNull(result[1]);
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-	}
-
-	[TestClass]
-	public class KeyToEntityAsyncRemoteTests : KeyToEntityAsyncBase {
-		protected override void Configure(EntityFrameworkCoreOptions options) {
-			options.EntitiesRetrievalMode = EntitiesRetrievalMode.Remote;
-		}
-
-
-		[TestMethod]
-		public async Task ShouldFindNotLoadedSingleEntities() {
-			{
-				var result = await _mapper.MapAsync<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
-
-			Assert.IsNull(await _mapper.MapAsync<IntKey>(3));
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-
-		[TestMethod]
-		public async Task ShouldFindLoadedSingleEntities() {
-			_db.Find<IntKey>(2);
-
-			{
-				var result = await _mapper.MapAsync<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
-
-			Assert.IsNull(await _mapper.MapAsync<IntKey>(3));
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(3));
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
 			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}

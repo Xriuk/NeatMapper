@@ -55,7 +55,7 @@ namespace NeatMapper {
 						var interfaceOpenGenericArguments = interfaceArguments
 							.SelectMany(GetOpenGenericArgumentsRecursive)
 							.Distinct()
-							.ToArray();
+							.ToList();
 						if (!typeArguments.All(t => interfaceOpenGenericArguments.Contains(t))) { 
 							throw new InvalidOperationException(
 								$"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated " +
@@ -386,7 +386,7 @@ namespace NeatMapper {
 				// Try inferring the types
 				var classArguments = InferOpenGenericArgumentsRecursive(map.From, types.From)
 					.Concat(InferOpenGenericArgumentsRecursive(map.To, types.To))
-					.ToArray();
+					.ToList();
 
 				// We may have different closed types matching for the same open type argument, in this case the map should not match
 				var genericArguments = map.Class.GetGenericArguments().Length;
@@ -583,7 +583,9 @@ namespace NeatMapper {
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		static Type MakeGenericTypeWithInferredArguments(Type openType, IEnumerable<(Type OpenGenericArgument, Type ClosedType)> arguments) {
-			return openType.MakeGenericType(openType.GetGenericArguments().Select(oa => arguments.First(a => a.OpenGenericArgument == oa).ClosedType).ToArray());
+			return openType.MakeGenericType(openType.GetGenericArguments()
+				.Select(oa => arguments.First(a => a.OpenGenericArgument == oa).ClosedType)
+				.ToArray());
 		}
 		#endregion
 	}

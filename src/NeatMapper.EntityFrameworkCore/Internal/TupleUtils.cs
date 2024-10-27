@@ -33,5 +33,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			return tupleType.MakeGenericType(types).GetConstructor(types)
 				?? throw new InvalidOperationException("No value tuple constructor for arguments length " + types.Length);
 		}
+
+		public static Type TupleToValueTuple(this Type type) {
+			return type.IsTuple() ? TupleUtils.GetValueTupleConstructor(type.GetGenericArguments()).DeclaringType : type;
+		}
 	}
 }

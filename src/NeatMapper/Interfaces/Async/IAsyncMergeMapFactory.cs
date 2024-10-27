@@ -34,7 +34,6 @@ namespace NeatMapper {
 		/// <see cref="DestinationType"/>, which can be the same as <paramref name="destination"/> or a new one,
 		/// may be null.
 		/// </returns>
-		/// <exception cref="MapNotFoundException">The provided objects could not be mapped.</exception>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
 		Task<
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

@@ -24,7 +24,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public static Func<object, object> GetOrCreateTupleToValueTupleDelegate(Type tuple) {
 			if (!tuple.IsTuple())
-				throw new ArgumentException("Type is not a Tuple", nameof(tuple));
+				return null;
 
 			return _tupleToValueTupleCache.GetOrAdd(tuple, tupleType => {
 				var keyParam = Expression.Parameter(typeof(object), "key");
@@ -39,6 +39,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public static bool IsKeyType(this Type type) {
 			return type.IsPrimitive || type == typeof(DateTime)
+				// DEV: add byte array? and others
 #if NET6_0_OR_GREATER
 				|| type == typeof(DateOnly)
 #endif

@@ -206,19 +206,7 @@ namespace NeatMapper {
 					var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 
 					// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
-					IMatcher elementsMatcher;
-					if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
-						// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
-						// so all the others should be available
-						var options = new CompositeMatcherOptions();
-						options.Matchers.Add(mergeMappingOptions.Matcher);
-						options.Matchers.Add(_elementsMatcher);
-						elementsMatcher = new SafeMatcher(new CompositeMatcher(options));
-					}
-					else
-						elementsMatcher = _elementsMatcher;
-					
-					using(var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions)) {
+					using (var elementsMatcherFactory = GetMatcher(mergeMappingOptions).MatchFactory(elementTypes.From, elementTypes.To, mappingOptions)) {
 						var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
 							?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
 
@@ -419,18 +407,7 @@ namespace NeatMapper {
 					var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 
 					// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
-					IMatcher elementsMatcher;
-					if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
-						// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
-						// so all the others should be available
-						var options = new CompositeMatcherOptions();
-						options.Matchers.Add(mergeMappingOptions.Matcher);
-						options.Matchers.Add(_elementsMatcher);
-						elementsMatcher = new SafeMatcher(new CompositeMatcher(options));
-					}
-					else
-						elementsMatcher = _elementsMatcher;
-					var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
+					var elementsMatcherFactory = GetMatcher(mergeMappingOptions).MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
 
 					try { 
 						var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
@@ -608,7 +585,7 @@ namespace NeatMapper {
 					}
 				}
 
-				elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetCollectionElementType());
+				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetCollectionElementType());
 				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 				elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
@@ -621,6 +598,19 @@ namespace NeatMapper {
 
 				return false;
 			}
+		}
+
+		private IMatcher GetMatcher(MergeCollectionsMappingOptions mergeMappingOptions) {
+			if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
+				// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
+				// so all the others should be available
+				var options = new CompositeMatcherOptions();
+				options.Matchers.Add(mergeMappingOptions.Matcher);
+				options.Matchers.Add(_elementsMatcher);
+				return new SafeMatcher(new CompositeMatcher(options));
+			}
+			else
+				return _elementsMatcher;
 		}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER

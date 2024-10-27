@@ -345,9 +345,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 
 	[TestClass]
-	public class KeyToEntityLocalTests : KeyToEntityBase {
+	public class KeyToEntityLocalOnlyTests : KeyToEntityBase {
 		protected override void Configure(EntityFrameworkCoreOptions options) {
-			options.EntitiesRetrievalMode = EntitiesRetrievalMode.Local;
+			options.EntitiesRetrievalMode = EntitiesRetrievalMode.LocalOnly;
 		}
 
 
@@ -355,6 +355,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldNotFindNotLoadedSingleEntities() {
 			Assert.IsNull(_mapper.Map<IntKey>(2));
 			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			using(var factory = _mapper.MapNewFactory<int, IntKey>()) {
+				Assert.IsNull(factory.Invoke(2));
+				Assert.IsNull(factory.Invoke(3));
+			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
 			Assert.AreEqual(0, _db.ChangeTracker.Entries<IntKey>().Count());
@@ -366,6 +371,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			Assert.IsNotNull(_mapper.Map<IntKey>(2));
 			Assert.IsNull(_mapper.Map<IntKey>(3));
+
+			using (var factory = _mapper.MapNewFactory<int, IntKey>()) {
+				Assert.IsNotNull(factory.Invoke(2));
+				Assert.IsNull(factory.Invoke(3));
+			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
@@ -379,6 +389,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNull(result[0]);
 			Assert.IsNull(result[1]);
 
+			using (var factory = _mapper.MapNewFactory<int[], IList<IntKey>>()) {
+				result = factory.Invoke(new int[] { 2, 3 });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNull(result[0]);
+				Assert.IsNull(result[1]);
+			}
+
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
 			Assert.AreEqual(0, _db.ChangeTracker.Entries<IntKey>().Count());
 		}
@@ -391,6 +408,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
 			Assert.IsNull(result[1]);
+
+			using (var factory = _mapper.MapNewFactory<int[], IList<IntKey>>()) {
+				result = factory.Invoke(new int[] { 2, 3 });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNull(result[1]);
+			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
@@ -407,14 +431,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldAttachNotLoadedSingleEntities() {
-			{ 
-				var result = _mapper.Map<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
+			Assert.IsNotNull(_mapper.Map<IntKey>(2));
+			Assert.IsNotNull(_mapper.Map<IntKey>(3));
 
-			{
-				var result = _mapper.Map<IntKey>(3);
-				Assert.IsNotNull(result);
+			using(var factory = _mapper.MapNewFactory<int, IntKey>()) {
+				Assert.IsNotNull(factory.Invoke(2));
+				Assert.IsNotNull(factory.Invoke(3));
 			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
@@ -426,14 +448,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldFindLoadedSingleEntities() {
 			_db.Find<IntKey>(2);
 
-			{
-				var result = _mapper.Map<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
+			Assert.IsNotNull(_mapper.Map<IntKey>(2));
+			Assert.IsNotNull(_mapper.Map<IntKey>(3));
 
-			{
-				var result = _mapper.Map<IntKey>(3);
-				Assert.IsNotNull(result);
+			using(var factory = _mapper.MapNewFactory<int, IntKey>()) {
+				Assert.IsNotNull(factory.Invoke(2));
+				Assert.IsNotNull(factory.Invoke(3));
 			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
@@ -448,6 +468,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNotNull(result[0]);
 			Assert.IsNotNull(result[1]);
 
+			using(var factory = _mapper.MapNewFactory<int[], IList<IntKey>>()) {
+				result = factory.Invoke(new int[] { 2, 3 });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Never());
 			Assert.AreEqual(2, _db.ChangeTracker.Entries<IntKey>().Count());
 			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
@@ -461,6 +488,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.AreEqual(2, result.Count);
 			Assert.IsNotNull(result[0]);
 			Assert.IsNotNull(result[1]);
+
+			using (var factory = _mapper.MapNewFactory<int[], IList<IntKey>>()) {
+				result = factory.Invoke(new int[] { 2, 3 });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
 			Assert.AreEqual(2, _db.ChangeTracker.Entries<IntKey>().Count());
@@ -477,14 +511,15 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldFindNotLoadedSingleEntities() {
-			{
-				var result = _mapper.Map<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
-
+			Assert.IsNotNull(_mapper.Map<IntKey>(2));
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			using(var factory = _mapper.MapNewFactory<int, IntKey>()) {
+				Assert.IsNotNull(factory.Invoke(2));
+				Assert.IsNull(factory.Invoke(3));
+			}
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(3));
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
 			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
@@ -493,76 +528,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldFindLoadedSingleEntities() {
 			_db.Find<IntKey>(2);
 
-			{
-				var result = _mapper.Map<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
-
+			Assert.IsNotNull(_mapper.Map<IntKey>(2));
 			Assert.IsNull(_mapper.Map<IntKey>(3));
 
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-
-		[TestMethod]
-		public void ShouldFindNotLoadedMultipleEntities() {
-			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
-			Assert.AreEqual(2, result.Count);
-			Assert.IsNotNull(result[0]);
-			Assert.IsNull(result[1]);
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-
-		[TestMethod]
-		public void ShouldFindLoadedMultipleEntities() {
-			_db.Find<IntKey>(2);
-
-			var result = _mapper.Map<IList<IntKey>>(new int[] { 2, 3 });
-			Assert.AreEqual(2, result.Count);
-			Assert.IsNotNull(result[0]);
-			Assert.IsNull(result[1]);
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-	}
-
-	[TestClass]
-	public class KeyToEntityRemoteTests : KeyToEntityBase {
-		protected override void Configure(EntityFrameworkCoreOptions options) {
-			options.EntitiesRetrievalMode = EntitiesRetrievalMode.Remote;
-		}
-
-
-		[TestMethod]
-		public void ShouldFindNotLoadedSingleEntities() {
-			{
-				var result = _mapper.Map<IntKey>(2);
-				Assert.IsNotNull(result);
+			using(var factory = _mapper.MapNewFactory<int, IntKey>()) {
+				Assert.IsNotNull(factory.Invoke(2));
+				Assert.IsNull(factory.Invoke(3));
 			}
-
-			Assert.IsNull(_mapper.Map<IntKey>(3));
-
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
-			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
-			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
-		}
-
-		[TestMethod]
-		public void ShouldFindLoadedSingleEntities() {
-			_db.Find<IntKey>(2);
-
-			{
-				var result = _mapper.Map<IntKey>(2);
-				Assert.IsNotNull(result);
-			}
-
-			Assert.IsNull(_mapper.Map<IntKey>(3));
 
 			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(3));
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
@@ -576,7 +548,14 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNotNull(result[0]);
 			Assert.IsNull(result[1]);
 
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Once());
+			using(var factory = _mapper.MapNewFactory<int[], IList<IntKey>>()){
+				result = factory.Invoke(new int[] { 2, 3 });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNull(result[1]);
+			}
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
 			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}
@@ -590,7 +569,14 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNotNull(result[0]);
 			Assert.IsNull(result[1]);
 
-			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(2));
+			using (var factory = _mapper.MapNewFactory<int[], IList<IntKey>>()) {
+				result = factory.Invoke(new int[] { 2, 3 });
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNull(result[1]);
+			}
+
+			_interceptorMock.Verify(i => i.CommandCreated(It.IsAny<CommandEndEventData>(), It.IsAny<DbCommand>()), Times.Exactly(3));
 			Assert.AreEqual(1, _db.ChangeTracker.Entries<IntKey>().Count());
 			Assert.IsTrue(_db.ChangeTracker.Entries<IntKey>().All(e => e.State == EntityState.Unchanged));
 		}

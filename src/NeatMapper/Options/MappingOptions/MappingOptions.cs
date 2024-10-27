@@ -167,7 +167,7 @@ namespace NeatMapper {
 					return new KeyValuePair<Type, object>(f.Key, ret);
 				})
 				.Where(o => o.Value != null)
-				.ToArray();
+				.ToList();
 
 			if(!changed)
 				return this;
@@ -234,7 +234,7 @@ namespace NeatMapper {
 					return new KeyValuePair<Type, object>(f.Key, ret);
 				})
 				.Where(o => o.Value != null)
-				.ToArray();
+				.ToList();
 
 			if (!changed)
 				return this;

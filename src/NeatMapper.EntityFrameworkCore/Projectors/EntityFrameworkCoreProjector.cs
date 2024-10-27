@@ -158,6 +158,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			var isCompiling = mappingOptions?.GetOptions<ProjectionCompilationContext>() != null;
 			var dbContext = isCompiling ? RetrieveDbContext(mappingOptions) : null;
 
+			// DEV: support NestedSemaphoreContext
+
 			Expression body;
 			if (isCompiling && key.Properties.Any(k => k.IsShadowProperty())) {
 				if(dbContext == null)

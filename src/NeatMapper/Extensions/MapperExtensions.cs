@@ -999,8 +999,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into new objects
-		/// of type <typeparamref name="TDestination"/>.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapperFactory.MapNewFactory(Type, Type, MappingOptions)" path="/exception"/>
 		public static NewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this IMapper mapper,
@@ -1148,8 +1147,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into existing objects
-		/// of type <typeparamref name="TDestination"/>.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// of type <typeparamref name="TDestination"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/exception"/>
 		public static MergeMapFactory<TSource, TDestination> MapMergeFactory<TSource, TDestination>(this IMapper mapper,
@@ -1226,8 +1224,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A factory which can be used to map collections of type <typeparamref name="TSourceElement"/> into existing
-		/// collections of type <typeparamref name="TDestinationElement"/>.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// collections of type <typeparamref name="TDestinationElement"/>.
 		/// </returns>
 		/// <inheritdoc cref="IMapperFactory.MapMergeFactory(Type, Type, MappingOptions)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]

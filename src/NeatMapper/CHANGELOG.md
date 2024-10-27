@@ -1,5 +1,6 @@
 # Changelog
 
+
 ## [5.0.0] - Unreleased
 
 ### Removed
@@ -49,6 +50,7 @@
 - `AsyncCompositeMapper` missing `IAsyncMapperFactory` interface.
 - `Project` `IQueryable<T>` extension method `params object[]` overload nullability.
 - `MergeCollectionMapper` and `AsyncMergeCollectionMapper` now correctly return the destination collection if source collection is null.
+
 
 ## [4.0.0] - 2024-07-16
 

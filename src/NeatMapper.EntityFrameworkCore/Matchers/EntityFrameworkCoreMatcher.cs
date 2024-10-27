@@ -9,9 +9,8 @@ using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
-	/// <see cref="IMatcher"/> which matches entities with their keys (even composite keys
-	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>, and shadow keys). Allows also matching entities
-	/// with other entities.
+	/// <see cref="IMatcher"/> which matches entities with their keys (even composite keys as <see cref="Tuple"/>
+	/// or <see cref="ValueTuple"/>, and shadow keys). Allows also matching entities with other entities.
 	/// Will return <see langword="false"/> if at least one of the entities/key is null, so it won't match
 	/// null entities and keys, but will match default non-nullable keys (like <see langword="0"/>,
 	/// <see cref="Guid.Empty"/>, ...).
@@ -87,6 +86,19 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 
+		public bool CanMatch(
+			Type sourceType,
+			Type destinationType,
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return CanMatchInternal(sourceType, destinationType, mappingOptions, out _, out _);
+		}
+
 		public bool Match(
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 			object?
@@ -113,78 +125,6 @@ namespace NeatMapper.EntityFrameworkCore {
 				return factory.Invoke(source, destination);
 			}
 		}
-
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Check which type is the key and which is the entity, since it can be used both ways,
-			// we could also match two entities
-			Type keyType;
-			Type entityType;
-			if (sourceType == destinationType) {
-				keyType = null;
-				entityType = sourceType;
-			}
-			else if (sourceType.IsKeyType() || sourceType.IsCompositeKeyType()) {
-				keyType = sourceType;
-				entityType = destinationType;
-			}
-			else if (destinationType.IsKeyType() || destinationType.IsCompositeKeyType()) {
-				keyType = destinationType;
-				entityType = sourceType;
-			}
-			else
-				return false;
-
-			if (!entityType.IsClass)
-				return false;
-
-			// Check if the entity is in the model
-			var modelEntity = _model.FindEntityType(entityType);
-			if (modelEntity == null || modelEntity.IsOwned())
-				return false;
-
-			// Check that the entity has a key and that it matches the key type
-			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1)
-				return false;
-			if(keyType != null) { 
-				if (keyType.IsCompositeKeyType()) {
-					var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
-					if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
-						return false;
-				}
-				else if (key.Properties.Count != 1 || key.Properties[0].ClrType != keyType.UnwrapNullable())
-					return false;
-			}
-
-			// If the key has shadow properties we need a DbContext to get the values
-			if(key.Properties.Any(p => p.IsShadowProperty()) && RetrieveDbContext(mappingOptions) == null) 
-				return false;
-
-			return true;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-		}
-
 		public IMatchMapFactory MatchFactory(
 			Type sourceType,
 			Type destinationType,
@@ -199,28 +139,14 @@ namespace NeatMapper.EntityFrameworkCore {
 #nullable disable
 #endif
 
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!CanMatch(sourceType, destinationType, mappingOptions))
+			if(!CanMatchInternal(sourceType, destinationType, mappingOptions, out var keyType, out var entityType))
 				throw new MapNotFoundException((sourceType, destinationType));
+
+			// DEV: convert to use EntityFrameworkProjector?
 
 			// Check if we are matching an entity with its key,
 			// or two entities
-			if (sourceType != destinationType) {
-				Type keyType;
-				Type entityType;
-				if (sourceType.IsKeyType() || sourceType.IsCompositeKeyType()) {
-					keyType = sourceType;
-					entityType = destinationType;
-				}
-				else {
-					keyType = destinationType;
-					entityType = sourceType;
-				}
-
+			if (keyType != null) {
 				// Create and cache the delegate for the map if needed
 				var entityKeyComparer = _entityKeyComparerCache.GetOrAdd(entityType, _ => {
 					var entityParam = Expression.Parameter(typeof(object), "entity");
@@ -305,9 +231,10 @@ namespace NeatMapper.EntityFrameworkCore {
 				});
 				
 				// If the key is a tuple we convert it to a value tuple, because maps are with value tuples only
-				var tupleToValueTupleDelegate = keyType.IsTuple() ? EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType) : null;
+				var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType);
 
-				// Retrieve DbContext and semaphore if dealing with shadow keys
+				// Retrieve DbContext and semaphore if dealing with shadow keys (semaphore will be retrieved
+				// and used only if we are not already inside a semaphore lock)
 				DbContext dbContext;
 				SemaphoreSlim dbContextSemaphore;
 				if (_entityShadowKeyCache.TryGetValue(entityType, out var shadowKey) && shadowKey) {
@@ -345,12 +272,6 @@ namespace NeatMapper.EntityFrameworkCore {
 
 						try { 
 							return entityKeyComparer.Invoke(entityObject, keyObject, dbContextSemaphore, dbContext);
-						}
-						catch (MapNotFoundException e) {
-							if (e.From == sourceType && e.To == destinationType)
-								throw;
-							else
-								throw new MappingException(e, (sourceType, destinationType));
 						}
 						catch (OperationCanceledException) {
 							throw;
@@ -494,9 +415,70 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 
+
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
+		bool CanMatchInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions mappingOptions,
+			out Type keyType,
+			out Type entityType) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Check which type is the key and which is the entity, since it can be used both ways,
+			// we could also match two entities
+			if (sourceType == destinationType) {
+				keyType = null;
+				entityType = sourceType;
+			}
+			else if (sourceType.IsKeyType() || sourceType.IsCompositeKeyType()) {
+				keyType = sourceType;
+				entityType = destinationType;
+			}
+			else if (destinationType.IsKeyType() || destinationType.IsCompositeKeyType()) {
+				keyType = destinationType;
+				entityType = sourceType;
+			}
+			else { 
+				keyType = null;
+				entityType = null;
+				return false;
+			}
+
+			if (!entityType.IsClass)
+				return false;
+
+			// Check if the entity is in the model
+			var modelEntity = _model.FindEntityType(entityType);
+			if (modelEntity == null || modelEntity.IsOwned())
+				return false;
+
+			// Check that the entity has a key and that it matches the key type
+			var key = modelEntity.FindPrimaryKey();
+			if (key == null || key.Properties.Count < 1)
+				return false;
+			if (keyType != null) {
+				if (keyType.IsCompositeKeyType()) {
+					var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
+					if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
+						return false;
+				}
+				else if (key.Properties.Count != 1 || key.Properties[0].ClrType != keyType.UnwrapNullable())
+					return false;
+			}
+
+			// If the key has shadow properties we need a DbContext to get the values
+			if (key.Properties.Any(p => p.IsShadowProperty()) && RetrieveDbContext(mappingOptions) == null)
+				return false;
+
+			return true;
+		}
 
 		// Retrieves the DbContext if available, may return null
 		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {

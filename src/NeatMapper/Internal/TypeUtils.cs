@@ -115,7 +115,7 @@ namespace NeatMapper {
 			var parameterExpressions = delegateArguments
 				.Zip(parameterNames, (p1, p2) => (p1, p2))
 				.Select(parameters => Expression.Parameter(parameters.p1, parameters.p2))
-				.ToArray();
+				.ToList();
 			var parametersList = parameterExpressions
 				.Zip(method.GetParameters(), (p1, p2) => (p1, p2))
 				.Select(parameters => {

@@ -1247,8 +1247,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A factory which can be used to map objects of type <typeparamref name="TSource"/> into existing objects
-		/// of type <typeparamref name="TDestination"/> asynchronously.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// of type <typeparamref name="TDestination"/> asynchronously.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions)" path="/exception"/>
 		public static AsyncMergeMapFactory<TSource, TDestination> MapAsyncMergeFactory<TSource, TDestination>(this IAsyncMapper mapper,
@@ -1325,8 +1324,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A factory which can be used to map collections of type <typeparamref name="TSourceElement"/> into existing
-		/// collections of type <typeparamref name="TDestinationElement"/> asynchronously.<br/>
-		/// The factory when invoked may throw <see cref="MapNotFoundException"/> or <see cref="MappingException"/> exceptions.
+		/// collections of type <typeparamref name="TDestinationElement"/> asynchronously.
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapperFactory.MapAsyncMergeFactory(Type, Type, MappingOptions)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
