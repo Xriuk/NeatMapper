@@ -13,14 +13,14 @@ namespace NeatMapper {
 		/// <list type="bullet">
 		/// <item>
 		/// <see cref="IMapper"/>, <see cref="IMapperFactory"/> -
-		/// <see cref="NewMapper"/>, <see cref="MergeMapper"/>, <see cref="ProjectionMapper"/>,
-		/// <see cref="NewCollectionMapper"/>, <see cref="MergeCollectionMapper"/>, <see cref="CompositeMapper"/>
+		/// <see cref="CustomMapper"/>, <see cref="ProjectionMapper"/>,
+		/// <see cref="CollectionMapper"/>, <see cref="CompositeMapper"/>
 		/// (which also contains <see cref="IdentityMapper"/> in addition to all the previous)
 		/// </item>
 		/// <item>
 		/// <see cref="IAsyncMapper"/>, <see cref="IAsyncMapperFactory"/> -
-		/// <see cref="AsyncNewMapper"/>, <see cref="AsyncMergeMapper"/>, <see cref="AsyncNewCollectionMapper"/>,
-		/// <see cref="AsyncMergeCollectionMapper"/>, <see cref="AsyncCompositeMapper"/>
+		/// <see cref="AsyncCustomMapper"/>, <see cref="AsyncCollectionMapper"/>,
+		/// <see cref="AsyncCompositeMapper"/>
 		/// (which also contains <see cref="AsyncIdentityMapper"/> in addition to all the previous)
 		/// </item>
 		/// <item>
@@ -69,8 +69,10 @@ namespace NeatMapper {
 				.Configure<CustomMatcher, HierarchyCustomMatcher>((o, m, h) => {
 					o.Matchers.Add(m);
 					o.Matchers.Add(h);
-
 					o.Matchers.Add(EquatableMatcher.Instance);
+				})
+				.PostConfigure(o => {
+					o.Matchers.Add(ObjectEqualsMatcher.Instance);
 				});
 
 
@@ -108,20 +110,18 @@ namespace NeatMapper {
 			#region IMapper
 			// Add mappers to composite mapper
 			services.AddOptions<CompositeMapperOptions>()
-				.Configure<NewMapper, MergeMapper, ProjectionMapper, IServiceProvider>((o, n, m, p, s) => {
-					o.Mappers.Add(n);
-					o.Mappers.Add(m);
-
+				.Configure<CustomMapper, ProjectionMapper, IServiceProvider>((o, c, p, s) => {
+					o.Mappers.Add(c);
+					o.Mappers.Add(p);
+				})
+				.PostConfigure<IServiceProvider>((o, s) => {
 					o.Mappers.Add(IdentityMapper.Instance);
 
-					// Creating collection mappers with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
-					o.Mappers.Add(new NewCollectionMapper(EmptyMapper.Instance));
-					o.Mappers.Add(new MergeCollectionMapper(
+					// Creating collection mapper with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
+					o.Mappers.Add(new CollectionMapper(
 						EmptyMapper.Instance,
 						s.GetService<IMatcher>(),
 						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value));
-
-					o.Mappers.Add(p);
 				});
 
 
@@ -129,16 +129,10 @@ namespace NeatMapper {
 
 			// Normal mappers
 			services.Add(new ServiceDescriptor(
-				typeof(NewMapper),
-				s => new NewMapper(
+				typeof(CustomMapper),
+				s => new CustomMapper(
 					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
 					s.GetService<IOptionsSnapshot<CustomNewAdditionalMapsOptions>>()?.Value,
-					s),
-				mappersLifetime));
-			services.Add(new ServiceDescriptor(
-				typeof(MergeMapper),
-				s => new MergeMapper(
-					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
 					s.GetService<IOptionsSnapshot<CustomMergeAdditionalMapsOptions>>()?.Value,
 					s),
 				mappersLifetime));
@@ -149,12 +143,8 @@ namespace NeatMapper {
 
 			// Collection mappers
 			services.Add(new ServiceDescriptor(
-				typeof(NewCollectionMapper),
-				s => new NewCollectionMapper(s.GetRequiredService<IMapper>()),
-				mappersLifetime));
-			services.Add(new ServiceDescriptor(
-				typeof(MergeCollectionMapper),
-				s => new MergeCollectionMapper(
+				typeof(CollectionMapper),
+				s => new CollectionMapper(
 					s.GetRequiredService<IMapper>(),
 					s.GetService<IMatcher>(),
 					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
@@ -174,18 +164,16 @@ namespace NeatMapper {
 			#region IAsyncMapper
 			// Add mappers to composite mapper
 			services.AddOptions<AsyncCompositeMapperOptions>()
-				.Configure<AsyncNewMapper, AsyncMergeMapper, IServiceProvider>((o, n, m, s) => {
-					o.Mappers.Add(n);
-					o.Mappers.Add(m);
-
+				.Configure<AsyncCustomMapper, IServiceProvider>((o, c, s) => {
+					o.Mappers.Add(c);
+				})
+				.PostConfigure<IServiceProvider>((o, s) => {
 					o.Mappers.Add(AsyncIdentityMapper.Instance);
 
-					// Creating collection mappers with AsyncEmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
-					o.Mappers.Add(new AsyncNewCollectionMapper(
+					// Creating collection mapper with AsyncEmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
+					o.Mappers.Add(new AsyncCollectionMapper(
 						AsyncEmptyMapper.Instance,
-						s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value));
-					o.Mappers.Add(new AsyncMergeCollectionMapper(
-						AsyncEmptyMapper.Instance,
+						s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value,
 						s.GetService<IMatcher>(),
 						s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value));
 				});
@@ -195,31 +183,20 @@ namespace NeatMapper {
 
 			// Normal mappers
 			services.Add(new ServiceDescriptor(
-				typeof(AsyncNewMapper),
-				s => new AsyncNewMapper(
+				typeof(AsyncCustomMapper),
+				s => new AsyncCustomMapper(
 					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
 					s.GetService<IOptionsSnapshot<CustomAsyncNewAdditionalMapsOptions>>()?.Value,
-					s),
-				asyncMappersLifetime));
-			services.Add(new ServiceDescriptor(
-				typeof(AsyncMergeMapper),
-				s => new AsyncMergeMapper(
-					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
 					s.GetService<IOptionsSnapshot<CustomAsyncMergeAdditionalMapsOptions>>()?.Value,
 					s),
 				asyncMappersLifetime));
 
 			// Collection mappers
 			services.Add(new ServiceDescriptor(
-				typeof(AsyncNewCollectionMapper),
-				s => new AsyncNewCollectionMapper(
+				typeof(AsyncCollectionMapper),
+				s => new AsyncCollectionMapper(
 					s.GetRequiredService<IAsyncMapper>(),
-					s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value),
-				asyncMappersLifetime));
-			services.Add(new ServiceDescriptor(
-				typeof(AsyncMergeCollectionMapper),
-				s => new AsyncMergeCollectionMapper(
-					s.GetRequiredService<IAsyncMapper>(),
+					s.GetService<IOptionsSnapshot<AsyncCollectionMappersOptions>>()?.Value,
 					s.GetService<IMatcher>(),
 					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
 				asyncMappersLifetime));
@@ -240,7 +217,8 @@ namespace NeatMapper {
 			services.AddOptions<CompositeProjectorOptions>()
 				.Configure<CustomProjector>((o, p) => {
 					o.Projectors.Add(p);
-
+				})
+				.PostConfigure(o => {
 					// Creating collection mappers with EmptyProjector to avoid recursion, the element projector will be overridden by composite projector
 					o.Projectors.Add(new CollectionProjector(EmptyProjector.Instance));
 				});

@@ -78,9 +78,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 		public void ShouldNotMatchEntitiesWithShadowKeysWithoutContext() {
 			var options = new[] { new MatcherOverrideMappingOptions(serviceProvider: new ServiceCollection().BuildServiceProvider()) };
 
-			Assert.IsFalse(_matcher.CanMatch<ShadowIntKey, ShadowIntKey>(options));
+			// Should be ObjectEqualsMatcher
+			Assert.IsTrue(_matcher.CanMatch<ShadowIntKey, ShadowIntKey>(options));
 
-			TestUtils.AssertMapNotFound(() => _matcher.Match(new ShadowIntKey(), new ShadowIntKey(), options));
+			Assert.IsFalse(_matcher.Match(new ShadowIntKey(), new ShadowIntKey(), options));
+			var ent = new ShadowIntKey();
+			Assert.IsTrue(_matcher.Match(ent, ent, options));
 		}
 
 		[TestMethod]
@@ -121,17 +124,23 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 
 		[TestMethod]
 		public void ShouldNotMatchOwnedEntities() {
-			Assert.IsFalse(_matcher.CanMatch<OwnedEntity, OwnedEntity>());
+			// Should be ObjectEqualsMatcher
+			Assert.IsTrue(_matcher.CanMatch<OwnedEntity, OwnedEntity>());
 
-			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity(), new OwnedEntity()));
+			Assert.IsFalse(_matcher.Match(new OwnedEntity(), new OwnedEntity()));
+			var ent = new OwnedEntity();
+			Assert.IsTrue(_matcher.Match(ent, ent));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
 		[TestMethod]
 		public void ShouldNotMatchKeylessEntities() {
-			Assert.IsFalse(_matcher.CanMatch<Keyless, Keyless>());
+			// Should be ObjectEqualsMatcher
+			Assert.IsTrue(_matcher.CanMatch<Keyless, Keyless>());
 
-			TestUtils.AssertMapNotFound(() => _matcher.Match(new Keyless(), new Keyless()));
+			Assert.IsFalse(_matcher.Match(new Keyless(), new Keyless()));
+			var ent = new Keyless();
+			Assert.IsTrue(_matcher.Match(ent, ent));
 		}
 #endif
 

@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class NewMapperGenericTests {
+	public class NewMapsGenericTests {
 		public class Maps<T1, T2, T3> :
 #if NET7_0_OR_GREATER
 			INewMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>>
@@ -441,7 +441,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new NewMapper(new CustomMapsOptions {
+			_mapper = new CustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			});
 		}
@@ -466,7 +466,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Class constraint
 				{
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
 
@@ -523,7 +523,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldNotMapNotMatchingGenericConstraints() {
 			// struct
 			{
-				var mapper = new NewMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
@@ -538,7 +538,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			// class
 			{
-				var mapper = new NewMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
@@ -555,7 +555,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			// unmanaged
 			{
-				var mapper = new NewMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
@@ -572,7 +572,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			// new()
 			{
-				var mapper = new NewMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
@@ -587,7 +587,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Not generic
 				{ 
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
@@ -602,7 +602,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Generic
 				{
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
@@ -620,7 +620,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Not generic
 				{ 
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
@@ -633,7 +633,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Generic
 				{
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
@@ -650,7 +650,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Simple
 				{
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
@@ -666,7 +666,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Complex
 				{
-					var mapper = new NewMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
@@ -721,7 +721,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldRespectConstraints() {
-			var mapper = new NewMapper(new CustomMapsOptions {
+			var mapper = new CustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
 			});
 
@@ -744,7 +744,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollections() {
-			var mapper = new NewCollectionMapper(_mapper);
+			var mapper = new CollectionMapper(_mapper);
 
 			{
 				Assert.IsTrue(mapper.CanMapNew<Tuple<string, int>[], ValueTuple<int, string>[]>());

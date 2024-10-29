@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
-	public class AsyncMergeMapperTests {
+	public class AsyncMergeMapsTests {
 		public class Maps :
 #if NET7_0_OR_GREATER
 			IAsyncMergeMapStatic<int, string>,
@@ -514,7 +514,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncMergeMapper(new CustomMapsOptions {
+			_mapper = new AsyncCustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
@@ -951,7 +951,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapWithAdditionalMaps() {
 			var options = new CustomAsyncMergeAdditionalMapsOptions();
 			options.AddMap<string, int>((s, d, _) => Task.FromResult(s?.Length ?? 0));
-			var mapper = new AsyncMergeMapper(null, options);
+			var mapper = new AsyncCustomMapper(null, null, options);
 
 			Assert.IsTrue(mapper.CanMapAsyncMerge<string, int>());
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -7,6 +8,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -188,60 +190,72 @@ namespace NeatMapper.EntityFrameworkCore {
 			var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key);
 
-			await dbContextSemaphore.WaitAsync(cancellationToken);
-			try {
-				var dbSet = RetrieveDbSet(dbContext, elementTypes.Entity);
-				var localView = GetLocalFromDbSet(dbSet);
+			var dbSet = RetrieveDbSet(dbContext, elementTypes.Entity);
+			var localView = GetLocalFromDbSet(dbSet);
 
-				// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
-				using (var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(elementTypes, mappingOptions
-					.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance))) {
+			// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
+			using (var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(elementTypes, mappingOptions
+				.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance))) {
 
-					// Check if we are mapping a collection or just a single entity
-					if (isCollection) {
-						// Create the collection and retrieve the actual type which will be used,
-						// eg: to create an array we create a List<T> first, which will be later
-						// converted to the desired array
-						object destination;
-						Type actualCollectionType;
+				// Check if we are mapping a collection or just a single entity
+				if (isCollection) {
+					// Create the collection and retrieve the actual type which will be used,
+					// eg: to create an array we create a List<T> first, which will be later
+					// converted to the desired array
+					object destination;
+					Type actualCollectionType;
+					try {
+						destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
+					}
+					catch (ObjectCreationException) {
+						throw new MapNotFoundException(types);
+					}
+
+					// Since the method above is not 100% accurate in checking if the type is an actual collection
+					// we check again here, if we do not get back a method to add elements then it is not a collection
+					Action<object, object> addDelegate;
+					try {
+						addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
+					}
+					catch (InvalidOperationException) {
+						throw new MapNotFoundException(types);
+					}
+
+					if(types.From.IsAsyncEnumerable()) {
+						var moveNextAsyncDelegate = ObjectFactory.GetAsyncEnumeratorMoveNextAsync(elementTypes.Key);
+						var currentDelegate = ObjectFactory.GetAsyncEnumeratorCurrent(elementTypes.Key);
+
+						object result;
 						try {
-							destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
-						}
-						catch (ObjectCreationException) {
-							throw new MapNotFoundException(types);
-						}
+							var localsAndPredicates = new List<EntityMappingInfo>();
 
-						// Since the method above is not 100% accurate in checking if the type is an actual collection
-						// we check again here, if we do not get back a method to add elements then it is not a collection
-						Action<object, object> addDelegate;
-						try {
-							addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
-						}
-						catch (InvalidOperationException) {
-							throw new MapNotFoundException(types);
-						}
-
-						if (source is IEnumerable sourceEnumerable) {
-							object result;
+							await dbContextSemaphore.WaitAsync(cancellationToken);
 							try {
 								// Retrieve tracked local entities and normalize keys
-								var localsAndPredicates = sourceEnumerable
-									.Cast<object>()
-									.Select(sourceElement => {
-										if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement))
-											return new EntityMappingInfo();
+								var asyncEnumerator = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.Key)
+									.Invoke(source, cancellationToken);
+								try {
+									while (await moveNextAsyncDelegate.Invoke(asyncEnumerator)) {
+										var sourceElement = currentDelegate.Invoke(asyncEnumerator);
+										if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement)) {
+											localsAndPredicates.Add(new EntityMappingInfo());
+											continue;
+										}
 
 										if (tupleToValueTupleDelegate != null)
 											sourceElement = tupleToValueTupleDelegate.Invoke(sourceElement);
 
-										return new EntityMappingInfo {
+										localsAndPredicates.Add(new EntityMappingInfo {
 											Key = sourceElement,
 											LocalEntity = localView
 												.Cast<object>()
 												.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(sourceElement, e))
-										};
-									})
-									.ToList();
+										});
+									}
+								}
+								finally {
+									await asyncEnumerator.DisposeAsync();
+								}
 
 								// Query db for missing entities if needed,
 								// or attach missing elements
@@ -278,6 +292,95 @@ namespace NeatMapper.EntityFrameworkCore {
 										localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
 									}
 								}
+							}
+							finally {
+								dbContextSemaphore.Release();
+							}
+
+							foreach (var localAndPredicate in localsAndPredicates) {
+								addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+							}
+
+							result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
+						}
+						catch (OperationCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, (sourceType, destinationType));
+						}
+
+						// Should not happen
+						NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
+
+						return result;
+					}
+					else { 
+						if (source is IEnumerable sourceEnumerable) {
+							object result;
+							try {
+								List<EntityMappingInfo> localsAndPredicates;
+									
+								await dbContextSemaphore.WaitAsync(cancellationToken);
+								try {
+									// Retrieve tracked local entities and normalize keys
+									localsAndPredicates = sourceEnumerable
+										.Cast<object>()
+										.Select(sourceElement => {
+											if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement))
+												return new EntityMappingInfo();
+
+											if (tupleToValueTupleDelegate != null)
+												sourceElement = tupleToValueTupleDelegate.Invoke(sourceElement);
+
+											return new EntityMappingInfo {
+												Key = sourceElement,
+												LocalEntity = localView
+													.Cast<object>()
+													.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(sourceElement, e))
+											};
+										})
+										.ToList();
+
+									// Query db for missing entities if needed,
+									// or attach missing elements
+									if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
+										var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
+										if (missingEntities.Any()) {
+											var filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key,
+												missingEntities
+													.Select(e => keyToValuesDelegate.Invoke(e.Key))
+													.ToList());
+
+											var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
+
+											var entities = await EntityFrameworkQueryableExtensionsToArrayAsync.Invoke(query, cancellationToken);
+
+											// Not using Where() because the collection changes during iteration
+											foreach (var localAndPredicate in localsAndPredicates) {
+												if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
+													continue;
+
+												localAndPredicate.LocalEntity = entities
+													.Cast<object>()
+													.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(localAndPredicate.Key, e));
+											}
+										}
+									}
+									else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
+										// Not using Where() because the collection changes during iteration
+										foreach (var localAndPredicate in localsAndPredicates) {
+											if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
+												continue;
+
+											var keyValues = keyToValuesDelegate.Invoke(localAndPredicate.Key);
+											localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+										}
+									}
+								}
+								finally {
+									dbContextSemaphore.Release();
+								}
 
 								foreach (var localAndPredicate in localsAndPredicates) {
 									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
@@ -300,16 +403,19 @@ namespace NeatMapper.EntityFrameworkCore {
 						else
 							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 					}
-					else {
-						if (TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
-							return null;
+				}
+				else {
+					if (TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
+						return null;
 
-						object result;
-						try {
-							var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-								tupleToValueTupleDelegate.Invoke(source) :
-								source);
+					object result;
+					try {
+						var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+							tupleToValueTupleDelegate.Invoke(source) :
+							source);
 
+						await dbContextSemaphore.WaitAsync(cancellationToken);
+						try { 
 							// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
 							// in which case we can use Find directly)
 							if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) {
@@ -329,22 +435,22 @@ namespace NeatMapper.EntityFrameworkCore {
 									result = attachEntityDelegate.Invoke(keyValues, dbContext);
 							}
 						}
-						catch (OperationCanceledException) {
-							throw;
+						finally {
+							dbContextSemaphore.Release();
 						}
-						catch (Exception e) {
-							throw new MappingException(e, (sourceType, destinationType));
-						}
-
-						// Should not happen
-						NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
-
-						return result;
 					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, (sourceType, destinationType));
+					}
+
+					// Should not happen
+					NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
+
+					return result;
 				}
-			}
-			finally {
-				dbContextSemaphore.Release();
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -430,8 +536,36 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Check if we are mapping a collection or just a single entity
 			if (isCollection) {
-				try {
-					if (source is IEnumerable sourceEnumerable) {
+				if (types.From.IsAsyncEnumerable()) {
+					var moveNextAsyncDelegate = ObjectFactory.GetAsyncEnumeratorMoveNextAsync(elementTypes.Key);
+					var currentDelegate = ObjectFactory.GetAsyncEnumeratorCurrent(elementTypes.Key);
+
+					var newSourceType = typeof(IEnumerable<>).MakeGenericType(elementTypes.Key);
+
+					// IAsyncEnumerable<T> would require enumerating all the values twice
+					// in order to merge them, so we buffer them once and map them as IEnumerable<T>
+					object sourceCollection;
+					Type actualSourceCollectionType;
+					try {
+						sourceCollection = ObjectFactory.CreateCollectionFactory(newSourceType, out actualSourceCollectionType).Invoke();
+					}
+					catch (ObjectCreationException) {
+						throw new MapNotFoundException(types);
+					}
+
+					// Since the method above is not 100% accurate in checking if the type is an actual collection
+					// we check again here, if we do not get back a method to add elements then it is not a collection
+					Action<object, object> sourceAddDelegate;
+					try {
+						sourceAddDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualSourceCollectionType);
+					}
+					catch (InvalidOperationException) {
+						throw new MapNotFoundException(types);
+					}
+
+					if (source == null)
+						return destination;
+					else {
 						// If we have to create the destination collection we forward to NewMap
 						// Otherwise we must check that the collection can be mapped to
 						if (destination == null)
@@ -441,30 +575,69 @@ namespace NeatMapper.EntityFrameworkCore {
 								(destination.GetType().FullName ?? destination.GetType().Name));
 						}
 
+						// Retrieve all the values and buffer them
+						var asyncEnumerator = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.Key)
+							.Invoke(source, cancellationToken);
+						try {
+							while (await moveNextAsyncDelegate.Invoke(asyncEnumerator)) {
+								var sourceElement = currentDelegate.Invoke(asyncEnumerator);
+								sourceAddDelegate.Invoke(sourceCollection, sourceElement);
+							}
+						}
+						finally {
+							await asyncEnumerator.DisposeAsync();
+						}
+
+						// Retrieve the elements and merge them
 						if (destination is IEnumerable destinationEnumerable) {
-							var sourceEntitiesEnumerable = await MapAsync(source, sourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
+							var sourceEntitiesEnumerable = await MapAsync(sourceCollection, newSourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
 								?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
 							using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) {
-								mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
+								mergeFactory.Invoke(destinationEnumerable, (IEnumerable)sourceCollection, sourceEntitiesEnumerable);
 							}
 						}
 						else
 							throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 					}
-					else if (source == null)
-						return destination;
-					else
-						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 				}
-				catch (MappingException) {
-					throw;
-				}
-				catch (OperationCanceledException) {
-					throw;
-				}
-				catch (Exception e) {
-					throw new MappingException(e, (sourceType, destinationType));
+				else { 
+					try {
+						if (source is IEnumerable sourceEnumerable) {
+							// If we have to create the destination collection we forward to NewMap
+							// Otherwise we must check that the collection can be mapped to
+							if (destination == null)
+								return await MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
+							else if (NeatMapper.TypeUtils.IsCollectionReadonly(destination)) {
+								throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
+									(destination.GetType().FullName ?? destination.GetType().Name));
+							}
+
+							if (destination is IEnumerable destinationEnumerable) {
+								var sourceEntitiesEnumerable = await MapAsync(source, sourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
+									?? throw new InvalidOperationException("Invalid result"); // Should not happen
+
+								using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) {
+									mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
+								}
+							}
+							else
+								throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+						}
+						else if (source == null)
+							return destination;
+						else
+							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+					}
+					catch (MappingException) {
+						throw;
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, (sourceType, destinationType));
+					}
 				}
 
 				// Should not happen
@@ -621,105 +794,214 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To);
 
-					return new DisposableAsyncNewMapFactory(
-						sourceType, destinationType,
-						async (source, cancellationToken) => {
-							NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+					if (types.From.IsAsyncEnumerable()) {
+						var getAsyncEnumeratorDelegate = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.Key);
+						var moveNextAsyncDelegate = ObjectFactory.GetAsyncEnumeratorMoveNextAsync(elementTypes.Key);
+						var currentDelegate = ObjectFactory.GetAsyncEnumeratorCurrent(elementTypes.Key);
 
-							if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
-								return null;
+						return new DisposableAsyncNewMapFactory(
+							sourceType, destinationType,
+							async (source, cancellationToken) => {
+								NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-							if (source is IEnumerable sourceEnumerable) {
-								object result;
-								try {
-									List<EntityMappingInfo> localsAndPredicates;
-
-									await dbContextSemaphore.WaitAsync(cancellationToken);
+								if (source == null)
+									return null;
+								else {
+									object result;
 									try {
-										// Retrieve tracked local entities and normalize keys
-										localsAndPredicates = sourceEnumerable
-											.Cast<object>()
-											.Select(sourceElement => {
-												if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement))
-													return new EntityMappingInfo();
+										var localsAndPredicates = new List<EntityMappingInfo>();
+										
+										await dbContextSemaphore.WaitAsync(cancellationToken);
+										try {
+											// Retrieve tracked local entities and normalize keys
+											var asyncEnumerator = getAsyncEnumeratorDelegate.Invoke(source, cancellationToken);
+											try {
+												while (await moveNextAsyncDelegate.Invoke(asyncEnumerator)) {
+													var sourceElement = currentDelegate.Invoke(asyncEnumerator);
+													if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement)) { 
+														localsAndPredicates.Add(new EntityMappingInfo());
+														continue;
+													}
 
-												if (tupleToValueTupleDelegate != null)
-													sourceElement = tupleToValueTupleDelegate.Invoke(sourceElement);
+													if (tupleToValueTupleDelegate != null)
+														sourceElement = tupleToValueTupleDelegate.Invoke(sourceElement);
 
-												return new EntityMappingInfo {
-													Key = sourceElement,
-													LocalEntity = localView
-														.Cast<object>()
-														.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(sourceElement, e))
-												};
-											})
-											.ToList();
+													localsAndPredicates.Add(new EntityMappingInfo {
+														Key = sourceElement,
+														LocalEntity = localView
+															.Cast<object>()
+															.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(sourceElement, e))
+													});
+												}
+											}
+											finally {
+												await asyncEnumerator.DisposeAsync();
+											}
 
-										// Query db for missing entities if needed,
-										// or attach missing elements
-										if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
-											var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
-											if (missingEntities.Any()) {
-												var filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key,
-													missingEntities
-														.Select(e => keyToValuesDelegate.Invoke(e.Key))
-														.ToList());
+											// Query db for missing entities if needed,
+											// or attach missing elements
+											if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
+												var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
+												if (missingEntities.Any()) {
+													var filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key,
+														missingEntities
+															.Select(e => keyToValuesDelegate.Invoke(e.Key))
+															.ToList());
 
-												var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
+													var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
 
-												var entities = await EntityFrameworkQueryableExtensionsToArrayAsync.Invoke(query, cancellationToken);
+													var entities = await EntityFrameworkQueryableExtensionsToArrayAsync.Invoke(query, cancellationToken);
 
+													// Not using Where() because the collection changes during iteration
+													foreach (var localAndPredicate in localsAndPredicates) {
+														if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
+															continue;
+
+														localAndPredicate.LocalEntity = entities
+															.Cast<object>()
+															.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(localAndPredicate.Key, e));
+													}
+												}
+											}
+											else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
 												// Not using Where() because the collection changes during iteration
 												foreach (var localAndPredicate in localsAndPredicates) {
 													if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
 														continue;
 
-													localAndPredicate.LocalEntity = entities
-														.Cast<object>()
-														.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(localAndPredicate.Key, e));
+													var keyValues = keyToValuesDelegate.Invoke(localAndPredicate.Key);
+													localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
 												}
 											}
 										}
-										else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-											// Not using Where() because the collection changes during iteration
-											foreach (var localAndPredicate in localsAndPredicates) {
-												if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
-													continue;
+										finally {
+											dbContextSemaphore.Release();
+										}
 
-												var keyValues = keyToValuesDelegate.Invoke(localAndPredicate.Key);
-												localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+										// Create collection and populate it
+										var destination = collectionFactory.Invoke();
+
+										foreach (var localAndPredicate in localsAndPredicates) {
+											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+										}
+
+										result = collectionConversionDelegate.Invoke(destination);
+									}
+									catch (OperationCanceledException) {
+										throw;
+									}
+									catch (Exception e) {
+										throw new MappingException(e, (sourceType, destinationType));
+									}
+
+									// Should not happen
+									NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
+
+									return result;
+								}
+							},
+							normalizedElementsMatcherFactory);
+					}
+					else { 
+						return new DisposableAsyncNewMapFactory(
+							sourceType, destinationType,
+							async (source, cancellationToken) => {
+								NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+								if (source is IEnumerable sourceEnumerable) {
+									object result;
+									try {
+										List<EntityMappingInfo> localsAndPredicates;
+
+										await dbContextSemaphore.WaitAsync(cancellationToken);
+										try {
+											// Retrieve tracked local entities and normalize keys
+											localsAndPredicates = sourceEnumerable
+												.Cast<object>()
+												.Select(sourceElement => {
+													if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement))
+														return new EntityMappingInfo();
+
+													if (tupleToValueTupleDelegate != null)
+														sourceElement = tupleToValueTupleDelegate.Invoke(sourceElement);
+
+													return new EntityMappingInfo {
+														Key = sourceElement,
+														LocalEntity = localView
+															.Cast<object>()
+															.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(sourceElement, e))
+													};
+												})
+												.ToList();
+
+											// Query db for missing entities if needed,
+											// or attach missing elements
+											if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
+												var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
+												if (missingEntities.Any()) {
+													var filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key,
+														missingEntities
+															.Select(e => keyToValuesDelegate.Invoke(e.Key))
+															.ToList());
+
+													var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
+
+													var entities = await EntityFrameworkQueryableExtensionsToArrayAsync.Invoke(query, cancellationToken);
+
+													// Not using Where() because the collection changes during iteration
+													foreach (var localAndPredicate in localsAndPredicates) {
+														if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
+															continue;
+
+														localAndPredicate.LocalEntity = entities
+															.Cast<object>()
+															.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(localAndPredicate.Key, e));
+													}
+												}
+											}
+											else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
+												// Not using Where() because the collection changes during iteration
+												foreach (var localAndPredicate in localsAndPredicates) {
+													if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
+														continue;
+
+													var keyValues = keyToValuesDelegate.Invoke(localAndPredicate.Key);
+													localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+												}
 											}
 										}
+										finally {
+											dbContextSemaphore.Release();
+										}
+
+										// Create collection and populate it
+										var destination = collectionFactory.Invoke();
+
+										foreach (var localAndPredicate in localsAndPredicates) {
+											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+										}
+
+										result = collectionConversionDelegate.Invoke(destination);
 									}
-									finally {
-										dbContextSemaphore.Release();
+									catch (OperationCanceledException) {
+										throw;
+									}
+									catch (Exception e) {
+										throw new MappingException(e, (sourceType, destinationType));
 									}
 
-									// Create collection and populate it
-									var destination = collectionFactory.Invoke();
+									// Should not happen
+									NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
 
-									foreach (var localAndPredicate in localsAndPredicates) {
-										addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
-									}
-
-									result = collectionConversionDelegate.Invoke(destination);
+									return result;
 								}
-								catch (OperationCanceledException) {
-									throw;
-								}
-								catch (Exception e) {
-									throw new MappingException(e, (sourceType, destinationType));
-								}
-
-								// Should not happen
-								NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
-
-								return result;
-							}
-							else
-								throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-						},
-						normalizedElementsMatcherFactory);
+								else if(source == null)
+									return null;
+								else
+									throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+							},
+							normalizedElementsMatcherFactory);
+					}
 				}
 				else {
 					return new DisposableAsyncNewMapFactory(
@@ -824,91 +1106,205 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else
 				destinationMappingOptions = mappingOptions;
-			var destinationFactory = MapAsyncNewFactory(sourceType, destinationType, destinationMappingOptions);
 
-			try { 
-				var throwOnDuplicateEntity = efCoreOptions?.ThrowOnDuplicateEntity
-					?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
+			var throwOnDuplicateEntity = efCoreOptions?.ThrowOnDuplicateEntity
+				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
 
-				// Retrieve the db context from the services if we need to attach entities
-				DbContext dbContext;
-				IKey key;
-				if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-					dbContext = RetrieveDbContext(mappingOptions);
-					key = _model.FindEntityType(types.To).FindPrimaryKey();
-				}
-				else {
-					dbContext = null;
-					key = null;
-				}
+			// Retrieve the db context from the services if we need to attach entities
+			DbContext dbContext;
+			IKey key;
+			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
+				dbContext = RetrieveDbContext(mappingOptions);
+				key = _model.FindEntityType(types.To).FindPrimaryKey();
+			}
+			else {
+				dbContext = null;
+				key = null;
+			}
 
-				// Check if we are mapping a collection or just a single entity
-				if (isCollection) {
-					var newFactory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
-					try {
-						var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
+			// Check if we are mapping a collection or just a single entity
+			if (isCollection) {
+				var newFactory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
 
-						return new DisposableAsyncMergeMapFactory(
-							sourceType, destinationType,
-							async (source, destination, cancellationToken) => {
-								try {
-									NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-									NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+				try {
+					var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
 
-									if (source is IEnumerable sourceEnumerable) {
-										// If we have to create the destination collection we forward to NewMap
-										// Otherwise we must check that the collection can be mapped to
-										if (destination == null)
-											return await newFactory.Invoke(source, cancellationToken);
-										else if (NeatMapper.TypeUtils.IsCollectionReadonly(destination)) {
-											throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
-												(destination.GetType().FullName ?? destination.GetType().Name));
+					try { 
+						if (types.From.IsAsyncEnumerable()) {
+							var getAsyncEnumeratorDelegate = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.Key);
+							var moveNextAsyncDelegate = ObjectFactory.GetAsyncEnumeratorMoveNextAsync(elementTypes.Key);
+							var currentDelegate = ObjectFactory.GetAsyncEnumeratorCurrent(elementTypes.Key);
+
+							var newSourceType = typeof(IEnumerable<>).MakeGenericType(elementTypes.Key);
+
+							// IAsyncEnumerable<T> would require enumerating all the values twice
+							// in order to merge them, so we buffer them once and map them as IEnumerable<T>
+							Func<object> sourceCollectionFactory;
+							Type actualSourceCollectionType;
+							try {
+								sourceCollectionFactory = ObjectFactory.CreateCollectionFactory(newSourceType, out actualSourceCollectionType);
+							}
+							catch (ObjectCreationException) {
+								throw new MapNotFoundException(types);
+							}
+							
+							// Since the method above is not 100% accurate in checking if the type is an actual collection
+							// we check again here, if we do not get back a method to add elements then it is not a collection
+							Action<object, object> sourceAddDelegate;
+							try {
+								sourceAddDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualSourceCollectionType);
+							}
+							catch (InvalidOperationException) {
+								throw new MapNotFoundException(types);
+							}
+
+							var destinationFactory = MapAsyncNewFactory(newSourceType, destinationType, destinationMappingOptions);
+
+							try { 
+								return new DisposableAsyncMergeMapFactory(
+									sourceType, destinationType,
+									async (source, destination, cancellationToken) => {
+										try {
+											NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+											NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+											if(source == null)
+												return destination;
+											else {
+												// If we have to create the destination collection we forward to NewMap
+												// Otherwise we must check that the collection can be mapped to
+												if (destination == null)
+													return await newFactory.Invoke(source, cancellationToken);
+												else if (NeatMapper.TypeUtils.IsCollectionReadonly(destination)) {
+													throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
+														(destination.GetType().FullName ?? destination.GetType().Name));
+												}
+
+												// Retrieve all the values and buffer them
+												var sourceCollection = sourceCollectionFactory.Invoke();
+												var asyncEnumerator = getAsyncEnumeratorDelegate.Invoke(source, cancellationToken);
+												try {
+													while (await moveNextAsyncDelegate.Invoke(asyncEnumerator)) {
+														var sourceElement = currentDelegate.Invoke(asyncEnumerator);
+														sourceAddDelegate.Invoke(sourceCollection, sourceElement);
+													}
+												}
+												finally {
+													await asyncEnumerator.DisposeAsync();
+												}
+
+												// Retrieve the elements and merge them
+												if (destination is IEnumerable destinationEnumerable) {
+													var sourceEntitiesEnumerable = await destinationFactory.Invoke(sourceCollection, cancellationToken) as IEnumerable
+														?? throw new InvalidOperationException("Invalid result"); // Should not happen
+
+													mergeFactory.Invoke(destinationEnumerable, (IEnumerable)sourceCollection, sourceEntitiesEnumerable);
+												}
+												else
+													throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+											}
+										}
+										catch (MappingException) {
+											throw;
+										}
+										catch (OperationCanceledException) {
+											throw;
+										}
+										catch (Exception e) {
+											throw new MappingException(e, (sourceType, destinationType));
 										}
 
-										if (destination is IEnumerable destinationEnumerable) {
-											var sourceEntitiesEnumerable = (await destinationFactory.Invoke(source, cancellationToken)) as IEnumerable
-												?? throw new InvalidOperationException("Invalid result"); // Should not happen
+										// Should not happen
+										NeatMapper.TypeUtils.CheckObjectType(destination, types.To);
 
-											mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
+										return destination;
+									},
+									destinationFactory, newFactory, mergeFactory);
+							}
+							catch {
+								destinationFactory.Dispose();
+								throw;
+							}
+						}
+						else {
+							var destinationFactory = MapAsyncNewFactory(sourceType, destinationType, destinationMappingOptions);
+
+							try { 
+							return new DisposableAsyncMergeMapFactory(
+								sourceType, destinationType,
+								async (source, destination, cancellationToken) => {
+									try {
+										NeatMapper.TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+										NeatMapper.TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+										if (source is IEnumerable sourceEnumerable) {
+											// If we have to create the destination collection we forward to NewMap
+											// Otherwise we must check that the collection can be mapped to
+											if (destination == null)
+												return await newFactory.Invoke(source, cancellationToken);
+											else if (NeatMapper.TypeUtils.IsCollectionReadonly(destination)) {
+												throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
+													(destination.GetType().FullName ?? destination.GetType().Name));
+											}
+
+											if (destination is IEnumerable destinationEnumerable) {
+												var sourceEntitiesEnumerable = (await destinationFactory.Invoke(source, cancellationToken)) as IEnumerable
+													?? throw new InvalidOperationException("Invalid result"); // Should not happen
+
+												mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
+											}
+											else
+												throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
 										}
+										else if (source == null)
+											return destination;
 										else
-											throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+											throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
 									}
-									else if (source == null)
-										return null;
-									else
-										throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
-								}
-								catch (MappingException) {
-									throw;
-								}
-								catch (OperationCanceledException) {
-									throw;
-								}
-								catch (Exception e) {
-									throw new MappingException(e, (sourceType, destinationType));
-								}
+									catch (MappingException) {
+										throw;
+									}
+									catch (OperationCanceledException) {
+										throw;
+									}
+									catch (Exception e) {
+										throw new MappingException(e, (sourceType, destinationType));
+									}
 
-								// Should not happen
-								NeatMapper.TypeUtils.CheckObjectType(destination, types.To);
+									// Should not happen
+									NeatMapper.TypeUtils.CheckObjectType(destination, types.To);
 
-								return destination;
-							},
-							destinationFactory, newFactory, mergeFactory);
+									return destination;
+								},
+								destinationFactory, newFactory, mergeFactory);
+							}
+							catch {
+								destinationFactory.Dispose();
+								throw;
+							}
+						}
 					}
 					catch {
-						newFactory.Dispose();
+						mergeFactory.Dispose();
 						throw;
 					}
 				}
-				else {
-					var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
-					var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
+				catch {
+					newFactory.Dispose();
+					throw;
+				}
+			}
+			else {
+				var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
+				var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 
-					var attachEntityDelegate = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key);
+				var attachEntityDelegate = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key);
 
-					var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
+				var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
+				var destinationFactory = MapAsyncNewFactory(sourceType, destinationType, destinationMappingOptions);
+
+				try { 
 					return new DisposableAsyncMergeMapFactory(
 						sourceType, destinationType,
 						async (source, destination, cancellationToken) => {
@@ -975,10 +1371,10 @@ namespace NeatMapper.EntityFrameworkCore {
 						},
 						destinationFactory);
 				}
-			}
-			catch {
-				destinationFactory.Dispose();
-				throw;
+				catch {
+					destinationFactory.Dispose();
+					throw;
+				}
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -991,6 +1387,95 @@ namespace NeatMapper.EntityFrameworkCore {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
+
+		private bool CanMapNewInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions mappingOptions,
+			out bool isCollection,
+			out (Type Key, Type Entity) elementTypes) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Prevent being used by a collection mapper
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions)) {
+				isCollection = false;
+				elementTypes = default;
+
+				return false;
+			}
+
+			// We could also map collections of keys/entities
+			if ((sourceType.IsEnumerable() ? sourceType != typeof(string) : sourceType.IsAsyncEnumerable()) &&
+				(destinationType.IsEnumerable() ? destinationType != typeof(string) : destinationType.IsAsyncEnumerable())) {
+
+				isCollection = true;
+				elementTypes = (sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
+					destinationType.IsEnumerable() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType());
+
+				if (!ObjectFactory.CanCreateCollection(destinationType))
+					return false;
+			}
+			else {
+				isCollection = false;
+				elementTypes = (sourceType, destinationType);
+			}
+
+			return CanMapTypesInternal(elementTypes);
+		}
+
+		private bool CanMapMergeInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions mappingOptions,
+			out bool isCollection,
+			out (Type Key, Type Entity) elementTypes) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Prevent being used by a collection mapper
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions)) {
+				isCollection = false;
+				elementTypes = default;
+
+				return false;
+			}
+
+			// We could also map collections of keys/entities
+			if ((sourceType.IsEnumerable() ? sourceType != typeof(string) : sourceType.IsAsyncEnumerable()) &&
+				destinationType.IsCollection()) {
+
+				isCollection = true;
+				elementTypes = (sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
+					destinationType.GetEnumerableElementType());
+
+				if (destinationType.IsArray || !ObjectFactory.CanCreateCollection(destinationType))
+					return false;
+
+				// If the destination type is not an interface, check if it is not readonly
+				if (!destinationType.IsInterface && destinationType.IsGenericType) {
+					var collectionDefinition = destinationType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						return false;
+					}
+				}
+			}
+			else {
+				isCollection = false;
+				elementTypes = (sourceType, destinationType);
+			}
+
+			return CanMapTypesInternal(elementTypes);
+		}
 
 		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
 			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;

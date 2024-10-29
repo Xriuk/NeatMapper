@@ -83,12 +83,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			// Add mapper to composite mapper
 			services.AddOptions<CompositeMapperOptions>()
 				.Configure<EntityFrameworkCoreMapper>((o, m) => {
-					// Try adding before collection mappers
-					var collectionMapper = o.Mappers.OfType<CollectionMapper>().FirstOrDefault();
-					if (collectionMapper != null)
-						o.Mappers.Insert(o.Mappers.IndexOf(collectionMapper), m);
-					else
-						o.Mappers.Add(m);
+					o.Mappers.Add(m);
 				});
 
 			services.Add(new ServiceDescriptor(
@@ -107,12 +102,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			// Add mapper to composite mapper
 			services.AddOptions<AsyncCompositeMapperOptions>()
 				.Configure<AsyncEntityFrameworkCoreMapper>((o, m) => {
-					// Try adding before collection mappers
-					var collectionMapper = o.Mappers.OfType<AsyncCollectionMapper>().FirstOrDefault();
-					if (collectionMapper != null)
-						o.Mappers.Insert(o.Mappers.IndexOf(collectionMapper), m);
-					else
-						o.Mappers.Add(m);
+					o.Mappers.Add(m);
 				});
 
 			services.Add(new ServiceDescriptor(

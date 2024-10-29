@@ -7,7 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
-	public class AsyncNewCollectionMapperTests {
+	public class AsyncCollectionMapperNewMapsTests {
 		protected IAsyncMapper _mapper = null;
 
 
@@ -426,11 +426,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 	}
 
 	[TestClass]
-	public class AsyncNewCollectionMapperNotParallelWithAsyncNewMapperTests : AsyncNewCollectionMapperTests {
+	public class AsyncCollectionMapperNewMapsNotParallelTests : AsyncCollectionMapperNewMapsTests {
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncNewCollectionMapper(new AsyncNewMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(AsyncNewMapperTests.Maps) }
+			_mapper = new AsyncCollectionMapper(new AsyncCustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(AsyncNewMapsTests.Maps), typeof(AsyncMergeMapsTests.Maps) }
 			}), new AsyncCollectionMappersOptions {
 				MaxParallelMappings = 1
 			});
@@ -438,81 +438,11 @@ namespace NeatMapper.Tests.Mapping.Async {
 	}
 
 	[TestClass]
-	public class AsyncNewCollectionMapperNotParallelWithAsyncMergeMapperTests : AsyncNewCollectionMapperTests {
+	public class AsyncCollectionMapperNewMapsParallelTests : AsyncCollectionMapperNewMapsTests {
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncNewCollectionMapper(new AsyncMergeMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(AsyncMergeMapperTests.Maps) }
-			}), new AsyncCollectionMappersOptions {
-				MaxParallelMappings = 1
-			});
-		}
-
-
-		// DEV: we have no way of checking the below atm
-		/*
-		[TestMethod]
-		public async Task ShouldFallbackToMergeMapInCollections() {
-			// No Options
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var result = await _mapper.MapAsync<IList<string>>(new[] { 2f });
-				Assert.IsNotNull(result);
-				Assert.AreEqual(1, result.Count);
-				Assert.AreEqual("MergeMap", result[0]);
-
-				Assert.IsNull(MappingOptionsUtils.options);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions);
-			}
-
-			// Options (without matcher)
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var opts = new TestOptions();
-				await _mapper.MapAsync<IList<string>>(new[] { 2f }, new[] { opts });
-
-				Assert.AreSame(opts, MappingOptionsUtils.options);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions);
-			}
-
-			// Options (with matcher, forwards everything)
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions {
-					Matcher = (s, d, c) => false,
-					RemoveNotMatchedDestinationElements = false
-				};
-				await _mapper.MapAsync<IList<string>>(new[] { 2f }, new object[] { opts, merge });
-
-				Assert.AreSame(opts, MappingOptionsUtils.options);
-				Assert.AreNotSame(merge, MappingOptionsUtils.mergeOptions);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions.Matcher);
-				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
-			}
-		}
-		*/
-
-		[TestMethod]
-		public async Task ShouldNotFallbackToMergeMapInCollectionsIfCannotCreateElement() {
-			Assert.IsFalse(_mapper.CanMapAsyncNew<string[], IEnumerable<ClassWithoutParameterlessConstructor>>());
-
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<ClassWithoutParameterlessConstructor>>(new[] { "" }));
-		}
-	}
-
-	[TestClass]
-	public class AsyncNewCollectionMapperParallelWithAsyncNewMapperTests : AsyncNewCollectionMapperTests {
-		[TestInitialize]
-		public void Initialize() {
-			_mapper = new AsyncNewCollectionMapper(new AsyncNewMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(AsyncNewMapperTests.Maps) }
+			_mapper = new AsyncCollectionMapper(new AsyncCustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(AsyncNewMapsTests.Maps), typeof(AsyncMergeMapsTests.Maps) }
 			}), new AsyncCollectionMappersOptions {
 				MaxParallelMappings = 10
 			});
@@ -533,44 +463,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				return "";
 			});
 
-			var mapper = new AsyncNewCollectionMapper(new AsyncNewMapper(null, options), new AsyncCollectionMappersOptions {
-				MaxParallelMappings = 10
-			});
-
-			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 100, 201 }));
-			await Task.Delay(300);
-
-			Assert.AreEqual(2, mapped);
-		}
-	}
-
-	[TestClass]
-	public class AsyncNewCollectionMapperParallelWithAsyncMergeMapperTests : AsyncNewCollectionMapperTests {
-		[TestInitialize]
-		public void Initialize() {
-			_mapper = new AsyncNewCollectionMapper(new AsyncMergeMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(AsyncMergeMapperTests.Maps) }
-			}), new AsyncCollectionMappersOptions {
-				MaxParallelMappings = 10
-			});
-		}
-
-		private static int mapped = 0;
-
-		[TestMethod]
-		public async Task ShouldCancelParallelMappingsOnException() {
-			var options = new CustomAsyncMergeAdditionalMapsOptions();
-			mapped = 0;
-			options.AddMap<int, string>(async (s, d, c) => {
-				await Task.Delay(s, c.CancellationToken);
-				if (s % 2 == 0)
-					throw new Exception();
-				else
-					Interlocked.Increment(ref mapped);
-				return "";
-			});
-
-			var mapper = new AsyncNewCollectionMapper(new AsyncMergeMapper(null, options), new AsyncCollectionMappersOptions {
+			var mapper = new AsyncCollectionMapper(new AsyncCustomMapper(null, options), new AsyncCollectionMappersOptions {
 				MaxParallelMappings = 10
 			});
 
@@ -585,13 +478,13 @@ namespace NeatMapper.Tests.Mapping.Async {
 	public class AsyncNewCollectionMapperCanMapTests {
 		[TestMethod]
 		public void ShouldUseMappingOptions() {
-			var mapper = new AsyncNewCollectionMapper(new AsyncNewMapper());
+			var mapper = new AsyncCollectionMapper(new AsyncCustomMapper());
 
 			Assert.IsFalse(mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>());
 
 			var options = new CustomAsyncNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => Task.FromResult(0));
-			var mapper2 = new AsyncNewMapper(null, options);
+			var mapper2 = new AsyncCustomMapper(null, options);
 
 			Assert.IsTrue(mapper.CanMapAsyncNew<IEnumerable<string>, IEnumerable<int>>(new[] { new AsyncMapperOverrideMappingOptions(mapper2) }));
 		}

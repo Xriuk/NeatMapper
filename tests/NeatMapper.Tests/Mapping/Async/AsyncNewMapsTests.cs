@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
-	public class AsyncNewMapperTests {
+	public class AsyncNewMapsTests {
 		public class Maps :
 #if NET7_0_OR_GREATER
 			IAsyncNewMapStatic<int, string>,
@@ -472,7 +472,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncNewMapper(new CustomMapsOptions {
+			_mapper = new AsyncCustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
@@ -673,7 +673,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldMapWithAdditionalMaps() {
 			var options = new CustomAsyncNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0));
-			var mapper = new AsyncNewMapper(null, options);
+			var mapper = new AsyncCustomMapper(null, options);
 
 			Assert.IsTrue(mapper.CanMapAsyncNew<string, int>());
 

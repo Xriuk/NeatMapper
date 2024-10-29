@@ -10,6 +10,7 @@
 
 ### Changed
 
+- New and Merge mappers (normal, collection and async ones) were merged together into a custom one.
 - `IMapperCanMap`/`IAsyncMapperCanMap`/`IMatcherCanMatch`/`IProjectorCanProject` interfaces were integrated into their parent interfaces (`IMapper`/`IAsyncMapper`/`IMatcher`/`IProjector`) and removed, all implementing classes and extension methods were adjusted.
 - `IAsyncMapper` `CanMapAsync*` methods now return `bool` instead of `Task<bool>` and the `CancellationToken` parameter has been removed.
 - `CanMap*`/`CanMapAsync*`/`CanMatch`/`CanProject` methods now should never throw, if an interface type can be mapped true will be returned, and if the object provided does not respect expectations (eg: passing a readonly collection) a mapping exception will be thrown.
@@ -26,6 +27,9 @@
 - `AsyncMergeCollectionMapper` does not support anymore `AsyncCollectionMappersMappingOptions` `MaxParallelMappings`, constructor has been updated to remove the parameter.
 - `MapNotFoundException` can no longer be thrown from mapper/maps on its own, a map cannot refuse itself based on provided objects.
 - `CompositeMapper` and `AsyncCompositeMapper` will not try following mappers anymore on `MapNotFoundException`s.
+- `CompositeMapperOptions` collection and identity mappers have been moved to `PostConfigure()`.
+- `AsyncCompositeMapperOptions` collection and identity mappers have been moved to `PostConfigure()`.
+- `CompositeProjectorOptions` collection projector has been moved to `PostConfigure()`.
 
 ### Added
 
@@ -42,6 +46,7 @@
 - `IPredicateFactory` and `PredicateFactory<T>` types which replaces `NewMapFactory<T, bool>`.
 - `params object[]` constructor overload for `MappingOptions`.
 - `EquatableMatcher` which allows matching types implementing `IEquatable`.
+- `ObjectEqualsMatcher` as last matcher (via `PostConfigure()` of `CompositeMatcherOptions`) which allows matching via `object.Equals()`.
 
 ### Fixed
 

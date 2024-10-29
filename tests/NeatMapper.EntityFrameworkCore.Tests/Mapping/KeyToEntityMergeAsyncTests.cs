@@ -301,6 +301,21 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => _mapper.MapAsync(new[] { 2, 0 }, new List<IntKey> { entity }, mappingOptions));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
+
+			{
+				var list = new List<StringKey>();
+				var result = await _mapper.MapAsync(new DefaultAsyncEnumerable<string>(new[] { null, "Test" }), list);
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+			using (var factory = _mapper.MapAsyncMergeFactory<IAsyncEnumerable<string>, List<StringKey>>()) {
+				var list = new List<StringKey>();
+				var result = await factory.Invoke(new DefaultAsyncEnumerable<string>(new[] { null, "Test" }), list);
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
 		}
 
 		[TestMethod]

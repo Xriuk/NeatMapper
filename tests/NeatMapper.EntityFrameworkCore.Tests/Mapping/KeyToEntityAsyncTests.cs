@@ -289,6 +289,56 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(result[0]);
 				Assert.IsNotNull(result[1]);
 			}
+
+			{
+				var result = await _mapper.MapAsync<StringKey[]>(new DefaultAsyncEnumerable<string>(new[] { null, "Test" }));
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+			using(var factory = _mapper.MapAsyncNewFactory<IAsyncEnumerable<string>, StringKey[]>()){
+				var result = await factory.Invoke(new DefaultAsyncEnumerable<string>(new[] { null, "Test" }));
+				Assert.AreEqual(2, result.Length);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+
+			{
+				var result = await _mapper.MapAsync<IAsyncEnumerable<StringKey>>(new[] { null, "Test" });
+				var i = 0;
+				var enumerator = result.GetAsyncEnumerator();
+				try {
+					while(await enumerator.MoveNextAsync()) {
+						if(i == 0)
+							Assert.IsNull(enumerator.Current);
+						else
+							Assert.IsNotNull(enumerator.Current);
+						i++;
+					}
+				}
+				finally {
+					await enumerator.DisposeAsync();
+				}
+				Assert.AreEqual(2, i);
+			}
+			using (var factory = _mapper.MapAsyncNewFactory<string[], IAsyncEnumerable<StringKey>>()) {
+				var result = await factory.Invoke(new[] { null, "Test" });
+				var i = 0;
+				var enumerator = result.GetAsyncEnumerator();
+				try {
+					while (await enumerator.MoveNextAsync()) {
+						if (i == 0)
+							Assert.IsNull(enumerator.Current);
+						else
+							Assert.IsNotNull(enumerator.Current);
+						i++;
+					}
+				}
+				finally {
+					await enumerator.DisposeAsync();
+				}
+				Assert.AreEqual(2, i);
+			}
 		}
 
 		[TestMethod]

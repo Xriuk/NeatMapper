@@ -4,15 +4,16 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// <see cref="IMapper"/> which retrieves entities from their keys (even composite keys
 	/// as <see cref="Tuple"/> or <see cref="ValueTuple"/>, and shadow keys) from a <see cref="DbContext"/>.<br/>
-	/// Supports new and merge maps, also supports collections (same as <see cref="NewCollectionMapper"/> and
-	/// <see cref="MergeCollectionMapper"/> but not nested).<br/>
+	/// Supports new and merge maps, also supports collections (same as <see cref="CollectionMapper"/> but not nested).<br/>
 	/// Entities may be searched locally in the <see cref="DbContext"/> first,
 	/// otherwise a query to the db will be made, depending on
 	/// <see cref="EntityFrameworkCoreOptions.EntitiesRetrievalMode"/> (and overrides).
@@ -185,44 +186,46 @@ namespace NeatMapper.EntityFrameworkCore {
 			var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key);
 
-			dbContextSemaphore.Wait();
-			try {
-				var dbSet = RetrieveDbSet(dbContext, elementTypes.Entity);
-				var localView = GetLocalFromDbSet(dbSet);
+			var dbSet = RetrieveDbSet(dbContext, elementTypes.Entity);
+			var localView = GetLocalFromDbSet(dbSet);
 
-				// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
-				using(var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(elementTypes, mappingOptions
-					.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance))) { 
+			// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
+			using(var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(elementTypes, mappingOptions
+				.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance))) { 
 
-					// Check if we are mapping a collection or just a single entity
-					if (isCollection) {
-						// Create the collection and retrieve the actual type which will be used,
-						// eg: to create an array we create a List<T> first, which will be later
-						// converted to the desired array
-						object destination;
-						Type actualCollectionType;
+				// Check if we are mapping a collection or just a single entity
+				if (isCollection) {
+					// Create the collection and retrieve the actual type which will be used,
+					// eg: to create an array we create a List<T> first, which will be later
+					// converted to the desired array
+					object destination;
+					Type actualCollectionType;
+					try {
+						destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
+					}
+					catch (ObjectCreationException) {
+						throw new MapNotFoundException(types);
+					}
+
+					// Since the method above is not 100% accurate in checking if the type is an actual collection
+					// we check again here, if we do not get back a method to add elements then it is not a collection
+					Action<object, object> addDelegate;
+					try {
+						addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
+					}
+					catch (InvalidOperationException) {
+						throw new MapNotFoundException(types);
+					}
+
+					if (source is IEnumerable sourceEnumerable) {
+						object result;
 						try {
-							destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
-						}
-						catch (ObjectCreationException) {
-							throw new MapNotFoundException(types);
-						}
+							List<EntityMappingInfo> localsAndPredicates;
 
-						// Since the method above is not 100% accurate in checking if the type is an actual collection
-						// we check again here, if we do not get back a method to add elements then it is not a collection
-						Action<object, object> addDelegate;
-						try {
-							addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
-						}
-						catch (InvalidOperationException) {
-							throw new MapNotFoundException(types);
-						}
-
-						if (source is IEnumerable sourceEnumerable) {
-							object result;
+							dbContextSemaphore.Wait();
 							try {
 								// Retrieve tracked local entities and normalize keys
-								var localsAndPredicates = sourceEnumerable
+								localsAndPredicates = sourceEnumerable
 									.Cast<object>()
 									.Select(sourceElement => {
 										if (sourceElement == null || TypeUtils.IsDefaultValue(elementTypes.Key.UnwrapNullable(), sourceElement))
@@ -275,41 +278,47 @@ namespace NeatMapper.EntityFrameworkCore {
 										localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
 									}
 								}
-
-								foreach (var localAndPredicate in localsAndPredicates) {
-									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
-								}
-
-								result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 							}
-							catch (OperationCanceledException) {
-								throw;
-							}
-							catch (Exception e) {
-								throw new MappingException(e, (sourceType, destinationType));
+							finally {
+								dbContextSemaphore.Release();
 							}
 
-							// Should not happen
-							NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
+							foreach (var localAndPredicate in localsAndPredicates) {
+								addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+							}
 
-							return result;
+							result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 						}
-						else
-							throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+						catch (OperationCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, (sourceType, destinationType));
+						}
+
+						// Should not happen
+						NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
+
+						return result;
 					}
-					else {
-						if (TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
-							return null;
+					else
+						throw new InvalidOperationException("Source is not an enumerable"); // Should not happen
+				}
+				else {
+					if (TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
+						return null;
 
-						object result;
+					object result;
+					try {
+						var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+							tupleToValueTupleDelegate.Invoke(source) :
+							source);
+
+						dbContextSemaphore.Wait();
 						try {
-							var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-								tupleToValueTupleDelegate.Invoke(source) :
-								source);
-
 							// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
 							// in which case we can use Find directly)
-							if(retrievalMode != EntitiesRetrievalMode.LocalOrRemote) { 
+							if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) { 
 								result = localView
 									.Cast<object>()
 									.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(source, e));
@@ -326,22 +335,22 @@ namespace NeatMapper.EntityFrameworkCore {
 									result = attachEntityDelegate.Invoke(keyValues, dbContext);
 							}
 						}
-						catch (OperationCanceledException) {
-							throw;
+						finally {
+							dbContextSemaphore.Release();
 						}
-						catch (Exception e) {
-							throw new MappingException(e, (sourceType, destinationType));
-						}
-
-						// Should not happen
-						NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
-
-						return result;
 					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, (sourceType, destinationType));
+					}
+
+					// Should not happen
+					NeatMapper.TypeUtils.CheckObjectType(result, destinationType);
+
+					return result;
 				}
-			}
-			finally {
-				dbContextSemaphore.Release();
 			}
 
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
@@ -840,6 +849,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				// Check if we are mapping a collection or just a single entity
 				if (isCollection) {
 					var newFactory = MapNewFactory(sourceType, destinationType, mappingOptions);
+
 					try { 
 						var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
 
@@ -992,6 +1002,93 @@ namespace NeatMapper.EntityFrameworkCore {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
+
+		private bool CanMapNewInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions mappingOptions,
+			out bool isCollection,
+			out (Type Key, Type Entity) elementTypes) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Prevent being used by a collection mapper
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions)) {
+				isCollection = false;
+				elementTypes = default;
+
+				return false;
+			}
+
+			// We could also map collections of keys/entities
+			if (sourceType.IsEnumerable() && sourceType != typeof(string) &&
+				destinationType.IsEnumerable() && destinationType != typeof(string)) {
+
+				isCollection = true;
+				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
+
+				if (!ObjectFactory.CanCreateCollection(destinationType))
+					return false;
+			}
+			else {
+				isCollection = false;
+				elementTypes = (sourceType, destinationType);
+			}
+
+			return CanMapTypesInternal(elementTypes);
+		}
+
+		private bool CanMapMergeInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions mappingOptions,
+			out bool isCollection,
+			out (Type Key, Type Entity) elementTypes) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// Prevent being used by a collection mapper
+			if (CheckCollectionMapperNestedContextRecursive(mappingOptions)) {
+				isCollection = false;
+				elementTypes = default;
+
+				return false;
+			}
+
+			// We could also map collections of keys/entities
+			if (sourceType.IsEnumerable() && sourceType != typeof(string) &&
+				destinationType.IsCollection()) {
+
+				isCollection = true;
+				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
+
+				if (destinationType.IsArray || !ObjectFactory.CanCreateCollection(destinationType))
+					return false;
+
+				// If the destination type is not an interface, check if it is not readonly
+				if (!destinationType.IsInterface && destinationType.IsGenericType) {
+					var collectionDefinition = destinationType.GetGenericTypeDefinition();
+					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+
+						return false;
+					}
+				}
+			}
+			else {
+				isCollection = false;
+				elementTypes = (sourceType, destinationType);
+			}
+
+			return CanMapTypesInternal(elementTypes);
+		}
 
 		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
 			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;

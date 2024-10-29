@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
-	public class AsyncNewMapperGenericTests {
+	public class AsyncNewMapsGenericTests {
 		public class Maps<T1, T2, T3> :
 #if NET7_0_OR_GREATER
 			IAsyncNewMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>>
@@ -460,7 +460,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncNewMapper(new CustomMapsOptions {
+			_mapper = new AsyncCustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			});
 		}
@@ -485,7 +485,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Class constraint
 				{
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
 
@@ -542,7 +542,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldNotMapNotMatchingGenericConstraints() {
 			// struct
 			{
-				var mapper = new AsyncNewMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
@@ -557,7 +557,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// class
 			{
-				var mapper = new AsyncNewMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
@@ -574,7 +574,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// unmanaged
 			{
-				var mapper = new AsyncNewMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
@@ -591,7 +591,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// new()
 			{
-				var mapper = new AsyncNewMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
@@ -606,7 +606,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Not generic
 				{ 
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
@@ -621,7 +621,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Generic
 				{
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
@@ -639,7 +639,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Not generic
 				{ 
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
@@ -652,7 +652,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Generic
 				{
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
@@ -669,7 +669,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Simple
 				{
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
@@ -685,7 +685,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Complex
 				{
-					var mapper = new AsyncNewMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
@@ -740,7 +740,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldRespectConstraints() {
-			var mapper = new AsyncNewMapper(new CustomMapsOptions {
+			var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
 			});
 
@@ -763,7 +763,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollections() {
-			var mapper = new AsyncNewCollectionMapper(_mapper);
+			var mapper = new AsyncCollectionMapper(_mapper);
 
 			{
 				Assert.IsTrue(mapper.CanMapAsyncNew<Tuple<string, int>[], ValueTuple<int, string>[]>());

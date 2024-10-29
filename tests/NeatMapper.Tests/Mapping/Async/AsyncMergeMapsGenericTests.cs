@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
 	[TestClass]
-	public class AsyncMergeMapperGenericTests {
+	public class AsyncMergeMapsGenericTests {
 		public class Maps<T1, T2, T3> :
 #if NET7_0_OR_GREATER
 			IAsyncMergeMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>> 
@@ -561,7 +561,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new AsyncMergeMapper(new CustomMapsOptions {
+			_mapper = new AsyncCustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			});
 		}
@@ -587,7 +587,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Class constraint
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
 
@@ -644,7 +644,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 		public async Task ShouldNotMapNotMatchingGenericConstraints() {
 			// struct
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
@@ -659,7 +659,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// class
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
@@ -676,7 +676,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// unmanaged
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
@@ -693,7 +693,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			// new()
 			{
-				var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+				var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
@@ -708,7 +708,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Not generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
@@ -723,7 +723,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
@@ -741,7 +741,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Not generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
@@ -754,7 +754,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Generic
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
@@ -771,7 +771,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 			{
 				// Simple
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
@@ -787,7 +787,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				// Complex
 				{
-					var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+					var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
@@ -842,7 +842,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldRespectConstraints() {
-			var mapper = new AsyncMergeMapper(new CustomMapsOptions {
+			var mapper = new AsyncCustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
 			});
 
@@ -865,7 +865,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithoutElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper);
+			var mapper = new AsyncCollectionMapper(_mapper);
 
 			{
 				var tuples = await mapper.MapAsync(new[] { new Tuple<string, int>("Test1", 4), new Tuple<string, int>("Test2", 5) }, new List<ValueTuple<int, string>>());
@@ -903,7 +903,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithGenericElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
+			var mapper = new AsyncCollectionMapper(_mapper, null, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 			var a = new GenericClassDto<CategoryDto> {
@@ -961,7 +961,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithSpecificElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
+			var mapper = new AsyncCollectionMapper(_mapper, null, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 			var pa = new ProductDto {
@@ -1021,7 +1021,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 		[TestMethod]
 		public async Task ShouldMapCollectionsWithCustomElementsComparer() {
-			var mapper = new AsyncMergeCollectionMapper(_mapper);
+			var mapper = new AsyncCollectionMapper(_mapper);
 			var pa = new ProductDto {
 				Code = "Test1"
 			};

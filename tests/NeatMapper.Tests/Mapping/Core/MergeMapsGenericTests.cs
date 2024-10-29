@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class MergeMapperGenericTests {
+	public class MergeMapsGenericTests {
 		public class Maps<T1, T2, T3> :
 #if NET7_0_OR_GREATER
 			IMergeMapStatic<Tuple<T1, T2>, ValueTuple<T1, T2, T3>> 
@@ -542,7 +542,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new MergeMapper(new CustomMapsOptions {
+			_mapper = new CustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			});
 		}
@@ -568,7 +568,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Class constraint
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 					});
 
@@ -625,7 +625,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldNotMapNotMatchingGenericConstraints() {
 			// struct
 			{
-				var mapper = new MergeMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithStructType<>) }
 				});
 
@@ -640,7 +640,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			// class
 			{
-				var mapper = new MergeMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
 				});
 
@@ -657,7 +657,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			// unmanaged
 			{
-				var mapper = new MergeMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithUnmanagedType<>) }
 				});
 
@@ -674,7 +674,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			// new()
 			{
-				var mapper = new MergeMapper(new CustomMapsOptions {
+				var mapper = new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(MapsWithNewType<>) }
 				});
 
@@ -689,7 +689,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Not generic
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<>) }
 					});
 
@@ -704,7 +704,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Generic
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithBaseClassType<,>) }
 					});
 
@@ -722,7 +722,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Not generic
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<>) }
 					});
 
@@ -735,7 +735,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Generic
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithInterfaceType<,>) }
 					});
 
@@ -752,7 +752,7 @@ namespace NeatMapper.Tests.Mapping {
 			{
 				// Simple
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterType<,>) }
 					});
 
@@ -768,7 +768,7 @@ namespace NeatMapper.Tests.Mapping {
 
 				// Complex
 				{
-					var mapper = new MergeMapper(new CustomMapsOptions {
+					var mapper = new CustomMapper(new CustomMapsOptions {
 						TypesToScan = new List<Type> { typeof(MapsWithGenericTypeParameterComplexType<,>) }
 					});
 
@@ -823,7 +823,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldRespectConstraints() {
-			var mapper = new MergeMapper(new CustomMapsOptions {
+			var mapper = new CustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(MapsWithClassType<>), typeof(MapsWithStructType<>) }
 			});
 
@@ -846,7 +846,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithoutElementsComparer() {
-			var mapper = new MergeCollectionMapper(_mapper);
+			var mapper = new CollectionMapper(_mapper);
 
 			{
 				Assert.IsTrue(mapper.CanMapMerge<Tuple<string, int>[], List<ValueTuple<int, string>>>());
@@ -890,7 +890,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithGenericElementsComparer() {
-			var mapper = new MergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
+			var mapper = new CollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 
@@ -951,7 +951,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithSpecificElementsComparer() {
-			var mapper = new MergeCollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
+			var mapper = new CollectionMapper(_mapper, new CustomMatcher(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps<,,>), typeof(Maps<,>), typeof(Maps<>), typeof(Maps) }
 			}));
 
@@ -1012,7 +1012,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldMapCollectionsWithCustomElementsComparer() {
-			var mapper = new MergeCollectionMapper(_mapper);
+			var mapper = new CollectionMapper(_mapper);
 			var pa = new ProductDto {
 				Code = "Test1"
 			};

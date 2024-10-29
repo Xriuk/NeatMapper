@@ -50,8 +50,8 @@ namespace NeatMapper.Tests.Extensions {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new MergeMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(Mapping.MergeMapperTests.Maps) }
+			_mapper = new CustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(Mapping.MergeMapsTests.Maps) }
 			});
 		}
 

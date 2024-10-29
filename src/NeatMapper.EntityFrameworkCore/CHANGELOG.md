@@ -11,6 +11,11 @@
 
 - `EntitiesRetrievalMode.Local` value renamed to `EntitiesRetrievalMode.LocalOnly`.
 - Updated NeatMapper dependency version and corrected breaking changes (see NeatMapper changelog).
+- Adjusted Dependency Injection configuration since now collection mappers of NeatMapper core package are added in PostConfiguration there's no need to check them before adding EF Core mappers.
+
+### Added
+
+- `AsyncEntityFrameworkCoreMapper` now supports `IAsyncEnumerable<T>`, as source or destination for new maps and as source for merge maps.
 
 ### Fixed
 
@@ -25,16 +30,16 @@
 
 ## [3.1.0] - 2024-04-26
 
-### Added
-
-- .NET 8.0 support.
-
 ### Changed
 
 - Updated NeatMapper dependency version.
 - `EntityFrameworkCoreMatcher` now handles shadow keys too, and now it requires a `DbContext` type and optionally a `ServiceProvider` in its constructor.
 - Instead of `TaskCanceledException` which where caught and re-thrown directly by maps and mappers (instead of being wrapped in `MappingException` like the others) now `OperationCanceledException`s are caught and re-thrown, this is backwards compatible, since `TaskCanceledException` is derived from it, but now other exceptions can be caught too.
 - `EntityFrameworkCoreProjector` no longer throws `MapNotFoundException` in case of a disposed `DbContext`, instead the exception is now wrapped in a `ProjectionException`.
+
+### Added
+
+- .NET 8.0 support.
 
 ### Fixed
 

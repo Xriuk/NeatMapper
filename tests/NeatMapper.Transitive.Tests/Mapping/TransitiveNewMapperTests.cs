@@ -50,7 +50,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new CompositeMapper(
-				new NewMapper(new CustomMapsOptions {
+				new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Maps) }
 				}),
 				new TransitiveNewMapper(EmptyMapper.Instance));

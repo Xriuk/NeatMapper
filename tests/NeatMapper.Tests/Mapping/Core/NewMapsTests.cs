@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class NewMapperTests {
+	public class NewMapsTests {
 		public class Maps :
 #if NET7_0_OR_GREATER
 			INewMapStatic<int, string>,
@@ -407,7 +407,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new NewMapper(new CustomMapsOptions {
+			_mapper = new CustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
@@ -604,7 +604,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldMapWithAdditionalMaps() {
 			var options = new CustomNewAdditionalMapsOptions();
 			options.AddMap<string, int>((s, _) => s?.Length ?? 0);
-			var mapper = new NewMapper(null, options);
+			var mapper = new CustomMapper(null, options);
 
 			Assert.IsTrue(_mapper.CanMapNew<string, int>());
 

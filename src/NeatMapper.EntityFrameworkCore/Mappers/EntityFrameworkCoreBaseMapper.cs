@@ -19,6 +19,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
@@ -225,81 +226,16 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		protected abstract bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions);
 
-		protected bool CanMapNewInternal(
-			Type sourceType,
-			Type destinationType,
-			MappingOptions mappingOptions,
-			out bool isCollection,
-			out (Type Key, Type Entity) elementTypes) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// Prevent being used by a collection mapper
-			if (CheckCollectionMapperNestedContextRecursive(mappingOptions)) { 
-				isCollection = false;
-				elementTypes = default;
-
-				return false;
-			}
-
-			// We could also map collections of keys/entities
-			if (sourceType.IsEnumerable() && sourceType != typeof(string) && destinationType.IsEnumerable() && destinationType != typeof(string)) {
-				isCollection = true;
-				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
-
-				if (!ObjectFactory.CanCreateCollection(destinationType))
-					return false;
-			}
-			else { 
-				isCollection = false;
-				elementTypes = (sourceType, destinationType);
-			}
-
+		protected bool CanMapTypesInternal((Type Key, Type Entity) elementTypes) {
 			// We can only map from key to entity so we check source and destination types
 			if (!elementTypes.Key.IsKeyType() && !elementTypes.Key.IsCompositeKeyType())
 				return false;
 
-			return CanMapEntityKey(elementTypes.Entity, elementTypes.Key);
-		}
-
-		protected bool CanMapMergeInternal(
-			Type sourceType,
-			Type destinationType,
-			MappingOptions mappingOptions,
-			out bool isCollection,
-			out (Type Key, Type Entity) elementTypes) {
-
-			if(!CanMapNewInternal(sourceType, destinationType, mappingOptions, out isCollection, out elementTypes))
-				return false;
-
-			if (isCollection) {
-				if(!destinationType.IsCollection() || destinationType.IsArray)
-					return false;
-
-				// If the destination type is not an interface, check if it is not readonly
-				if (!destinationType.IsInterface && destinationType.IsGenericType) {
-					var collectionDefinition = destinationType.GetGenericTypeDefinition();
-					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
-						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
-						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
-
-						return false;
-					}
-				}
-			}
-
-			return true;
-		}
-
-		private bool CanMapEntityKey(Type entityType, Type keyType) {
-			if (!entityType.IsClass)
+			if (!elementTypes.Entity.IsClass)
 				return false;
 
 			// Check if the entity is in the model
-			var modelEntity = _model.FindEntityType(entityType);
+			var modelEntity = _model.FindEntityType(elementTypes.Entity);
 			if (modelEntity == null || modelEntity.IsOwned())
 				return false;
 
@@ -307,12 +243,12 @@ namespace NeatMapper.EntityFrameworkCore {
 			var key = modelEntity.FindPrimaryKey();
 			if (key == null || key.Properties.Count < 1)
 				return false;
-			if (keyType.IsCompositeKeyType()) {
-				var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
+			if (elementTypes.Key.IsCompositeKeyType()) {
+				var keyTypes = elementTypes.Key.UnwrapNullable().GetGenericArguments();
 				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
 					return false;
 			}
-			else if (key.Properties.Count != 1 || (key.Properties[0].ClrType != keyType && !keyType.IsNullable(key.Properties[0].ClrType)))
+			else if (key.Properties.Count != 1 || (key.Properties[0].ClrType != elementTypes.Key && !elementTypes.Key.IsNullable(key.Properties[0].ClrType)))
 				return false;
 
 			return true;
@@ -564,54 +500,5 @@ namespace NeatMapper.EntityFrameworkCore {
 		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions mappingOptions) {
 			return GetMatcher(mappingOptions).MatchFactory(types.Key.TupleToValueTuple(), types.Entity, mappingOptions);
 		}
-
-		// Elements matched factory should be provided with NestedSemaphoreContext options set
-		/// <remarks>Returned factory contains semaphore</remarks>
-		internal Func<object, EntityMappingInfo> RetrieveLocalAndPredicateFactory(
-			Type keyType, Type entityType,
-			IKey key, EntitiesRetrievalMode retrievalMode,
-			IEnumerable localView, DbContext dbContext,
-			IMatchMapFactory elementsMatcherFactory) {
-
-			var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType);
-			var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(keyType);
-
-			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(entityType, key);
-
-			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
-
-			return sourceElement => {
-				if (sourceElement == null || TypeUtils.IsDefaultValue(keyType.UnwrapNullable(), sourceElement))
-					return new EntityMappingInfo();
-
-				if (tupleToValueTupleDelegate != null)
-					sourceElement = tupleToValueTupleDelegate.Invoke(sourceElement);
-				var keyValues = keyToValuesDelegate.Invoke(sourceElement);
-
-				object localEntity;
-				if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) {
-					dbContextSemaphore.Wait();
-					try {
-						localEntity = localView
-							.Cast<object>()
-							.FirstOrDefault(e => elementsMatcherFactory.Invoke(sourceElement, e));
-					}
-					finally {
-						dbContextSemaphore.Release();
-					}
-
-					if (localEntity == null && retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
-						localEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
-				}
-				else
-					localEntity = null;
-
-				return new EntityMappingInfo {
-					Key = sourceElement,
-					LocalEntity = localEntity
-				};
-			};
-		}
-
 	}
 }

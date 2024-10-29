@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
-	public class MergeMapperTests {
+	public class MergeMapsTests {
 		public class Maps :
 #if NET7_0_OR_GREATER
 			IMergeMapStatic<int, string>,
@@ -443,7 +443,7 @@ namespace NeatMapper.Tests.Mapping {
 
 		[TestInitialize]
 		public void Initialize() {
-			_mapper = new MergeMapper(new CustomMapsOptions {
+			_mapper = new CustomMapper(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(Maps) }
 			});
 		}
@@ -871,7 +871,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void ShouldMapWithAdditionalMaps() {
 			var options = new CustomMergeAdditionalMapsOptions();
 			options.AddMap<string, int>((s, d, _) => s?.Length ?? 0);
-			var mapper = new MergeMapper(null, options);
+			var mapper = new CustomMapper(null, null, options);
 
 			Assert.IsTrue(_mapper.CanMapMerge<string, int>());
 
