@@ -28,7 +28,7 @@ This will check and will return true if the mapper/matcher can map the two given
 
 # List types
 
-You can also retrieve a list of all available maps for a given mapper/matcher/projector (if supported by it), by using the extension methods.
+You can also retrieve a list of all available maps for a given mapper/projector (if supported by it), by using the extension methods.
 
 `IMapper`:
 

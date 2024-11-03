@@ -67,10 +67,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 
 
 			modelBuilder.Entity<StringFieldKey>()
-				.HasKey(e => e.Id);
+				.HasKey("Id");
 
 			modelBuilder.Entity<IntFieldKey>()
-				.HasKey(e => e.Id);
+				.HasKey("Id");
 		}
 	}
 }

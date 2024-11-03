@@ -475,7 +475,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				modelEntities
 					.Select(e => {
 						var eKey = e.FindPrimaryKey();
-						if(eKey == null)
+						if(eKey == null || eKey.Properties.Count < 1)
 							return null;
 						else { 
 							return string.Join("~", eKey.Properties
@@ -484,7 +484,6 @@ namespace NeatMapper.EntityFrameworkCore {
 						}
 					})
 					.Distinct()
-					.Where(k => !string.IsNullOrEmpty(k))
 					.Count() != 1) {
 
 				return false;
