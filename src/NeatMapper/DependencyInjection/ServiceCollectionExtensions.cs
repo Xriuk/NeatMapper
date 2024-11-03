@@ -10,30 +10,55 @@ namespace NeatMapper {
 	public static class ServiceCollectionExtensions {
 		/// <summary>
 		/// Adds NeatMapper services to the services collection:
+		/// <para>
+		/// Matchers:
 		/// <list type="bullet">
+		/// <item><see cref="IMatcher"/> and <see cref="IMatcherFactory"/></item>
 		/// <item>
-		/// <see cref="IMapper"/>, <see cref="IMapperFactory"/> -
-		/// <see cref="CustomMapper"/>, <see cref="ProjectionMapper"/>,
-		/// <see cref="CollectionMapper"/>, <see cref="CompositeMapper"/>
-		/// (which also contains <see cref="IdentityMapper"/> in addition to all the previous)
-		/// </item>
-		/// <item>
-		/// <see cref="IAsyncMapper"/>, <see cref="IAsyncMapperFactory"/> -
-		/// <see cref="AsyncCustomMapper"/>, <see cref="AsyncCollectionMapper"/>,
-		/// <see cref="AsyncCompositeMapper"/>
-		/// (which also contains <see cref="AsyncIdentityMapper"/> in addition to all the previous)
-		/// </item>
-		/// <item>
-		/// <see cref="IMatcher"/>, <see cref="IMatcherFactory"/> -
-		/// <see cref="CustomMatcher"/>, <see cref="HierarchyCustomMatcher"/>, <see cref="CompositeMatcher"/>
-		/// (which also contains <see cref="EquatableMatcher"/> in addition to all the previous)
-		/// </item>
-		/// <item>
-		/// <see cref="IProjector"/> -
-		/// <see cref="CustomProjector"/>, <see cref="CollectionProjector"/>, <see cref="CompositeProjector"/>
-		/// (which also contains all the previous)
+		/// <see cref="CustomMatcher"/>, <see cref="HierarchyCustomMatcher"/> and <see cref="CompositeMatcher"/>
+		/// which also contains, in addition to all the previous:
+		/// <list type="bullet">
+		/// <item><see cref="EquatableMatcher"/></item>
+		/// <item>EqualityOperatorsMatcher for (.NET 7+)</item>
+		/// <item><see cref="ObjectEqualsMatcher"/></item>
+		/// </list>
 		/// </item>
 		/// </list>
+		/// </para>
+		/// <para>
+		/// Mappers:
+		/// <list type="bullet">
+		/// <item><see cref="IMapper"/> and <see cref="IMapperFactory"/></item>
+		/// <item>
+		/// <see cref="CustomMapper"/>, <see cref="ProjectionMapper"/>, <see cref="CollectionMapper"/>
+		/// and <see cref="CompositeMapper"/> which also contains, in addition to all the previous:
+		/// <list type="bullet">
+		/// <item><see cref="TypeConverterMapper"/></item>
+		/// <item><see cref="ConvertibleMapper"/></item>
+		/// </list>
+		/// </item>
+		/// </list>
+		/// </para>
+		/// <para>
+		/// Async mappers:
+		/// <list type="bullet">
+		/// <item><see cref="IAsyncMapper"/> and <see cref="IAsyncMapperFactory"/></item>
+		/// <item>
+		/// <see cref="AsyncCustomMapper"/>, <see cref="AsyncCollectionMapper"/> and <see cref="AsyncCompositeMapper"/>
+		/// which also contains all the previous.
+		/// </item>
+		/// </list>
+		/// </para>
+		/// <para>
+		/// Projectors:
+		/// <list type="bullet">
+		/// <item><see cref="IProjector"/></item>
+		/// <item>
+		/// <see cref="CustomProjector"/>, <see cref="CollectionProjector"/> and <see cref="CompositeProjector"/>
+		/// which also contains all the previous.
+		/// </item>
+		/// </list>
+		/// </para>
 		/// </summary>
 		/// <param name="mappersLifetime">
 		/// Lifetime of the <see cref="IMapper"/> service (and all the specific mappers registered
@@ -69,9 +94,12 @@ namespace NeatMapper {
 				.Configure<CustomMatcher, HierarchyCustomMatcher>((o, m, h) => {
 					o.Matchers.Add(m);
 					o.Matchers.Add(h);
-					o.Matchers.Add(EquatableMatcher.Instance);
 				})
 				.PostConfigure(o => {
+					o.Matchers.Add(EquatableMatcher.Instance);
+#if NET7_0_OR_GREATER
+					o.Matchers.Add(EqualityOperatorsMatcher.Instance);
+#endif
 					o.Matchers.Add(ObjectEqualsMatcher.Instance);
 				});
 
@@ -115,7 +143,8 @@ namespace NeatMapper {
 					o.Mappers.Add(p);
 				})
 				.PostConfigure<IServiceProvider>((o, s) => {
-					o.Mappers.Add(IdentityMapper.Instance);
+					o.Mappers.Add(TypeConverterMapper.Instance);
+					o.Mappers.Add(ConvertibleMapper.Instance);
 
 					// Creating collection mapper with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
 					o.Mappers.Add(new CollectionMapper(
@@ -168,8 +197,6 @@ namespace NeatMapper {
 					o.Mappers.Add(c);
 				})
 				.PostConfigure<IServiceProvider>((o, s) => {
-					o.Mappers.Add(AsyncIdentityMapper.Instance);
-
 					// Creating collection mapper with AsyncEmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
 					o.Mappers.Add(new AsyncCollectionMapper(
 						AsyncEmptyMapper.Instance,

@@ -36,6 +36,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 		public void ShouldMatchEntitiesWithKey() {
 			Assert.IsTrue(_matcher.CanMatch<IntKey, int>());
 			Assert.IsTrue(_matcher.CanMatch<string, StringKey>());
+			Assert.IsTrue(_matcher.CanMatch<IntFieldKey, int>());
+			Assert.IsTrue(_matcher.CanMatch<string, StringFieldKey>());
 
 			// Not null
 			{
@@ -44,6 +46,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				Assert.IsTrue(_matcher.Match(new Guid("56033406-E593-4076-B48A-70988C9F9190"), new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
 				Assert.IsFalse(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, Guid.Empty));
 				Assert.IsTrue(_matcher.Match(new StringKey { Id = "Test" }, "Test"));
+
+				Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 2 }, 2));
+				Assert.IsTrue(_matcher.Match(0, new IntFieldKey { Id = 0 }));
+				Assert.IsTrue(_matcher.Match(new StringFieldKey { Id = "Test" }, "Test"));
 			}
 
 			// Null
@@ -52,6 +58,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				Assert.IsFalse(_matcher.Match<Guid, GuidKey>(Guid.Empty, null));
 				Assert.IsFalse(_matcher.Match<StringKey, string>(null, null));
 				Assert.IsFalse(_matcher.Match<string, StringKey>(null, new StringKey { Id = null }));
+
+				Assert.IsFalse(_matcher.Match<IntFieldKey, int>(null, 0));
+				Assert.IsFalse(_matcher.Match<StringFieldKey, string>(null, null));
+				Assert.IsFalse(_matcher.Match<string, StringFieldKey>(null, new StringFieldKey { Id = null }));
 			}
 
 			Assert.IsFalse(_matcher.CanMatch<string, IntKey>());
@@ -61,11 +71,14 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 		[TestMethod]
 		public void ShouldMatchEntitiesWithNullableKey() {
 			Assert.IsTrue(_matcher.CanMatch<IntKey, int?>());
+			Assert.IsTrue(_matcher.CanMatch<IntFieldKey, int?>());
 
 			// Not null
 			{
 				Assert.IsTrue(_matcher.Match<IntKey, int?>(new IntKey { Id = 2 }, 2));
 				Assert.IsTrue(_matcher.Match<Guid?, GuidKey>(new Guid("56033406-E593-4076-B48A-70988C9F9190"), new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+
+				Assert.IsTrue(_matcher.Match<IntFieldKey, int?>(new IntFieldKey { Id = 2 }, 2));
 			}
 
 			// Null
@@ -76,6 +89,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				Assert.IsFalse(_matcher.Match<Guid?, GuidKey>(Guid.Empty, null));
 				Assert.IsFalse(_matcher.Match<Guid?, GuidKey>(null, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
 				Assert.IsFalse(_matcher.Match<Guid?, GuidKey>(null, null));
+
+				Assert.IsFalse(_matcher.Match<IntFieldKey, int?>(null, 0));
+				Assert.IsFalse(_matcher.Match<IntFieldKey, int?>(new IntFieldKey { Id = 2 }, null));
+				Assert.IsFalse(_matcher.Match<IntFieldKey, int?>(null, null));
 			}
 		}
 
@@ -232,21 +249,41 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 			Assert.IsFalse(_matcher.Match(entity2, (1, "Nope"), options));
 		}
 
+		// Owned entities which can be used both as single and collection (and thus have different key configurations)
 		[TestMethod]
-		public void ShouldNotMatchOwnedEntities() {
-			Assert.IsFalse(_matcher.CanMatch<OwnedEntity, int>());
+		public void ShouldNotMatchPromiscuousOwnedEntities() {
+			Assert.IsFalse(_matcher.CanMatch<OwnedEntity1, int>());
 
-			TestUtils.AssertMapNotFound(() => _matcher.Match(2, new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(2, new OwnedEntity1 { Id = 2 }));
 
-			Assert.IsFalse(_matcher.CanMatch<OwnedEntity, Tuple<string, int>>());
+			Assert.IsFalse(_matcher.CanMatch<OwnedEntity1, Tuple<string, int>>());
 
-			TestUtils.AssertMapNotFound(() => _matcher.Match(Tuple.Create("Test", 2), new OwnedEntity()));
-			TestUtils.AssertMapNotFound(() => _matcher.Match(Tuple.Create(1, 2), new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(Tuple.Create("Test", 2), new OwnedEntity1 { Id = 2 }));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(Tuple.Create(1, 2), new OwnedEntity1 { Id = 2 }));
 
-			Assert.IsFalse(_matcher.CanMatch<OwnedEntity, (string, int)>());
+			Assert.IsFalse(_matcher.CanMatch<OwnedEntity1, (string, int)>());
 
-			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity(), ("Test", 2)));
-			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity(), (1, 2)));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity1(), ("Test", 2)));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity1(), (1, 2)));
+		}
+
+		// Owned entities which are used only in collections (so they have a composite key which we can compare)
+		[TestMethod]
+		public void ShouldMatchNotPromiscuousOwnedEntities() {
+			Assert.IsTrue(_matcher.CanMatch<OwnedEntity2, int>());
+
+			Assert.IsTrue(_matcher.Match(2, new OwnedEntity2 { Id = 2 }));
+
+			// We cannot match composite keys because we cannot check the parent type if the entity is not tracked
+			Assert.IsFalse(_matcher.CanMatch<OwnedEntity2, Tuple<string, int>>());
+
+			TestUtils.AssertMapNotFound(() => _matcher.Match(Tuple.Create("Test", 2), new OwnedEntity1()));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(Tuple.Create(1, 2), new OwnedEntity1()));
+
+			Assert.IsFalse(_matcher.CanMatch<OwnedEntity2, (string, int)>());
+
+			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity1(), ("Test", 2)));
+			TestUtils.AssertMapNotFound(() => _matcher.Match(new OwnedEntity1(), (1, 2)));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

@@ -1,6 +1,5 @@
 # Changelog
 
-
 ## [5.0.0] - Unreleased
 
 ### Removed
@@ -10,6 +9,7 @@
 ### Changed
 
 - `EntitiesRetrievalMode.Local` value renamed to `EntitiesRetrievalMode.LocalOnly`.
+- `EntityFrameworkCoreMatcher` now matches owned types which have a primary key (those used inside collections). The key configuration must be the same for all owned type instances (excluding foreign primary keys to parent entity).
 - Updated NeatMapper dependency version and corrected breaking changes (see NeatMapper changelog).
 - Adjusted Dependency Injection configuration since now collection mappers of NeatMapper core package are added in PostConfiguration there's no need to check them before adding EF Core mappers.
 
@@ -19,7 +19,9 @@
 
 ### Fixed
 
+- Fields are now correctly supported as primary keys.
 - `EntityFrameworkCoreMapper` and `AsyncEntityFrameworkCoreMapper` when mapping collections now correctly return the destination collection if source collection is null.
+
 
 ## [4.0.0] - 2024-07-16
 

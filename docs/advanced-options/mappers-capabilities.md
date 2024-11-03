@@ -5,7 +5,9 @@ nav_order: 7
 parent: "Advanced options"
 ---
 
-You can check if a mapper/matcher/projector supports a map for two given types by using the extension methods.
+# Test types
+
+You can check if a mapper/matcher/projector supports a map for two given types by using the methods.
 
 `IMapper`:
 
@@ -13,8 +15,8 @@ You can check if a mapper/matcher/projector supports a map for two given types b
 - `mapper.CanMapMerge<Source, Destination>()`
 
 `IAsyncMapper`:
-- `await asyncMapper.CanMapAsyncNew<Source, Destination>()`
-- `await asyncMapper.CanMapAsyncMerge<Source, Destination>()`
+- `asyncMapper.CanMapAsyncNew<Source, Destination>()`
+- `asyncMapper.CanMapAsyncMerge<Source, Destination>()`
 
 `IMatcher`:
 - `matcher.CanMatch<Source, Destination>()`
@@ -22,7 +24,24 @@ You can check if a mapper/matcher/projector supports a map for two given types b
 `IProjector`:
 - `projector.CanProject<Source, Destination>()`
 
-This will check and will return true if the mapper/matcher **could** potentially map the two given types (actual mapping can still fail for various reasons).
+This will check and will return true if the mapper/matcher can map the two given types.
 
-{: .highlight }
-It may throw an InvalidOperationException in the case where it cannot verify if two types can be mapped (currently in case of some interfaces because some details depends on their runtime implementation), so you should also keep that in mind.
+# List types
+
+You can also retrieve a list of all available maps for a given mapper/matcher/projector (if supported by it), by using the extension methods.
+
+`IMapper`:
+
+- `mapper.GetNewMaps()`
+- `mapper.GetMergeMaps()`
+
+`IAsyncMapper`:
+- `asyncMapper.GetAsyncNewMaps()`
+- `asyncMapper.GetAsyncMergeMaps()`
+
+`IProjector`:
+- `projector.GetMaps()`
+
+This should return a list of types (source and destination) which can be mapped by the mapper.
+It will be empty for dynamic mappers which map based on rules.
+For performance reasons duplicate types may be returned.

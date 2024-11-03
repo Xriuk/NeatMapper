@@ -4,7 +4,7 @@
 
 ## What is this package
 
-.NEaT Mapper is an object mapper (and now projector too!), with configurable and reusable mappings.
+.NEaT Mapper is a .NET object mapper (and now projector too!), with configurable and reusable mappings.
 
 This allows you to create mappings (and projections) between different types (even generic ones), combine them, nest them and reuse them, making your code DRY. Map once, use everywhere.
 

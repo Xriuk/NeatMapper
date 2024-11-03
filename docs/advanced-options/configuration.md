@@ -114,7 +114,7 @@ In addition to overriding global options for [MergeCollectionsOptions](#mergecol
 
 ```csharp
 mapper.Map(products, productDtos,
-    new object[]{ new MergeCollectionsMappingOptions{ Matcher = (p1, p2, c) => (p1 as Product)?.Code == (p2 as ProductDto)?.Code } });
+    new object[]{ new MergeCollectionsMappingOptions{ Matcher = DelegateMatcher.Create<Product, ProductDto>((p1, p2, c) => p1?.Code == p2?.Code) } });
 ```
 
 ## Nested{MapperType}Context

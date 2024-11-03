@@ -128,5 +128,32 @@ namespace NeatMapper {
 				TDestination
 #endif
 				> factory) => factory.Invoke;
+
+		public static implicit operator Converter<
+#if NET5_0_OR_GREATER
+			TSource?
+#else
+			TSource
+#endif
+			,
+#if NET5_0_OR_GREATER
+			TDestination?
+#else
+			TDestination
+#endif
+			>(
+			NewMapFactory<
+#if NET5_0_OR_GREATER
+				TSource?
+#else
+				TSource
+#endif
+				,
+#if NET5_0_OR_GREATER
+				TDestination?
+#else
+				TDestination
+#endif
+				> factory) => factory.Invoke;
 	}
 }

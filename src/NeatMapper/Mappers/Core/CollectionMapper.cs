@@ -327,59 +327,66 @@ namespace NeatMapper {
 								}
 
 								if (destination is IEnumerable destinationEnumerable) {
-									// DEV: use pool?
-									var elementsToAdd = new List<object>();
-									var elementsToRemove = new List<object>();
+									var elementsToAdd = ObjectPool.Lists.Get();
+									var elementsToRemove = ObjectPool.Lists.Get();
 
 									// Deleted elements
 									var matchedDestinations = removeNotMatchedDestinationElements ?
-										new List<object>() :
+										ObjectPool.Lists.Get() :
 										null;
 
-									// Added/updated elements
-									foreach (var sourceElement in sourceEnumerable) {
-										bool found = false;
-										object matchingDestinationElement = null;
-										foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
-											if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-												!elementsToRemove.Contains(destinationElement)) {
+									try { 
+										// Added/updated elements
+										foreach (var sourceElement in sourceEnumerable) {
+											bool found = false;
+											object matchingDestinationElement = null;
+											foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
+												if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+													!elementsToRemove.Contains(destinationElement)) {
 
-												matchingDestinationElement = destinationElement;
-												matchedDestinations?.Add(matchingDestinationElement);
-												found = true;
-												break;
-											}
-										}
-
-										if (found) {
-											// MergeMap or NewMap
-											if (mergeElementsFactory != null) {
-												var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
-												if (mergeResult != matchingDestinationElement) {
-													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(mergeResult);
+													matchingDestinationElement = destinationElement;
+													matchedDestinations?.Add(matchingDestinationElement);
+													found = true;
+													break;
 												}
 											}
-											else {
-												elementsToRemove.Add(matchingDestinationElement);
-												elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+
+											if (found) {
+												// MergeMap or NewMap
+												if (mergeElementsFactory != null) {
+													var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
+													if (mergeResult != matchingDestinationElement) {
+														elementsToRemove.Add(matchingDestinationElement);
+														elementsToAdd.Add(mergeResult);
+													}
+												}
+												else {
+													elementsToRemove.Add(matchingDestinationElement);
+													elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+												}
 											}
+											else
+												elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
 										}
-										else
-											elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-									}
 
-									// Deleted elements
-									if (removeNotMatchedDestinationElements)
-										elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+										// Deleted elements
+										if (removeNotMatchedDestinationElements)
+											elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
 
-									// Update destination collection
-									foreach (var element in elementsToAdd) {
-										addDelegate.Invoke(destination, element);
+										// Update destination collection
+										foreach (var element in elementsToAdd) {
+											addDelegate.Invoke(destination, element);
+										}
+										foreach (var element in elementsToRemove) {
+											if (!removeDelegate.Invoke(destination, element))
+												throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+										}
 									}
-									foreach (var element in elementsToRemove) {
-										if (!removeDelegate.Invoke(destination, element))
-											throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+									finally {
+										ObjectPool.Lists.Return(elementsToAdd);
+										ObjectPool.Lists.Return(elementsToRemove);
+										if(matchedDestinations != null)
+											ObjectPool.Lists.Return(matchedDestinations);
 									}
 
 									if (actualCollectionType != null)
@@ -632,59 +639,66 @@ namespace NeatMapper {
 										}
 
 										if (destination is IEnumerable destinationEnumerable) {
-											// DEV: use pool?
-											var elementsToAdd = new List<object>();
-											var elementsToRemove = new List<object>();
+											var elementsToAdd = ObjectPool.Lists.Get();
+											var elementsToRemove = ObjectPool.Lists.Get();
 
 											// Deleted elements
 											var matchedDestinations = removeNotMatchedDestinationElements ?
-												new List<object>() :
+												ObjectPool.Lists.Get() :
 												null;
 
-											// Added/updated elements
-											foreach (var sourceElement in sourceEnumerable) {
-												bool found = false;
-												object matchingDestinationElement = null;
-												foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
-													if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-														!elementsToRemove.Contains(destinationElement)) {
+											try { 
+												// Added/updated elements
+												foreach (var sourceElement in sourceEnumerable) {
+													bool found = false;
+													object matchingDestinationElement = null;
+													foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
+														if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+															!elementsToRemove.Contains(destinationElement)) {
 
-														matchingDestinationElement = destinationElement;
-														matchedDestinations?.Add(matchingDestinationElement);
-														found = true;
-														break;
-													}
-												}
-
-												if (found) {
-													// MergeMap or NewMap
-													if (mergeElementsFactory != null) {
-														var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
-														if (mergeResult != matchingDestinationElement) {
-															elementsToRemove.Add(matchingDestinationElement);
-															elementsToAdd.Add(mergeResult);
+															matchingDestinationElement = destinationElement;
+															matchedDestinations?.Add(matchingDestinationElement);
+															found = true;
+															break;
 														}
 													}
-													else {
-														elementsToRemove.Add(matchingDestinationElement);
-														elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+
+													if (found) {
+														// MergeMap or NewMap
+														if (mergeElementsFactory != null) {
+															var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
+															if (mergeResult != matchingDestinationElement) {
+																elementsToRemove.Add(matchingDestinationElement);
+																elementsToAdd.Add(mergeResult);
+															}
+														}
+														else {
+															elementsToRemove.Add(matchingDestinationElement);
+															elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+														}
 													}
+													else
+														elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
 												}
-												else
-													elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-											}
 
-											// Deleted elements
-											if (removeNotMatchedDestinationElements)
-												elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+												// Deleted elements
+												if (removeNotMatchedDestinationElements)
+													elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
 
-											// Update destination collection
-											foreach (var element in elementsToAdd) {
-												addDelegate.Invoke(destination, element);
+												// Update destination collection
+												foreach (var element in elementsToAdd) {
+													addDelegate.Invoke(destination, element);
+												}
+												foreach (var element in elementsToRemove) {
+													if (!removeDelegate.Invoke(destination, element))
+														throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+												}
 											}
-											foreach (var element in elementsToRemove) {
-												if (!removeDelegate.Invoke(destination, element))
-													throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+											finally {
+												ObjectPool.Lists.Return(elementsToAdd);
+												ObjectPool.Lists.Return(elementsToRemove);
+												if (matchedDestinations != null)
+													ObjectPool.Lists.Return(matchedDestinations);
 											}
 
 											result = collectionConversionDelegate.Invoke(destination);

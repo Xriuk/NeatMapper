@@ -231,19 +231,19 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(_mapper.CanMapAsyncMerge<int, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<int, OwnedEntity1>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(2, (OwnedEntity)null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(2, (OwnedEntity1)null));
 
-			Assert.IsFalse(_mapper.CanMapAsyncMerge<Tuple<string, int>, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<Tuple<string, int>, OwnedEntity1>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create("Test", 2), (OwnedEntity)null));
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create(2, 2), (OwnedEntity)null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create("Test", 2), (OwnedEntity1)null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(Tuple.Create(2, 2), (OwnedEntity1)null));
 
-			Assert.IsFalse(_mapper.CanMapAsyncMerge<(string, int), OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<(string, int), OwnedEntity1>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(("Test", 2), (OwnedEntity)null));
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync((2, 2), (OwnedEntity)null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync(("Test", 2), (OwnedEntity1)null));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync((2, 2), (OwnedEntity1)null));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

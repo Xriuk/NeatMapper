@@ -154,14 +154,16 @@ namespace NeatMapper.EntityFrameworkCore {
 					var dbContextSemaphoreParam = Expression.Parameter(typeof(SemaphoreSlim), "dbContextSemaphore");
 					var dbContextParam = Expression.Parameter(typeof(DbContext), "dbContext");
 
-					var keyParamType = keyType.IsCompositeKeyType() ? TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType : keyType.UnwrapNullable();
-					var modelEntity = _model.FindEntityType(entityType);
-					var key = modelEntity.FindPrimaryKey();
-
 					var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
 
-					var properties = key.Properties
-						.Select((p, i) => {
+					var keyParamType = keyType.IsCompositeKeyType() ?
+						TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType :
+						keyType.UnwrapNullable();
+					var modelEntity = _model.GetEntityTypes().First(e => e.ClrType == entityType);
+					var key = modelEntity.FindPrimaryKey();
+					var keyProperties = key.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
+
+					var properties = keyProperties.Select((p, i) => {
 							if (p.IsShadowProperty()) {
 								// (KeyItemType)entityEntry.Property("Key1").CurrentValue
 								return (Expression)Expression.Convert(
@@ -178,8 +180,9 @@ namespace NeatMapper.EntityFrameworkCore {
 								return Expression.PropertyOrField(Expression.Convert(entityParam, entityType), p.Name);
 							}
 						});
+
 					Expression body;
-					if (key.Properties.Count == 1) {
+					if (properties.Count() == 1) {
 						// KEYPROP == (KeyType)key
 						body = Expression.Equal(properties.Single(), Expression.Convert(keyParam, keyParamType));
 					}
@@ -192,7 +195,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					// If we have a shadow key we must retrieve values from DbContext, so we must use a semaphore (if not already inside one),
 					// also we wrap the access to dbContext in a try/catch block to throw map not found if the context is disposed
-					if (_entityShadowKeyCache.GetOrAdd(entityType, __ => key.Properties.Any(p => p.IsShadowProperty()))) {
+					if (_entityShadowKeyCache.GetOrAdd(entityType, __ => keyProperties.Any(p => p.IsShadowProperty()))) {
 						var catchExceptionParam = Expression.Parameter(typeof(Exception), "e");
 
 						body = Expression.Block(typeof(bool),
@@ -289,15 +292,17 @@ namespace NeatMapper.EntityFrameworkCore {
 					var dbContextSemaphoreParam = Expression.Parameter(typeof(SemaphoreSlim), "dbContextSemaphore");
 					var dbContextParam = Expression.Parameter(typeof(DbContext), "dbContext");
 
-					var modelEntity = _model.FindEntityType(type);
-					var key = modelEntity.FindPrimaryKey();
-
 					var entityEntry1Var = Expression.Variable(typeof(EntityEntry), "entityEntry1");
 					var entityEntry2Var = Expression.Variable(typeof(EntityEntry), "entityEntry2");
 
-					Expression body = key.Properties
+					var modelEntity = _model.GetEntityTypes().First(e => e.ClrType == entityType);
+					var key = modelEntity.FindPrimaryKey();
+
+					var keyProperties = key.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
+
+					Expression body = keyProperties
 						.Select(p => {
-							if (key.Properties[0].IsShadowProperty()) {
+							if (p.IsShadowProperty()) {
 								// (KeyItemType)entityEntry1.Property("Key1").CurrentValue == (KeyItemType)entityEntry2.Property("Key1").CurrentValue
 								return Expression.Equal(
 									Expression.Convert(
@@ -317,17 +322,23 @@ namespace NeatMapper.EntityFrameworkCore {
 											EfCoreUtils.MemberEntry_CurrentValue),
 										p.ClrType));
 							}
-							else {
+							else if(p.PropertyInfo != null){
 								// ((EntityType)entity1).Key1 == ((EntityType)entity2).Key1
 								return Expression.Equal(
 									Expression.Property(Expression.Convert(entity1Param, type), p.PropertyInfo),
 									Expression.Property(Expression.Convert(entity2Param, type), p.PropertyInfo));
 							}
+							else{
+								// ((EntityType)entity1)._key1 == ((EntityType)entity2)._key1
+								return Expression.Equal(
+									Expression.Field(Expression.Convert(entity1Param, type), p.FieldInfo),
+									Expression.Field(Expression.Convert(entity2Param, type), p.FieldInfo));
+							}
 						})
 						.Aggregate(Expression.AndAlso);
 
 					// If we have a shadow key we must retrieve values from DbContext, so we must use a semaphore
-					if (_entityShadowKeyCache.GetOrAdd(sourceType, __ => key.Properties.Any(p => p.IsShadowProperty()))) {
+					if (_entityShadowKeyCache.GetOrAdd(sourceType, __ => keyProperties.Any(p => p.IsShadowProperty()))) {
 						body = Expression.Block(typeof(bool),
 							// if(dbContextSemaphore != null)
 							//     dbContextSemaphore.Wait()
@@ -455,26 +466,54 @@ namespace NeatMapper.EntityFrameworkCore {
 				return false;
 
 			// Check if the entity is in the model
-			var modelEntity = _model.FindEntityType(entityType);
-			if (modelEntity == null || modelEntity.IsOwned())
+			// If a type is mapped to multiple entities (currently owned ones),
+			// all the types should have the same key configuration (excluding the parent foreign keys)
+			var type = entityType;
+			var modelEntities = _model.GetEntityTypes()
+				.Where(e => e.ClrType == type);
+			if(!modelEntities.Any() ||
+				modelEntities
+					.Select(e => {
+						var eKey = e.FindPrimaryKey();
+						if(eKey == null)
+							return null;
+						else { 
+							return string.Join("~", eKey.Properties
+								.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership))
+								.Select(p => $"{(p.IsShadowProperty() ? "s" : "n")}{p.Name}-{p.ClrType.FullName}"));
+						}
+					})
+					.Distinct()
+					.Where(k => !string.IsNullOrEmpty(k))
+					.Count() != 1) {
+
 				return false;
+			}
 
 			// Check that the entity has a key and that it matches the key type
-			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1)
+			// For owned entities foreign keys are excluded
+			var key = modelEntities.First().FindPrimaryKey();
+			if (key == null)
 				return false;
+
+			var keyProperties = key.Properties
+				.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
+			if (!keyProperties.Any())
+				return false;
+
+			var keyPropertiesCount = keyProperties.Count();
 			if (keyType != null) {
 				if (keyType.IsCompositeKeyType()) {
 					var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
-					if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
+					if (keyPropertiesCount != keyTypes.Length || !keyTypes.Zip(keyProperties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
 						return false;
 				}
-				else if (key.Properties.Count != 1 || key.Properties[0].ClrType != keyType.UnwrapNullable())
+				else if (keyPropertiesCount != 1 || keyProperties.First().ClrType != keyType.UnwrapNullable())
 					return false;
 			}
 
 			// If the key has shadow properties we need a DbContext to get the values
-			if (key.Properties.Any(p => p.IsShadowProperty()) && RetrieveDbContext(mappingOptions) == null)
+			if (keyProperties.Any(p => p.IsShadowProperty()) && RetrieveDbContext(mappingOptions) == null)
 				return false;
 
 			return true;

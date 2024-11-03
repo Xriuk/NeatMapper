@@ -12,7 +12,7 @@ description: ".NET Object mapper and projector, with configurable and reusable m
 [Download on NuGet](https://www.nuget.org/packages/NeatMapper){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
 [Get started](/getting-started){: .btn .fs-5 .mb-4 .mb-md-0 }
 
-.NEaT Mapper is an object mapper and projector, with configurable and reusable mappings.
+.NEaT Mapper is a .NET object mapper and projector, with configurable and reusable mappings.
 
 This allows you to create mappings between different types (even generic ones), combine them, nest them and reuse them, making your code DRY. Map once, use everywhere.
 

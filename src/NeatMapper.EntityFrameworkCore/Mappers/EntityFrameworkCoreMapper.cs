@@ -6,8 +6,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
-using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
@@ -248,10 +248,20 @@ namespace NeatMapper.EntityFrameworkCore {
 								if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
 									var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
 									if (missingEntities.Any()) {
-										var filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key,
-											missingEntities
-												.Select(e => keyToValuesDelegate.Invoke(e.Key))
-												.ToList());
+										var missingKeys = ListsPool.Get();
+										LambdaExpression filterExpression;
+										try { 
+											foreach(var missingEntity in missingEntities) {
+												missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
+											}
+
+											filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+										}
+										finally {
+											foreach (var missingKey in missingKeys) {
+												ArrayPool.Return(missingKey);
+											}
+										}
 
 										var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
 
@@ -275,7 +285,12 @@ namespace NeatMapper.EntityFrameworkCore {
 											continue;
 
 										var keyValues = keyToValuesDelegate.Invoke(localAndPredicate.Key);
-										localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+										try { 
+											localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+										}
+										finally {
+											ArrayPool.Return(keyValues);
+										}
 									}
 								}
 							}
@@ -314,29 +329,34 @@ namespace NeatMapper.EntityFrameworkCore {
 							tupleToValueTupleDelegate.Invoke(source) :
 							source);
 
-						dbContextSemaphore.Wait();
-						try {
-							// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
-							// in which case we can use Find directly)
-							if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) { 
-								result = localView
-									.Cast<object>()
-									.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(source, e));
-							}
-							else
-								result = null;
+						try { 
+							dbContextSemaphore.Wait();
+							try {
+								// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
+								// in which case we can use Find directly)
+								if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) { 
+									result = localView
+										.Cast<object>()
+										.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(source, e));
+								}
+								else
+									result = null;
 
-							if (result == null) {
-								// Query db for missing entity if needed (this also performs a local search first),
-								// or attach the missing entity
-								if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote)
-									result = dbContext.Find(types.To, keyValues);
-								else if(retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
-									result = attachEntityDelegate.Invoke(keyValues, dbContext);
+								if (result == null) {
+									// Query db for missing entity if needed (this also performs a local search first),
+									// or attach the missing entity
+									if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote)
+										result = dbContext.Find(types.To, keyValues);
+									else if(retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
+										result = attachEntityDelegate.Invoke(keyValues, dbContext);
+								}
+							}
+							finally {
+								dbContextSemaphore.Release();
 							}
 						}
 						finally {
-							dbContextSemaphore.Release();
+							ArrayPool.Return(keyValues);
 						}
 					}
 					catch (OperationCanceledException) {
@@ -479,7 +499,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else {
 				var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
-				var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
+				var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 
 				object result;
 				try {
@@ -503,11 +523,16 @@ namespace NeatMapper.EntityFrameworkCore {
 								result = destination;
 							}
 							else {
-								var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+								var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 									tupleToValueTupleDelegate.Invoke(source) :
 									source);
 
-								result = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key).Invoke(keyValues, dbContext);
+								try { 
+									result = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key).Invoke(keyValues, dbContext);
+								}
+								finally {
+									ArrayPool.Return(keyValues);
+								}
 							}
 						}
 						finally {
@@ -516,10 +541,15 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 					else if ((result == null || destination != null) && destination != result && throwOnDuplicateEntity) {
 						if (result != null) {
-							var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+							var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 								tupleToValueTupleDelegate.Invoke(source) :
 								source);
-							throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+							try { 
+								throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+							}
+							finally {
+								ArrayPool.Return(keyValues);
+							}
 						}
 						else
 							throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
@@ -662,10 +692,20 @@ namespace NeatMapper.EntityFrameworkCore {
 										if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
 											var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
 											if (missingEntities.Any()) {
-												var filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key,
-													missingEntities
-														.Select(e => keyToValuesDelegate.Invoke(e.Key))
-														.ToList());
+												var missingKeys = ListsPool.Get();
+												LambdaExpression filterExpression;
+												try {
+													foreach (var missingEntity in missingEntities) {
+														missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
+													}
+
+													filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+												}
+												finally {
+													foreach (var missingKey in missingKeys) {
+														ArrayPool.Return(missingKey);
+													}
+												}
 
 												var query = TypeUtils.QueryableWhere.Invoke(dbSet, filterExpression);
 
@@ -689,7 +729,12 @@ namespace NeatMapper.EntityFrameworkCore {
 													continue;
 
 												var keyValues = keyToValuesDelegate.Invoke(localAndPredicate.Key);
-												localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+												try { 
+													localAndPredicate.LocalEntity = attachEntityDelegate.Invoke(keyValues, dbContext);
+												}
+												finally {
+													ArrayPool.Return(keyValues);
+												}
 											}
 										}
 									}
@@ -740,29 +785,34 @@ namespace NeatMapper.EntityFrameworkCore {
 									tupleToValueTupleDelegate.Invoke(source) :
 									source);
 
-								dbContextSemaphore.Wait();
-								try {
-									// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
-									// in which case we can use Find directly)
-									if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) {
-										result = localView
-											.Cast<object>()
-											.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(source, e));
-									}
-									else
-										result = null;
+								try { 
+									dbContextSemaphore.Wait();
+									try {
+										// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
+										// in which case we can use Find directly)
+										if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) {
+											result = localView
+												.Cast<object>()
+												.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(source, e));
+										}
+										else
+											result = null;
 
-									if(result == null) {
-										// Query db for missing entity if needed (this also performs a local search first),
-										// or attach the missing entity
-										if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) 
-											result = dbContext.Find(types.To, keyValues);
-										else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
-											result = attachEntityDelegate.Invoke(keyValues, dbContext);
+										if(result == null) {
+											// Query db for missing entity if needed (this also performs a local search first),
+											// or attach the missing entity
+											if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) 
+												result = dbContext.Find(types.To, keyValues);
+											else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
+												result = attachEntityDelegate.Invoke(keyValues, dbContext);
+										}
+									}
+									finally {
+										dbContextSemaphore.Release();
 									}
 								}
 								finally {
-									dbContextSemaphore.Release();
+									ArrayPool.Return(keyValues);
 								}
 							}
 							catch (OperationCanceledException) {
@@ -914,7 +964,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 				else {
 					var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
-					var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
+					var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 
 					var attachEntityDelegate = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key);
 
@@ -947,11 +997,16 @@ namespace NeatMapper.EntityFrameworkCore {
 											result = destination;
 										}
 										else {
-											var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+											var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 												tupleToValueTupleDelegate.Invoke(source) :
 												source);
 
-											result = attachEntityDelegate.Invoke(keyValues, dbContext);
+											try { 
+												result = attachEntityDelegate.Invoke(keyValues, dbContext);
+											}
+											finally {
+												ArrayPool.Return(keyValues);
+											}
 										}
 									}
 									finally {
@@ -960,10 +1015,15 @@ namespace NeatMapper.EntityFrameworkCore {
 								}
 								else if ((result == null || destination != null) && destination != result && throwOnDuplicateEntity) {
 									if (result != null) {
-										var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+										var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 											tupleToValueTupleDelegate.Invoke(source) :
 											source);
-										throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+										try { 
+											throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+										}
+										finally {
+											ArrayPool.Return(keyValues);
+										}
 									}
 									else
 										throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");

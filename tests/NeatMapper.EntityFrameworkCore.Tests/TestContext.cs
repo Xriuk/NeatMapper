@@ -13,6 +13,12 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 
 			modelBuilder.Entity<IntKey>()
 				.OwnsOne(o => o.Entity);
+			var ownedBuilder3 = modelBuilder.Entity<IntKey>()
+				.OwnsMany(o => o.NewEntities);
+			ownedBuilder3.Property(typeof(int), "IntId");
+			ownedBuilder3.WithOwner()
+				.HasForeignKey("IntId");
+			ownedBuilder3.HasKey("IntId", "Id");
 
 			modelBuilder.Entity<GuidKey>();
 
@@ -22,6 +28,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			ownedBuilder.WithOwner()
 				.HasForeignKey("StringId");
 			ownedBuilder.HasKey("StringId", "Id");
+
+			var ownedBuilder2 = modelBuilder.Entity<StringKey>()
+				.OwnsMany(o => o.NewEntities);
+			ownedBuilder2.Property(typeof(string), "StringId");
+			ownedBuilder2.WithOwner()
+				.HasForeignKey("StringId");
+			ownedBuilder2.HasKey("StringId", "Id");
 
 			modelBuilder.Entity<CompositePrimitiveKey>()
 				.HasKey(o => new { o.Id1, o.Id2 });
@@ -51,6 +64,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 			modelBuilder.Entity<Keyless>()
 				.HasNoKey();
 #endif
+
+
+			modelBuilder.Entity<StringFieldKey>()
+				.HasKey(e => e.Id);
+
+			modelBuilder.Entity<IntFieldKey>()
+				.HasKey(e => e.Id);
 		}
 	}
 }

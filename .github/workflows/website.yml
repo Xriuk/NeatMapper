@@ -10,6 +10,7 @@ on:
     - "LICENSE.md"
     - "src/NeatMapper/CHANGELOG.md"
     - "src/NeatMapper.EntityFrameworkCore/CHANGELOG.md"
+    - "src/NeatMapper.Transitive/CHANGELOG.md"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -44,6 +45,12 @@ jobs:
         with:
           source: "src/NeatMapper.EntityFrameworkCore/CHANGELOG.md"
           target: "docs/_includes/NeatMapperEntityFrameworkCoreChangelog.md"
+          flags: "-f"
+      - name: Copy NeatMapper Transitive Changelog
+        uses: canastro/copy-file-action@master
+        with:
+          source: "src/NeatMapper.Transitive/CHANGELOG.md"
+          target: "docs/_includes/NeatMapperTransitiveChangelog.md"
           flags: "-f"
       - name: Copy License
         uses: canastro/copy-file-action@master

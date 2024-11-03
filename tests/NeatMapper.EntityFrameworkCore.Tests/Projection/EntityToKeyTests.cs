@@ -37,30 +37,60 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Projection {
 
 		[TestMethod]
 		public void ShouldProjectEntityToKey() {
-			Assert.IsTrue(_projector.CanProject<IntKey, int>());
+			{ 
+				Assert.IsTrue(_projector.CanProject<IntKey, int>());
 
-			var param = Expression.Parameter(typeof(IntKey));
-			Expression body = Expression.Property(param, nameof(IntKey.Id));
-			body = Expression.Condition(
-				Expression.NotEqual(param, Expression.Constant(null, typeof(IntKey))),
-				body,
-				Expression.Default(typeof(int)));
-			var expr = Expression.Lambda(body, param);
-			TestUtils.AssertExpressionsEqual(expr, _projector.Project<IntKey, int>());
+				var param = Expression.Parameter(typeof(IntKey));
+				Expression body = Expression.Property(param, nameof(IntKey.Id));
+				body = Expression.Condition(
+					Expression.NotEqual(param, Expression.Constant(null, typeof(IntKey))),
+					body,
+					Expression.Default(typeof(int)));
+				var expr = Expression.Lambda(body, param);
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<IntKey, int>());
+			}
+
+			{
+				Assert.IsTrue(_projector.CanProject<IntFieldKey, int>());
+
+				var param = Expression.Parameter(typeof(IntFieldKey));
+				Expression body = Expression.Field(param, nameof(IntFieldKey.Id));
+				body = Expression.Condition(
+					Expression.NotEqual(param, Expression.Constant(null, typeof(IntFieldKey))),
+					body,
+					Expression.Default(typeof(int)));
+				var expr = Expression.Lambda(body, param);
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<IntFieldKey, int>());
+			}
 		}
 
 		[TestMethod]
 		public void ShouldProjectEntityToNullableKey() {
-			Assert.IsTrue(_projector.CanProject<IntKey, int?>());
+			{ 
+				Assert.IsTrue(_projector.CanProject<IntKey, int?>());
 
-			var param = Expression.Parameter(typeof(IntKey));
-			Expression body = Expression.Convert(Expression.Property(param, nameof(IntKey.Id)), typeof(int?));
-			body = Expression.Condition(
-				Expression.NotEqual(param, Expression.Constant(null, typeof(IntKey))),
-				body,
-				Expression.Default(typeof(int?)));
-			var expr = Expression.Lambda(body, param);
-			TestUtils.AssertExpressionsEqual(expr, _projector.Project<IntKey, int?>());
+				var param = Expression.Parameter(typeof(IntKey));
+				Expression body = Expression.Convert(Expression.Property(param, nameof(IntKey.Id)), typeof(int?));
+				body = Expression.Condition(
+					Expression.NotEqual(param, Expression.Constant(null, typeof(IntKey))),
+					body,
+					Expression.Default(typeof(int?)));
+				var expr = Expression.Lambda(body, param);
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<IntKey, int?>());
+			}
+
+			{
+				Assert.IsTrue(_projector.CanProject<IntFieldKey, int?>());
+
+				var param = Expression.Parameter(typeof(IntFieldKey));
+				Expression body = Expression.Convert(Expression.Field(param, nameof(IntFieldKey.Id)), typeof(int?));
+				body = Expression.Condition(
+					Expression.NotEqual(param, Expression.Constant(null, typeof(IntFieldKey))),
+					body,
+					Expression.Default(typeof(int?)));
+				var expr = Expression.Lambda(body, param);
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<IntFieldKey, int?>());
+			}
 		}
 
 		[TestMethod]
@@ -212,19 +242,19 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Projection {
 
 		[TestMethod]
 		public void ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(_projector.CanProject<OwnedEntity, int>());
+			Assert.IsFalse(_projector.CanProject<OwnedEntity1, int>());
 
-			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity, int>());
+			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, int>());
 
-			Assert.IsFalse(_projector.CanProject<OwnedEntity, Tuple<string, int>>());
+			Assert.IsFalse(_projector.CanProject<OwnedEntity1, Tuple<string, int>>());
 
-			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity, Tuple<string, int>>());
-			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity, Tuple<int, int>>());
+			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, Tuple<string, int>>());
+			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, Tuple<int, int>>());
 
-			Assert.IsFalse(_projector.CanProject<OwnedEntity, (string, int)>());
+			Assert.IsFalse(_projector.CanProject<OwnedEntity1, (string, int)>());
 
-			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity, (string, int)>());
-			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity, (int, int)>());
+			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, (string, int)>());
+			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, (int, int)>());
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

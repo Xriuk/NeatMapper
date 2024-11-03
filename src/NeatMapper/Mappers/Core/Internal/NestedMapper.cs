@@ -1,11 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which wraps another <see cref="IMapper"/> and overrides <see cref="MappingOptions"/>
 	/// (and caches them).
 	/// </summary>
-	internal sealed class NestedMapper : IMapper, IMapperFactory {
+	internal sealed class NestedMapper : IMapper, IMapperFactory, IMapperMaps {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
@@ -166,6 +167,30 @@ namespace NeatMapper {
 			mappingOptions = null) {
 
 			return _mapper.MapMergeFactory(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
+		}
+		#endregion
+
+		#region IMapperMaps methods
+		public IEnumerable<(Type From, Type To)> GetNewMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _mapper.GetNewMaps(_optionsCache.GetOrCreate(mappingOptions));
+		}
+
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(
+#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
+			MappingOptions?
+#else
+			MappingOptions
+#endif
+			mappingOptions = null) {
+
+			return _mapper.GetMergeMaps(_optionsCache.GetOrCreate(mappingOptions));
 		}
 		#endregion
 	}

@@ -46,18 +46,24 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			_db.Add(new IntKey {
 				Id = 2,
-				Entity = new OwnedEntity {
+				Entity = new OwnedEntity1 {
 					Id = 4
 				}
+			});
+			_db.Add(new IntFieldKey {
+				Id = 2
 			});
 			_db.Add(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") });
 			_db.Add(new StringKey {
 				Id = "Test",
-				Entities = new List<OwnedEntity> {
-					new OwnedEntity {
+				Entities = new List<OwnedEntity1> {
+					new OwnedEntity1 {
 						Id = 7
 					}
 				}
+			});
+			_db.Add(new StringFieldKey {
+				Id = "Test"
 			});
 
 			_db.Add(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") });
@@ -95,6 +101,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				Assert.IsTrue(_mapper.CanMapAsyncNew<int, IntKey>());
 				Assert.IsTrue(_mapper.CanMapAsyncNew<Guid, GuidKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<int, IntFieldKey>());
 
 				Assert.IsNotNull(await _mapper.MapAsync<IntKey>(2));
 				Assert.IsNull(await _mapper.MapAsync<IntKey>(3));
@@ -102,13 +109,21 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(await _mapper.MapAsync<GuidKey>(Guid.Empty));
 				Assert.IsNotNull(await _mapper.MapAsync<StringKey>("Test"));
 				Assert.IsNull(await _mapper.MapAsync<StringKey>("Test2"));
+
+				Assert.IsNotNull(await _mapper.MapAsync<IntFieldKey>(2));
+				Assert.IsNull(await _mapper.MapAsync<IntFieldKey>(3));
+				Assert.IsNotNull(await _mapper.MapAsync<StringFieldKey>("Test"));
+				Assert.IsNull(await _mapper.MapAsync<StringFieldKey>("Test2"));
 			}
 
 			// Null
 			{
 				Assert.IsTrue(_mapper.CanMapAsyncNew<string, StringKey>());
+				Assert.IsTrue(_mapper.CanMapAsyncNew<string, StringFieldKey>());
 
 				Assert.IsNull(await _mapper.MapAsync<string, StringKey>(null));
+
+				Assert.IsNull(await _mapper.MapAsync<string, StringFieldKey>(null));
 			}
 		}
 
@@ -116,6 +131,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public async Task ShouldMapNullableKeyToEntity() {
 			Assert.IsTrue(_mapper.CanMapAsyncNew<int?, IntKey>());
 			Assert.IsTrue(_mapper.CanMapAsyncNew<Guid?, GuidKey>());
+			Assert.IsTrue(_mapper.CanMapAsyncNew<int?, IntFieldKey>());
 
 			// Not null
 			{
@@ -123,12 +139,17 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(await _mapper.MapAsync<int?, IntKey>(3));
 				Assert.IsNotNull(await _mapper.MapAsync<Guid?, GuidKey>(new Guid("56033406-E593-4076-B48A-70988C9F9190")));
 				Assert.IsNull(await _mapper.MapAsync<Guid?, GuidKey>(Guid.Empty));
+
+				Assert.IsNotNull(await _mapper.MapAsync<int?, IntFieldKey>(2));
+				Assert.IsNull(await _mapper.MapAsync<int?, IntFieldKey>(3));
 			}
 
 			// Null
 			{
 				Assert.IsNull(await _mapper.MapAsync<int?, IntKey>(null));
 				Assert.IsNull(await _mapper.MapAsync<Guid?, GuidKey>(null));
+
+				Assert.IsNull(await _mapper.MapAsync<int?, IntFieldKey>(null));
 			}
 		}
 
@@ -240,19 +261,21 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public async Task ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(_mapper.CanMapAsyncNew<int, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<int, OwnedEntity1>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<int, OwnedEntity2>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity>(2));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity1>(2));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity2>(2));
 
-			Assert.IsFalse(_mapper.CanMapAsyncNew<Tuple<string, int>, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<Tuple<string, int>, OwnedEntity1>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity>(Tuple.Create("Test", 2)));
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity>(Tuple.Create(2, 2)));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity1>(Tuple.Create("Test", 2)));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity1>(Tuple.Create(2, 2)));
 
-			Assert.IsFalse(_mapper.CanMapAsyncNew<(string, int), OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapAsyncNew<(string, int), OwnedEntity1>());
 
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity>(("Test", 2)));
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity>((2, 2)));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity1>(("Test", 2)));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<OwnedEntity1>((2, 2)));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
@@ -338,6 +361,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 					await enumerator.DisposeAsync();
 				}
 				Assert.AreEqual(2, i);
+			}
+
+			{
+				var result = await _mapper.MapAsync<IEnumerable<IntFieldKey>>(new[] { 2, 0 });
+				Assert.AreEqual(2, result.Count());
+				Assert.IsNotNull(result.First());
+				Assert.IsNull(result.Last());
 			}
 		}
 

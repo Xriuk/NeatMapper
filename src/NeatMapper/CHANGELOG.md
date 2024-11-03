@@ -1,6 +1,5 @@
 # Changelog
 
-
 ## [5.0.0] - Unreleased
 
 ### Removed
@@ -10,6 +9,7 @@
 
 ### Changed
 
+- Internal optimizations and pooling have allowed an additional increase in performance of more than 50%.
 - New and Merge mappers (normal, collection and async ones) were merged together into a custom one.
 - `IMapperCanMap`/`IAsyncMapperCanMap`/`IMatcherCanMatch`/`IProjectorCanProject` interfaces were integrated into their parent interfaces (`IMapper`/`IAsyncMapper`/`IMatcher`/`IProjector`) and removed, all implementing classes and extension methods were adjusted.
 - `IAsyncMapper` `CanMapAsync*` methods now return `bool` instead of `Task<bool>` and the `CancellationToken` parameter has been removed.
@@ -27,8 +27,8 @@
 - `AsyncMergeCollectionMapper` does not support anymore `AsyncCollectionMappersMappingOptions` `MaxParallelMappings`, constructor has been updated to remove the parameter.
 - `MapNotFoundException` can no longer be thrown from mapper/maps on its own, a map cannot refuse itself based on provided objects.
 - `CompositeMapper` and `AsyncCompositeMapper` will not try following mappers anymore on `MapNotFoundException`s.
-- `CompositeMapperOptions` collection and identity mappers have been moved to `PostConfigure()`.
-- `AsyncCompositeMapperOptions` collection and identity mappers have been moved to `PostConfigure()`.
+- `CompositeMapperOptions` collection mapper has been moved to `PostConfigure()`.
+- `AsyncCompositeMapperOptions` collection mapper has been moved to `PostConfigure()`.
 - `CompositeProjectorOptions` collection projector has been moved to `PostConfigure()`.
 
 ### Added
@@ -36,17 +36,21 @@
 - New optional interfaces `IMapperMaps`, `IAsyncMapperMaps` and `IProjectorMaps` which allows discovering types which can be mapped by a given `IMapper`/`IAsyncMapper`/`IProjector`.
 - Extension methods `GetNewMaps` and `GetMergeMaps` for any `IMapper`, `GetAsyncNewMaps` and `GetAsyncMergeMaps` for any `IAsyncMapper` and `GetMaps` for any `IProjector` which will fallback to default `Enumerable.Empty<T>` if the corresponding interface (`IMapperMaps`/`IAsyncMapperMaps`/`IProjectorMaps`) is not implemented.
 - `IMapper`/`IAsyncMapper` `Map`/`MapAsync` and `MapMergeFactory`/`MapAsyncMergeFactory` extension methods added overloads with `IEqualityComparer` parameter used as matcher when merging collections.
-- All the optional interfaces (`IMapperCanMap`, `IAsyncMapperFactory`, ...) are now also provided as services via DI.
+- All the optional interfaces (`IAsyncMapperFactory`, ...) are now also provided as services via DI.
 - `EqualityComparerMatcher` which allows using an `IEqualityComparer` to match two elements of the same type.
 - `MappingOptions` extension method `AddMergeCollectionMatchers` which allows to Set/Add `IMatcher`s to be used in merge maps.
 - `AsyncEnumerableExtensions`.`Project`'s `MappingOptions` `params object[]` parameter overload.
-- `IdentityMapper` and `AsyncIdentityMapper` which always return the passed source (for both new and merge maps, provided that the mapped types are the same).
+- `IdentityMapper` and `AsyncIdentityMapper` which always return the passed source (for both new and merge maps, provided that the mapped types are the same). Not added to composite mappers by default.
 - `IMatchMapFactory` overloads to extension method `Predicate`.
 - `MapNewFactory` extension methods for `IMergeMapFactory`/`MergeMapFactory<TSource, TDestination>` and its async counterpart `MapAsyncNewFactory` for `IAsyncMergeMapFactory`/`AsyncMergeMapFactory<TSource, TDestination>`, which allows to create a new factory from a merge factory by creating destination objects.
 - `IPredicateFactory` and `PredicateFactory<T>` types which replaces `NewMapFactory<T, bool>`.
 - `params object[]` constructor overload for `MappingOptions`.
-- `EquatableMatcher` which allows matching types implementing `IEquatable`.
+- `EquatableMatcher` which allows matching types implementing `IEquatable<T>`.
 - `ObjectEqualsMatcher` as last matcher (via `PostConfigure()` of `CompositeMatcherOptions`) which allows matching via `object.Equals()`.
+- `EqualityOperatorsMatcher` (.NET 7+) which allows matching types implementing `IEqualityOperators<TSelf, TOther, TResult>` (equality operator `==`).
+- `NewMapFactory<TSource, TDestination>` implicit conversion to `Converter<TInput,TOutput>` delegate.
+- `TypeConverterMapper` which allows mapping types via `TypeConverter`s.
+- `ConvertibleMapper` which allows mapping types implementing `IConvertible`.
 
 ### Fixed
 

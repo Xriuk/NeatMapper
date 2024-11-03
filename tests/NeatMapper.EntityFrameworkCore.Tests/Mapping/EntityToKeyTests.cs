@@ -38,12 +38,16 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		[TestMethod]
 		public void ShouldMapEntityToKey() {
 			Assert.IsTrue(_mapper.CanMapNew<IntKey, int>());
+			Assert.IsTrue(_mapper.CanMapNew<IntFieldKey, int>());
 
 			// Not null
 			{
 				Assert.AreEqual(2, _mapper.Map<int>(new IntKey { Id = 2 }));
 				Assert.AreEqual(new Guid("56033406-E593-4076-B48A-70988C9F9190"), _mapper.Map<Guid>(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
 				Assert.AreEqual("Test", _mapper.Map<string>(new StringKey { Id = "Test" }));
+
+				Assert.AreEqual(2, _mapper.Map<int>(new IntFieldKey { Id = 2 }));
+				Assert.AreEqual("Test", _mapper.Map<string>(new StringFieldKey { Id = "Test" }));
 			}
 
 			// Null
@@ -51,23 +55,31 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.AreEqual(0, _mapper.Map<IntKey, int>(null));
 				Assert.AreEqual(Guid.Empty, _mapper.Map<GuidKey, Guid>(null));
 				Assert.IsNull(_mapper.Map<StringKey, string>(null));
+
+				Assert.AreEqual(0, _mapper.Map<IntFieldKey, int>(null));
+				Assert.IsNull(_mapper.Map<StringFieldKey, string>(null));
 			}
 		}
 
 		[TestMethod]
 		public void ShouldMapEntityToNullableKey() {
 			Assert.IsTrue(_mapper.CanMapNew<IntKey, int?>());
+			Assert.IsTrue(_mapper.CanMapNew<IntFieldKey, int?>());
 
 			// Not null
 			{
 				Assert.AreEqual(2, _mapper.Map<int?>(new IntKey { Id = 2 }));
 				Assert.AreEqual(new Guid("56033406-E593-4076-B48A-70988C9F9190"), _mapper.Map<Guid?>(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+
+				Assert.AreEqual(2, _mapper.Map<int?>(new IntFieldKey { Id = 2 }));
 			}
 
 			// Null
 			{
 				Assert.IsNull(_mapper.Map<IntKey, int?>(null));
 				Assert.IsNull(_mapper.Map<GuidKey, Guid?>(null));
+
+				Assert.IsNull(_mapper.Map<IntFieldKey, int?>(null));
 			}
 		}
 
@@ -236,19 +248,19 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity, int>());
+			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity1, int>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<int>(new OwnedEntity1()));
 
-			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity, Tuple<string, int>>());
+			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity1, Tuple<string, int>>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<Tuple<string, int>>(new OwnedEntity()));
-			TestUtils.AssertMapNotFound(() => _mapper.Map<Tuple<int, int>>(new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<Tuple<string, int>>(new OwnedEntity1()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<Tuple<int, int>>(new OwnedEntity1()));
 
-			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity, (string, int)>());
+			Assert.IsFalse(_mapper.CanMapNew<OwnedEntity1, (string, int)>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<(string, int)>(new OwnedEntity()));
-			TestUtils.AssertMapNotFound(() => _mapper.Map<(int, int)>(new OwnedEntity()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<(string, int)>(new OwnedEntity1()));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<(int, int)>(new OwnedEntity1()));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

@@ -16,6 +16,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			// Not null key
 			{
 				Assert.IsTrue(_mapper.CanMapMerge<int, IntKey>());
+				Assert.IsTrue(_mapper.CanMapMerge<int, IntFieldKey>());
 
 				// Null destination does not throw
 				Assert.IsNotNull(_mapper.Map<int, IntKey>(2, (IntKey)null));
@@ -23,6 +24,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 				Assert.IsNull(_mapper.Map<int, IntKey>(3, (IntKey)null));
 				Assert.IsNull(_mapper.Map<int, IntKey>(3, (IntKey)null, mappingOptions));
+
+				Assert.IsNotNull(_mapper.Map<int, IntFieldKey>(2, (IntFieldKey)null));
+				Assert.IsNotNull(_mapper.Map<int, IntFieldKey>(2, (IntFieldKey)null, mappingOptions));
+				Assert.IsNull(_mapper.Map<int, IntFieldKey>(3, (IntFieldKey)null));
+				Assert.IsNull(_mapper.Map<int, IntFieldKey>(3, (IntFieldKey)null, mappingOptions));
 
 				// Different destination passed
 				var entity = new IntKey();
@@ -35,18 +41,33 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(_mapper.Map<int, IntKey>(3, new IntKey()));
 				exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<int, IntKey>(3, new IntKey(), mappingOptions));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
+
+				var entity2 = new IntFieldKey();
+				var result2 = _mapper.Map<int, IntFieldKey>(2, entity2);
+				Assert.IsNotNull(result2);
+				Assert.AreNotSame(entity2, result2);
+				var exc2 = Assert.ThrowsException<MappingException>(() => _mapper.Map<int, IntFieldKey>(2, entity2, mappingOptions));
+				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
 			}
 
 			// Null key
 			{
 				Assert.IsTrue(_mapper.CanMapMerge<string, StringKey>());
+				Assert.IsTrue(_mapper.CanMapMerge<string, StringFieldKey>());
 
 				// Null destination does not throw
 				Assert.IsNull(_mapper.Map<string, StringKey>(null, (StringKey)null));
 
+				Assert.IsNull(_mapper.Map<string, StringFieldKey>(null, (StringFieldKey)null));
+
+				// Different destination passed
 				Assert.IsNull(_mapper.Map<string, StringKey>(null, new StringKey()));
 				var exc = Assert.ThrowsException<MappingException>(() => _mapper.Map<string, StringKey>(null, new StringKey(), mappingOptions));
 				Assert.IsInstanceOfType(exc.InnerException, typeof(DuplicateEntityException));
+
+				Assert.IsNull(_mapper.Map<string, StringFieldKey>(null, new StringFieldKey()));
+				var exc2 = Assert.ThrowsException<MappingException>(() => _mapper.Map<string, StringFieldKey>(null, new StringFieldKey(), mappingOptions));
+				Assert.IsInstanceOfType(exc2.InnerException, typeof(DuplicateEntityException));
 			}
 		}
 
@@ -230,19 +251,19 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(_mapper.CanMapMerge<int, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapMerge<int, OwnedEntity1>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map(2, (OwnedEntity)null));
+			TestUtils.AssertMapNotFound(() => _mapper.Map(2, (OwnedEntity1)null));
 
-			Assert.IsFalse(_mapper.CanMapMerge<Tuple<string, int>, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapMerge<Tuple<string, int>, OwnedEntity1>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map(Tuple.Create("Test", 2), (OwnedEntity)null));
-			TestUtils.AssertMapNotFound(() => _mapper.Map(Tuple.Create(2, 2), (OwnedEntity)null));
+			TestUtils.AssertMapNotFound(() => _mapper.Map(Tuple.Create("Test", 2), (OwnedEntity1)null));
+			TestUtils.AssertMapNotFound(() => _mapper.Map(Tuple.Create(2, 2), (OwnedEntity1)null));
 
-			Assert.IsFalse(_mapper.CanMapMerge<(string, int), OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapMerge<(string, int), OwnedEntity1>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map(("Test", 2), (OwnedEntity)null));
-			TestUtils.AssertMapNotFound(() => _mapper.Map((2, 2), (OwnedEntity)null));
+			TestUtils.AssertMapNotFound(() => _mapper.Map(("Test", 2), (OwnedEntity1)null));
+			TestUtils.AssertMapNotFound(() => _mapper.Map((2, 2), (OwnedEntity1)null));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

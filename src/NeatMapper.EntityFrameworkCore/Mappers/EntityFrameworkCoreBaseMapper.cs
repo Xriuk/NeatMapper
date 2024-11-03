@@ -12,14 +12,12 @@ using Microsoft.EntityFrameworkCore;
 #if !NET5_0 && !NETCOREAPP3_1
 using Microsoft.Extensions.DependencyInjection;
 #endif
-using System.Collections.ObjectModel;
 using System.Collections;
 using System.Linq.Expressions;
 using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Runtime.CompilerServices;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
@@ -63,6 +61,27 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			public object LocalEntity { get; set; }
 		}
+
+		internal static class ArrayPool {
+			private static readonly ConcurrentDictionary<int, ConcurrentBag<object[]>> _objects
+				= new ConcurrentDictionary<int, ConcurrentBag<object[]>>();
+
+
+			public static object[] Get(int size) {
+				var bag = _objects.GetOrAdd(size, _ => new ConcurrentBag<object[]>());
+				return bag.TryTake(out var item) ? item : new object[size];
+			}
+
+			public static void Return(object[] item) {
+				var bag = _objects.GetOrAdd(item.Length, _ => new ConcurrentBag<object[]>());
+				bag.Add(item);
+			}
+		}
+
+		internal static readonly ObjectPool<List<object[]>> ListsPool =
+			new ObjectPool<List<object[]>>(
+				() => new List<object[]>(),
+				l => l.Clear());
 
 
 		/// <summary>
@@ -132,7 +151,9 @@ namespace NeatMapper.EntityFrameworkCore {
 							Expression.NewArrayInit(prop.ClrType, keysValues.Select(values => Expression.Constant(values[0], prop.ClrType))),
 							prop.IsShadowProperty() ?
 								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
-								Expression.Property(param, prop.PropertyInfo)),
+								(prop.PropertyInfo != null ?
+									Expression.Property(param, prop.PropertyInfo) :
+									Expression.Field(param, prop.FieldInfo))),
 						param);
 				}
 			}
@@ -146,7 +167,9 @@ namespace NeatMapper.EntityFrameworkCore {
 						.Select((prop, i) => (Expression)Expression.Equal(
 							prop.IsShadowProperty() ?
 								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
-								Expression.Property(param, prop.PropertyInfo),
+								(prop.PropertyInfo != null ?
+									Expression.Property(param, prop.PropertyInfo) :
+									Expression.Field(param, prop.FieldInfo)),
 							Expression.Constant(values[i], prop.ClrType)))
 						.Aggregate(Expression.AndAlso))
 					.Aggregate(Expression.OrElse),
@@ -254,22 +277,38 @@ namespace NeatMapper.EntityFrameworkCore {
 			return true;
 		}
 
-		// DEV: consider using ArrayPool<T>
+		// Returns object array from ArrayPool
 		protected Func<object, object[]> GetOrCreateKeyToValuesDelegate(Type key) {
 			return _keyToValuesCache.GetOrAdd(key, keyType => {
 				var keyParam = Expression.Parameter(typeof(object), "key");
+				var keyValuesVar = Expression.Variable(typeof(object[]), "keyValues");
 				Expression body;
 				if (!keyType.IsCompositeKeyType()) {
-					// new object[]{ key }
-					body = Expression.NewArrayInit(typeof(object), keyParam);
+					body = Expression.Block(
+						new[] { keyValuesVar },
+						// keyValues = ArrayPool.Get(1);
+						Expression.Assign(keyValuesVar, Expression.Call(typeof(ArrayPool).GetMethod(nameof(ArrayPool.Get)), Expression.Constant(1))),
+						// keyValues[0] = key;
+						Expression.Assign(Expression.ArrayAccess(keyValuesVar, Expression.Constant(0)), keyParam),
+						keyValuesVar
+					);
 				}
 				else {
 					var tupleType = TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType;
+					var length = tupleType.GetGenericArguments().Length;
 
-					// new object[]{ (object)((ValueTuple<...>)key).Item1, ... }
-					body = Expression.NewArrayInit(typeof(object),
-						Enumerable.Range(1, tupleType.GetGenericArguments().Length)
-							.Select(n => Expression.Convert(Expression.PropertyOrField(Expression.Convert(keyParam, tupleType), "Item" + n), typeof(object))));
+					var bodyExpressions = new Expression[2 + length];
+					// keyValues = ArrayPool.Get(N);
+					bodyExpressions[0] = Expression.Assign(keyValuesVar, Expression.Call(typeof(ArrayPool).GetMethod(nameof(ArrayPool.Get)), Expression.Constant(length)));
+					for(var i = 1; i <= length; i++) {
+						// keyValues[N] = ((ValueTuple<...>)key).ItemN;
+						bodyExpressions[i] = Expression.Assign(
+							Expression.ArrayAccess(keyValuesVar, Expression.Constant(i-1)),
+							Expression.Convert(Expression.PropertyOrField(Expression.Convert(keyParam, tupleType), "Item" + i), typeof(object)));
+					}
+					bodyExpressions[bodyExpressions.Length-1] = keyValuesVar;
+
+					body = Expression.Block(new[] { keyValuesVar }, bodyExpressions);
 				}
 
 				return Expression.Lambda<Func<object, object[]>>(body, keyParam).Compile();
@@ -286,7 +325,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					Expression.New(type),
 					key.Properties.Select((kp, i) => (kp, i))
 						.Where(kpi => !kpi.kp.IsShadowProperty())
-						.Select(kpi => Expression.Bind(kpi.kp.PropertyInfo, Expression.Convert(Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i)), kpi.kp.ClrType))));
+						.Select(kpi => Expression.Bind((MemberInfo)kpi.kp.PropertyInfo ?? kpi.kp.FieldInfo, Expression.Convert(Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i)), kpi.kp.ClrType))));
 
 				var entityVar = Expression.Variable(typeof(object), "entity");
 				var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
@@ -357,16 +396,15 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			return new DisposableMergeCollectionFactory(
 				(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable) => {
-					// DEV: use pool?
-					var elementsToAdd = new List<object>();
-					var elementsToRemove = new List<object>();
+					var elementsToAdd = ObjectPool.Lists.Get();
+					var elementsToRemove = ObjectPool.Lists.Get();
+
+					// Deleted elements
+					var matchedDestinations = removeNotMatchedDestinationElements ?
+						ObjectPool.Lists.Get() :
+						null;
 
 					try {
-						// Deleted elements
-						var matchedDestinations = removeNotMatchedDestinationElements ?
-							new List<object>() :
-							null;
-
 						if(entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && dbContext != null)
 							dbContextSemaphore.Wait();
 						try {
@@ -407,8 +445,12 @@ namespace NeatMapper.EntityFrameworkCore {
 													var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 														tupleToValueTupleDelegate.Invoke(sourceElement) :
 														sourceElement);
-
-													matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+													try { 
+														matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+													}
+													finally {
+														ArrayPool.Return(keyValues);
+													}
 
 													elementsToRemove.Add(matchingDestinationElement);
 													elementsToAdd.Add(matchingSourceEntityElement);
@@ -423,7 +465,12 @@ namespace NeatMapper.EntityFrameworkCore {
 													var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 														tupleToValueTupleDelegate.Invoke(sourceElement) :
 														sourceElement);
-													throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+													try { 
+														throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+													}
+													finally {
+														ArrayPool.Return(keyValues);
+													}
 												}
 												else
 													throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
@@ -441,7 +488,12 @@ namespace NeatMapper.EntityFrameworkCore {
 											tupleToValueTupleDelegate.Invoke(sourceElement) :
 											sourceElement);
 
-										matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+										try { 
+											matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+										}
+										finally {
+											ArrayPool.Return(keyValues);
+										}
 									}
 									elementsToAdd.Add(matchingSourceEntityElement);
 								}
@@ -473,6 +525,12 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 					catch (Exception e) {
 						throw new MappingException(e, types);
+					}
+					finally {
+						ObjectPool.Lists.Return(elementsToAdd);
+						ObjectPool.Lists.Return(elementsToRemove);
+						if (matchedDestinations != null)
+							ObjectPool.Lists.Return(matchedDestinations);
 					}
 				},
 				elementsMatcherFactory);

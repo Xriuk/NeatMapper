@@ -45,18 +45,24 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 			_db.Add(new IntKey {
 				Id = 2,
-				Entity = new OwnedEntity {
+				Entity = new OwnedEntity1 {
 					Id = 4
 				}
+			});
+			_db.Add(new IntFieldKey {
+				Id = 2
 			});
 			_db.Add(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") });
 			_db.Add(new StringKey {
 				Id = "Test",
-				Entities = new List<OwnedEntity> {
-					new OwnedEntity {
+				Entities = new List<OwnedEntity1> {
+					new OwnedEntity1 {
 						Id = 7
 					}
 				}
+			});
+			_db.Add(new StringFieldKey {
+				Id = "Test"
 			});
 
 			_db.Add(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") });
@@ -94,6 +100,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			{
 				Assert.IsTrue(_mapper.CanMapNew<int, IntKey>());
 				Assert.IsTrue(_mapper.CanMapNew<Guid, GuidKey>());
+				Assert.IsTrue(_mapper.CanMapNew<int, IntFieldKey>());
 
 				Assert.IsNotNull(_mapper.Map<IntKey>(2));
 				Assert.IsNull(_mapper.Map<IntKey>(3));
@@ -101,6 +108,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(_mapper.Map<GuidKey>(Guid.Empty));
 				Assert.IsNotNull(_mapper.Map<StringKey>("Test"));
 				Assert.IsNull(_mapper.Map<StringKey>("Test2"));
+
+				Assert.IsNotNull(_mapper.Map<IntFieldKey>(2));
+				Assert.IsNull(_mapper.Map<IntFieldKey>(3));
+				Assert.IsNotNull(_mapper.Map<StringFieldKey>("Test"));
+				Assert.IsNull(_mapper.Map<StringFieldKey>("Test2"));
 			}
 
 			// Null
@@ -115,6 +127,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		public void ShouldMapNullableKeyToEntity() {
 			Assert.IsTrue(_mapper.CanMapNew<int?, IntKey>());
 			Assert.IsTrue(_mapper.CanMapNew<Guid?, GuidKey>());
+			Assert.IsTrue(_mapper.CanMapNew<int?, IntFieldKey>());
 
 			// Not null
 			{
@@ -122,12 +135,17 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.IsNull(_mapper.Map<int?, IntKey>(3));
 				Assert.IsNotNull(_mapper.Map<Guid?, GuidKey>(new Guid("56033406-E593-4076-B48A-70988C9F9190")));
 				Assert.IsNull(_mapper.Map<Guid?, GuidKey>(Guid.Empty));
+
+				Assert.IsNotNull(_mapper.Map<int?, IntFieldKey>(2));
+				Assert.IsNull(_mapper.Map<int?, IntFieldKey>(3));
 			}
 
 			// Null
 			{
 				Assert.IsNull(_mapper.Map<int?, IntKey>(null));
 				Assert.IsNull(_mapper.Map<Guid?, GuidKey>(null));
+
+				Assert.IsNull(_mapper.Map<int?, IntFieldKey>(null));
 			}
 		}
 
@@ -239,19 +257,21 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldNotMapOwnedEntities() {
-			Assert.IsFalse(_mapper.CanMapNew<int, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapNew<int, OwnedEntity1>());
+			Assert.IsFalse(_mapper.CanMapNew<int, OwnedEntity2>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity>(2));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity1>(2));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity2>(2));
 
-			Assert.IsFalse(_mapper.CanMapNew<Tuple<string, int>, OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapNew<Tuple<string, int>, OwnedEntity1>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity>(Tuple.Create("Test", 2)));
-			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity>(Tuple.Create(2, 2)));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity1>(Tuple.Create("Test", 2)));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity1>(Tuple.Create(2, 2)));
 
-			Assert.IsFalse(_mapper.CanMapNew<(string, int), OwnedEntity>());
+			Assert.IsFalse(_mapper.CanMapNew<(string, int), OwnedEntity1>());
 
-			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity>(("Test", 2)));
-			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity>((2, 2)));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity1>(("Test", 2)));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<OwnedEntity1>((2, 2)));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER
@@ -267,6 +287,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		[TestMethod]
 		public void ShouldMapKeysCollectionToEntitiesCollection() {
 			Assert.IsTrue(_mapper.CanMapNew<int[], IEnumerable<IntKey>>());
+			Assert.IsTrue(_mapper.CanMapNew<int[], IEnumerable<IntFieldKey>>());
 
 			{
 				var result = _mapper.Map<IEnumerable<IntKey>>(new[] { 2 , 0 });
@@ -287,6 +308,13 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 				Assert.AreEqual(2, result.Length);
 				Assert.IsNull(result[0]);
 				Assert.IsNotNull(result[1]);
+			}
+
+			{
+				var result = _mapper.Map<IEnumerable<IntFieldKey>>(new[] { 2, 0 });
+				Assert.AreEqual(2, result.Count());
+				Assert.IsNotNull(result.First());
+				Assert.IsNull(result.Last());
 			}
 		}
 

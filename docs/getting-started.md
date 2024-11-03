@@ -90,15 +90,23 @@ IProjector projector = serviceProvider.GetRequiredService<IProjector>();
 Map your objects by invoking the generic (extension) methods available:
 - `IMapper`
   - `mapper.Map<Destination>(source)`
+  - `mapper.Map<Source, Destination>(source)`
   - `mapper.Map(source, destination)`
-  - `IEnumerable`/`IEnumerable<T>` extension method `enumerable.Project<Destination>(mapper)`
+  - `mapper.Map<Source, Destination>(source, destination)`
+  - `IEnumerable`/`IEnumerable<T>` extension methods:
+    - `enumerable.Project<Destination>(mapper)`
+	- `enumerable.Project<Source, Destination>(mapper)`
 - `IAsyncMapper`
   - `await asyncMapper.MapAsync<Destination>(source)`
+  - `await asyncMapper.MapAsync<Source, Destination>(source)`
   - `await asyncMapper.MapAsync(source, destination)`
+  - `await asyncMapper.MapAsync<Source, Destination>(source, destination)`
   - `IAsyncEnumerable<T>` extension method `asyncEnumerable.Project<Source, Destination>(asyncMapper)`
 - `IProjector`
   - `projector.Project<Source, Destination>()`
-  - `IQueryable`/`IQueryable<T>` extension method `queryable.Project<Destination>(projector)`
+  - `IQueryable`/`IQueryable<T>` extension methods:
+    - `queryable.Project<Destination>(projector)`
+    - `queryable.Project<Source, Destination>(projector)`
 
 {: .highlight }
 Note that mapping matches types exactly, so parent or derived classes won't work.

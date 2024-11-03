@@ -6,6 +6,16 @@ namespace NeatMapper {
 	/// Supports only the same source/destination types. Can be used to merge collections of elements of the same type.
 	/// </summary>
 	public sealed class IdentityMapper : IMapper, IMapperFactory {
+		private static bool CanMap(Type sourceType, Type destinationType) {
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			return sourceType == destinationType;
+		}
+
+
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>
@@ -152,15 +162,5 @@ namespace NeatMapper {
 			});
 		}
 		#endregion
-
-
-		private bool CanMap(Type sourceType,Type destinationType) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return sourceType == destinationType;
-		}
 	}
 }

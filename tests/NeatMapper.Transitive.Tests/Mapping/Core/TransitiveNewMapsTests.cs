@@ -4,7 +4,7 @@ using System;
 
 namespace NeatMapper.Transitive.Tests.Mapping {
 	[TestClass]
-	public class TransitiveNewMapperTests {
+	public class TransitiveNewMapsTests {
 		public class Maps :
 			INewMap<float, double>,
 			INewMap<double, decimal>,
@@ -53,14 +53,14 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 				new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Maps) }
 				}),
-				new TransitiveNewMapper(EmptyMapper.Instance));
+				new TransitiveMapper(EmptyMapper.Instance));
 		}
 
 		private void VerifyMappingContext() {
 			Assert.IsNotNull(Maps.NestedMappingContext);
 			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(CompositeMapper));
 			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext);
-			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentMapper, typeof(TransitiveNewMapper));
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentMapper, typeof(TransitiveMapper));
 			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext.ParentContext);
 			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentContext.ParentMapper, typeof(CompositeMapper));
 			Assert.IsNull(Maps.NestedMappingContext.ParentContext.ParentContext.ParentContext);
@@ -103,7 +103,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldRespectLengthIfSpecified() {
-			var mapper = new TransitiveNewMapper(_mapper);
+			var mapper = new TransitiveMapper(_mapper);
 
 			// Map length is 5, so shorter
 			Assert.IsFalse(mapper.CanMapNew<float, PriceFloat>(new TransitiveMappingOptions(4)));

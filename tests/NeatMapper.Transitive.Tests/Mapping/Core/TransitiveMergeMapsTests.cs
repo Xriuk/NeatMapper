@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace NeatMapper.Transitive.Tests.Mapping {
 	[TestClass]
-	public class TransitiveMergeMapperTests {
+	public class TransitiveMergeMapsTests {
 		// Using all IMergeMaps because they can be used in new maps too
 		public class Maps :
 			IMergeMap<float, double>,
@@ -83,15 +83,14 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 				new CustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Maps) }
 				}),
-				new TransitiveNewMapper(EmptyMapper.Instance),
-				new TransitiveMergeMapper(EmptyMapper.Instance));
+				new TransitiveMapper(EmptyMapper.Instance));
 		}
 
 		private void VerifyMappingContext() {
 			Assert.IsNotNull(Maps.NestedMappingContext);
 			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentMapper, typeof(CompositeMapper));
 			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext);
-			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentMapper, typeof(TransitiveMergeMapper));
+			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentMapper, typeof(TransitiveMapper));
 			Assert.IsNotNull(Maps.NestedMappingContext.ParentContext.ParentContext);
 			Assert.IsInstanceOfType(Maps.NestedMappingContext.ParentContext.ParentContext.ParentMapper, typeof(CompositeMapper));
 			Assert.IsNull(Maps.NestedMappingContext.ParentContext.ParentContext.ParentContext);
@@ -132,7 +131,7 @@ namespace NeatMapper.Transitive.Tests.Mapping {
 
 		[TestMethod]
 		public void ShouldRespectLengthIfSpecified() {
-			var mapper = new TransitiveMergeMapper(_mapper);
+			var mapper = new TransitiveMapper(_mapper);
 
 			// Map length is 5, so shorter
 			Assert.IsFalse(mapper.CanMapMerge<float, PriceFloat>(new TransitiveMappingOptions(4)));

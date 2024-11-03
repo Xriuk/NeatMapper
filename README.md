@@ -6,9 +6,11 @@
 
 [![NeatMapper.EntityFrameworkCore](https://img.shields.io/nuget/v/NeatMapper.EntityFrameworkCore.svg?label=NeatMapper.EntityFrameworkCore)](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore)
 
+[![NeatMapper.Transitive](https://img.shields.io/nuget/v/NeatMapper.Transitive.svg?label=NeatMapper.Transitive)](https://www.nuget.org/packages/NeatMapper.Transitive)
+
 ## What is this project
 
-.NEaT Mapper is an object mapper and projector, with configurable and reusable mappings.
+.NEaT Mapper is a .NET object mapper and projector, with configurable and reusable mappings.
 
 This allows you to create mappings between different types (even generic ones), combine them, nest them and reuse them, making your code DRY. Map once, use everywhere.
 
@@ -22,12 +24,15 @@ You can install the core package directly from Nuget [NeatMapper](https://www.nu
 
 If you are using Entity Framework Core you may want to install [NeatMapper.EntityFrameworkCore](https://www.nuget.org/packages/NeatMapper.EntityFrameworkCore) too to map your entities.
 
+If you have complex mappings and want to reuse your maps even further you may want to install [NeatMapper.Transitive](https://www.nuget.org/packages/NeatMapper.Transitive) too to use your maps sequentially.
+
 ## How to use
 
 Find specific instructions in the README of every package:
 
 - [NeatMapper](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper/README.md)
 - [NeatMapper.EntityFrameworkCore](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.EntityFrameworkCore/README.md)
+- [NeatMapper.Transitive](https://github.com/Xriuk/NeatMapper/blob/main/src/NeatMapper.Transitive/README.md)
 
 ### 1. Create mapping classes
 

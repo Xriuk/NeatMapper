@@ -36,6 +36,8 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 		public void ShouldMatchEntitiesWithKey() {
 			Assert.IsTrue(_matcher.CanMatch<IntKey, IntKey>());
 			Assert.IsTrue(_matcher.CanMatch<StringKey, StringKey>());
+			Assert.IsTrue(_matcher.CanMatch<IntFieldKey, IntFieldKey>());
+			Assert.IsTrue(_matcher.CanMatch<StringFieldKey, StringFieldKey>());
 
 			// Not null
 			{
@@ -44,6 +46,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				Assert.IsTrue(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
 				Assert.IsFalse(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = Guid.Empty }));
 				Assert.IsTrue(_matcher.Match(new StringKey { Id = "Test" }, new StringKey { Id = "Test" }));
+
+				Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 2 }, new IntFieldKey { Id = 2 }));
+				Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 0 }, new IntFieldKey { Id = 0 }));
+				Assert.IsTrue(_matcher.Match(new StringFieldKey { Id = "Test" }, new StringFieldKey { Id = "Test" }));
 			}
 
 			// Null
@@ -52,6 +58,10 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				Assert.IsFalse(_matcher.Match<GuidKey, GuidKey>(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, null));
 				Assert.IsFalse(_matcher.Match<StringKey, StringKey>(null, null));
 				Assert.IsFalse(_matcher.Match<StringKey, StringKey>(null, new StringKey { Id = null }));
+
+				Assert.IsFalse(_matcher.Match<IntFieldKey, IntFieldKey>(null, new IntFieldKey { Id = 0 }));
+				Assert.IsFalse(_matcher.Match<StringFieldKey, StringFieldKey>(null, null));
+				Assert.IsFalse(_matcher.Match<StringFieldKey, StringFieldKey>(null, new StringFieldKey { Id = null }));
 			}
 		}
 
@@ -123,13 +133,22 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 		}
 
 		[TestMethod]
-		public void ShouldNotMatchOwnedEntities() {
+		public void ShouldNotMatchPromiscuousOwnedEntities() {
 			// Should be ObjectEqualsMatcher
-			Assert.IsTrue(_matcher.CanMatch<OwnedEntity, OwnedEntity>());
+			Assert.IsTrue(_matcher.CanMatch<OwnedEntity1, OwnedEntity1>());
 
-			Assert.IsFalse(_matcher.Match(new OwnedEntity(), new OwnedEntity()));
-			var ent = new OwnedEntity();
+			Assert.IsFalse(_matcher.Match(new OwnedEntity1(), new OwnedEntity1()));
+			Assert.IsFalse(_matcher.Match(new OwnedEntity1 { Id = 2 }, new OwnedEntity1 { Id = 2 }));
+			var ent = new OwnedEntity1();
 			Assert.IsTrue(_matcher.Match(ent, ent));
+		}
+
+		[TestMethod]
+		public void ShouldMatchNotPromiscuousOwnedEntities() {
+			Assert.IsTrue(_matcher.CanMatch<OwnedEntity2, OwnedEntity2>());
+
+			Assert.IsTrue(_matcher.Match(new OwnedEntity2 { Id = 2 }, new OwnedEntity2 { Id = 2 }));
+			Assert.IsFalse(_matcher.Match(new OwnedEntity2 { Id = 2 }, new OwnedEntity2 { Id = 3 }));
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

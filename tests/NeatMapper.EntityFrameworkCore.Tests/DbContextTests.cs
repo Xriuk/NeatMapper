@@ -27,7 +27,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests {
 
 				dbContext.Add(new IntKey {
 					Id = 2,
-					Entity = new OwnedEntity {
+					Entity = new OwnedEntity1 {
 						Id = 4
 					}
 				});
