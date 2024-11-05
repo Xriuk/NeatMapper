@@ -130,7 +130,7 @@ namespace NeatMapper {
 				s => new CompositeMatcher(s.GetService<IOptionsSnapshot<CompositeMatcherOptions>>()?.Value ?? new CompositeMatcherOptions()),
 				matchersLifetime));
 
-			// IMatcher, IMatcherCanMatch, IMatcherFactory
+			// IMatcher, IMatcherFactory
 			services.Add(new ServiceDescriptor(typeof(IMatcher),			s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
 			services.Add(new ServiceDescriptor(typeof(IMatcherFactory),		s => s.GetRequiredService<CompositeMatcher>(),	matchersLifetime));
 			#endregion
@@ -185,7 +185,7 @@ namespace NeatMapper {
 				s => new CompositeMapper(s.GetService<IOptionsSnapshot<CompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IMapper>()),
 				mappersLifetime));
 
-			// IMapper, IMapperCanMap, IMapperFactory
+			// IMapper, IMapperFactory
 			services.Add(new ServiceDescriptor(typeof(IMapper),			s => s.GetRequiredService<CompositeMapper>(),	mappersLifetime));
 			services.Add(new ServiceDescriptor(typeof(IMapperFactory),	s => s.GetRequiredService<CompositeMapper>(),	mappersLifetime));
 			#endregion
@@ -234,7 +234,7 @@ namespace NeatMapper {
 				s => new AsyncCompositeMapper(s.GetService<IOptionsSnapshot<AsyncCompositeMapperOptions>>()?.Value.Mappers ?? Array.Empty<IAsyncMapper>()),
 				asyncMappersLifetime));
 
-			// IAsyncMapper, IAsyncMapperCanMap, IAsyncMapperFactory
+			// IAsyncMapper, IAsyncMapperFactory
 			services.Add(new ServiceDescriptor(typeof(IAsyncMapper),		s => s.GetRequiredService<AsyncCompositeMapper>(),	asyncMappersLifetime));
 			services.Add(new ServiceDescriptor(typeof(IAsyncMapperFactory),	s => s.GetRequiredService<AsyncCompositeMapper>(),	asyncMappersLifetime));
 			#endregion
@@ -274,8 +274,8 @@ namespace NeatMapper {
 				s => new CompositeProjector(s.GetService<IOptionsSnapshot<CompositeProjectorOptions>>()?.Value.Projectors ?? Array.Empty<IProjector>()),
 				projectorsLifetime));
 
-			// IProjector, IProjectorCanProject
-			services.Add(new ServiceDescriptor(typeof(IProjector),				s => s.GetRequiredService<CompositeProjector>(),	projectorsLifetime));
+			// IProjector
+			services.Add(new ServiceDescriptor(typeof(IProjector), s => s.GetRequiredService<CompositeProjector>(), projectorsLifetime));
 			#endregion
 
 			return services;
