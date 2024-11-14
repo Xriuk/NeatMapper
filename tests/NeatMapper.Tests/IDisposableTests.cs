@@ -14,15 +14,7 @@ namespace NeatMapper.Tests {
 		}
 
 
-		[TestMethod]
-		public void CachedLazyEnumerableIdempotency() {
-			IDisposable enumerable = new CachedLazyEnumerable<DisposableClass>(new[] { new DisposableClass() });
-			
-			enumerable.Dispose();
-			enumerable.Dispose();
-		}
-
-
+		
 		[TestMethod]
 		public void DisposableAsyncNewMapFactoryIdempotency() {
 			IDisposable factory = new DisposableAsyncNewMapFactory(typeof(int), typeof(string), (s, c) => Task.FromResult<object>(""), new[] { new DisposableClass() });

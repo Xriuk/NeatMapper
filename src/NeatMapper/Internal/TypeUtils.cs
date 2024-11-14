@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,9 +35,9 @@ namespace NeatMapper {
 		public static Type GetArrayElementType(this Type arrayType) {
 			var rank = arrayType.GetArrayRank();
 			if(rank == 1)
-				return arrayType.GetElementType();
+				return arrayType.GetElementType()!;
 			else
-				return arrayType.GetElementType().MakeArrayType(rank - 1);
+				return arrayType.GetElementType()!.MakeArrayType(rank - 1);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,7 +71,7 @@ namespace NeatMapper {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void CheckObjectType(object obj, Type type, string argument = null) {
+		public static void CheckObjectType(object? obj, Type type, string? argument = null) {
 			if(obj != null ? !type.IsAssignableFrom(obj.GetType()) : (type.IsValueType && Nullable.GetUnderlyingType(type) == null)) {
 				var message = (obj != null ? $"Object of type {obj.GetType().FullName ?? obj.GetType().Name}" : "null") + " " +
 					$"is not assignable to type {type.FullName ?? type.Name}.";
@@ -83,7 +79,7 @@ namespace NeatMapper {
 			}
 		}
 
-		public static bool IsCollectionReadonly(object collection) {
+		public static bool IsCollectionReadonly(object? collection) {
 			if(collection == null)
 				return false;
 
@@ -96,7 +92,7 @@ namespace NeatMapper {
 				var collectionInterfaceType = typeof(ICollection<>).MakeGenericType(type);
 				var param = Expression.Parameter(typeof(object), "collection");
 				// ((ICollection<Type>)collection).IsReadOnly
-				var body = Expression.Property(Expression.Convert(param, collectionInterfaceType), collectionInterfaceType.GetProperty(nameof(ICollection<object>.IsReadOnly)));
+				var body = Expression.Property(Expression.Convert(param, collectionInterfaceType), collectionInterfaceType.GetProperty(nameof(ICollection<object>.IsReadOnly))!);
 				return Expression.Lambda<Func<object, bool>>(body, param).Compile();
 			}).Invoke(collection);
 		}

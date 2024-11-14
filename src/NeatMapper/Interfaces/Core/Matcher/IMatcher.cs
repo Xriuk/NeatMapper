@@ -19,15 +19,7 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be matched
 		/// with an object of type <paramref name="sourceType"/>.
 		/// </returns>
-		bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Checks if two objects are equivalent.
@@ -44,26 +36,6 @@ namespace NeatMapper {
 		/// <exception cref="MatcherException">
 		/// An exception was thrown while matching the types, check the inner exception for details.
 		/// </exception>
-		bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null);
 	}
 }

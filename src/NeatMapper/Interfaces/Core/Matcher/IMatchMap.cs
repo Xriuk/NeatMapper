@@ -19,19 +19,6 @@
 		/// <exception cref="MatcherException">
 		/// An exception was thrown while matching the types, check the inner exception for details.
 		/// </exception>
-		bool Match(
-#if NET5_0_OR_GREATER
-			TSource? 
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination? 
-#else
-			TDestination
-#endif
-			destination,
-			MatchingContext context);
+		bool Match(TSource? source, TDestination? destination, MatchingContext context);
 	}
 }

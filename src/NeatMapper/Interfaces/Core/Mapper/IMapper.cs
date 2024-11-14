@@ -6,8 +6,8 @@ namespace NeatMapper {
 	/// </summary>
 	/// <remarks>
 	/// Note to implementers: if a mapper does not support one of the methods
-	/// (<see cref="Map(object, Type, Type, MappingOptions)"/> or
-	/// <see cref="Map(object, Type, object, Type, MappingOptions)"/>) it should throw
+	/// (<see cref="Map(object?, Type, Type, MappingOptions?)"/> or
+	/// <see cref="Map(object?, Type, object?, Type, MappingOptions?)"/>) it should throw
 	/// <see cref="MapNotFoundException"/> inside.<br/>
 	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
@@ -28,15 +28,7 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created
 		/// from a parameter of type <paramref name="sourceType"/>.
 		/// </returns>
-		bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool CanMapNew(Type sourceType,Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Checks if the mapper could merge an object into an existing one. It does not guarantee
@@ -52,15 +44,7 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged
 		/// into an object of type <paramref name="destinationType"/>.
 		/// </returns>
-		bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Maps an object to a new one.
@@ -78,26 +62,7 @@ namespace NeatMapper {
 		/// <exception cref="MappingException">
 		/// An exception was thrown while mapping the types, check the inner exception for details.
 		/// </exception>
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Maps an object to an existing one and returns the result.
@@ -119,31 +84,6 @@ namespace NeatMapper {
 		/// <exception cref="MappingException">
 		/// An exception was thrown while mapping the types, check the inner exception for details.
 		/// </exception>
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-		Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null);
 	}
 }

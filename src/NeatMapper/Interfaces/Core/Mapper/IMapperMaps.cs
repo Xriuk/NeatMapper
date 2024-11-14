@@ -21,13 +21,7 @@ namespace NeatMapper {
 		/// <returns>
 		/// A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.
 		/// </returns>
-		IEnumerable<(Type From, Type To)> GetNewMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Retrieves a collection of type pairs which can be mapped to merge objects. It does not guarantee
@@ -40,12 +34,6 @@ namespace NeatMapper {
 		/// <returns>
 		/// A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.
 		/// </returns>
-		IEnumerable<(Type From, Type To)> GetMergeMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null);
 	}
 }

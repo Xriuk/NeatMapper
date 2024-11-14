@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,8 +11,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Awaits a task and casts the result.
 		/// </summary>
-		public static async Task<TResult> AwaitTask<TResult>(Task<object> task) {
-			return (TResult)await task;
+		public static async Task<TResult?> AwaitTask<TResult>(Task<object?> task) {
+			return (TResult?)await task;
 		}
 
 		// https://stackoverflow.com/a/60482164/2672235

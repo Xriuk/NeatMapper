@@ -25,15 +25,7 @@ namespace NeatMapper {
 		/// of type <paramref name="destinationType"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be mapped.</exception>
-		INewMapFactory MapNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Creates a factory to map an object to an existing one.
@@ -50,14 +42,6 @@ namespace NeatMapper {
 		/// of type <paramref name="destinationType"/>.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be mapped.</exception>
-		IMergeMapFactory MapMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 	}
 }

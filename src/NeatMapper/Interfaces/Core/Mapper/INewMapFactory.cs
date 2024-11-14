@@ -25,18 +25,7 @@ namespace NeatMapper {
 		/// <param name="source">Object to map, of type <see cref="SourceType"/>, may be null.</param>
 		/// <returns>The newly created object, of type <see cref="DestinationType"/>, may be null.</returns>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source);
+		object? Invoke(object? source);
 	}
 
 	/// <summary>
@@ -51,23 +40,11 @@ namespace NeatMapper {
 		public abstract Type DestinationType { get; }
 
 
-		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/summary"/>
-		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="INewMapFactory.Invoke(object?)" path="/summary"/>
+		/// <inheritdoc cref="INewMapFactory.Invoke(object?)" path="/param[@name='source']"/>
 		/// <returns>The newly created object of type <typeparamref name="TDestination"/>, may be null.</returns>
-		/// <inheritdoc cref="INewMapFactory.Invoke(object)" path="/exception"/>
-		public abstract
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-			Invoke(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source);
+		/// <inheritdoc cref="INewMapFactory.Invoke(object?)" path="/exception"/>
+		public abstract TDestination? Invoke(TSource? source);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -75,85 +52,17 @@ namespace NeatMapper {
 			Dispose(true);
 			GC.SuppressFinalize(this);
 		}
+		
 
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			INewMapFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return Invoke((TSource)source);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		object? INewMapFactory.Invoke(object? source) {
+			return Invoke((TSource?)source);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			>(
-			NewMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TSource?, TDestination?>(
+			NewMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 
-		public static implicit operator Converter<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			>(
-			NewMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Converter<TSource?, TDestination?>(
+			NewMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 	}
 }

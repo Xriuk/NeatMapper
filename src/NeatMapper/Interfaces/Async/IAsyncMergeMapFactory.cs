@@ -35,26 +35,7 @@ namespace NeatMapper {
 		/// may be null.
 		/// </returns>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
-		Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			CancellationToken cancellationToken = default);
+		Task<object?> Invoke(object? source, object? destination, CancellationToken cancellationToken = default);
 	}
 
 	/// <summary>
@@ -69,35 +50,16 @@ namespace NeatMapper {
 		public abstract Type DestinationType { get; }
 
 
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/summary"/>
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/param[@name='source']"/>
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object?, object?, CancellationToken)" path="/summary"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object?, object?, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object?, object?, CancellationToken)" path="/param[@name='cancellationToken']"/>
 		/// <returns>
 		/// A task which when completed returns the resulting object of the mapping of type
 		/// <typeparamref name="TDestination"/>, which can be the same as <paramref name="destination"/> or a new one,
 		/// may be null.
 		/// </returns>
-		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object, object, CancellationToken)" path="/exception"/>
-		public abstract Task<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> Invoke(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination,
-			CancellationToken cancellationToken = default);
+		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object?, object?, CancellationToken)" path="/exception"/>
+		public abstract Task<TDestination?> Invoke(TSource? source, TDestination? destination, CancellationToken cancellationToken = default);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -107,72 +69,12 @@ namespace NeatMapper {
 		}
 
 
-		async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> IAsyncMergeMapFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			CancellationToken cancellationToken) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return await Invoke((TSource)source, (TDestination)destination, cancellationToken);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		async Task<object?> IAsyncMergeMapFactory.Invoke(object? source, object? destination, CancellationToken cancellationToken) {
+			return await Invoke((TSource?)source, (TDestination?)destination, cancellationToken);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			,
-			CancellationToken,
-			Task<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			>>(
-			AsyncMergeMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TSource?, TDestination?, CancellationToken, Task<TDestination?>>(
+			AsyncMergeMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 	}
 }

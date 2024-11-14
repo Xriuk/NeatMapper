@@ -30,52 +30,37 @@ namespace NeatMapper {
 		/// <param name="destinationElementType">
 		/// Type of the destination element, used to retrieve the available maps.
 		/// </param>
-		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// The projected queryable with <see cref="IQueryable.ElementType"/> equal to <paramref name="destinationElementType"/>.
 		/// The actual elements may be null.
 		/// </returns>
-		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type destinationElementType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
+			MappingOptions? mappingOptions = null) {
 
 			return queryable.Project(projector, queryable.ElementType, destinationElementType, mappingOptions);
 		}
 
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type destinationElementType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
+			IEnumerable? mappingOptions) {
 
 			return queryable.Project(projector, queryable.ElementType, destinationElementType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
-			IProjector projector, Type destinationElementType,
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			mappingOptions) {
+			IProjector projector,
+			Type destinationElementType,
+			params object?[]? mappingOptions) {
 
 			return queryable.Project(projector, queryable.ElementType, destinationElementType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
@@ -85,22 +70,13 @@ namespace NeatMapper {
 		/// <summary>
 		/// Projects a queryable into another one.
 		/// </summary>
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions?)"/>
 		/// <param name="sourceElementType">Type of the source element, used to retrieve the available maps.</param>
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type sourceElementType,
 			Type destinationElementType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+			MappingOptions? mappingOptions = null) {
 
 			if (queryable == null)
 				throw new ArgumentNullException(nameof(queryable));
@@ -108,185 +84,110 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(projector));
 			if (sourceElementType == null)
 				throw new ArgumentNullException(nameof(sourceElementType));
-			if (destinationElementType == null)
-				throw new ArgumentNullException(nameof(destinationElementType));
-			if (!sourceElementType.IsAssignableFrom(queryable.ElementType)) { 
+			if (!sourceElementType.IsAssignableFrom(queryable.ElementType)) {
 				throw new ArgumentException($"Source type {sourceElementType.FullName ?? sourceElementType.Name} is not assignable " +
 					$"from queryable type {queryable.ElementType.FullName ?? queryable.ElementType.Name}.");
 			}
+			if (destinationElementType == null)
+				throw new ArgumentNullException(nameof(destinationElementType));
 
+			// DEV: maybe cache?
 			return (IQueryable)Queryable_Select.MakeGenericMethod(sourceElementType, destinationElementType)
 				.Invoke(null, new object[] {
 					queryable,
-					projector.Project(sourceElementType, destinationElementType, mappingOptions) });
+					projector.Project(sourceElementType, destinationElementType, mappingOptions) })!;
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
 			IProjector projector,
 			Type sourceElementType,
 			Type destinationElementType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
+			IEnumerable? mappingOptions) {
 
 			return queryable.Project(projector, sourceElementType, destinationElementType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static IQueryable Project(this IQueryable queryable,
-			IProjector projector, Type sourceElementType, Type destinationElementType, params object[] mappingOptions) {
+			IProjector projector,
+			Type sourceElementType,
+			Type destinationElementType,
+			params object[] mappingOptions) {
 
 			return queryable.Project(projector, sourceElementType, destinationElementType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 
 		#region Explicit destination, inferred source
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TDestination"><inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)" path="/param[@name='destinationElementType']"/></typeparam>
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)" path="/param[@name='projector']"/>
-		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions?)" path="/summary"/>
+		/// <typeparam name="TDestination"><inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions?)" path="/param[@name='destinationElementType']"/></typeparam>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions?)" path="/param[@name='projector']"/>
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>The projected queryable, the actual elements may be null.</returns>
-		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static IQueryable<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> Project<TDestination>(this IQueryable queryable,
+		public static IQueryable<TDestination?> Project<TDestination>(this IQueryable queryable,
 			IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
+			MappingOptions? mappingOptions = null) {
 
-			return (IQueryable<TDestination>)queryable.Project(projector, queryable.ElementType, typeof(TDestination), mappingOptions);
+			return (IQueryable<TDestination?>)queryable.Project(projector, queryable.ElementType, typeof(TDestination), mappingOptions);
 		}
 
-		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)"/>
+		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static IQueryable<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> Project<TDestination>(this IQueryable queryable,
+		public static IQueryable<TDestination?> Project<TDestination>(this IQueryable queryable,
 			IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
+			IEnumerable? mappingOptions) {
 
 			return queryable.Project<TDestination>(projector, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)"/>
+		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static IQueryable<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> Project<TDestination>(this IQueryable queryable, IProjector projector, params object[] mappingOptions) {
+		public static IQueryable<TDestination?> Project<TDestination>(this IQueryable queryable,
+			IProjector projector,
+			params object[] mappingOptions) {
 
 			return queryable.Project<TDestination>(projector, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 
 		#region Explicit source and destination
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions)" path="/param[@name='sourceElementType']"/></typeparam>
-		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)" path="/typeparam[@name='TDestination']"/>
-		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions)" path="/param[@name='projector']"/>
-		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/param[@name='mappingOptions']"/>
-		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions)" path="/returns"/>
-		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions)" path="/exception"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions?)" path="/summary"/>
+		/// <typeparam name="TSource"><inheritdoc cref="Project(IQueryable, IProjector, Type, Type, MappingOptions?)" path="/param[@name='sourceElementType']"/></typeparam>
+		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions?)" path="/typeparam[@name='TDestination']"/>
+		/// <inheritdoc cref="Project(IQueryable, IProjector, Type, MappingOptions?)" path="/param[@name='projector']"/>
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions?)" path="/returns"/>
+		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static IQueryable<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
 #pragma warning disable CS1712
-			> Project<TSource, TDestination>(this IQueryable<
+		public static IQueryable<TDestination?> Project<TSource, TDestination>(this IQueryable<TSource?> queryable,
 #pragma warning restore CS1712
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			> queryable,
 			IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
+			MappingOptions? mappingOptions = null) {
 
 			return queryable.Select(projector.Project<TSource, TDestination>(mappingOptions));
 		}
 
-		/// <inheritdoc cref="Project{TSource, TDestination}(IQueryable{TSource}, IProjector, MappingOptions)"/>
+		/// <inheritdoc cref="Project{TSource, TDestination}(IQueryable{TSource}, IProjector, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static IQueryable<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> Project<TSource, TDestination>(this IQueryable<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			> queryable,
+		public static IQueryable<TDestination?> Project<TSource, TDestination>(this IQueryable<TSource?> queryable,
 			IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
+			IEnumerable? mappingOptions) {
 
 			return queryable.Select(projector.Project<TSource, TDestination>(mappingOptions));
 		}
 
-		/// <inheritdoc cref="Project{TSource, TDestination}(IQueryable{TSource}, IProjector, MappingOptions)"/>
+		/// <inheritdoc cref="Project{TSource, TDestination}(IQueryable{TSource}, IProjector, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static IQueryable<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> Project<TSource, TDestination>(this IQueryable<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			> queryable,
-			IProjector projector, params object[] mappingOptions) {
+		public static IQueryable<TDestination?> Project<TSource, TDestination>(this IQueryable<TSource?> queryable,
+			IProjector projector,
+			params object[] mappingOptions) {
 
 			return queryable.Select(projector.Project<TSource, TDestination>(mappingOptions));
 		}

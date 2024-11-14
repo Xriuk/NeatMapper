@@ -26,13 +26,7 @@ namespace NeatMapper {
 		/// false otherwise.
 		/// </returns>
 		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
-		bool Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			comparer);
+		bool Invoke(object? comparer);
 	}
 
 	/// <summary>
@@ -46,14 +40,8 @@ namespace NeatMapper {
 		public abstract Type ComparerType { get; }
 
 
-		/// <inheritdoc cref="IPredicateFactory.Invoke(object)"/>
-		public abstract bool Invoke(
-#if NET5_0_OR_GREATER
-			TComparer?
-#else
-			TComparer
-#endif
-			comparer);
+		/// <inheritdoc cref="IPredicateFactory.Invoke(object?)"/>
+		public abstract bool Invoke(TComparer? comparer);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -63,55 +51,15 @@ namespace NeatMapper {
 		}
 
 
-		bool IPredicateFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			comparer) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return Invoke((TComparer)comparer);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		bool IPredicateFactory.Invoke(object? comparer) {
+			return Invoke((TComparer?)comparer);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TComparer?
-#else
-			TComparer
-#endif
-			,
-			bool>(
-			PredicateFactory<
-#if NET5_0_OR_GREATER
-				TComparer?
-#else
-				TComparer
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TComparer?, bool>(
+			PredicateFactory<TComparer?> factory) => factory.Invoke;
 
-		public static implicit operator Predicate<
-#if NET5_0_OR_GREATER
-			TComparer?
-#else
-			TComparer
-#endif
-			>(
-			PredicateFactory<
-#if NET5_0_OR_GREATER
-				TComparer?
-#else
-				TComparer
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Predicate<TComparer?>(
+			PredicateFactory<TComparer?> factory) => factory.Invoke;
 	}
 }

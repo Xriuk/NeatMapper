@@ -172,25 +172,63 @@ namespace NeatMapper.Tests.Extensions {
 			{
 				// Explicit source and destination
 				{
-					// No parameters (MappingOptions with default value overload)
-					matcher.Predicate<string, int>("Test");
-					matcher.Predicate<int, string>(2);
+					// Source
+					{ 
+						// No parameters (MappingOptions with default value overload)
+						matcher.Predicate<string, int>("Test");
+						matcher.Predicate<int, string>(2);
+						//matcher.Predicate<string, string>("Test"); // DEV: resolve ambiguity after breaking changes
 
-					// MappingOptions
-					matcher.Predicate<string, int>("Test", options);
-					matcher.Predicate<int, string>(2, options);
+						// MappingOptions
+						matcher.Predicate<string, int>("Test", options);
+						matcher.Predicate<int, string>(2, options);
+						//matcher.Predicate<string, string>("Test", options); // DEV: resolve ambiguity after breaking changes
 
-					// IEnumerable
-					matcher.Predicate<string, int>("Test", enumerable1);
-					matcher.Predicate<string, int>("Test", enumerable2);
-					matcher.Predicate<int, string>(2, enumerable1);
-					matcher.Predicate<int, string>(2, enumerable2);
+						// IEnumerable
+						matcher.Predicate<string, int>("Test", enumerable1);
+						matcher.Predicate<string, int>("Test", enumerable2);
+						matcher.Predicate<int, string>(2, enumerable1);
+						matcher.Predicate<int, string>(2, enumerable2);
+						//matcher.Predicate<string, string>("Test", enumerable1); // DEV: resolve ambiguity after breaking changes
+						//matcher.Predicate<string, string>("Test", enumerable2);
 
-					// Params
-					matcher.Predicate<string, int>("Test", option1);
-					matcher.Predicate<string, int>("Test", option1, option2);
-					matcher.Predicate<int, string>(2, option1);
-					matcher.Predicate<int, string>(2, option1, option2);
+						// Params
+						matcher.Predicate<string, int>("Test", option1);
+						matcher.Predicate<string, int>("Test", option1, option2);
+						matcher.Predicate<int, string>(2, option1);
+						matcher.Predicate<int, string>(2, option1, option2);
+						//matcher.Predicate<string, string>("Test", option1); // DEV: resolve ambiguity after breaking changes
+						//matcher.Predicate<string, string>("Test", option1, option2);
+					}
+
+					// Destination
+					{
+						// No parameters (MappingOptions with default value overload)
+						matcher.PredicateDestination<string, int>(2);
+						matcher.PredicateDestination<int, string>("Test");
+						matcher.PredicateDestination<string, string>("Test");
+
+						// MappingOptions
+						matcher.PredicateDestination<string, int>(2, options);
+						matcher.PredicateDestination<int, string>("Test", options);
+						matcher.PredicateDestination<string, string>("Test", options);
+
+						// IEnumerable
+						matcher.PredicateDestination<string, int>(2, enumerable1);
+						matcher.PredicateDestination<string, int>(2, enumerable2);
+						matcher.PredicateDestination<int, string>("Test", enumerable1);
+						matcher.PredicateDestination<int, string>("Test", enumerable2);
+						matcher.PredicateDestination<string, string>("Test", enumerable1);
+						matcher.PredicateDestination<string, string>("Test", enumerable2);
+
+						// Params
+						matcher.PredicateDestination<string, int>(2, option1);
+						matcher.PredicateDestination<string, int>(2, option1, option2);
+						matcher.PredicateDestination<int, string>("Test", option1);
+						matcher.PredicateDestination<int, string>("Test", option1, option2);
+						matcher.PredicateDestination<string, string>("Test", option1);
+						matcher.PredicateDestination<string, string>("Test", option1, option2);
+					}
 				}
 
 				// Explicit destination, inferred source
@@ -220,6 +258,35 @@ namespace NeatMapper.Tests.Extensions {
 					matcher.Predicate<int>(strNonNull, option1, option2);
 					matcher.Predicate<string>(2, option1);
 					matcher.Predicate<string>(2, option1, option2);
+				}
+
+				// Explicit source, inferred destinatinon
+				{
+					// No parameters (MappingOptions with default value overload)
+					matcher.PredicateDestination<int>("Test");
+					matcher.PredicateDestination<int>(strNonNull);
+					matcher.PredicateDestination<string>(2);
+
+					// MappingOptions
+					matcher.PredicateDestination<int>("Test", options);
+					matcher.PredicateDestination<int>(strNonNull, options);
+					matcher.PredicateDestination<string>(2, options);
+
+					// IEnumerable
+					matcher.PredicateDestination<int>("Test", enumerable1);
+					matcher.PredicateDestination<int>(strNonNull, enumerable1);
+					matcher.PredicateDestination<int>("Test", enumerable2);
+					matcher.PredicateDestination<int>(strNonNull, enumerable2);
+					matcher.PredicateDestination<string>(2, enumerable1);
+					matcher.PredicateDestination<string>(2, enumerable2);
+
+					// Params
+					matcher.PredicateDestination<int>("Test", option1);
+					matcher.PredicateDestination<int>(strNonNull, option1);
+					matcher.PredicateDestination<int>("Test", option1, option2);
+					matcher.PredicateDestination<int>(strNonNull, option1, option2);
+					matcher.PredicateDestination<string>(2, option1);
+					matcher.PredicateDestination<string>(2, option1, option2);
 				}
 
 				// Runtime
@@ -332,7 +399,7 @@ namespace NeatMapper.Tests.Extensions {
 			}
 
 			// Explicit source and destination (destination)
-			using (var predicate = matcher.Predicate<Product, ProductDto>(match1)) {
+			using (var predicate = matcher.PredicateDestination<Product, ProductDto>(match1)) {
 				var matchingProduct = products1.First(predicate);
 
 				Assert.AreEqual("DEF", matchingProduct.Code);

@@ -1,18 +1,14 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
 	internal class DisposableAsyncMergeMapFactory<TSource, TDestination> : DefaultAsyncMergeMapFactory<TSource, TDestination> {
-		protected readonly IDisposable[] _disposables;
+		protected readonly IDisposable?[] _disposables;
 
-		internal DisposableAsyncMergeMapFactory(Func<TSource, TDestination, CancellationToken, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
+		internal DisposableAsyncMergeMapFactory(Func<TSource?, TDestination?, CancellationToken, Task<TDestination?>> mapDelegate, params IDisposable?[] disposables) :
 			this(typeof(TSource), typeof(TDestination), mapDelegate, disposables){ }
-		protected DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<TSource, TDestination, CancellationToken, Task<TDestination>> mapDelegate, params IDisposable[] disposables) :
+		protected DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<TSource?, TDestination?, CancellationToken, Task<TDestination?>> mapDelegate, params IDisposable?[] disposables) :
 			base(sourceType, destinationType, mapDelegate) {
 
 			_disposables = disposables ?? throw new ArgumentNullException(nameof(disposables));
@@ -34,7 +30,7 @@ namespace NeatMapper {
 	}
 
 	internal sealed class DisposableAsyncMergeMapFactory : DisposableAsyncMergeMapFactory<object, object> {
-		internal DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<object, object, CancellationToken, Task<object>> mapDelegate, params IDisposable[] disposables) :
+		internal DisposableAsyncMergeMapFactory(Type sourceType, Type destinationType, Func<object?, object?, CancellationToken, Task<object?>> mapDelegate, params IDisposable?[] disposables) :
 			base(sourceType, destinationType, mapDelegate, disposables) {}
 	}
 }

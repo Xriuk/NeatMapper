@@ -18,25 +18,6 @@ namespace NeatMapper {
 		/// A task which when completed returns the resulting object of the mapping,
 		/// can be <paramref name="destination"/> or a new one, may be null
 		/// </returns>
-		Task<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> MapAsync(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination,
-			AsyncMappingContext context);
+		Task<TDestination?> MapAsync(TSource? source, TDestination? destination, AsyncMappingContext context);
 	}
 }

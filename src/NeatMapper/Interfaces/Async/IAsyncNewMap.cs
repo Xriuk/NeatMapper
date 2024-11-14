@@ -14,19 +14,6 @@ namespace NeatMapper {
 		/// <param name="source">Object to map, may be null</param>
 		/// <param name="context">Mapping context, which allows nested mappings, services retrieval via DI, ...</param>
 		/// <returns>A task which when completed returns the newly created object, which may be null</returns>
-		Task<
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			> MapAsync(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-			AsyncMappingContext context);
+		Task<TDestination?> MapAsync(TSource? source, AsyncMappingContext context);
 	}
 }

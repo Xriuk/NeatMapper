@@ -29,24 +29,7 @@ namespace NeatMapper {
 		/// <paramref name="destination"/> or a new one, may be null.
 		/// </returns>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination);
+		object? Invoke(object? source, object? destination);
 	}
 
 	/// <summary>
@@ -61,32 +44,14 @@ namespace NeatMapper {
 		public abstract Type DestinationType { get; }
 
 
-		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/summary"/>
-		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IMergeMapFactory.Invoke(object?, object?)" path="/summary"/>
+		/// <inheritdoc cref="IMergeMapFactory.Invoke(object?, object?)" path="/param[@name='source']"/>
 		/// <returns>
 		/// The resulting object of the mapping of type <typeparamref name="TDestination"/>, can be the same as
 		/// <paramref name="destination"/> or a new one, may be null.
 		/// </returns>
-		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/exception"/>
-		public abstract
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-			Invoke(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination);
+		/// <inheritdoc cref="IMergeMapFactory.Invoke(object?, object?)" path="/exception"/>
+		public abstract TDestination? Invoke(TSource? source, TDestination? destination);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -96,68 +61,12 @@ namespace NeatMapper {
 		}
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			IMergeMapFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return Invoke((TSource)source, (TDestination)destination);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		object? IMergeMapFactory.Invoke(object? source, object? destination) {
+			return Invoke((TSource?)source, (TDestination?)destination);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			>(
-			MergeMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TSource?, TDestination?, TDestination?>(
+			MergeMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 	}
 }

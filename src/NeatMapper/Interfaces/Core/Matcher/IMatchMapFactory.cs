@@ -26,19 +26,7 @@ namespace NeatMapper {
 		/// <param name="destination">Destination object, may be null.</param>
 		/// <returns><see langword="true"/> if the two objects match.</returns>
 		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
-		bool Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination);
+		bool Invoke(object? source, object? destination);
 	}
 
 	/// <summary>
@@ -53,20 +41,8 @@ namespace NeatMapper {
 		public abstract Type DestinationType { get; }
 
 
-		/// <inheritdoc cref="IMatchMapFactory.Invoke(object, object)"/>
-		public abstract bool Invoke(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination);
+		/// <inheritdoc cref="IMatchMapFactory.Invoke(object?, object?)"/>
+		public abstract bool Invoke(TSource? source, TDestination? destination);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -76,58 +52,12 @@ namespace NeatMapper {
 		}
 
 
-		bool IMatchMapFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return Invoke((TSource)source, (TDestination)destination);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		bool IMatchMapFactory.Invoke(object? source, object? destination) {
+			return Invoke((TSource?)source, (TDestination?)destination);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			,
-			bool>(
-			MatchMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TSource?, TDestination?, bool>(
+			MatchMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 	}
 }

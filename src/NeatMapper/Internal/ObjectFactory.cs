@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -80,7 +76,7 @@ namespace NeatMapper {
 					return (Expression.Lambda<Func<object>>(Expression.Convert(body, typeof(object))).Compile(), type);
 				}
 
-				return (null, null);
+				return (null!, null!);
 			});
 
 			if(factory == null || actualType == null)
@@ -106,7 +102,7 @@ namespace NeatMapper {
 				catch { }
 			}
 
-			instance = null;
+			instance = null!;
 			return false;
 		}
 
@@ -160,7 +156,7 @@ namespace NeatMapper {
 			if (objectType == typeof(string))
 				objectType = typeof(StringBuilder);
 			else if (objectType.IsArray)
-				objectType = typeof(List<>).MakeGenericType(objectType.GetElementType());
+				objectType = typeof(List<>).MakeGenericType(objectType.GetElementType()!);
 			else if (objectType.IsGenericType) {
 				if (objectType.IsAsyncEnumerable()) 
 					objectType = typeof(List<>).MakeGenericType(objectType.GetAsyncEnumerableElementType());
@@ -185,7 +181,7 @@ namespace NeatMapper {
 
 			return collectionsCustomAddMethodsCache.GetOrAdd(collectionType, collection => {
 				var collectionInterface = collection.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
-				MethodInfo method = null;
+				MethodInfo method = null!;
 				if (collectionInterface != null)
 					method = collection.GetInterfaceMap(collectionInterface).TargetMethods.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 				else if (collection.IsGenericType) {
@@ -204,7 +200,7 @@ namespace NeatMapper {
 					var collectionParam = Expression.Parameter(typeof(object), "collection");
 					var elementParam = Expression.Parameter(typeof(object), "element");
 					// ((Type)collection).Add((Type)element)
-					var body = Expression.Call(Expression.Convert(collectionParam, method.DeclaringType), method, Expression.Convert(elementParam, method.GetParameters()[0].ParameterType));
+					var body = Expression.Call(Expression.Convert(collectionParam, method.DeclaringType!), method, Expression.Convert(elementParam, method.GetParameters()[0].ParameterType));
 					return Expression.Lambda<Action<object, object>>(body, collectionParam, elementParam).Compile();
 				}
 
@@ -217,7 +213,7 @@ namespace NeatMapper {
 				var collectionParam = Expression.Parameter(typeof(object), "collection");
 				var elementParam = Expression.Parameter(typeof(object), "element");
 				// ((ICollection<Type>)collection).Add((Type)element)
-				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Add)), Expression.Convert(elementParam, elementType));
+				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Add))!, Expression.Convert(elementParam, elementType));
 				return Expression.Lambda<Action<object, object>>(body, collectionParam, elementParam).Compile();
 			});
 		}
@@ -228,7 +224,7 @@ namespace NeatMapper {
 				var collectionParam = Expression.Parameter(typeof(object), "collection");
 				var elementParam = Expression.Parameter(typeof(object), "element");
 				// ((ICollection<Type>)collection).Remove((Type)element)
-				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Remove)), Expression.Convert(elementParam, elementType));
+				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Remove))!, Expression.Convert(elementParam, elementType));
 				return Expression.Lambda<Func<object, object, bool>>(body, collectionParam, elementParam).Compile();
 			});
 		}
@@ -242,11 +238,11 @@ namespace NeatMapper {
 						if (destination.IsArray) {
 							var collectionParam = Expression.Parameter(typeof(object), "collection");
 							// ((Type)collection).ToArray()
-							var body = Expression.Call(Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()), Expression.Convert(collectionParam, actualType));
+							var body = Expression.Call(Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()!), Expression.Convert(collectionParam, actualType));
 							return Expression.Lambda<Func<object, object>>(Expression.Convert(body, typeof(object)), collectionParam).Compile();
 						}
 						else if (destination.IsGenericType){
-							ConstructorInfo constr = null;
+							ConstructorInfo constr = null!;
 							if (destination.IsAsyncEnumerable()) {
 								constr = typeof(DefaultAsyncEnumerable<>).MakeGenericType(destination.GetAsyncEnumerableElementType()).GetConstructors()
 									.Single();
@@ -300,7 +296,7 @@ namespace NeatMapper {
 				// ((IAsyncEnumerator<Type>)enumerable).GetAsyncEnumerator(cancellationToken)
 				var body = Expression.Call(
 					Expression.Convert(enumerableParam, enumerableType),
-					enumerableType.GetMethod(nameof(IAsyncEnumerable<object>.GetAsyncEnumerator)),
+					enumerableType.GetMethod(nameof(IAsyncEnumerable<object>.GetAsyncEnumerator))!,
 					cancellationParam);
 				return Expression.Lambda<Func<object, CancellationToken, IAsyncDisposable>>(body, enumerableParam, cancellationParam).Compile();
 			});
@@ -312,7 +308,7 @@ namespace NeatMapper {
 				// ((IAsyncEnumerator<Type>)enumerator).MoveNextAsync()
 				var body = Expression.Call(
 					Expression.Convert(enumeratorParam, enumeratorType),
-					enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync)));
+					enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync))!);
 				return Expression.Lambda<Func<IAsyncDisposable, ValueTask<bool>>>(body, enumeratorParam).Compile();
 			});
 		}
@@ -324,7 +320,7 @@ namespace NeatMapper {
 				var body = Expression.Convert(
 					Expression.Property(
 						Expression.Convert(enumeratorParam, enumeratorType),
-						enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current))),
+						enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current))!),
 					typeof(object));
 				return Expression.Lambda<Func<IAsyncDisposable, object>>(body, enumeratorParam).Compile();
 			});

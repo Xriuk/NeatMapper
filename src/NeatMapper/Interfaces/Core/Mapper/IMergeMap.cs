@@ -22,24 +22,6 @@
 		/// <exception cref="MappingException">
 		/// An exception was thrown while mapping the types, check the inner exception for details.
 		/// </exception>
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-			Map(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination,
-			MappingContext context);
+		TDestination? Map(TSource? source, TDestination? destination, MappingContext context);
 	}
 }

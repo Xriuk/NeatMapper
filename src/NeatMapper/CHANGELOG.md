@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.1.0] - Unreleased
+
+### Changed
+
+- Deprecated `IMatcher` and `IMatchMapFactory` `Predicate()` extension methods with destination to avoid ambiguities with the same types. New extension methods `PredicateDestination()` should be used instead.
+
+### Added
+
+- `IMatcher` and `IMatchMapFactory` `PredicateDestination()` extension methods to create `Predicate()` factories by passing the destination instead of source and inferring its type.
+
+
 ## [5.0.0] - 2024-11-03
 
 ### Removed
