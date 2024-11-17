@@ -19,10 +19,11 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Types and instances of the present options
+		/// Types and instances of the present options.
 		/// </summary>
 		private readonly IReadOnlyDictionary<Type, object> options;
 
+		// DEV: consider making public?
 		internal bool Cached { get; }
 
 

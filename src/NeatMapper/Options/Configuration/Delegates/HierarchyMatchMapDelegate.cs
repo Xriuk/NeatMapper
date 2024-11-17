@@ -9,18 +9,5 @@
 	/// <param name="destination">Destination object, may be null</param>
 	/// <param name="context">Matching context, which allows nested matches, services retrieval via DI, ...</param>
 	/// <returns><see langword="true"/> if the two objects match</returns>
-	public delegate bool HierarchyMatchMapDelegate<in TSource, in TDestination>(
-#if NET5_0_OR_GREATER
-		TSource?
-#else
-		TSource
-#endif
-		source,
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-		destination,
-		MatchingContext context);
+	public delegate bool HierarchyMatchMapDelegate<in TSource, in TDestination>(TSource? source, TDestination? destination, MatchingContext context);
 }

@@ -14,20 +14,13 @@ namespace NeatMapper {
 	/// Supports only new maps and not merge maps.
 	/// </summary>
 	public sealed class ProjectionMapper : IMapper, IMapperFactory, IMapperMaps {
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Adds a compilation context, this allows projections not suited to be compiled to throw and be ignored
+		// Adds a compilation context, this allows projections not suited to be compiled to throw and be ignored.
+		// Not cached with MappingOptionsFactoryCache because compiled delegates are cached instead.
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
+		private static MappingOptions MergeOrCreateMappingOptions(MappingOptions? options) {
 			return (options ?? MappingOptions.Empty)
 				.ReplaceOrAdd<ProjectionCompilationContext>(_ => ProjectionCompilationContext.Instance);
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 
 
 		/// <summary>
@@ -38,8 +31,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Compiled maps cache, value can be null if no map exists.
 		/// </summary>
-		private readonly ConcurrentDictionary<(Type From, Type To), Func<object, object>> _mapsCache =
-			new ConcurrentDictionary<(Type, Type), Func<object, object>>();
+		private readonly ConcurrentDictionary<(Type From, Type To), Func<object?, object?>?> _mapsCache =
+			new ConcurrentDictionary<(Type, Type), Func<object?, object?>?>();
 
 
 		/// <summary>
@@ -52,16 +45,7 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -73,50 +57,16 @@ namespace NeatMapper {
 				return _projector.CanProject(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
 		}
 
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return false;
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			var map = GetMap(sourceType, destinationType, mappingOptions);
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-			object result;
+			object? result;
 			try {
 				result = map.Invoke(source);
 			}
@@ -131,66 +81,21 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(result, destinationType);
 
 			return result;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			// Not mapping merge
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 		#endregion
 
 		#region IMapperFactory methods
-		public INewMapFactory MapNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			var map = GetMap(sourceType, destinationType, mappingOptions);
 
 			return new DefaultNewMapFactory(sourceType, destinationType, source => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-				object result;
+				object? result;
 				try {
 					result = map.Invoke(source);
 				}
@@ -206,57 +111,25 @@ namespace NeatMapper {
 
 				return result;
 			});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IMergeMapFactory MapMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			// Not mapping merge
+		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 		#endregion
 
 		#region IMapperMaps methods
-		public IEnumerable<(Type From, Type To)> GetNewMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
 			return _projector.GetMaps(mappingOptions);
 		}
 
-		public IEnumerable<(Type From, Type To)> GetMergeMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			return Enumerable.Empty<(Type, Type)>();
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
+			return [];
 		}
 		#endregion
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private Func<object, object> GetMap(Type sourceType, Type destinationType, MappingOptions mappingOptions) {
+		private Func<object?, object?> GetMap(Type sourceType, Type destinationType, MappingOptions? mappingOptions) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -285,12 +158,8 @@ namespace NeatMapper {
 					param);
 
 				// Compile the expression and wrap it to catch exceptions
-				return (Func<object, object>)projection.Compile();
+				return (Func<object?, object?>)projection.Compile();
 			}) ?? throw new MapNotFoundException((sourceType, destinationType));
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

@@ -506,7 +506,7 @@ namespace NeatMapper {
 
 		#region Deprecated
 		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
-		[Obsolete("This method will be removed in future releases, use PredicateDestination() instead.")]
+		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
 			TDestination? destination,
 			MappingOptions? mappingOptions = null) {
@@ -515,7 +515,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
-		[Obsolete("This method will be removed in future releases, use PredicateDestination() instead.")]
+		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
 			TDestination? destination,
 			IEnumerable? mappingOptions) {
@@ -524,7 +524,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
-		[Obsolete("This method will be removed in future releases, use PredicateDestination() instead.")]
+		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
 			TDestination? destination,
 			params object?[]? mappingOptions) {

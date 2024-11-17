@@ -1,11 +1,23 @@
-﻿namespace NeatMapper {
+﻿using System;
+
+namespace NeatMapper {
 	/// <summary>
 	/// Options applied to automatic asynchronous collections mapping.<br/>
 	/// Can be overridden during mapping with <see cref="AsyncCollectionMappersMappingOptions"/>.
 	/// </summary>
 	public sealed class AsyncCollectionMappersOptions {
+		/// <summary>
+		/// Creates a new instance of <see cref="AsyncCollectionMappersOptions"/>.
+		/// </summary>
 		public AsyncCollectionMappersOptions() { }
+		/// <summary>
+		/// Creates a new instance of <see cref="AsyncCollectionMappersOptions"/> by copying options from another instance.
+		/// </summary>
+		/// <param name="other">Options to copy from.</param>
 		public AsyncCollectionMappersOptions(AsyncCollectionMappersOptions other) {
+			if (other == null)
+				throw new ArgumentNullException(nameof(other));
+
 			MaxParallelMappings = other.MaxParallelMappings;
 		}
 

@@ -28,9 +28,7 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Creates a new instance of <see cref="CustomMapper"/>.<br/>
-		/// At least one between <paramref name="mapsOptions"/>, <paramref name="additionalNewMapsOptions"/>
-		/// and <paramref name="additionalMergeMapsOptions"/> should be specified.
+		/// Creates a new instance of <see cref="CustomMapper"/>.
 		/// </summary>
 		/// <param name="mapsOptions">Options to retrieve user-defined maps for the mapper, null to ignore.</param>
 		/// <param name="additionalNewMapsOptions">Additional user-defined maps for the mapper, null to ignore.</param>
@@ -40,31 +38,15 @@ namespace NeatMapper {
 		/// null to pass an empty service provider.<br/>
 		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.ServiceProvider"/>.
 		/// </param>
+		/// <remarks>
+		/// At least one between <paramref name="mapsOptions"/>, <paramref name="additionalNewMapsOptions"/>
+		/// and <paramref name="additionalMergeMapsOptions"/> should be specified.
+		/// </remarks>
 		public CustomMapper(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomMapsOptions?
-#else
-			CustomMapsOptions
-#endif
-			mapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomNewAdditionalMapsOptions?
-#else
-			CustomNewAdditionalMapsOptions
-#endif
-			additionalNewMapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomMergeAdditionalMapsOptions?
-#else
-			CustomMergeAdditionalMapsOptions
-#endif
-			additionalMergeMapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
+			CustomMapsOptions? mapsOptions = null,
+			CustomNewAdditionalMapsOptions? additionalNewMapsOptions = null,
+			CustomMergeAdditionalMapsOptions? additionalMergeMapsOptions = null,
+			IServiceProvider? serviceProvider = null) {
 
 			_newMapsConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
@@ -94,10 +76,11 @@ namespace NeatMapper {
 				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
 				additionalMergeMapsOptions?._maps.Values
 			);
+			serviceProvider ??= EmptyServiceProvider.Instance;
 			_contextsCache = new MappingOptionsFactoryCache<MappingContext>(options => {
 				var overrideOptions = options.GetOptions<MapperOverrideMappingOptions>();
 				return new MappingContext(
-					overrideOptions?.ServiceProvider ?? serviceProvider ?? EmptyServiceProvider.Instance,
+					overrideOptions?.ServiceProvider ?? serviceProvider,
 					overrideOptions?.Mapper ?? this,
 					this,
 					options
@@ -107,16 +90,7 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -126,16 +100,7 @@ namespace NeatMapper {
 				(ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType, mappingOptions));
 		}
 
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -144,32 +109,7 @@ namespace NeatMapper {
 			return _mergeMapsConfiguration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out _);
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -193,40 +133,9 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(result, destinationType);
 
 			return result;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -250,20 +159,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperFactory methods
-		public INewMapFactory MapNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -286,22 +182,9 @@ namespace NeatMapper {
 
 					return result;
 				});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IMergeMapFactory MapMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -329,25 +212,11 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperMaps methods
-		public IEnumerable<(Type From, Type To)> GetNewMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
 			return _newMapsConfiguration.GetMaps();
 		}
 
-		public IEnumerable<(Type From, Type To)> GetMergeMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
 			return _mergeMapsConfiguration.GetMaps();
 		}
 		#endregion

@@ -8,16 +8,16 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CompositeMatcherOptions {
 		/// <summary>
-		/// Creates a new instance
+		/// Creates a new instance of <see cref="CompositeMatcherOptions"/>.
 		/// </summary>
 		public CompositeMatcherOptions() {
-			Matchers = new List<IMatcher>();
+			Matchers = [];
 			ReverseTypes = true;
 		}
 		/// <summary>
-		/// Creates a new instance by copying options from another instance
+		/// Creates a new instance of <see cref="CompositeMatcherOptions"/> by copying options from another instance.
 		/// </summary>
-		/// <param name="options">Options to copy from</param>
+		/// <param name="options">Options to copy from.</param>
 		public CompositeMatcherOptions(CompositeMatcherOptions options) {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
@@ -28,8 +28,7 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// <see cref="IMatcher"/>s to use to match types. Each matcher is invoked in order and the first one
-		/// to succeed in matching is returned.
+		/// Ordered list of matchers, each matcher will be tried and the first one to succeed will match the types.
 		/// </summary>
 		public IList<IMatcher> Matchers { get; set; }
 

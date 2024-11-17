@@ -16,11 +16,6 @@ namespace NeatMapper {
 		private readonly IReadOnlyList<IProjector> _projectors;
 
 		/// <summary>
-		/// Cached <see cref="NestedProjectionContext"/> to provide, if not already provided in <see cref="MappingOptions"/>.
-		/// </summary>
-		private readonly NestedProjectionContext _nestedProjectionContext;
-
-		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
@@ -31,30 +26,20 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="projectors">Projectors to delegate the projection to.</param>
 		public CompositeProjector(params IProjector[] projectors) : this((IList<IProjector>)projectors ?? throw new ArgumentNullException(nameof(projectors))) { }
-
 		/// <summary>
 		/// Creates a new instance of <see cref="CompositeProjector"/>.
 		/// </summary>
 		/// <param name="projectors">Projectors to delegate the projection to.</param>
 		public CompositeProjector(IList<IProjector> projectors) {
 			_projectors = new List<IProjector>(projectors ?? throw new ArgumentNullException(nameof(projectors)));
-			_nestedProjectionContext = new NestedProjectionContext(this);
+			var nestedProjectionContext = new NestedProjectionContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
 				p => p?.Projector != null ? p : new ProjectorOverrideMappingOptions(this, p?.ServiceProvider),
-				n => n != null ? new NestedProjectionContext(this, n) : _nestedProjectionContext));
+				n => n != null ? new NestedProjectionContext(this, n) : nestedProjectionContext));
 		}
 
 
-		public bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -65,20 +50,7 @@ namespace NeatMapper {
 			return _projectors.Any(p => p.CanProject(sourceType, destinationType, mappingOptions));
 		}
 
-		public LambdaExpression Project(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -91,20 +63,9 @@ namespace NeatMapper {
 				return projector.Project(sourceType, destinationType, mappingOptions);
 			else
 				throw new MapNotFoundException((sourceType, destinationType));
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IEnumerable<(Type From, Type To)> GetMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetMaps(MappingOptions? mappingOptions = null) {
 			return _projectors.SelectMany(m => m.GetMaps(mappingOptions));
 		}
 	}

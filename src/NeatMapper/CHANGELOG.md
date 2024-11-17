@@ -5,10 +5,18 @@
 ### Changed
 
 - Deprecated `IMatcher` and `IMatchMapFactory` `Predicate()` extension methods with destination to avoid ambiguities with the same types. New extension methods `PredicateDestination()` should be used instead.
+- Deprecated `(Async)EmptyMapper` `I(Async)MapperFactory` implementation in favor of the corresponding `I(Async)Mapper` extension methods which now check for `CanMap(Async)*()` methods and throw accordingly.
 
 ### Added
 
 - `IMatcher` and `IMatchMapFactory` `PredicateDestination()` extension methods to create `Predicate()` factories by passing the destination instead of source and inferring its type.
+- `ObjectEqualsMatcher` now implements `IMatcherFactory`.
+
+### Fixed
+
+- Collection mappers for `string`s (which use `StringBuilder` as their backing collection) now handle correctly `null` chars which result in adding the null char (`'\0'`).
+- `ObjectEqualsMatcher` source and destination typechecking.
+- `AsyncCollectionMappersOptions`, `AsyncCompositeMapperOptions`, `CompositeMapperOptions`, `CompositeProjectorOptions` and `MergeCollectionsOptions` copy constructors added null checks.
 
 
 ## [5.0.0] - 2024-11-03

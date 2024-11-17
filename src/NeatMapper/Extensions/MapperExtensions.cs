@@ -190,9 +190,13 @@ namespace NeatMapper {
 		/// <returns>The newly created object, may be null.</returns>
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if !NETCOREAPP3_1
 #pragma warning disable CS1712
+#endif
 		public static TDestination? Map<TSource, TDestination>(this IMapper mapper, TSource? source, MappingOptions? mappingOptions = null) {
+#if !NETCOREAPP3_1
 #pragma warning restore CS1712
+#endif
 
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
@@ -706,7 +710,7 @@ namespace NeatMapper {
 			if (mapper is IMapperMaps maps)
 				return maps.GetNewMaps(mappingOptions);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetNewMaps(IMapper, MappingOptions?)"/>
@@ -715,7 +719,7 @@ namespace NeatMapper {
 			if (mapper is IMapperMaps maps)
 				return maps.GetNewMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetNewMaps(IMapper, MappingOptions?)"/>
@@ -724,7 +728,7 @@ namespace NeatMapper {
 			if (mapper is IMapperMaps maps)
 				return maps.GetNewMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 		#endregion
 
@@ -740,7 +744,7 @@ namespace NeatMapper {
 			if (mapper is IMapperMaps maps)
 				return maps.GetMergeMaps(mappingOptions);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetMergeMaps(IMapper, MappingOptions?)"/>
@@ -749,7 +753,7 @@ namespace NeatMapper {
 			if (mapper is IMapperMaps maps)
 				return maps.GetMergeMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetMergeMaps(IMapper, MappingOptions?)"/>
@@ -758,7 +762,7 @@ namespace NeatMapper {
 			if (mapper is IMapperMaps maps)
 				return maps.GetMergeMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 		#endregion
 	}

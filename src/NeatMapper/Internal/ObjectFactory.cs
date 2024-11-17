@@ -22,20 +22,20 @@ namespace NeatMapper {
 
 		private static readonly ConcurrentDictionary<Type, (Func<object>, Type)> factoriesCache = new ConcurrentDictionary<Type, (Func<object>, Type)>();
 
-		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsCustomAddMethodsCache =
-			new ConcurrentDictionary<Type, Action<object, object>>();
-		private static readonly ConcurrentDictionary<Type, Action<object, object>> collectionsAddMethodsCache =
-			new ConcurrentDictionary<Type, Action<object, object>>();
-		private static readonly ConcurrentDictionary<Type, Func<object, object, bool>> collectionsRemoveMethodsCache =
-			new ConcurrentDictionary<Type, Func<object, object, bool>>();
+		private static readonly ConcurrentDictionary<Type, Action<object, object?>> collectionsCustomAddMethodsCache =
+			new ConcurrentDictionary<Type, Action<object, object?>>();
+		private static readonly ConcurrentDictionary<Type, Action<object, object?>> collectionsAddMethodsCache =
+			new ConcurrentDictionary<Type, Action<object, object?>>();
+		private static readonly ConcurrentDictionary<Type, Func<object, object?, bool>> collectionsRemoveMethodsCache =
+			new ConcurrentDictionary<Type, Func<object, object?, bool>>();
 		private static readonly ConcurrentDictionary<Type, Func<object, object>> collectionsConversionMethodsCache =
 			new ConcurrentDictionary<Type, Func<object, object>>();
 		private static readonly ConcurrentDictionary<Type, Func<object, CancellationToken, IAsyncDisposable>> asyncGetEnumeratorMethodsCache =
 			new ConcurrentDictionary<Type, Func<object, CancellationToken, IAsyncDisposable>>();
 		private static readonly ConcurrentDictionary<Type, Func<IAsyncDisposable, ValueTask<bool>>> asyncMoveNextMethodsCache =
 			new ConcurrentDictionary<Type, Func<IAsyncDisposable, ValueTask<bool>>>();
-		private static readonly ConcurrentDictionary<Type, Func<IAsyncDisposable, object>> asyncCurrentMethodsCache =
-			new ConcurrentDictionary<Type, Func<IAsyncDisposable, object>>();
+		private static readonly ConcurrentDictionary<Type, Func<IAsyncDisposable, object?>> asyncCurrentMethodsCache =
+			new ConcurrentDictionary<Type, Func<IAsyncDisposable, object?>>();
 
 
 		public static Func<object> CreateFactory(Type objectType) {
@@ -175,9 +175,9 @@ namespace NeatMapper {
 		}
 
 		// Returns an instance method which can be invoked with a single parameter to be added to the collection
-		public static Action<object, object> GetCollectionCustomAddDelegate(Type collectionType) {
+		public static Action<object, object?> GetCollectionCustomAddDelegate(Type collectionType) {
 			if (collectionType == typeof(StringBuilder))
-				return (collection, element) => ((StringBuilder)collection).Append((char)element);
+				return (collection, element) => ((StringBuilder)collection).Append((char?)element ?? '\0');
 
 			return collectionsCustomAddMethodsCache.GetOrAdd(collectionType, collection => {
 				var collectionInterface = collection.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
@@ -201,31 +201,31 @@ namespace NeatMapper {
 					var elementParam = Expression.Parameter(typeof(object), "element");
 					// ((Type)collection).Add((Type)element)
 					var body = Expression.Call(Expression.Convert(collectionParam, method.DeclaringType!), method, Expression.Convert(elementParam, method.GetParameters()[0].ParameterType));
-					return Expression.Lambda<Action<object, object>>(body, collectionParam, elementParam).Compile();
+					return Expression.Lambda<Action<object, object?>>(body, collectionParam, elementParam).Compile();
 				}
 
 				throw new InvalidOperationException("Invalid collection"); // Should not happen
 			});
 		}
-		public static Action<object, object> GetCollectionAddDelegate(Type elementType) {
+		public static Action<object, object?> GetCollectionAddDelegate(Type elementType) {
 			return collectionsAddMethodsCache.GetOrAdd(elementType, element => {
 				var collectionType = typeof(ICollection<>).MakeGenericType(elementType);
 				var collectionParam = Expression.Parameter(typeof(object), "collection");
 				var elementParam = Expression.Parameter(typeof(object), "element");
 				// ((ICollection<Type>)collection).Add((Type)element)
 				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Add))!, Expression.Convert(elementParam, elementType));
-				return Expression.Lambda<Action<object, object>>(body, collectionParam, elementParam).Compile();
+				return Expression.Lambda<Action<object, object?>>(body, collectionParam, elementParam).Compile();
 			});
 		}
 
-		public static Func<object, object, bool> GetCollectionRemoveDelegate(Type elementType) {
+		public static Func<object, object?, bool> GetCollectionRemoveDelegate(Type elementType) {
 			return collectionsRemoveMethodsCache.GetOrAdd(elementType, element => {
 				var collectionType = typeof(ICollection<>).MakeGenericType(elementType);
 				var collectionParam = Expression.Parameter(typeof(object), "collection");
 				var elementParam = Expression.Parameter(typeof(object), "element");
 				// ((ICollection<Type>)collection).Remove((Type)element)
 				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Remove))!, Expression.Convert(elementParam, elementType));
-				return Expression.Lambda<Func<object, object, bool>>(body, collectionParam, elementParam).Compile();
+				return Expression.Lambda<Func<object, object?, bool>>(body, collectionParam, elementParam).Compile();
 			});
 		}
 
@@ -312,7 +312,7 @@ namespace NeatMapper {
 				return Expression.Lambda<Func<IAsyncDisposable, ValueTask<bool>>>(body, enumeratorParam).Compile();
 			});
 		}
-		public static Func<IAsyncDisposable, object> GetAsyncEnumeratorCurrent(Type elementType) {
+		public static Func<IAsyncDisposable, object?> GetAsyncEnumeratorCurrent(Type elementType) {
 			return asyncCurrentMethodsCache.GetOrAdd(elementType, type => {
 				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
 				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
@@ -322,7 +322,7 @@ namespace NeatMapper {
 						Expression.Convert(enumeratorParam, enumeratorType),
 						enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current))!),
 					typeof(object));
-				return Expression.Lambda<Func<IAsyncDisposable, object>>(body, enumeratorParam).Compile();
+				return Expression.Lambda<Func<IAsyncDisposable, object?>>(body, enumeratorParam).Compile();
 			});
 		}
 	}

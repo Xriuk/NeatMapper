@@ -25,9 +25,8 @@ namespace NeatMapper {
 
 			_mapper = new Lazy<IMapper>(() => {
 				var nestedMappingContext = new NestedMappingContext(parentMapper);
-				return new NestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
-					.ReplaceOrAdd<NestedMappingContext>(
-						n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
+				return new NestedMapper(nestedMapper, o => o.ReplaceOrAdd<NestedMappingContext>(
+					n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
 			}, true);
 
 			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));

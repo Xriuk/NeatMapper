@@ -27,42 +27,11 @@ namespace NeatMapper {
 		}
 
 
-		// Forwarding all the methods because we want to check on the wrapper matcher
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return _matcher.CanMatch(sourceType, destinationType, GetOptions(mappingOptions));
 		}
 
-		public bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			mappingOptions = GetOptions(mappingOptions);
 
 			if(!_matcher.CanMatch(sourceType, destinationType, mappingOptions))
@@ -76,21 +45,7 @@ namespace NeatMapper {
 			}
 		}
 
-		// Forwarding all the methods because we want to check on the wrapper matcher
-		public IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			mappingOptions = GetOptions(mappingOptions);
 
 			if (!_matcher.CanMatch(sourceType, destinationType, mappingOptions))
@@ -102,24 +57,12 @@ namespace NeatMapper {
 			catch (MapNotFoundException) {
 				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private MappingOptions GetOptions(MappingOptions mappingOptions) {
+		private MappingOptions GetOptions(MappingOptions? mappingOptions) {
 			return (mappingOptions ?? MappingOptions.Empty)
 				.ReplaceOrAdd<NestedMatchingContext>(n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

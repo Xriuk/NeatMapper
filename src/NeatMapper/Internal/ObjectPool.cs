@@ -5,7 +5,7 @@ using System.Collections.Generic;
 namespace NeatMapper {
 	// https://learn.microsoft.com/en-us/dotnet/standard/collections/thread-safe/how-to-create-an-object-pool
 	internal sealed class ObjectPool<T> {
-		private readonly ConcurrentBag<T> _objects = new ConcurrentBag<T>();
+		private readonly ConcurrentBag<T> _objects = [];
 		private readonly Func<T> _generator;
 		private readonly Action<T>? _reset;
 
@@ -26,9 +26,9 @@ namespace NeatMapper {
 	}
 
 	internal static class ObjectPool {
-		public static readonly ObjectPool<List<object>> Lists =
-			new ObjectPool<List<object>>(
-				() => new List<object>(),
+		public static readonly ObjectPool<List<object?>> Lists =
+			new ObjectPool<List<object?>>(
+				() => [],
 				l => l.Clear());
 	}
 }

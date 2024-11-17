@@ -15,14 +15,7 @@
 		/// <inheritdoc cref="Matcher" path="/summary"/>
 		/// <inheritdoc cref="Matcher" path="/remarks"/>
 		/// </param>
-		public MergeCollectionsMappingOptions(bool? removeNotMatchedDestinationElements = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			matcher = null) {
-
+		public MergeCollectionsMappingOptions(bool? removeNotMatchedDestinationElements = null, IMatcher? matcher = null) {
 			RemoveNotMatchedDestinationElements = removeNotMatchedDestinationElements;
 			Matcher = matcher;
 		}
@@ -44,16 +37,10 @@
 		/// <see cref="IMatcher"/> to be used to match elements of the collections.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the default <see cref="IMatcher"/> (if any).</remarks>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			Matcher {
-				get;
+		public IMatcher? Matcher {
+			get;
 #if NET5_0_OR_GREATER
-				init;
+			init;
 #endif
 		}
 	}

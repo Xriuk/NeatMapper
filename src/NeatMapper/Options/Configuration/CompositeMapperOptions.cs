@@ -7,23 +7,26 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CompositeMapperOptions {
 		/// <summary>
-		/// Creates a new instance
+		/// Creates a new instance of <see cref="CompositeMapperOptions"/>.
 		/// </summary>
 		public CompositeMapperOptions() {
-			Mappers = new List<IMapper>();
+			Mappers = [];
 		}
 		/// <summary>
-		/// Creates a new instance by copying options from another instance
+		/// Creates a new instance of <see cref="CompositeMapperOptions"/> by copying options from another instance.
 		/// </summary>
-		/// <param name="options">Options to copy from</param>
+		/// <param name="options">Options to copy from.</param>
 		public CompositeMapperOptions(CompositeMapperOptions options) {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
 
-			Mappers = new List<IMapper>(options.Mappers);
+			Mappers = new List<IMapper>(options.Mappers ?? throw new InvalidOperationException("Mappers cannot be null"));
 		}
 
 
+		/// <summary>
+		/// Ordered list of mappers, each mapper will be tried and the first one to succeed will map the types.
+		/// </summary>
 		public IList<IMapper> Mappers { get; set; }
 	}
 }

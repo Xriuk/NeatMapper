@@ -215,7 +215,7 @@ namespace NeatMapper {
 
 
 		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(MatchMapFactory{TSource, TDestination}, TDestination, bool)"/>
-		[Obsolete("This method will be removed in future releases, use PredicateDestination() instead.")]
+		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
 		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
 			TDestination? destination,
 			bool shouldDispose = true) {

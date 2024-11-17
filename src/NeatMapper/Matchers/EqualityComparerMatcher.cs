@@ -13,24 +13,13 @@ namespace NeatMapper {
 		/// <typeparam name="TElement">Type of the source and destination objects.</typeparam>
 		/// <param name="equalityComparer">Equality comparer to use for matching.</param>
 		/// <returns>A new instance of <see cref="EqualityComparerMatcher"/> for the given equality comparer.</returns>
-		public static EqualityComparerMatcher Create<TElement>(IEqualityComparer<TElement> equalityComparer) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public static EqualityComparerMatcher Create<TElement>(IEqualityComparer<TElement?> equalityComparer) {
 			return new EqualityComparerMatcher(typeof(TElement), (source, destination) => {
 				TypeUtils.CheckObjectType(source, typeof(TElement), nameof(source));
 				TypeUtils.CheckObjectType(destination, typeof(TElement), nameof(destination));
 
 				try {
-					return equalityComparer.Equals((TElement)source, (TElement)destination);
-				}
-				catch (MapNotFoundException e) {
-					if (e.From == typeof(TElement) && e.To == typeof(TElement))
-						throw;
-					else
-						throw new MatcherException(e, (typeof(TElement), typeof(TElement)));
+					return equalityComparer.Equals((TElement?)source, (TElement?)destination);
 				}
 				catch (OperationCanceledException) {
 					throw;
@@ -39,10 +28,6 @@ namespace NeatMapper {
 					throw new MatcherException(e, (typeof(TElement), typeof(TElement)));
 				}
 			});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 
@@ -54,33 +39,17 @@ namespace NeatMapper {
 		/// <summary>
 		/// Delegate to use for matching.
 		/// </summary>
-		private readonly Func<object, object, bool> _equalityComparer;
+		private readonly Func<object?, object?, bool> _equalityComparer;
 
 
 		// Private constructor because requires type-safe type and delegate.
-		private EqualityComparerMatcher(Type comparerType, Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?, object?
-#else
-			object, object
-#endif
-			, bool> equalityComparer) {
-
+		private EqualityComparerMatcher(Type comparerType, Func<object?, object?, bool> equalityComparer) {
 			_comparerType = comparerType ?? throw new ArgumentNullException(nameof(comparerType));
 			_equalityComparer = equalityComparer ?? throw new ArgumentNullException(nameof(equalityComparer));
 		}
 
 
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -89,52 +58,14 @@ namespace NeatMapper {
 			return sourceType == _comparerType && destinationType == _comparerType;
 		}
 
-		public bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMatch(sourceType, destinationType))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			return _equalityComparer.Invoke(source, destination);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMatch(sourceType, destinationType))
 				throw new MapNotFoundException((sourceType, destinationType));
 

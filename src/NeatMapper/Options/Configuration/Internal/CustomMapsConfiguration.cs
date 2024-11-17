@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,8 +14,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Cache of resolved delegates for each type.
 		/// </summary>
-		readonly ConcurrentDictionary<(Type From, Type To), Delegate> _mapsCache =
-			new ConcurrentDictionary<(Type From, Type To), Delegate>();
+		readonly ConcurrentDictionary<(Type From, Type To), Delegate?> _mapsCache =
+			new ConcurrentDictionary<(Type From, Type To), Delegate?>();
 
 		/// <param name="interfaceFilter">
 		/// Filter used to retrieve interface(s) for the maps, will receive the declaring type 
@@ -30,7 +26,7 @@ namespace NeatMapper {
 		internal CustomMapsConfiguration(
 			Func<Type, Type, bool> interfaceFilter,
 			IEnumerable<Type> typesToScan,
-			IEnumerable<CustomAdditionalMap> additionalMaps = null) {
+			IEnumerable<CustomAdditionalMap>? additionalMaps = null) {
 
 			if (interfaceFilter == null)
 				throw new ArgumentNullException(nameof(interfaceFilter));
@@ -109,7 +105,7 @@ namespace NeatMapper {
 							throw new InvalidOperationException(
 								$"Duplicate interface {interf.FullName ?? interf.Name} in class {type.Name}, " +
 								$"an interface with matching parameters is already defined" +
-								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType.Name}" : "") +
+								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType!.Name}" : "") +
 								".");
 						}
 						else { 
@@ -135,8 +131,8 @@ namespace NeatMapper {
 					// DEV: maybe validate Method against From and To types?
 
 					// Check method (delegates do not need to be checked as they are self-contained)
-					if (map.Method != null && !map.Method.IsStatic &&
-						map.Method.DeclaringType.GetConstructor(Type.EmptyTypes) == null && map.Instance == null) { 
+					if (!map.Method.IsStatic &&
+						map.Method.DeclaringType!.GetConstructor(Type.EmptyTypes) == null && map.Instance == null) { 
 
 						throw new InvalidOperationException(
 							$"Map {map.Method.Name} in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name} " +
@@ -150,10 +146,10 @@ namespace NeatMapper {
 						if (map.ThrowOnDuplicate) { 
 							throw new InvalidOperationException(
 								$"Duplicate map {map.Method.Name}" +
-								(map.Method != null ? $" in class {map.Method.DeclaringType.FullName ?? map.Method.DeclaringType.Name}" : "") +
+								(map.Method != null ? $" in class {map.Method.DeclaringType!.FullName ?? map.Method.DeclaringType.Name}" : "") +
 								", " +
 								$"a map with matching parameters is already defined" +
-								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType.FullName ?? maps[types].Method.DeclaringType.Name}" : "") +
+								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType!.FullName ?? maps[types].Method.DeclaringType!.Name}" : "") +
 								".");
 					
 						}
@@ -165,12 +161,9 @@ namespace NeatMapper {
 
 			Maps = maps;
 			GenericMaps = genericMaps;
-
-
-#if NET5_0_OR_GREATER
-			static 
-#endif
-				bool IsGenericMethod(MethodInfo method) {
+			
+			
+			static bool IsGenericMethod(MethodInfo method) {
 				return method.IsGenericMethod ||
 					method.DeclaringType != null && method.DeclaringType.IsGenericType && !method.DeclaringType.IsConstructedGenericType;
 			}
@@ -182,127 +175,103 @@ namespace NeatMapper {
 		internal IEnumerable<CustomGenericMap> GenericMaps { get; }
 
 
-		internal bool TryGetContextMap<TContext>((Type From, Type To) types, out Func<TContext, object> map) {
-			map = (Func<TContext, object>)_mapsCache.GetOrAdd(types, _ => {
-				var mapDeleg = RetrieveDelegate<Func<TContext, object>>(types, "context");
-				if (mapDeleg != null) {
-#if !NET48
-#pragma warning disable IDE0039 // Use local function
-#endif
-					Func<TContext, object> deleg = context => {
-						try {
-							return mapDeleg.Invoke(context);
-						}
-						catch (OperationCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, types);
-						}
-					};
-#if !NET48
-#pragma warning restore IDE0039 // Use local function
-#endif
+		internal bool TryGetContextMap<TContext>((Type From, Type To) types, out Func<TContext, object?> map) {
+			map = (Func<TContext, object?>?)_mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<TContext, object?>>(types, "context");
+				if (mapDeleg != null) 
+					return WrapDelegate;
+				else
+					return null;
 
-					return deleg;
+
+				object? WrapDelegate(TContext context) {
+					try {
+						return mapDeleg.Invoke(context);
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 				}
-
-				return null;
-			});
+			})!;
 			return map != null;
 		}
 
-		internal bool TryGetSingleMap<TContext>((Type From, Type To) types, out Func<object, TContext, object> map) {
-			map = (Func<object, TContext, object>)_mapsCache.GetOrAdd(types, _ => {
-				var mapDeleg = RetrieveDelegate<Func<object, TContext, object>>(types, "source", "context");
-				if(mapDeleg != null) {
-#if !NET48
-#pragma warning disable IDE0039 // Use local function
-#endif
-					Func<object, TContext, object> deleg = (source, context) => {
-						try {
-							return mapDeleg.Invoke(source, context);
-						}
-						catch (OperationCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, types);
-						}
-					};
-#if !NET48
-#pragma warning restore IDE0039 // Use local function
-#endif
+		internal bool TryGetSingleMap<TContext>((Type From, Type To) types, out Func<object?, TContext, object?> map) {
+			map = (Func<object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object?, TContext, object?>>(types, "source", "context");
+				if(mapDeleg != null) 
+					return WrapDelegate;
+				else
+					return null;
 
-					return deleg;
+
+				object? WrapDelegate(object? source, TContext context) {
+					try {
+						return mapDeleg.Invoke(source, context);
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 				}
-
-				return null;
-			});
+			})!;
 			return map != null;
 		}
-		internal bool TryGetSingleMapAsync((Type From, Type To) types, out Func<object, AsyncMappingContext, Task<object>> map) {
-			map = (Func<object, AsyncMappingContext, Task<object>>)_mapsCache.GetOrAdd(types, _ => {
-				var mapDeleg = RetrieveDelegate<Func<object, AsyncMappingContext, Task<object>>>(types, "source", "context");
-				if (mapDeleg != null) {
-#if !NET48
-#pragma warning disable IDE0039 // Use local function
-#endif
-					Func<object, AsyncMappingContext, Task<object>> deleg = async (source, context) => {
-						try {
-							return await mapDeleg.Invoke(source, context);
-						}
-						catch (OperationCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, types);
-						}
-					};
-#if !NET48
-#pragma warning restore IDE0039 // Use local function
-#endif
+		internal bool TryGetSingleMapAsync((Type From, Type To) types, out Func<object?, AsyncMappingContext, Task<object?>> map) {
+			map = (Func<object?, AsyncMappingContext, Task<object?>>?)_mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object?, AsyncMappingContext, Task<object?>>>(types, "source", "context");
+				if (mapDeleg != null)
+					return WrapDelegate;
+				else
+					return null;
 
-					return deleg;
+
+				async Task<object?> WrapDelegate(object? source, AsyncMappingContext context) {
+					try {
+						return await mapDeleg.Invoke(source, context);
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 				}
-
-				return null;
-			});
+			})!;
 			return map != null;
 		}
 
-		internal bool TryGetDoubleMap<TContext>((Type From, Type To) types, out Func<object, object, TContext, object> map) {
-			map = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => {
-				var mapDeleg = RetrieveDelegate<Func<object, object, TContext, object>>(types, "source", "destination", "context");
-				if (mapDeleg != null) {
-#if !NET48
-#pragma warning disable IDE0039 // Use local function
-#endif
-					Func<object, object, TContext, object> deleg = (source, destination, context) => {
-						try {
-							return mapDeleg.Invoke(source, destination, context);
-						}
-						catch (OperationCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, types);
-						}
-					};
-#if !NET48
-#pragma warning restore IDE0039 // Use local function
-#endif
+		internal bool TryGetDoubleMap<TContext>((Type From, Type To) types, out Func<object?, object?, TContext, object?> map) {
+			map = (Func<object?, object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object?, object?, TContext, object?>>(types, "source", "destination", "context");
+				if (mapDeleg != null) 
+					return WrapDelegate;
+				else
+					return null;
 
-					return deleg;
+
+				object? WrapDelegate(object? source, object? destination, TContext context) {
+					try {
+						return mapDeleg.Invoke(source, destination, context);
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 				}
-
-				return null;
-			});
+			})!;
 			return map != null;
 		}
-		internal bool TryGetDoubleMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate, out Func<object, object, TContext, object> mapResult) {
+		internal bool TryGetDoubleMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate, out Func<object?, object?, TContext, object?> mapResult) {
 			if(_mapsCache.TryGetValue(types, out var cacheDeleg)){
-				mapResult = (Func<object, object, TContext, object>)cacheDeleg;
+				mapResult = ((Func<object?, object?, TContext, object?>?)cacheDeleg)!;
 				return mapResult != null;
 			}
 
@@ -311,15 +280,17 @@ namespace NeatMapper {
 				map = Maps.First(predicate);
 			}
 			catch {
-				mapResult = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => (Delegate)null);
+				mapResult = ((Func<object?, object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => (Delegate?)null))!;
 				return mapResult != null;
 			}
 
-			var mapDeleg = TypeUtils.MethodToDelegate<Func<object, object, TContext, object>>(map.Value.Method, "source", "destination", "context");
-#if !NET48
-#pragma warning disable IDE0039 // Use local function
-#endif
-			Func<object, object, TContext, object> deleg = (source, destination, context) => {
+			var mapDeleg = TypeUtils.MethodToDelegate<Func<object?, object?, TContext, object?>>(map.Value.Method, "source", "destination", "context");
+
+			mapResult = ((Func<object?, object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => WrapDelegate))!;
+			return mapResult != null;
+
+
+			object? WrapDelegate(object? source, object? destination, TContext context) {
 				try {
 					return mapDeleg.Invoke(source, destination, context);
 				}
@@ -329,45 +300,33 @@ namespace NeatMapper {
 				catch (Exception e) {
 					throw new MappingException(e, types);
 				}
-			};
-#if !NET48
-#pragma warning restore IDE0039 // Use local function
-#endif
-
-			mapResult = (Func<object, object, TContext, object>)_mapsCache.GetOrAdd(types, _ => deleg);
-			return mapResult != null;
+			}
 		}
-		internal bool TryGetDoubleMapAsync((Type From, Type To) types, out Func<object, object, AsyncMappingContext, Task<object>> map) {
-			map = (Func<object, object, AsyncMappingContext, Task<object>>)_mapsCache.GetOrAdd(types, _ => {
-				var mapDeleg = RetrieveDelegate<Func<object, object, AsyncMappingContext, Task<object>>>(types, "source", "destination", "context");
-				if (mapDeleg != null) {
-#if !NET48
-#pragma warning disable IDE0039 // Use local function
-#endif
-					Func<object, object, AsyncMappingContext, Task<object>> deleg = async (source, destination, context) => {
-						try {
-							return await mapDeleg.Invoke(source, destination, context);
-						}
-						catch (OperationCanceledException) {
-							throw;
-						}
-						catch (Exception e) {
-							throw new MappingException(e, types);
-						}
-					};
-#if !NET48
-#pragma warning restore IDE0039 // Use local function
-#endif
+		internal bool TryGetDoubleMapAsync((Type From, Type To) types, out Func<object?, object?, AsyncMappingContext, Task<object?>> map) {
+			map = (Func<object?, object?, AsyncMappingContext, Task<object?>>)_mapsCache.GetOrAdd(types, _ => {
+				var mapDeleg = RetrieveDelegate<Func<object?, object?, AsyncMappingContext, Task<object?>>>(types, "source", "destination", "context");
+				if (mapDeleg != null) 
+					return WrapDelegate;
+				else
+					return null;
 
-					return deleg;
+
+				async Task<object?> WrapDelegate(object? source, object? destination, AsyncMappingContext context) {
+					try {
+						return await mapDeleg.Invoke(source, destination, context);
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MappingException(e, types);
+					}
 				}
-
-				return null;
-			});
+			})!;
 			return map != null;
 		}
 
-		private TDelegate RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) where TDelegate : Delegate {
+		private TDelegate? RetrieveDelegate<TDelegate>((Type From, Type To) types, params string[] parameterNames) where TDelegate : Delegate {
 			// Try retrieving a regular map
 			{
 				if (Maps.TryGetValue(types, out var map))
@@ -392,7 +351,7 @@ namespace NeatMapper {
 				var genericArguments = map.Class.GetGenericArguments().Length;
 				if (classArguments
 #if NET6_0_OR_GREATER
-						.DistinctBy(a => a.OpenGenericArgument)
+					.DistinctBy(a => a.OpenGenericArgument)
 #else
 					.GroupBy(a => a.OpenGenericArgument)
 #endif
@@ -435,11 +394,11 @@ namespace NeatMapper {
 
 		static IEnumerable<Type> GetOpenGenericArgumentsRecursive(Type t) {
 			if (IsGenericTypeParameter(t))
-				return new[] { t };
+				return [ t ];
 			if (t.IsArray)
 				return GetOpenGenericArgumentsRecursive(t.GetArrayElementType());
 			if (!t.IsGenericType)
-				return Enumerable.Empty<Type>();
+				return [];
 
 			var arguments = t.GetGenericArguments();
 			return arguments
@@ -469,9 +428,9 @@ namespace NeatMapper {
 
 					var t1Constraints = t1.GetGenericParameterConstraints();
 					var t2Constraints = t2.GetGenericParameterConstraints();
-					if (!t1Constraints.Any() && t1Attributes == GenericParameterAttributes.None ||
-						!t2Constraints.Any() && t2Attributes == GenericParameterAttributes.None ||
-						t1Constraints.Any(t => IsGenericTypeParameter(t)) || t2Constraints.Any(t => IsGenericTypeParameter(t))) {
+					if (t1Constraints.Length <= 0 && t1Attributes == GenericParameterAttributes.None ||
+						t2Constraints.Length <= 0 && t2Attributes == GenericParameterAttributes.None ||
+						t1Constraints.Any(IsGenericTypeParameter) || t2Constraints.Any(IsGenericTypeParameter)) {
 
 						return true;
 					}
@@ -483,7 +442,7 @@ namespace NeatMapper {
 						!t2Constraints.Where(t2c => !t1Constraints.Any(t1c => t1c.IsAssignableFrom(t2c))).Any();
 				}
 				else if (t1.IsArray && t2.IsArray)
-					return MatchOpenGenericsRecursive(t1.GetElementType(), t2.GetElementType());
+					return MatchOpenGenericsRecursive(t1.GetElementType()!, t2.GetElementType()!);
 				else
 					return t1 == t2;
 			}
@@ -536,7 +495,7 @@ namespace NeatMapper {
 
 			return answer;
 #else
-            return !(bool)RuntimeHelpers_IsReferenceOrContainsReference.MakeGenericMethod(type).Invoke(null, null);
+            return !(bool)RuntimeHelpers_IsReferenceOrContainsReference.MakeGenericMethod(type).Invoke(null, null)!;
 #endif
 		}
 
@@ -544,7 +503,7 @@ namespace NeatMapper {
 		static bool MatchOpenAndClosedGenericsRecursive(Type openType, Type closedType) {
 			if (!openType.IsGenericType) {
 				if (openType.IsArray)
-					return closedType.IsArray && MatchOpenAndClosedGenericsRecursive(openType.GetElementType(), closedType.GetElementType());
+					return closedType.IsArray && MatchOpenAndClosedGenericsRecursive(openType.GetElementType()!, closedType.GetElementType()!);
 				else
 					return IsGenericTypeParameter(openType) || openType == closedType;
 			}
@@ -565,16 +524,17 @@ namespace NeatMapper {
 		static IEnumerable<(Type OpenGenericArgument, Type ClosedType)> InferOpenGenericArgumentsRecursive(Type openType, Type closedType) {
 			if (!openType.IsGenericType) {
 				if (IsGenericTypeParameter(openType))
-					return new[] { (openType, closedType) };
+					return [ (openType, closedType) ];
 				else if (openType.IsArray)
-					return InferOpenGenericArgumentsRecursive(openType.GetElementType(), closedType.GetElementType());
+					return InferOpenGenericArgumentsRecursive(openType.GetElementType()!, closedType.GetElementType()!);
 				else
-					return Enumerable.Empty<(Type, Type)>();
+					return [];
 			}
-			else
+			else { 
 				return openType.GetGenericArguments()
 					.Zip(closedType.GetGenericArguments(), (o, c) => (First: o, Second: c))
 					.SelectMany((a) => InferOpenGenericArgumentsRecursive(a.First, a.Second));
+			}
 		}
 
 		static bool IsGenericTypeParameter(Type t) {

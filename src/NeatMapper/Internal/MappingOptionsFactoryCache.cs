@@ -31,7 +31,7 @@ namespace NeatMapper {
 		}
 
 
-		public TOutput GetOrCreate(MappingOptions options) {
+		public TOutput GetOrCreate(MappingOptions? options) {
 			if (options == null || options == MappingOptions.Empty)
 				return _optionsCacheNull;
 			else if (options.Cached)

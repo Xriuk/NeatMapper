@@ -126,12 +126,15 @@ namespace NeatMapper {
 			if (method.IsStatic)
 				body = Expression.Call(method, parametersList);
 			else {
-				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType)),
+				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType!)),
 					method, parametersList);
 			}
 
 			// Cast return type if needed (we check for not equal instead of IsAssignableFrom
 			// because Expressions require convert even for implicit casts)
+#if !NET47_OR_GREATER
+#pragma warning disable IDE0056
+#endif
 			if (method.ReturnType != typeof(void) && method.ReturnType != delegateArguments[delegateArguments.Length - 1]) {
 				// (Destination)(await task) or
 				// (Destination)result
@@ -140,6 +143,9 @@ namespace NeatMapper {
 				else
 					body = Expression.Convert(body, delegateArguments[delegateArguments.Length - 1]);
 			}
+#if !NET47_OR_GREATER
+#pragma warning restore IDE0056
+#endif
 
 			return Expression.Lambda<TDelegate>(body, parameterExpressions).Compile();
 		}

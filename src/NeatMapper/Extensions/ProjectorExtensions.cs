@@ -121,7 +121,7 @@ namespace NeatMapper {
 			if (projector is IProjectorMaps maps)
 				return maps.GetMaps(mappingOptions);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetMaps(IProjector, MappingOptions?)"/>
@@ -129,7 +129,7 @@ namespace NeatMapper {
 			if (projector is IProjectorMaps maps)
 				return maps.GetMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetMaps(IProjector, MappingOptions?)"/>
@@ -137,7 +137,7 @@ namespace NeatMapper {
 			if (projector is IProjectorMaps maps)
 				return maps.GetMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 		#endregion
 	}

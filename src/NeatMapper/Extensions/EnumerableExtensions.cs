@@ -169,9 +169,13 @@ namespace NeatMapper {
 		/// <inheritdoc cref="Project{TDestination}(IEnumerable, IMapper, MappingOptions?)" path="/returns"/>
 		/// <inheritdoc cref="IMapper.Map(object, Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if !NETCOREAPP3_1
 #pragma warning disable CS1712
+#endif
 		public static IEnumerable<TDestination?> Project<TSource, TDestination>(this IEnumerable<TSource?> enumerable,
+#if !NETCOREAPP3_1
 #pragma warning restore CS1712
+#endif
 			IMapper mapper,
 			MappingOptions? mappingOptions = null) {
 

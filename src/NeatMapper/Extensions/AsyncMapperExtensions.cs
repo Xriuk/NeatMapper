@@ -219,9 +219,13 @@ namespace NeatMapper {
 		/// </returns>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if !NETCOREAPP3_1
 #pragma warning disable CS1712
+#endif
 		public static Task<TDestination?> MapAsync<TSource, TDestination>(this IAsyncMapper mapper,
+#if !NETCOREAPP3_1
 #pragma warning restore CS1712
+#endif
 			TSource? source,
 			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
@@ -812,7 +816,7 @@ namespace NeatMapper {
 			if (mapper is IAsyncMapperMaps maps)
 				return maps.GetAsyncNewMaps(mappingOptions);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetAsyncNewMaps(IAsyncMapper, MappingOptions?)"/>
@@ -820,7 +824,7 @@ namespace NeatMapper {
 			if (mapper is IAsyncMapperMaps maps)
 				return maps.GetAsyncNewMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetAsyncNewMaps(IAsyncMapper, MappingOptions?)"/>
@@ -828,7 +832,7 @@ namespace NeatMapper {
 			if (mapper is IAsyncMapperMaps maps)
 				return maps.GetAsyncNewMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 		#endregion
 
@@ -843,7 +847,7 @@ namespace NeatMapper {
 			if (mapper is IAsyncMapperMaps maps)
 				return maps.GetAsyncMergeMaps(mappingOptions);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetAsyncMergeMaps(IAsyncMapper, MappingOptions?)"/>
@@ -851,7 +855,7 @@ namespace NeatMapper {
 			if (mapper is IAsyncMapperMaps maps)
 				return maps.GetAsyncMergeMaps(mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 
 		/// <inheritdoc cref="GetAsyncMergeMaps(IAsyncMapper, MappingOptions?)"/>
@@ -859,7 +863,7 @@ namespace NeatMapper {
 			if (mapper is IAsyncMapperMaps maps)
 				return maps.GetAsyncMergeMaps(mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 			else
-				return Enumerable.Empty<(Type, Type)>();
+				return [];
 		}
 		#endregion
 	}

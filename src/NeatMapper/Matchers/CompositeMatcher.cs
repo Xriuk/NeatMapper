@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace NeatMapper {
@@ -19,11 +18,6 @@ namespace NeatMapper {
 		private readonly CompositeMatcherOptions _compositeMatcherOptions;
 
 		/// <summary>
-		/// Cached <see cref="NestedMatchingContext"/> to provide, if not already provided in <see cref="MappingOptions"/>.
-		/// </summary>
-		private readonly NestedMatchingContext _nestedMatchingContext;
-
-		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
@@ -38,23 +32,14 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(compositeMatcherOptions));
 
 			_compositeMatcherOptions = new CompositeMatcherOptions(compositeMatcherOptions);
-			_nestedMatchingContext = new NestedMatchingContext(this);
+			var nestedMatchingContext = new NestedMatchingContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<MatcherOverrideMappingOptions, NestedMatchingContext>(
 				m => m?.Matcher != null ? m : new MatcherOverrideMappingOptions(this, m?.ServiceProvider),
-				n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext, options.Cached));
+				n => n != null ? new NestedMatchingContext(this, n) : nestedMatchingContext, options.Cached));
 		}
 
 
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -75,28 +60,7 @@ namespace NeatMapper {
 			return false;
 		}
 
-		public bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -120,20 +84,7 @@ namespace NeatMapper {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
-		public IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -142,13 +93,13 @@ namespace NeatMapper {
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			// Try retrieving a new factory
-			IMatcher validMatcher = null;
+			IMatcher? validMatcher = null;
 			foreach (var matcher in _compositeMatcherOptions.Matchers) {
 				if (matcher.CanMatch(sourceType, destinationType, mappingOptions)) {
 					if (matcher is IMatcherFactory factory)
 						return factory.MatchFactory(sourceType, destinationType, mappingOptions);
-					else if (validMatcher == null)
-						validMatcher = matcher;
+					else
+						validMatcher ??= matcher;
 				}
 			}
 
@@ -179,8 +130,8 @@ namespace NeatMapper {
 								throw;
 							}
 						}
-						else if (validMatcher == null)
-							validMatcher = matcher;
+						else
+							validMatcher ??= matcher;
 					}
 				}
 
@@ -193,10 +144,6 @@ namespace NeatMapper {
 			}
 
 			throw new MapNotFoundException((sourceType, destinationType));
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 	}
 }

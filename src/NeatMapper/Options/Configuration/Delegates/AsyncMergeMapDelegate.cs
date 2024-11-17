@@ -2,7 +2,8 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// Delegate which allows mapping an object to an existing one asynchronously, used to add custom <see cref="IAsyncMergeMap{TSource, TDestination}"/>
+	/// Delegate which allows mapping an object to an existing one asynchronously, used to add custom
+	/// <see cref="IAsyncMergeMap{TSource, TDestination}"/>
 	/// </summary>
 	/// <typeparam name="TSource">Source type</typeparam>
 	/// <typeparam name="TDestination">Destination type</typeparam>
@@ -13,24 +14,5 @@ namespace NeatMapper {
 	/// The resulting object of the mapping, can be <paramref name="destination"/> or a new one,
 	/// may be null
 	/// </returns>
-	public delegate Task<
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-		> AsyncMergeMapDelegate<in TSource, TDestination>(
-#if NET5_0_OR_GREATER
-		TSource?
-#else
-		TSource
-#endif
-		source,
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-		destination,
-		AsyncMappingContext context);
+	public delegate Task<TDestination?> AsyncMergeMapDelegate<in TSource, TDestination>(TSource? source, TDestination? destination, AsyncMappingContext context);
 }

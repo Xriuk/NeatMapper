@@ -30,9 +30,7 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Creates a new instance of <see cref="AsyncCustomMapper"/>.<br/>
-		/// At least one between <paramref name="mapsOptions"/>, <paramref name="additionalNewMapsOptions"/>
-		/// and <paramref name="additionalMergeMapsOptions"/> should be specified.
+		/// Creates a new instance of <see cref="AsyncCustomMapper"/>.
 		/// </summary>
 		/// <param name="mapsOptions">Options to retrieve user-defined maps for the mapper, null to ignore.</param>
 		/// <param name="additionalNewMapsOptions">Additional user-defined maps for the mapper, null to ignore.</param>
@@ -42,31 +40,15 @@ namespace NeatMapper {
 		/// null to pass an empty service provider.<br/>
 		/// Can be overridden during mapping with <see cref="AsyncMapperOverrideMappingOptions"/>.
 		/// </param>
+		/// <remarks>
+		/// At least one between <paramref name="mapsOptions"/>, <paramref name="additionalNewMapsOptions"/>
+		/// and <paramref name="additionalMergeMapsOptions"/> should be specified.
+		/// </remarks>
 		public AsyncCustomMapper(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomMapsOptions?
-#else
-			CustomMapsOptions
-#endif
-			mapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomAsyncNewAdditionalMapsOptions?
-#else
-			CustomAsyncNewAdditionalMapsOptions
-#endif
-			additionalNewMapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomAsyncMergeAdditionalMapsOptions?
-#else
-			CustomAsyncMergeAdditionalMapsOptions
-#endif
-			additionalMergeMapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
+			CustomMapsOptions? mapsOptions = null,
+			CustomAsyncNewAdditionalMapsOptions? additionalNewMapsOptions = null,
+			CustomAsyncMergeAdditionalMapsOptions? additionalMergeMapsOptions = null,
+			IServiceProvider? serviceProvider = null) {
 
 			_newMapsConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
@@ -96,10 +78,11 @@ namespace NeatMapper {
 				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
 				additionalMergeMapsOptions?._maps.Values
 			);
+			serviceProvider ??= EmptyServiceProvider.Instance;
 			_contextsOptionsCache = new MappingOptionsFactoryCache<AsyncMappingContextOptions>(options => {
 				var overrideOptions = options.GetOptions<AsyncMapperOverrideMappingOptions>();
 				return new AsyncMappingContextOptions(
-					overrideOptions?.ServiceProvider ?? serviceProvider ?? EmptyServiceProvider.Instance,
+					overrideOptions?.ServiceProvider ?? serviceProvider,
 					overrideOptions?.Mapper ?? this,
 					this,
 					options
@@ -109,16 +92,7 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
-		public bool CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -128,16 +102,7 @@ namespace NeatMapper {
 				(ObjectFactory.CanCreate(destinationType) && CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
 		}
 
-		public bool CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -146,27 +111,11 @@ namespace NeatMapper {
 			return _mergeMapsConfiguration.TryGetDoubleMapAsync((sourceType, destinationType), out _);
 		}
 
-		public Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
 			if (sourceType == null)
@@ -190,33 +139,12 @@ namespace NeatMapper {
 			return map.Invoke(source, new AsyncMappingContext(contextOptions, cancellationToken));
 		}
 
-		public Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
+			object? destination,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
 			if (sourceType == null)
@@ -238,16 +166,7 @@ namespace NeatMapper {
 		#endregion
 
 		#region IAsyncMapperFactory methods
-		public IAsyncNewMapFactory MapAsyncNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IAsyncNewMapFactory MapAsyncNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -266,16 +185,7 @@ namespace NeatMapper {
 			});
 		}
 
-		public IAsyncMergeMapFactory MapAsyncMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IAsyncMergeMapFactory MapAsyncMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -297,25 +207,11 @@ namespace NeatMapper {
 		#endregion
 
 		#region IAsyncMapperMaps methods
-		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(MappingOptions? mappingOptions = null) {
 			return _newMapsConfiguration.GetMaps();
 		}
 
-		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(MappingOptions? mappingOptions = null) {
 			return _mergeMapsConfiguration.GetMaps();
 		}
 		#endregion

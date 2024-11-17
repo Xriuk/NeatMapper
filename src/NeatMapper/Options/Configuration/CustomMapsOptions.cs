@@ -11,7 +11,7 @@ namespace NeatMapper {
 		/// Creates a new instance of <see cref="CustomMapsOptions"/>.
 		/// </summary>
 		public CustomMapsOptions() {
-			TypesToScan = new List<Type>();
+			TypesToScan = [];
 		}
 		/// <summary>
 		/// Creates a new instance of <see cref="CustomMapsOptions"/> by copying options from another instance.
@@ -21,7 +21,7 @@ namespace NeatMapper {
 			if(options == null)
 				throw new ArgumentNullException(nameof(options));
 
-			TypesToScan = new List<Type>(options.TypesToScan);
+			TypesToScan = new List<Type>(options.TypesToScan ?? throw new InvalidOperationException("TypesToScan cannot be null"));
 		}
 
 

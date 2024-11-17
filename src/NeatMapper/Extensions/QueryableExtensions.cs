@@ -93,9 +93,10 @@ namespace NeatMapper {
 
 			// DEV: maybe cache?
 			return (IQueryable)Queryable_Select.MakeGenericMethod(sourceElementType, destinationElementType)
-				.Invoke(null, new object[] {
+				.Invoke(null, [
 					queryable,
-					projector.Project(sourceElementType, destinationElementType, mappingOptions) })!;
+					projector.Project(sourceElementType, destinationElementType, mappingOptions)
+				])!;
 
 		}
 
@@ -165,9 +166,13 @@ namespace NeatMapper {
 		/// <inheritdoc cref="Project{TDestination}(IQueryable, IProjector, MappingOptions?)" path="/returns"/>
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if !NETCOREAPP3_1
 #pragma warning disable CS1712
+#endif
 		public static IQueryable<TDestination?> Project<TSource, TDestination>(this IQueryable<TSource?> queryable,
+#if !NETCOREAPP3_1
 #pragma warning restore CS1712
+#endif
 			IProjector projector,
 			MappingOptions? mappingOptions = null) {
 

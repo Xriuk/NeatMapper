@@ -15,20 +15,7 @@ namespace NeatMapper {
 		/// <param name="serviceProvider">
 		/// <inheritdoc cref="ServiceProvider" path="/summary"/><inheritdoc cref="ServiceProvider" path="/remarks"/>
 		/// </param>
-		public AsyncMapperOverrideMappingOptions(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IAsyncMapper?
-#else
-			IAsyncMapper
-#endif
-			mapper = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
-
+		public AsyncMapperOverrideMappingOptions(IAsyncMapper? mapper = null, IServiceProvider? serviceProvider = null) {
 			Mapper = mapper;
 			ServiceProvider = serviceProvider;
 		}
@@ -38,16 +25,10 @@ namespace NeatMapper {
 		/// Mapper to be used for nested maps.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent mapper.</remarks>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IAsyncMapper?
-#else
-			IAsyncMapper
-#endif
-			Mapper {
-				get;
+		public IAsyncMapper? Mapper {
+			get;
 #if NET5_0_OR_GREATER
-				init;
+			init;
 #endif
 		}
 
@@ -55,16 +36,10 @@ namespace NeatMapper {
 		/// Service provider to use for the maps.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent mapper.</remarks>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			ServiceProvider {
-				get;
+		public IServiceProvider? ServiceProvider {
+			get;
 #if NET5_0_OR_GREATER
-				init;
+			init;
 #endif
 		}
 	}
