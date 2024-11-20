@@ -374,7 +374,7 @@ namespace NeatMapper {
 		public static ICollection<TElement>? Map<TElement>(this IMapper mapper,
 			IEnumerable<TElement>? source,
 			ICollection<TElement>? destination,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			MappingOptions? mappingOptions = null) {
 
 			if (mapper == null)
@@ -391,7 +391,7 @@ namespace NeatMapper {
 		public static ICollection<TElement>? Map<TElement>(this IMapper mapper,
 			IEnumerable<TElement>? source,
 			ICollection<TElement>? destination,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			IEnumerable? mappingOptions) {
 
 			return mapper.Map<TElement>(source, destination, comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
@@ -402,7 +402,7 @@ namespace NeatMapper {
 		public static ICollection<TElement>? Map<TElement>(this IMapper mapper,
 			IEnumerable<TElement>? source,
 			ICollection<TElement>? destination,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			params object?[]? mappingOptions) {
 
 			return mapper.Map<TElement>(source, destination, comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
@@ -662,7 +662,7 @@ namespace NeatMapper {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<IEnumerable<TElement>, ICollection<TElement>>
 			MapMergeFactory<TElement>(this IMapper mapper,
-				IEqualityComparer<TElement> comparer,
+				IEqualityComparer<TElement?> comparer,
 				MappingOptions? mappingOptions = null) {
 
 			if (mapper == null)
@@ -678,7 +678,7 @@ namespace NeatMapper {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<IEnumerable<TElement>, ICollection<TElement>>
 			MapMergeFactory<TElement>(this IMapper mapper,
-				IEqualityComparer<TElement> comparer,
+				IEqualityComparer<TElement?> comparer,
 				IEnumerable? mappingOptions) {
 
 			return mapper.MapMergeFactory<TElement>(comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
@@ -688,7 +688,7 @@ namespace NeatMapper {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static MergeMapFactory<IEnumerable<TElement>, ICollection<TElement>>
 			MapMergeFactory<TElement>(this IMapper mapper,
-				IEqualityComparer<TElement> comparer,
+				IEqualityComparer<TElement?> comparer,
 				params object?[]? mappingOptions) {
 
 			return mapper.MapMergeFactory<TElement>(comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);

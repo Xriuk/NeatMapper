@@ -1,7 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
-
-[assembly: SuppressMessage("Style", "IDE0130", Justification = "Project has a single namespace", Scope = "namespace", Target = "~N:NeatMapper")]
+﻿using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("NeatMapper.EntityFrameworkCore")]
 [assembly: InternalsVisibleTo("NeatMapper.EntityFrameworkCore.Tests")]

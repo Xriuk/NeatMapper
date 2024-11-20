@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System;
 using System.Collections.Concurrent;
@@ -22,7 +18,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			new ConcurrentDictionary<Type, Func<object, object>>();
 
 
-		public static Func<object, object> GetOrCreateTupleToValueTupleDelegate(Type tuple) {
+		public static Func<object, object>? GetOrCreateTupleToValueTupleDelegate(Type tuple) {
 			if (!tuple.IsTuple())
 				return null;
 
@@ -31,7 +27,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				// (object)new ValueTuple<...>(((Tuple<...>)key).Item1, ...)
 				Expression body = Expression.Convert(Expression.New(
 					TupleUtils.GetValueTupleConstructor(tupleType.GetGenericArguments()),
-					Enumerable.Range(1, tupleType.GetGenericArguments().Count())
+					Enumerable.Range(1, tupleType.GetGenericArguments().Length)
 						.Select(n => Expression.Property(Expression.Convert(keyParam, tupleType), "Item" + n))), typeof(object));
 				return Expression.Lambda<Func<object, object>>(body, keyParam).Compile();
 			});
@@ -80,7 +76,13 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// the corresponding context is (depending on the GC).
 		/// </summary>
 		private static readonly ConditionalWeakTable<DbContext, Finalizer<SemaphoreSlim>> _dbContextSemaphores =
+#if !NET47_OR_GREATER
+#pragma warning disable IDE0028
+#endif
 			new ConditionalWeakTable<DbContext, Finalizer<SemaphoreSlim>>();
+#if !NET47_OR_GREATER
+#pragma warning restore IDE0028
+#endif
 
 
 		public static SemaphoreSlim GetOrCreateSemaphoreForDbContext(DbContext dbContext) {
@@ -116,7 +118,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// <see cref="EntityEntry.Property(string)"/>
 		/// </summary>
-		public static readonly MethodInfo EntityEntry_Property = typeof(EntityEntry).GetMethod(nameof(EntityEntry.Property), new[] { typeof(string) })
+		public static readonly MethodInfo EntityEntry_Property = typeof(EntityEntry).GetMethod(nameof(EntityEntry.Property), [ typeof(string) ])
 			?? throw new Exception("Could not find EntityEntry.Property(string)");
 
 		/// <summary>

@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
@@ -32,7 +28,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		public static bool IsDefaultValue<T>(T value) {
-			return value.Equals(default(T));
+			return Object.Equals(value, default(T));
 		}
 
 		public static bool IsDefaultValue(Type type, object value) {

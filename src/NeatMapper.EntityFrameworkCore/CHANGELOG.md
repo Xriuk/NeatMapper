@@ -2,9 +2,16 @@
 
 ## [5.1.0] - Unreleased
 
+### Changed
+
+- Updated NeatMapper dependency version.
+
 ### Fixed
 
 - Upgraded `Microsoft.EntityFrameworkCore` dependency version to minimum (6.0.35 for .NET6/7 and 8.0.10 for .NET8) to fix [reported vulnerability with Microsoft.Extensions.Caching.Memory](https://github.com/advisories/GHSA-qj66-m88j-hmgj).
+- `ServiceCollectionExtensions` `AddNeatMapperEntityFrameworkCore` fixed null check.
+- Added internal null checks.
+- Fixed null `MappingOptions` in merge maps.
 
 
 ## [5.0.0] - 2024-11-03

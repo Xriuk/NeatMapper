@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// (via <see cref="TypeDescriptor.GetConverter(Type)"/>).
 	/// Supports only new maps.
 	/// </summary>
-	public sealed class TypeConverterMapper : IMapper {
+	public sealed class TypeConverterMapper : IMapper, IMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>

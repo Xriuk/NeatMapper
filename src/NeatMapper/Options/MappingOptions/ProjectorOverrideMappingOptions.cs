@@ -25,22 +25,12 @@ namespace NeatMapper {
 		/// Projector to be used for nested projections.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent projector.</remarks>
-		public IProjector? Projector {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IProjector? Projector { get; init; }
 
 		/// <summary>
 		/// Service provider to use for the maps.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent projector.</remarks>
-		public IServiceProvider? ServiceProvider {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IServiceProvider? ServiceProvider { get; init; }
 	}
 }

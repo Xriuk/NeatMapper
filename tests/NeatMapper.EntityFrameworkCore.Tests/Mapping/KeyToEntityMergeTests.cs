@@ -324,7 +324,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapNullableKeysCollectioToEntitiesCollection() {
+		public void ShouldMapNullableKeysCollectionToEntitiesCollection() {
 			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<int?>, List<IntKey>>());
 
 			{

@@ -26,22 +26,12 @@
 		/// matched with <see cref="IMatchMap{TSource, TDestination}"/> (or <see cref="Matcher"/>).
 		/// </summary>
 		/// <remarks><see langword="null"/> to use global setting from <see cref="MergeCollectionsOptions"/>.</remarks>
-		public bool? RemoveNotMatchedDestinationElements {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public bool? RemoveNotMatchedDestinationElements { get; init; }
 
 		/// <summary>
 		/// <see cref="IMatcher"/> to be used to match elements of the collections.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the default <see cref="IMatcher"/> (if any).</remarks>
-		public IMatcher? Matcher {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IMatcher? Matcher { get; init; }
 	}
 }

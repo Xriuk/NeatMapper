@@ -7,14 +7,24 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// defined in <see cref="EntityFrameworkCoreOptions"/>.
 	/// </summary>
 	public sealed class EntityFrameworkCoreMappingOptions {
+		/// <summary>
+		/// Creates a new instance of <see cref="EntityFrameworkCoreMappingOptions"/>.
+		/// </summary>
+		/// <param name="entitiesRetrievalMode">
+		/// <inheritdoc cref="EntitiesRetrievalMode" path="/summary"/>
+		/// <inheritdoc cref="EntitiesRetrievalMode" path="/remarks"/>
+		/// </param>
+		/// <param name="dbContextInstance">
+		/// <inheritdoc cref="DbContextInstance" path="/summary"/>
+		/// <inheritdoc cref="DbContextInstance" path="/remarks"/>
+		/// </param>
+		/// <param name="throwOnDuplicateEntity">
+		/// <inheritdoc cref="ThrowOnDuplicateEntity" path="/summary"/>
+		/// <inheritdoc cref="ThrowOnDuplicateEntity" path="/remarks"/>
+		/// </param>
 		public EntityFrameworkCoreMappingOptions(
 			EntitiesRetrievalMode? entitiesRetrievalMode = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			DbContext?
-#else
-			DbContext
-#endif
-			dbContextInstance = null,
+			DbContext? dbContextInstance = null,
 			bool? throwOnDuplicateEntity = null) {
 
 			EntitiesRetrievalMode = entitiesRetrievalMode;
@@ -25,12 +35,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		/// <inheritdoc cref="EntityFrameworkCore.EntitiesRetrievalMode"/>
 		/// <remarks><see langword="null"/> to use global setting.</remarks>
-		public EntitiesRetrievalMode? EntitiesRetrievalMode {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public EntitiesRetrievalMode? EntitiesRetrievalMode { get; init; }
 
 		/// <summary>
 		/// Overrides the db instance to use for the mapping, the type must be correct, the mapper will pick it up
@@ -40,29 +45,13 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <remarks>
 		/// <see langword="null"/> to inject the context from the <see cref="System.IServiceProvider"/> of the mapper.
 		/// </remarks>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			DbContext?
-#else
-			DbContext
-#endif
-			DbContextInstance {
-				get;
-#if NET5_0_OR_GREATER
-				init;
-#endif
-		}
+		public DbContext? DbContextInstance { get; init; }
 
 		/// <summary>
 		/// If <see langword="true"/> will throw a <see cref="DuplicateEntityException"/> when a duplicate entity is found
 		/// for the same key while merging, otherwise will return the entity from the <see cref="DbContext"/>.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use global setting.</remarks>
-		public bool? ThrowOnDuplicateEntity {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public bool? ThrowOnDuplicateEntity { get; init; }
 	}
 }

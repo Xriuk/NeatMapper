@@ -439,7 +439,7 @@ namespace NeatMapper {
 		public static Task<ICollection<TElement>?> MapAsync<TElement>(this IAsyncMapper mapper,
 			IEnumerable<TElement>? source,
 			ICollection<TElement>? destination,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
@@ -458,7 +458,7 @@ namespace NeatMapper {
 		public static Task<ICollection<TElement>?> MapAsync<TElement>(this IAsyncMapper mapper,
 			IEnumerable<TElement>? source,
 			ICollection<TElement>? destination,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			CancellationToken cancellationToken) {
 
 			return mapper.MapAsync<TElement>(source, destination, comparer, (MappingOptions?)null, cancellationToken);
@@ -761,7 +761,7 @@ namespace NeatMapper {
 			IEnumerable<TElement>,
 			ICollection<TElement>>
 				MapAsyncMergeFactory<TElement>(this IAsyncMapper mapper,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			MappingOptions? mappingOptions = null) {
 
 			if (mapper == null)
@@ -778,7 +778,7 @@ namespace NeatMapper {
 			IEnumerable<TElement>,
 			ICollection<TElement>>
 				MapAsyncMergeFactory<TElement>(this IAsyncMapper mapper,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			IEnumerable? mappingOptions) {
 
 			if (comparer == null)
@@ -792,7 +792,7 @@ namespace NeatMapper {
 			IEnumerable<TElement>,
 			ICollection<TElement>>
 				MapAsyncMergeFactory<TElement>(this IAsyncMapper mapper,
-			IEqualityComparer<TElement> comparer,
+			IEqualityComparer<TElement?> comparer,
 			params object?[]? mappingOptions) {
 
 			if (comparer == null)

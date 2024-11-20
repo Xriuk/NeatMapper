@@ -132,20 +132,14 @@ namespace NeatMapper {
 
 			// Cast return type if needed (we check for not equal instead of IsAssignableFrom
 			// because Expressions require convert even for implicit casts)
-#if !NET47_OR_GREATER
-#pragma warning disable IDE0056
-#endif
-			if (method.ReturnType != typeof(void) && method.ReturnType != delegateArguments[delegateArguments.Length - 1]) {
+			if (method.ReturnType != typeof(void) && method.ReturnType != delegateArguments[^1]) {
 				// (Destination)(await task) or
 				// (Destination)result
 				if (method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-					body = Expression.Call(this_ConvertTask.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0], delegateArguments[delegateArguments.Length - 1].GetGenericArguments()[0]), body);
+					body = Expression.Call(this_ConvertTask.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0], delegateArguments[^1].GetGenericArguments()[0]), body);
 				else
-					body = Expression.Convert(body, delegateArguments[delegateArguments.Length - 1]);
+					body = Expression.Convert(body, delegateArguments[^1]);
 			}
-#if !NET47_OR_GREATER
-#pragma warning restore IDE0056
-#endif
 
 			return Expression.Lambda<TDelegate>(body, parameterExpressions).Compile();
 		}

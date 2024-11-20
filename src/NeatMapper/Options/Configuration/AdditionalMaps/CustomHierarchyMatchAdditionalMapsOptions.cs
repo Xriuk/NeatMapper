@@ -14,7 +14,7 @@ namespace NeatMapper {
 		/// Creates a new instance of <see cref="CustomHierarchyMatchAdditionalMapsOptions"/>.
 		/// </summary>
 		public CustomHierarchyMatchAdditionalMapsOptions() {
-			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>();
+			_maps = [];
 		}
 		/// <summary>
 		/// Creates a new instance of <see cref="CustomHierarchyMatchAdditionalMapsOptions"/>
@@ -28,7 +28,7 @@ namespace NeatMapper {
 			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>(options._maps);
 		}
 
-		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>();
+		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps = [];
 
 
 		/// <summary>

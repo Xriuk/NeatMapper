@@ -25,22 +25,12 @@ namespace NeatMapper {
 		/// Matcher to be used for nested matches.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent matcher.</remarks>
-		public IMatcher? Matcher {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IMatcher? Matcher { get; init; }
 
 		/// <summary>
 		/// Service provider to use for the matches.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent matcher.</remarks>
-		public IServiceProvider? ServiceProvider {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IServiceProvider? ServiceProvider { get; init; }
 	}
 }

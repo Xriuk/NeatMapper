@@ -27,7 +27,7 @@ namespace NeatMapper {
 		/// Creates a new instance of <see cref="Custom<#= name #>AdditionalMapsOptions"/>.
 		/// </summary>
 		public Custom<#= name #>AdditionalMapsOptions() {
-			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>();
+			_maps = [];
 		}
 		/// <summary>
 		/// Creates a new instance of <see cref="Custom<#= name #>AdditionalMapsOptions"/>
@@ -41,7 +41,7 @@ namespace NeatMapper {
 			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>(options._maps);
 		}
 
-		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>();
+		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps = [];
 
 
 		/// <summary>

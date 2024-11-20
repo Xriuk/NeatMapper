@@ -54,12 +54,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		public EntityFrameworkCoreProjector(
 			IModel model,
 			Type dbContextType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
+			IServiceProvider? serviceProvider = null) {
 
 			_model = model ?? throw new ArgumentNullException(nameof(model));
 			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
@@ -74,20 +69,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 
-		public bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -108,7 +90,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				return false;
 			if (destinationType.IsCompositeKeyType()) {
 				var keyTypes = destinationType.UnwrapNullable().GetGenericArguments();
-				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
+				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (KeyType: k1, PropertyType: k2.ClrType)).All(keys => keys.KeyType == keys.PropertyType))
 					return false;
 			}
 			else if (key.Properties.Count != 1 || key.Properties[0].ClrType != destinationType.UnwrapNullable())
@@ -123,26 +105,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			return true;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public LambdaExpression Project(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -153,8 +118,8 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			var entityParam = Expression.Parameter(sourceType, "entity");
 
-			var entity = _model.FindEntityType(sourceType);
-			var key = entity.FindPrimaryKey();
+			var entity = _model.FindEntityType(sourceType)!;
+			var key = entity.FindPrimaryKey()!;
 			var isCompiling = mappingOptions?.GetOptions<ProjectionCompilationContext>() != null;
 			var dbContext = isCompiling ? RetrieveDbContext(mappingOptions) : null;
 
@@ -208,11 +173,11 @@ namespace NeatMapper.EntityFrameworkCore {
 
 				body = Expression.TryCatch(
 					Expression.Block(
-						new [] { entityEntryVar },
+						[ entityEntryVar ],
 						// dbContextSemaphore.Wait()
 						Expression.Call(dbContextSemaphoreConstant, EfCoreUtils.SemaphoreSlim_Wait),
 						Expression.TryFinally(
-							Expression.Block(new[] { entityEntryVar },
+							Expression.Block([ entityEntryVar ],
 								// entityEntry = context.Entry(entity)
 								Expression.Assign(
 									entityEntryVar,
@@ -222,7 +187,7 @@ namespace NeatMapper.EntityFrameworkCore {
 									Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
 									Expression.Throw(
 										Expression.New(
-											typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+											typeof(InvalidOperationException).GetConstructor([ typeof(string) ])!,
 											Expression.Constant($"The entity of type {sourceType.FullName ?? sourceType.Name} is not being tracked " +
 												$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
 												$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
@@ -251,7 +216,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 					else {
 						// entity.Id
-						return (Expression)Expression.Field(entityParam, k.FieldInfo);
+						return (Expression)Expression.Field(entityParam, k.FieldInfo!);
 					}
 				});
 				if (key.Properties.Count == 1) {
@@ -281,19 +246,10 @@ namespace NeatMapper.EntityFrameworkCore {
 				Expression.Default(body.Type));
 
 			return Expression.Lambda(body, entityParam);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		// Retrieves the DbContext if available, may return null
-		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
+		private DbContext? RetrieveDbContext(MappingOptions? mappingOptions) {
 			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;
 			if (dbContext != null && dbContext.GetType() != _dbContextType)
 				dbContext = null;
@@ -316,9 +272,5 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			return dbContext;
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

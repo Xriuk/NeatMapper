@@ -17,6 +17,7 @@
 - Collection mappers for `string`s (which use `StringBuilder` as their backing collection) now handle correctly `null` chars which result in adding the null char (`'\0'`).
 - `ObjectEqualsMatcher` source and destination typechecking.
 - `AsyncCollectionMappersOptions`, `AsyncCompositeMapperOptions`, `CompositeMapperOptions`, `CompositeProjectorOptions` and `MergeCollectionsOptions` copy constructors added null checks.
+- `TypeConverterMapper` `IMapperFactory` missing implementation.
 
 
 ## [5.0.0] - 2024-11-03

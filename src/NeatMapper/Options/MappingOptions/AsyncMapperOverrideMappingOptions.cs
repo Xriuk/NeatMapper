@@ -25,22 +25,12 @@ namespace NeatMapper {
 		/// Mapper to be used for nested maps.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent mapper.</remarks>
-		public IAsyncMapper? Mapper {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IAsyncMapper? Mapper { get; init; }
 
 		/// <summary>
 		/// Service provider to use for the maps.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent mapper.</remarks>
-		public IServiceProvider? ServiceProvider {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public IServiceProvider? ServiceProvider { get; init; }
 	}
 }
