@@ -3,8 +3,8 @@ namespace NeatMapper {
 	/// <summary>
 	/// Interface which allows matching two objects.
 	/// </summary>
-	/// <typeparam name="TSource">Source type.</typeparam>
-	/// <typeparam name="TDestination">Destination type.</typeparam>
+	/// <typeparam name="TSource">Source type, can be an open generic.</typeparam>
+	/// <typeparam name="TDestination">Destination type, can be an open generic.</typeparam>
 	/// <remarks>
 	/// This interface is the same as <see cref="IMatchMap{TSource, TDestination}"/>, but allows greater flexibility:
 	/// for example it can be used in classes which cannot be instantiated (which do not have parameterless constructors).<br/>

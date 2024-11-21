@@ -27,7 +27,7 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created
-		/// from a parameter of type <paramref name="sourceType"/>.
+		/// from an object of type <paramref name="sourceType"/> asynchronously.
 		/// </returns>
 		bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 

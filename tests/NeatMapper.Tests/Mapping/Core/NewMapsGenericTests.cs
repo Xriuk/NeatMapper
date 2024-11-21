@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,10 +33,14 @@ namespace NeatMapper.Tests.Mapping {
 		public class Maps<T1, T2> :
 #if NET7_0_OR_GREATER
 			INewMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
-			INewMapStatic<T1[], T2[]>
+			INewMapStatic<T1[], T2[]>,
+			ICanMapNewStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			INewMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #else
 			INewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
-			INewMap<T1[], T2[]>
+			INewMap<T1[], T2[]>,
+			ICanMapNew<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			INewMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #endif
 			{
 
@@ -67,6 +72,42 @@ namespace NeatMapper.Tests.Mapping {
 				.Map(T1[] source, MappingContext context) {
 				
 				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				ICanMapNewStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				ICanMapNew<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.CanMapNew(MappingContext context) {
+
+				return context.Mapper.CanMapNew<T1, T2>(context.MappingOptions);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			CustomCollectionComplex<T2>
+#if NET7_0_OR_GREATER
+				INewMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				INewMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.Map(IEnumerable<T1> source, MappingContext context) {
+
+				var coll = new CustomCollectionComplex<T2>();
+				using(var factory = context.Mapper.MapNewFactory<T1, T2>(context.MappingOptions)) { 
+					foreach (var el in source) {
+						coll.Add(factory.Invoke(el));
+					}
+				}
+
+				return coll;
 			}
 		}
 
@@ -824,6 +865,26 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
 				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
 			}
+		}
+
+
+		[TestMethod]
+		public void ShouldCheckCanMapIfPresent() {
+			var nestedMapper = new CustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(NewMapsTests.Maps) }
+			});
+
+			var options = new MappingOptions(new MapperOverrideMappingOptions(nestedMapper));
+
+			Assert.IsTrue(_mapper.CanMapNew<IEnumerable<int>, CustomCollectionComplex<string>>(options));
+			Assert.IsFalse(_mapper.CanMapNew<IEnumerable<int>, CustomCollectionComplex<float>>(options));
+
+			var result = _mapper.Map<IEnumerable<int>, CustomCollectionComplex<string>>(new[] { 2, -3, 0 }, options);
+			Assert.AreEqual(3, result.Elements.Count());
+			Assert.AreEqual("4", result.Elements.ElementAt(0));
+			Assert.AreEqual("-6", result.Elements.ElementAt(1));
+			Assert.AreEqual("0", result.Elements.ElementAt(2));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<int>, CustomCollectionComplex<float>>(new[] { 2, -3, 0 }, options));
 		}
 	}
 }

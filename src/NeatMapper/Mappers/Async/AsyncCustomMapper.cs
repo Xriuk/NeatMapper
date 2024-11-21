@@ -12,10 +12,22 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class AsyncCustomMapper : IAsyncMapper, IAsyncMapperFactory, IAsyncMapperMaps {
 		/// <<summary>
+		/// Configuration for <see cref="ICanMapAsyncNew{TSource, TDestination}"/> (and the static version) classes
+		/// for the mapper.
+		/// </summary>
+		internal readonly CustomMapsConfiguration _canMapNewConfiguration;
+
+		/// <<summary>
 		/// Configuration for <see cref="IAsyncNewMap{TSource, TDestination}"/> (and the static version) classes and
 		/// <see cref="CustomAsyncNewAdditionalMapsOptions"/> additional maps for the mapper.
 		/// </summary>
 		internal readonly CustomMapsConfiguration _newMapsConfiguration;
+
+		/// <<summary>
+		/// Configuration for <see cref="ICanMapAsyncMerge{TSource, TDestination}"/> (and the static version) classes
+		/// for the mapper.
+		/// </summary>
+		internal readonly CustomMapsConfiguration _canMapMergeConfiguration;
 
 		/// <<summary>
 		/// Configuration for <see cref="IAsyncMergeMap{TSource, TDestination}"/> (and the static version) classes and
@@ -26,7 +38,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// Cached input <see cref="MappingOptions"/> and output <see cref="AsyncMappingContextOptions"/>.
 		/// </summary>
-		private readonly MappingOptionsFactoryCache<AsyncMappingContextOptions> _contextsOptionsCache;
+		private readonly MappingOptionsFactoryCache<AsyncMappingContextOptions> _contextOptionsCache;
 
 
 		/// <summary>
@@ -50,6 +62,20 @@ namespace NeatMapper {
 			CustomAsyncMergeAdditionalMapsOptions? additionalMergeMapsOptions = null,
 			IServiceProvider? serviceProvider = null) {
 
+			var typesToScan = (mapsOptions ?? new CustomMapsOptions()).TypesToScan;
+			_canMapNewConfiguration = new CustomMapsConfiguration(
+				(_, i) => {
+					if (!i.IsGenericType)
+						return false;
+					var type = i.GetGenericTypeDefinition();
+					return type == typeof(ICanMapAsyncNew<,>)
+#if NET7_0_OR_GREATER
+						|| type == typeof(ICanMapAsyncNewStatic<,>)
+#endif
+					;
+				},
+				typesToScan,
+				additionalNewMapsOptions?._canMaps.Values);
 			_newMapsConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
 					if (!i.IsGenericType)
@@ -61,9 +87,21 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
-				additionalNewMapsOptions?._maps.Values
-			);
+				typesToScan,
+				additionalNewMapsOptions?._maps.Values);
+			_canMapMergeConfiguration = new CustomMapsConfiguration(
+				(_, i) => {
+					if (!i.IsGenericType)
+						return false;
+					var type = i.GetGenericTypeDefinition();
+					return type == typeof(ICanMapAsyncMerge<,>)
+#if NET7_0_OR_GREATER
+						|| type == typeof(ICanMapAsyncMergeStatic<,>)
+#endif
+					;
+				},
+				typesToScan,
+				additionalMergeMapsOptions?._canMaps.Values);
 			_mergeMapsConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
 					if (!i.IsGenericType)
@@ -75,11 +113,10 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
-				additionalMergeMapsOptions?._maps.Values
-			);
+				typesToScan,
+				additionalMergeMapsOptions?._maps.Values);
 			serviceProvider ??= EmptyServiceProvider.Instance;
-			_contextsOptionsCache = new MappingOptionsFactoryCache<AsyncMappingContextOptions>(options => {
+			_contextOptionsCache = new MappingOptionsFactoryCache<AsyncMappingContextOptions>(options => {
 				var overrideOptions = options.GetOptions<AsyncMapperOverrideMappingOptions>();
 				return new AsyncMappingContextOptions(
 					overrideOptions?.ServiceProvider ?? serviceProvider,
@@ -93,22 +130,12 @@ namespace NeatMapper {
 
 		#region IAsyncMapper methods
 		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return _newMapsConfiguration.TryGetSingleMapAsync((sourceType, destinationType), out _) ||
+			return CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out _, out _) ||
 				(ObjectFactory.CanCreate(destinationType) && CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
 		}
 
 		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return _mergeMapsConfiguration.TryGetDoubleMapAsync((sourceType, destinationType), out _);
+			return CanMapAsyncMergeInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
 		public Task<object?> MapAsync(
@@ -118,14 +145,7 @@ namespace NeatMapper {
 			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
-			if (!_newMapsConfiguration.TryGetSingleMapAsync((sourceType, destinationType), out var map)) {
+			if (!CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions)) {
 				// Forward new map to merge by creating a destination
 				if (ObjectFactory.CanCreate(destinationType))
 					return MapAsync(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions, cancellationToken);
@@ -133,7 +153,7 @@ namespace NeatMapper {
 					throw new MapNotFoundException((sourceType, destinationType));
 			}
 
-			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return map.Invoke(source, new AsyncMappingContext(contextOptions, cancellationToken));
@@ -147,18 +167,11 @@ namespace NeatMapper {
 			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_mergeMapsConfiguration.TryGetDoubleMapAsync((sourceType, destinationType), out var map))
+			if (!CanMapAsyncMergeInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return map.Invoke(source, destination, new AsyncMappingContext(contextOptions, cancellationToken));
@@ -167,15 +180,8 @@ namespace NeatMapper {
 
 		#region IAsyncMapperFactory methods
 		public IAsyncNewMapFactory MapAsyncNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_newMapsConfiguration.TryGetSingleMapAsync((sourceType, destinationType), out var map))
+			if (!CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions))
 				return MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
-
-			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return new DefaultAsyncNewMapFactory(sourceType, destinationType, (source, cancellationToken) => {
@@ -186,15 +192,8 @@ namespace NeatMapper {
 		}
 
 		public IAsyncMergeMapFactory MapAsyncMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_mergeMapsConfiguration.TryGetDoubleMapAsync((sourceType, destinationType), out var map))
+			if (!CanMapAsyncMergeInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
-
-			var contextOptions = _contextsOptionsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultAsyncMergeMapFactory(sourceType, destinationType, (source, destination, cancellationToken) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -215,5 +214,58 @@ namespace NeatMapper {
 			return _mergeMapsConfiguration.GetMaps();
 		}
 		#endregion
+
+
+		private bool CanMapAsyncNewInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions,
+			out Func<object?, AsyncMappingContext, Task<object?>> map,
+			out AsyncMappingContextOptions contextOptions) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (_newMapsConfiguration.TryGetSingleMapAsync((sourceType, destinationType), out map)) {
+				contextOptions = _contextOptionsCache.GetOrCreate(mappingOptions);
+
+				if (_canMapNewConfiguration.TryGetContextMap<AsyncMappingContextOptions>((sourceType, destinationType), out var canMapNew))
+					return (bool)canMapNew.Invoke(contextOptions)!;
+				else
+					return true;
+			}
+			else {
+				contextOptions = null!;
+				return false;
+			}
+		}
+
+		private bool CanMapAsyncMergeInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions,
+			out Func<object?, object?, AsyncMappingContext, Task<object?>> map,
+			out AsyncMappingContextOptions contextOptions) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (_mergeMapsConfiguration.TryGetDoubleMapAsync((sourceType, destinationType), out map)) {
+				contextOptions = _contextOptionsCache.GetOrCreate(mappingOptions);
+
+				if (_canMapMergeConfiguration.TryGetContextMap<AsyncMappingContextOptions>((sourceType, destinationType), out var canMapMerge))
+					return (bool)canMapMerge.Invoke(contextOptions)!;
+				else
+					return true;
+			}
+			else {
+				contextOptions = null!;
+				return false;
+			}
+		}
 	}
 }

@@ -21,7 +21,8 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Projector to be used for nested projections.
-		/// Can be used as a regular <see cref="IProjector"/>, the invocations will be replaced with the expanded maps.
+		/// NestedProjector.Project invocations will be replaced with the expanded maps from the underlying
+		/// <see cref="IProjector"/> (so it works kinda like an <see cref="IMapper"/> inside expressions).
 		/// </summary>
 		public NestedProjector Projector { get; }
 

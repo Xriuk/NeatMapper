@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace NeatMapper {
   /// <summary>
-	/// Options which allow to specify additional user-defined mappings, to be added to maps found
+	/// Options which allow to specify additional user-defined mappings (and optionally checks for them), to be added to maps found
 	/// in types in <see cref="CustomMapsOptions"/>.
 	/// </summary>
 	public sealed class CustomMergeAdditionalMapsOptions {
@@ -29,6 +29,7 @@ namespace NeatMapper {
 		}
 
 		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps = [];
+		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _canMaps = [];
 
 
 		/// <summary>
@@ -37,7 +38,16 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="mapDelegate">Mapping method to use.</param>
 		public void AddMap<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mapDelegate) {
-			AddMapInternal(mapDelegate, true);
+			AddMapInternal(mapDelegate, null, true);
+		}
+		/// <summary>
+		/// Adds a custom map, this will later throw if another map for the same types was defined
+		/// in one of the types in <see cref="CustomMapsOptions"/>.
+		/// </summary>
+		/// <param name="mapDelegate">Mapping method to use.</param>
+		/// <param name="canMapDelegate">Optional check method which will be called before the mapping method.</param>
+		public void AddMap<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mapDelegate, CanMapMergeDelegate<TSource, TDestination>? canMapDelegate) {
+			AddMapInternal(mapDelegate, canMapDelegate, true);
 		}
 
 		/// <summary>
@@ -46,15 +56,24 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="mapDelegate">Mapping method to use.</param>
 		public void TryAddMap<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mapDelegate) {
-			AddMapInternal(mapDelegate, false);
+			AddMapInternal(mapDelegate, null, false);
+		}
+		/// <summary>
+		/// Adds a custom map, this won't throw if another map for the same types was defined
+		/// in one of the types in <see cref="CustomMapsOptions"/>, the map will be ignored.
+		/// </summary>
+		/// <param name="mapDelegate">Mapping method to use.</param>
+		/// <param name="canMapDelegate">Optional check method which will be called before the mapping method.</param>
+		public void TryAddMap<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mapDelegate, CanMapMergeDelegate<TSource, TDestination>? canMapDelegate) {
+			AddMapInternal(mapDelegate, canMapDelegate, false);
 		}
 
 
-		private void AddMapInternal<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mapDelegate, bool throwOnDuplicate) {
+		private void AddMapInternal<TSource, TDestination>(MergeMapDelegate<TSource, TDestination> mapDelegate, CanMapMergeDelegate<TSource, TDestination>? canMapDelegate, bool throwOnDuplicate) {
 			if (mapDelegate == null)
 				throw new ArgumentNullException(nameof(mapDelegate));
 
-			if (_maps.ContainsKey((typeof(TSource), typeof(TDestination))))
+			if (_maps.ContainsKey((typeof(TSource), typeof(TDestination))) || (canMapDelegate != null && _canMaps.ContainsKey((typeof(TSource), typeof(TDestination)))))
 				throw new ArgumentException($"Duplicate map for types {typeof(TSource).FullName ?? typeof(TSource).Name} -> {typeof(TDestination).FullName ?? typeof(TDestination).Name}");
 
 			var map = new CustomAdditionalMap {
@@ -70,6 +89,22 @@ namespace NeatMapper {
 			else
 				map.Method = mapDelegate.Method;
 			_maps.Add((typeof(TSource), typeof(TDestination)), map);
+
+			if(canMapDelegate != null){
+				map = new CustomAdditionalMap {
+					From = typeof(TSource),
+					To = typeof(TDestination),
+					ThrowOnDuplicate = throwOnDuplicate
+				};
+				if ((canMapDelegate.Method.GetType().FullName?.StartsWith("System.Reflection.Emit.DynamicMethod") == true)) {
+					CanMapMergeDelegate<TSource, TDestination> method = canMapDelegate.Invoke;
+					map.Method = method.Method;
+					map.Instance = canMapDelegate;
+				}
+				else
+					map.Method = canMapDelegate.Method;
+				_canMaps.Add((typeof(TSource), typeof(TDestination)), map);
+			}
 		}
 	}
 }

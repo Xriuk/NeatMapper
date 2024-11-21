@@ -679,5 +679,18 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
 		}
+
+		[TestMethod]
+		public async Task ShouldCheckCanMapWithAdditionalMaps() {
+			var options = new CustomAsyncNewAdditionalMapsOptions();
+			options.AddMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0), c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			var mapper = new AsyncCustomMapper(null, options);
+
+			Assert.IsTrue(mapper.CanMapAsyncNew<string, int>());
+			Assert.IsFalse(mapper.CanMapAsyncNew<string, int>(ProjectionCompilationContext.Instance));
+
+			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
+			await TestUtils.AssertMapNotFound(() => mapper.MapAsync<int>("Test", new object[] { ProjectionCompilationContext.Instance }));
+		}
 	}
 }

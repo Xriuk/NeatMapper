@@ -6,9 +6,16 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CustomMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
-		/// Configuration for class and additional maps for the matcher.
+		/// Configuration for <see cref="ICanMatch{TSource, TDestination}"/> (and the static version) classes
+		/// for the matcher.
 		/// </summary>
-		private readonly CustomMapsConfiguration _configuration;
+		private readonly CustomMapsConfiguration _canMatchConfiguration;
+
+		/// <summary>
+		/// Configuration for <see cref="IMatchMap{TSource, TDestination}"/> (and the static version) classes and
+		/// <see cref="CustomMatchAdditionalMapsOptions"/> additional maps for the matcher.
+		/// </summary>
+		private readonly CustomMapsConfiguration _matchConfiguration;
 
 		/// <summary>
 		/// Cached input <see cref="MappingOptions"/> and output <see cref="MatchingContext"/>.
@@ -35,7 +42,21 @@ namespace NeatMapper {
 			CustomMatchAdditionalMapsOptions? additionalMapsOptions = null,
 			IServiceProvider? serviceProvider = null) {
 
-			_configuration = new CustomMapsConfiguration(
+			var typesToScan = (mapsOptions ?? new CustomMapsOptions()).TypesToScan;
+			_canMatchConfiguration = new CustomMapsConfiguration(
+				(_, i) => {
+					if (!i.IsGenericType)
+						return false;
+					var type = i.GetGenericTypeDefinition();
+					return type == typeof(ICanMatch<,>)
+#if NET7_0_OR_GREATER
+						|| type == typeof(ICanMatchStatic<,>)
+#endif
+					;
+				},
+				typesToScan,
+				additionalMapsOptions?._canMaps.Values);
+			_matchConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
 					if (!i.IsGenericType)
 						return false;
@@ -46,10 +67,9 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
-				additionalMapsOptions?._maps.Values
-			);
-		serviceProvider ??= EmptyServiceProvider.Instance;
+				typesToScan,
+				additionalMapsOptions?._maps.Values);
+			serviceProvider ??= EmptyServiceProvider.Instance;
 			_contextsCache = new MappingOptionsFactoryCache<MatchingContext>(options => {
 				var overrideOptions = options.GetOptions<MatcherOverrideMappingOptions>();
 				return new MatchingContext(
@@ -63,27 +83,15 @@ namespace NeatMapper {
 
 
 		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return _configuration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out _);
+			return CanMatchInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
 		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if(!_configuration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out var map))
+			if(!CanMatchInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			try {
 				return (bool)map.Invoke(source, destination, context)!;
@@ -94,15 +102,8 @@ namespace NeatMapper {
 		}
 
 		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if(!_configuration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out var map))
+			if (!CanMatchInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
 				throw new MapNotFoundException((sourceType, destinationType));
-
-			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -115,6 +116,33 @@ namespace NeatMapper {
 					throw new MatcherException(e.InnerException!, (sourceType, destinationType));
 				}
 			});
+		}
+
+
+		private bool CanMatchInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions,
+			out Func<object?, object?, MatchingContext, object?> map,
+			out MatchingContext context) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (_matchConfiguration.TryGetDoubleMap<MatchingContext>((sourceType, destinationType), out map)) {
+				context = _contextsCache.GetOrCreate(mappingOptions);
+
+				if (_canMatchConfiguration.TryGetContextMap<MatchingContext>((sourceType, destinationType), out var canMatch))
+					return (bool)canMatch.Invoke(context)!;
+				else
+					return true;
+			}
+			else {
+				context = null!;
+				return false;
+			}
 		}
 	}
 }

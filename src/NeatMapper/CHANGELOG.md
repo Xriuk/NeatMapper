@@ -9,8 +9,10 @@
 
 ### Added
 
+- New optional interfaces `ICanMapNew`, `ICanMapMerge`, `ICanMapAsyncNew`, `ICanMapAsyncMerge`, `ICanMatch`, `ICanMatchHierarchy` and `ICanProject` (and their static counterparts) which can be implemented to validate the corresponding custom maps, this should be especially useful for generic custom maps, because it allows to validate the generic type arguments (as a map can no longer reject itself by throwing `MapNotFoundException`, which now gets wrapped in a `MappingException`/`MatchingException`/`ProjectionException`).
 - `IMatcher` and `IMatchMapFactory` `PredicateDestination()` extension methods to create `Predicate()` factories by passing the destination instead of source and inferring its type.
 - `ObjectEqualsMatcher` now implements `IMatcherFactory`.
+- `CanProject` method to `NestedProjector` (which can be used outside expressions unlike `Project`).
 
 ### Fixed
 

@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,13 +38,17 @@ namespace NeatMapper.Tests.Mapping.Async {
 			IAsyncMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
 			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
 			IAsyncMergeMapStatic<T1[], T2[]>,
-			IAsyncMergeMapStatic<List<T1>, List<T2>>
+			IAsyncMergeMapStatic<List<T1>, List<T2>>,
+			ICanMapAsyncMergeStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IAsyncMergeMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #else
 			IAsyncMergeMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IAsyncMergeMap<GenericClass<T1>, GenericClassDto<T2>>,
 			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>,
 			IAsyncMergeMap<T1[], T2[]>,
-			IAsyncMergeMap<List<T1>, List<T2>>
+			IAsyncMergeMap<List<T1>, List<T2>>,
+			ICanMapAsyncMerge<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IAsyncMergeMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #endif
 			{
 
@@ -123,6 +128,42 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				await Task.Delay(0);
 				throw new MapNotFoundException((typeof(List<T1>), typeof(List<T2>)));
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				ICanMapAsyncMergeStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				ICanMapAsyncMerge<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.CanMapAsyncMerge(AsyncMappingContextOptions context) {
+
+				return context.Mapper.CanMapAsyncMerge<T1, T2>(context.MappingOptions);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<CustomCollectionComplex<T2>>
+#if NET7_0_OR_GREATER
+				IAsyncMergeMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				IAsyncMergeMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.MapAsync(IEnumerable<T1> source, CustomCollectionComplex<T2> destination, AsyncMappingContext context) {
+
+				var coll = new CustomCollectionComplex<T2>();
+				using (var factory = context.Mapper.MapAsyncMergeFactory<T1, T2>(context.MappingOptions)) {
+					foreach (var el in source) {
+						coll.Add(await factory.Invoke(el, default));
+					}
+				}
+
+				return coll;
 			}
 		}
 
@@ -1075,6 +1116,26 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.AreEqual("Test3", result.ElementAt(1).Value.Code);
 			Assert.AreEqual(6, result.ElementAt(2).Id);
 			Assert.AreEqual("Test1", result.ElementAt(2).Value.Code);
+		}
+
+
+		[TestMethod]
+		public async Task ShouldCheckCanMapIfPresent() {
+			var nestedMapper = new AsyncCustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(AsyncMergeMapsTests.Maps) }
+			});
+
+			var options = new MappingOptions(new AsyncMapperOverrideMappingOptions(nestedMapper));
+
+			Assert.IsTrue(_mapper.CanMapAsyncMerge<IEnumerable<int>, CustomCollectionComplex<string>>(options));
+			Assert.IsFalse(_mapper.CanMapAsyncMerge<IEnumerable<int>, CustomCollectionComplex<decimal>>(options));
+
+			var result = await _mapper.MapAsync<IEnumerable<int>, CustomCollectionComplex<string>>(new[] { 2, -3, 0 }, new CustomCollectionComplex<string>(), options);
+			Assert.AreEqual(3, result.Elements.Count());
+			Assert.AreEqual("4", result.Elements.ElementAt(0));
+			Assert.AreEqual("-6", result.Elements.ElementAt(1));
+			Assert.AreEqual("0", result.Elements.ElementAt(2));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<int>, CustomCollectionComplex<decimal>>(new[] { 2, -3, 0 }, new CustomCollectionComplex<decimal>(), options));
 		}
 	}
 }

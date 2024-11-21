@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -35,12 +36,16 @@ namespace NeatMapper.Tests.Mapping {
 			IMergeMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IMergeMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
 			IMatchMapStatic<GenericClass<T1>, GenericClassDto<T2>>,
-			IMergeMapStatic<T1[], T2[]>
+			IMergeMapStatic<T1[], T2[]>,
+			ICanMapMergeStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IMergeMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #else
 			IMergeMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IMergeMap<GenericClass<T1>, GenericClassDto<T2>>,
 			IMatchMap<GenericClass<T1>, GenericClassDto<T2>>,
-			IMergeMap<T1[], T2[]>
+			IMergeMap<T1[], T2[]>,
+			ICanMapMerge<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IMergeMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #endif
 			{
 
@@ -104,6 +109,42 @@ namespace NeatMapper.Tests.Mapping {
 				.Map(T1[] source, T2[] destination, MappingContext context) {
 
 				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				ICanMapMergeStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				ICanMapMerge<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.CanMapMerge(MappingContext context) {
+
+				return context.Mapper.CanMapMerge<T1, T2>(context.MappingOptions);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			CustomCollectionComplex<T2>
+#if NET7_0_OR_GREATER
+				IMergeMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				IMergeMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.Map(IEnumerable<T1> source, CustomCollectionComplex<T2> destination, MappingContext context) {
+
+				var coll = new CustomCollectionComplex<T2>();
+				using (var factory = context.Mapper.MapMergeFactory<T1, T2>(context.MappingOptions)) {
+					foreach (var el in source) {
+						coll.Add(factory.Invoke(el, default));
+					}
+				}
+
+				return coll;
 			}
 		}
 
@@ -1066,6 +1107,26 @@ namespace NeatMapper.Tests.Mapping {
 			Assert.AreEqual("Test3", result.ElementAt(1).Value.Code);
 			Assert.AreEqual(6, result.ElementAt(2).Id);
 			Assert.AreEqual("Test1", result.ElementAt(2).Value.Code);
+		}
+
+
+		[TestMethod]
+		public void ShouldCheckCanMapIfPresent() {
+			var nestedMapper = new CustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(MergeMapsTests.Maps) }
+			});
+
+			var options = new MappingOptions(new MapperOverrideMappingOptions(nestedMapper));
+
+			Assert.IsTrue(_mapper.CanMapMerge<IEnumerable<int>, CustomCollectionComplex<string>>(options));
+			Assert.IsFalse(_mapper.CanMapMerge<IEnumerable<int>, CustomCollectionComplex<float>>(options));
+
+			var result = _mapper.Map<IEnumerable<int>, CustomCollectionComplex<string>>(new[] { 2, -3, 0 }, new CustomCollectionComplex<string>(), options);
+			Assert.AreEqual(3, result.Elements.Count());
+			Assert.AreEqual("4", result.Elements.ElementAt(0));
+			Assert.AreEqual("-6", result.Elements.ElementAt(1));
+			Assert.AreEqual("0", result.Elements.ElementAt(2));
+			TestUtils.AssertMapNotFound(() => _mapper.Map<IEnumerable<int>, CustomCollectionComplex<float>>(new[] { 2, -3, 0 }, new CustomCollectionComplex<float>(), options));
 		}
 	}
 }

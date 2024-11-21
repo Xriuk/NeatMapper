@@ -183,7 +183,7 @@ namespace NeatMapper {
 				var collectionInterface = collection.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(ICollection<>));
 				MethodInfo method = null!;
 				if (collectionInterface != null)
-					method = collection.GetInterfaceMap(collectionInterface).TargetMethods.First(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
+					method = collection.GetInterfaceMap(collectionInterface).TargetMethods.Single(m => m.Name.EndsWith(nameof(ICollection<object>.Add)));
 				else if (collection.IsGenericType) {
 					var collectionGenericType = collection.GetGenericTypeDefinition();
 					if (collectionGenericType == typeof(Queue<>)) {

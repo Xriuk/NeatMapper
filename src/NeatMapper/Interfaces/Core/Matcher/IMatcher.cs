@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMatcher {
 		/// <summary>
-		/// Checks if the matcher could match an object with another one. It does not guarantee that the actual map will succeed.
+		/// Checks if the matcher could match an object with another one.
 		/// </summary>
 		/// <param name="sourceType">Type of the source object, used to retrieve the available maps.</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps.</param>
@@ -16,8 +16,8 @@ namespace NeatMapper {
 		/// since some matchers may depend on specific options to match or not two given types.
 		/// </param>
 		/// <returns>
-		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be matched
-		/// with an object of type <paramref name="sourceType"/>.
+		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be matched
+		/// with an object of type <paramref name="destinationType"/>.
 		/// </returns>
 		bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 

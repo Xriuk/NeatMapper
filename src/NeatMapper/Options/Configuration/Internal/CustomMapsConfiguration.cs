@@ -70,7 +70,7 @@ namespace NeatMapper {
 									$"an interface with matching parameters is already defined in class {duplicate.Class.Name}. " +
 									$"If the class has generic constraints check that they do not overlap.");
 							}
-							var method = type.GetInterfaceMap(interf).TargetMethods.First();
+							var method = type.GetInterfaceMap(interf).TargetMethods.Single();
 							if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null) { 
 								throw new InvalidOperationException(
 									$"Interface {interf.FullName ?? interf.Name} in generic class {type.Name} cannot be instantiated " +
@@ -91,7 +91,7 @@ namespace NeatMapper {
 				else {
 					foreach (var interf in interfaces) {
 						var arguments = interf.GetGenericArguments();
-						var method = type.GetInterfaceMap(interf).TargetMethods.First();
+						var method = type.GetInterfaceMap(interf).TargetMethods.Single();
 						if (!method.IsStatic && type.GetConstructor(Type.EmptyTypes) == null) { 
 							throw new InvalidOperationException(
 								$"Interface {interf.FullName ?? interf.Name} in class {type.Name} cannot be instantiated " +
@@ -197,6 +197,39 @@ namespace NeatMapper {
 				}
 			})!;
 			return map != null;
+		}
+		internal bool TryGetContextMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate, out Func<TContext, object?> mapResult) {
+			if (_mapsCache.TryGetValue(types, out var cacheDeleg)) {
+				mapResult = ((Func<TContext, object?>?)cacheDeleg)!;
+				return mapResult != null;
+			}
+
+			KeyValuePair<(Type From, Type To), CustomMap> map;
+			try {
+				map = Maps.First(predicate);
+			}
+			catch {
+				mapResult = ((Func<TContext, object?>?)_mapsCache.GetOrAdd(types, _ => (Delegate?)null))!;
+				return mapResult != null;
+			}
+
+			var mapDeleg = TypeUtils.MethodToDelegate<Func<TContext, object?>>(map.Value.Method, "context");
+
+			mapResult = ((Func<TContext, object?>?)_mapsCache.GetOrAdd(types, _ => WrapDelegate))!;
+			return mapResult != null;
+
+
+			object? WrapDelegate(TContext context) {
+				try {
+					return mapDeleg.Invoke(context);
+				}
+				catch (OperationCanceledException) {
+					throw;
+				}
+				catch (Exception e) {
+					throw new MappingException(e, types);
+				}
+			}
 		}
 
 		internal bool TryGetSingleMap<TContext>((Type From, Type To) types, out Func<object?, TContext, object?> map) {

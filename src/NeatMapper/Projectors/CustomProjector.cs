@@ -51,6 +51,7 @@ namespace NeatMapper {
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
 				// Expand mapper.Project into the corresponding expressions
 				if (node.Method.DeclaringType == typeof(NestedProjector) &&
+					node.Method.Name == nameof(NestedProjector.Project) &&
 					RetrieveValueRecursively(node.Object!) is NestedProjector nestedProjector) {
 
 					var argumentType = node.Arguments[0].Type;
@@ -105,11 +106,15 @@ namespace NeatMapper {
 			}
 		}
 
+		/// <summary>
+		/// Configuration for class and additional maps for the projector.
+		/// </summary>
+		internal readonly CustomMapsConfiguration _canProjectConfiguration;
 
 		/// <summary>
 		/// Configuration for class and additional maps for the projector.
 		/// </summary>
-		internal readonly CustomMapsConfiguration _configuration;
+		internal readonly CustomMapsConfiguration _projectConfiguration;
 
 		/// <summary>
 		/// Cached input <see cref="MappingOptions"/> and output <see cref="ProjectionContext"/>.
@@ -134,7 +139,21 @@ namespace NeatMapper {
 			CustomProjectionAdditionalMapsOptions? additionalMapsOptions = null,
 			IServiceProvider? serviceProvider = null) {
 
-			_configuration = new CustomMapsConfiguration(
+			var typesToScan = (mapsOptions ?? new CustomMapsOptions()).TypesToScan;
+			_canProjectConfiguration = new CustomMapsConfiguration(
+				(_, i) => {
+					if (!i.IsGenericType)
+						return false;
+					var type = i.GetGenericTypeDefinition();
+					return type == typeof(ICanProject<,>)
+#if NET7_0_OR_GREATER
+						|| type == typeof(ICanProjectStatic<,>)
+#endif
+					;
+				},
+				typesToScan,
+				additionalMapsOptions?._canMaps.Values);
+			_projectConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
 					if (!i.IsGenericType)
 						return false;
@@ -145,9 +164,8 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
-				additionalMapsOptions?._maps.Values
-			);
+				typesToScan,
+				additionalMapsOptions?._maps.Values);
 			serviceProvider ??= EmptyServiceProvider.Instance;
 			_contextsCache = new MappingOptionsFactoryCache<ProjectionContext>(options => {
 				var overrideOptions = options.GetOptions<ProjectorOverrideMappingOptions>();
@@ -161,24 +179,12 @@ namespace NeatMapper {
 
 
 		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return _configuration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out _);
+			return CanProjectInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
 		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if(!_configuration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out var map))
+			if(!CanProjectInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
 				throw new MapNotFoundException((sourceType, destinationType));
-
-			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			LambdaExpression result;
 			try {
@@ -207,7 +213,34 @@ namespace NeatMapper {
 		}
 
 		public IEnumerable<(Type From, Type To)> GetMaps(MappingOptions?mappingOptions = null) {
-			return _configuration.GetMaps();
+			return _projectConfiguration.GetMaps();
+		}
+
+
+		private bool CanProjectInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions,
+			out Func<ProjectionContext, object?> map,
+			out ProjectionContext context) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (_projectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out map)) {
+				context = _contextsCache.GetOrCreate(mappingOptions);
+
+				if (_canProjectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out var canMatch))
+					return (bool)canMatch.Invoke(context)!;
+				else
+					return true;
+			}
+			else {
+				context = null!;
+				return false;
+			}
 		}
 	}
 }

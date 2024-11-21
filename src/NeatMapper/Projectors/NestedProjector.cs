@@ -34,6 +34,21 @@ namespace NeatMapper {
 		}
 
 
+		/// <inheritdoc cref="ProjectorExtensions.CanProject{TSource, TDestination}(IProjector, MappingOptions?)"/>
+		public bool CanProject<TSource, TDestination>(MappingOptions? mappingOptions) {
+			return Projector.CanProject<TSource, TDestination>(mappingOptions);
+		}
+
+		/// <inheritdoc cref="ProjectorExtensions.CanProject{TSource, TDestination}(IProjector, MappingOptions?)"/>
+		public bool CanProject<TSource, TDestination>(IEnumerable? mappingOptions) {
+			return Projector.CanProject<TSource, TDestination>(mappingOptions);
+		}
+
+		/// <inheritdoc cref="ProjectorExtensions.CanProject{TSource, TDestination}(IProjector, MappingOptions?)"/>
+		public bool CanProject<TSource, TDestination>(params object?[]? mappingOptions) {
+			return Projector.CanProject<TSource, TDestination>(mappingOptions);
+		}
+
 		/// <summary>
 		/// Projects an object by injecting it into a projection map.
 		/// </summary>
@@ -63,22 +78,22 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>The projected object.</returns>
 		public TDestination Project<TDestination>(object? source, MappingOptions? mappingOptions) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)"/>
 		public TDestination Project<TDestination>(object? source, IEnumerable? mappingOptions) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)"/>
 		public TDestination Project<TDestination>(object? source, params object?[]? mappingOptions) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)"/>
 		public TDestination Project<TDestination>(object? source) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)" path="/summary"/>
@@ -95,22 +110,22 @@ namespace NeatMapper {
 #pragma warning restore CS1712
 #endif
 
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
 		public TDestination Project<TSource, TDestination>(TSource? source, IEnumerable? mappingOptions) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
 		public TDestination Project<TSource, TDestination>(TSource? source, params object?[]? mappingOptions) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
 		public TDestination Project<TSource, TDestination>(TSource? source) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 	}
 }

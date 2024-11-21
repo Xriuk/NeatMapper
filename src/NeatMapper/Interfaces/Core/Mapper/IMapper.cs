@@ -13,8 +13,7 @@ namespace NeatMapper {
 	/// </remarks>
 	public interface IMapper {
 		/// <summary>
-		/// Checks if the mapper could create a new object from a given one. It does not guarantee
-		/// that the actual map will succeed.
+		/// Checks if the mapper could create a new object from a given one.
 		/// </summary>
 		/// <param name="sourceType">Type of the source object, used to retrieve the available maps.</param>
 		/// <param name="destinationType">
@@ -26,13 +25,12 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created
-		/// from a parameter of type <paramref name="sourceType"/>.
+		/// from an object of type <paramref name="sourceType"/>.
 		/// </returns>
 		bool CanMapNew(Type sourceType,Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
-		/// Checks if the mapper could merge an object into an existing one. It does not guarantee
-		/// that the actual map will succeed.
+		/// Checks if the mapper could merge an object into an existing one.
 		/// </summary>
 		/// <param name="sourceType">Type of the object to be mapped, used to retrieve the available maps.</param>
 		/// <param name="destinationType">Type of the destination object, used to retrieve the available maps.</param>

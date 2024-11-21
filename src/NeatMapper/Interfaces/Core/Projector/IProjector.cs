@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IProjector {
 		/// <summary>
-		/// Checks if the projector could project a given object to another. It does not guarantee that the actual map will succeed.
+		/// Checks if the projector could project a given object to another.
 		/// </summary>
 		/// <param name="sourceType">Type of the object to project, used to retrieve the available maps.</param>
 		/// <param name="destinationType">
