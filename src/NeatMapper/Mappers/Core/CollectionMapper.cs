@@ -64,6 +64,22 @@ namespace NeatMapper {
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
+		/// <summary>
+		/// Creates a new instance of <see cref="CollectionMapper"/>.
+		/// </summary>
+		/// <param name="elementsMapper">
+		/// <see cref="IMapper"/> to use to map collection elements.<br/>
+		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions"/>.
+		/// </param>
+		/// <param name="elementsMatcher">
+		/// <see cref="IMatcher"/> used to match elements between collections to merge them,
+		/// if null the elements won't be matched.<br/>
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions.Matcher"/>.
+		/// </param>
+		/// <param name="mergeCollectionsOptions">
+		/// Additional merging options to apply during mapping, null to use default.<br/>
+		/// Can be overridden during mapping with <see cref="MergeCollectionsMappingOptions"/>.
+		/// </param>
 		public CollectionMapper(
 			IMapper elementsMapper,
 			IMatcher? elementsMatcher = null,
@@ -166,6 +182,9 @@ namespace NeatMapper {
 			if (!CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMapper))
 				throw new MapNotFoundException(types);
 
+			TypeUtils.CheckObjectType(source, types.From, nameof(source));
+			TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
+
 			// New mapper is required, Merge mapper is optional for mapping the elements:
 			// - elements to update will use MergeMap (on the existing element),
 			//   or NewMap (by removing the existing element and adding the new one)
@@ -213,9 +232,6 @@ namespace NeatMapper {
 						var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
 						var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
 
-						TypeUtils.CheckObjectType(source, types.From, nameof(source));
-						TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
-
 						if (source is IEnumerable sourceEnumerable) {
 							object result;
 							try {
@@ -257,7 +273,7 @@ namespace NeatMapper {
 													!elementsToRemove.Contains(destinationElement)) {
 
 													matchingDestinationElement = destinationElement;
-													matchedDestinations?.Add(matchingDestinationElement);
+													matchedDestinations?.Add(destinationElement);
 													found = true;
 													break;
 												}

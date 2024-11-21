@@ -11,8 +11,8 @@ namespace NeatMapper {
 		/// <list type="bullet">
 		/// <item><see cref="IMatcher"/> and <see cref="IMatcherFactory"/></item>
 		/// <item>
-		/// <see cref="CustomMatcher"/>, <see cref="HierarchyCustomMatcher"/> and <see cref="CompositeMatcher"/>
-		/// which also contains, in addition to all the previous:
+		/// <see cref="CustomMatcher"/>, <see cref="HierarchyCustomMatcher"/>, <see cref="CollectionMatcher"/>
+		/// and <see cref="CompositeMatcher"/> which also contains, in addition to all the previous:
 		/// <list type="bullet">
 		/// <item><see cref="EquatableMatcher"/></item>
 		/// <item>EqualityOperatorsMatcher for (.NET 7+)</item>
@@ -91,11 +91,17 @@ namespace NeatMapper {
 					o.Matchers.Add(m);
 					o.Matchers.Add(h);
 				})
-				.PostConfigure(o => {
+				.PostConfigure<IServiceProvider>((o, s) => {
 					o.Matchers.Add(EquatableMatcher.Instance);
 #if NET7_0_OR_GREATER
 					o.Matchers.Add(EqualityOperatorsMatcher.Instance);
 #endif
+
+					// Creating collection mapper with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
+					o.Matchers.Add(new CollectionMatcher(
+						EmptyMatcher.Instance,
+						s.GetService<IOptionsSnapshot<CollectionMatchersOptions>>()?.Value));
+
 					o.Matchers.Add(ObjectEqualsMatcher.Instance);
 				});
 
@@ -118,6 +124,14 @@ namespace NeatMapper {
 					s.GetService<IOptionsSnapshot<CustomMapsOptions>>()?.Value,
 					s.GetService<IOptionsSnapshot<CustomHierarchyMatchAdditionalMapsOptions>>()?.Value,
 					s),
+				matchersLifetime));
+
+			// Collection matcher
+			services.Add(new ServiceDescriptor(
+				typeof(CollectionMatcher),
+				s => new CollectionMatcher(
+					s.GetRequiredService<IMatcher>(),
+					s.GetService<IOptionsSnapshot<CollectionMatchersOptions>>()?.Value),
 				matchersLifetime));
 
 			// Composite matcher
@@ -152,7 +166,7 @@ namespace NeatMapper {
 
 			// Register mapper services
 
-			// Normal mappers
+			// Normal mapper
 			services.Add(new ServiceDescriptor(
 				typeof(CustomMapper),
 				s => new CustomMapper(
@@ -166,7 +180,7 @@ namespace NeatMapper {
 				s => new ProjectionMapper(s.GetRequiredService<IProjector>()),
 				mappersLifetime));
 
-			// Collection mappers
+			// Collection mapper
 			services.Add(new ServiceDescriptor(
 				typeof(CollectionMapper),
 				s => new CollectionMapper(
@@ -204,7 +218,7 @@ namespace NeatMapper {
 
 			// Register mapper services
 
-			// Normal mappers
+			// Normal mapper
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncCustomMapper),
 				s => new AsyncCustomMapper(
@@ -214,7 +228,7 @@ namespace NeatMapper {
 					s),
 				asyncMappersLifetime));
 
-			// Collection mappers
+			// Collection mapper
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncCollectionMapper),
 				s => new AsyncCollectionMapper(

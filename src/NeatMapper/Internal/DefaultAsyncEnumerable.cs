@@ -19,7 +19,7 @@ namespace NeatMapper {
 			}
 
 			public ValueTask DisposeAsync() {
-				((IDisposable)this).Dispose();
+				Dispose();
 #if NET5_0_OR_GREATER
 				return ValueTask.CompletedTask;
 #else

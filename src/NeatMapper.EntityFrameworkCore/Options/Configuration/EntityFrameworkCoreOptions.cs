@@ -3,7 +3,8 @@
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
 	/// Configures options for retrieving entitites, for <see cref="EntityFrameworkCoreMapper"/>
-	/// and <see cref="AsyncEntityFrameworkCoreMapper"/>.
+	/// and <see cref="AsyncEntityFrameworkCoreMapper"/>.<br/>
+	/// Can be overridden during mapping with <see cref="EntityFrameworkCoreMappingOptions"/>.
 	/// </summary>
 	public sealed class EntityFrameworkCoreOptions {
 		/// <summary>
