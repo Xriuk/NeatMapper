@@ -369,6 +369,49 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNotNull(result[0]);
 			Assert.IsNull(result[1]);
 		}
+
+		[TestMethod]
+		public void ShouldNotReturnNullEntities() {
+			// Should not be ambiguous
+			{
+				new EntityFrameworkCoreMappingOptions();
+				new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly);
+				new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, null);
+				new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, null, true);
+				new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, null, true, true);
+
+				new EntityFrameworkCoreMappingOptions(entitiesRetrievalMode: EntitiesRetrievalMode.LocalOnly);
+				new EntityFrameworkCoreMappingOptions(dbContextInstance: null);
+				new EntityFrameworkCoreMappingOptions(throwOnDuplicateEntity: true);
+				new EntityFrameworkCoreMappingOptions(ignoreNullEntities: true);
+			}
+
+			var options = new MappingOptions(new EntityFrameworkCoreMappingOptions(ignoreNullEntities: true));
+
+			{
+				var result = _mapper.Map<IEnumerable<IntKey>>(new[] { 2, 0 }, options);
+				Assert.AreEqual(1, result.Count());
+				Assert.IsNotNull(result.First());
+			}
+
+			{
+				var result = _mapper.Map<GuidKey[]>(new List<Guid> { Guid.Empty, new Guid("56033406-E593-4076-B48A-70988C9F9190") }, options);
+				Assert.AreEqual(1, result.Length);
+				Assert.IsNotNull(result[0]);
+			}
+
+			{
+				var result = _mapper.Map<StringKey[]>(new[] { null, "Test" }, options);
+				Assert.AreEqual(1, result.Length);
+				Assert.IsNotNull(result[0]);
+			}
+
+			using(var factory = _mapper.MapNewFactory<int[], IEnumerable<IntFieldKey>>(options)){
+				var result = factory.Invoke(new[] { 2, 0 });
+				Assert.AreEqual(1, result.Count());
+				Assert.IsNotNull(result.First());
+			}
+		}
 	}
 
 

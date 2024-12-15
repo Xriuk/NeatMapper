@@ -111,9 +111,11 @@ namespace NeatMapper {
 				return true;
 			else if (objectType.IsInterface && objectType.IsGenericType) {
 				var interfaceDefinition = objectType.GetGenericTypeDefinition();
-				if (interfaceDefinition == typeof(IEnumerable<>) || interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(ICollection<>) ||
-					interfaceDefinition == typeof(IReadOnlyList<>) || interfaceDefinition == typeof(IReadOnlyCollection<>) ||
-					interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>) || interfaceDefinition == typeof(ISet<>)
+				if (interfaceDefinition == typeof(IEnumerable<>) ||
+					interfaceDefinition == typeof(ICollection<>) || interfaceDefinition == typeof(IReadOnlyCollection<>) ||
+					interfaceDefinition == typeof(IList<>) || interfaceDefinition == typeof(IReadOnlyList<>) ||
+					interfaceDefinition == typeof(IDictionary<,>) || interfaceDefinition == typeof(IReadOnlyDictionary<,>) ||
+					interfaceDefinition == typeof(ISet<>)
 #if NET5_0_OR_GREATER
 					|| interfaceDefinition == typeof(IReadOnlySet<>)
 #endif

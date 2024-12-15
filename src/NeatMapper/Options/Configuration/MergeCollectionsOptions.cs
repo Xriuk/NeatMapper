@@ -9,7 +9,10 @@ namespace NeatMapper {
 		/// <summary>
 		/// Creates a new instance of <see cref="MergeCollectionsOptions"/>.
 		/// </summary>
-		public MergeCollectionsOptions() {}
+		public MergeCollectionsOptions() {
+			RemoveNotMatchedDestinationElements = true;
+			RecreateReadonlyDestination = false;
+		}
 		/// <summary>
 		/// Creates a new instance of <see cref="MergeCollectionsOptions"/> by copying options from another instance.
 		/// </summary>
@@ -19,6 +22,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(options));
 
 			RemoveNotMatchedDestinationElements = options.RemoveNotMatchedDestinationElements;
+			RecreateReadonlyDestination = options.RecreateReadonlyDestination;
 		}
 
 
@@ -28,6 +32,13 @@ namespace NeatMapper {
 		/// Matched with an <see cref="IMatcher"/> (or <see cref="MergeCollectionsMappingOptions.Matcher"/>).
 		/// </summary>
 		/// <remarks>Defaults to <see langword="true"/>.</remarks>
-		public bool RemoveNotMatchedDestinationElements { get; set; } = true;
+		public bool RemoveNotMatchedDestinationElements { get; set; }
+
+		/// <summary>
+		/// If <see langword="true"/> will recreate readonly destination collections (like arrays, and readonly lists)
+		/// and add all the merged elements, otherwise will throw an <see cref="InvalidOperationException"/>.
+		/// </summary>
+		/// <remarks>Defaults to <see langword="false"/>.</remarks>
+		public bool RecreateReadonlyDestination { get; set; }
 	}
 }

@@ -13,6 +13,8 @@
 - `IMatcher` and `IMatchMapFactory` `PredicateDestination()` extension methods to create `Predicate()` factories by passing the destination instead of source and inferring its type.
 - `ObjectEqualsMatcher` now implements `IMatcherFactory`.
 - `CanProject` method to `NestedProjector` (which can be used outside expressions unlike `Project`).
+- `CollectionMatcher` which allows matching collections by matching elements inside, supports ordered matches and not.
+- `MergeCollectionsOptions` `RecreateReadonlyDestination` which allows merge mapping to readonly collections (normal and async) by recreating them, all the merged elements will be copied from the original destination and new ones added.
 
 ### Fixed
 
@@ -20,6 +22,7 @@
 - `ObjectEqualsMatcher` source and destination typechecking.
 - `AsyncCollectionMappersOptions`, `AsyncCompositeMapperOptions`, `CompositeMapperOptions`, `CompositeProjectorOptions` and `MergeCollectionsOptions` copy constructors added null checks.
 - `TypeConverterMapper` `IMapperFactory` missing implementation.
+- `AsyncCollectionMapper` mapper removed parallel mentions from merge maps docs, as it is not supported.
 
 
 ## [5.0.0] - 2024-11-03

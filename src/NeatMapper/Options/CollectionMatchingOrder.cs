@@ -1,6 +1,7 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Type of the ordering to use during matching.
+	/// Type of the ordering to use during matching. In every mode, the number of elements of the source
+	/// and destination collections must be the same.
 	/// </summary>
 	public enum CollectionMatchingOrder {
 		/// <summary>

@@ -197,7 +197,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 
 		[TestMethod]
 		public void ShouldNotMatchEntitiesWithShadowKeysWithoutContext() {
-			var options = new []{ new MatcherOverrideMappingOptions(serviceProvider: new ServiceCollection().BuildServiceProvider()) };
+			var options = new []{ new MatcherOverrideMappingOptions(serviceProvider: EmptyServiceProvider.Instance) };
 
 			Assert.IsFalse(_matcher.CanMatch<ShadowIntKey, int>(options));
 

@@ -24,6 +24,7 @@ namespace NeatMapper.Tests.Matching {
 			Assert.IsTrue(_matcher.Match<IEnumerable<int>, ICollection<string>>(new[] { 2, 0, -3 }, new []{ "4", "-6", "0" }, options));
 			Assert.IsFalse(_matcher.Match<IEnumerable<int>, ICollection<string>>(new[] { 2, 0, -3 }, new[] { "4", "0" }, options));
 			Assert.IsFalse(_matcher.Match<IEnumerable<int>, ICollection<string>>(new[] { 2, 0 }, new[] { "4", "-6", "0" }, options));
+			Assert.IsFalse(_matcher.Match<IEnumerable<int>, ICollection<string>>(new[] { 2, 0 }, new[] { "4", "0", "0" }, options));
 		}
 
 		[TestMethod]

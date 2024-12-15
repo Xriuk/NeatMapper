@@ -110,7 +110,8 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
-			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
@@ -178,7 +179,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 								// Query db for missing entities if needed,
 								// or attach missing elements
-								if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
+								if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrRemote) {
 									var missingEntities = localsAndPredicates.Where(lp => lp.LocalEntity == null && lp.Key != null);
 									if (missingEntities.Any()) {
 										var missingKeys = ListsPool.Get();
@@ -211,7 +212,7 @@ namespace NeatMapper.EntityFrameworkCore {
 										}
 									}
 								}
-								else if (retrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
+								else if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
 									// Not using Where() because the collection changes during iteration
 									foreach (var localAndPredicate in localsAndPredicates) {
 										if (localAndPredicate.LocalEntity != null || localAndPredicate.Key == null)
@@ -231,8 +232,12 @@ namespace NeatMapper.EntityFrameworkCore {
 								dbContextSemaphore.Release();
 							}
 
+							var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+								?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
 							foreach (var localAndPredicate in localsAndPredicates) {
-								addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+								if(!removeNullEntities || localAndPredicate.LocalEntity != null)
+									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 							}
 
 							result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
@@ -267,7 +272,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							try {
 								// Retrieve the tracked local entity (only if we are not going to retrieve it remotely,
 								// in which case we can use Find directly)
-								if (retrievalMode != EntitiesRetrievalMode.LocalOrRemote) { 
+								if (entitiesRetrievalMode != EntitiesRetrievalMode.LocalOrRemote) { 
 									result = localView
 										.Cast<object>()
 										.FirstOrDefault(e => normalizedElementsMatcherFactory.Invoke(source, e));
@@ -278,9 +283,9 @@ namespace NeatMapper.EntityFrameworkCore {
 								if (result == null) {
 									// Query db for missing entity if needed (this also performs a local search first),
 									// or attach the missing entity
-									if (retrievalMode == EntitiesRetrievalMode.LocalOrRemote)
+									if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrRemote)
 										result = dbContext.Find(types.To, keyValues);
-									else if(retrievalMode == EntitiesRetrievalMode.LocalOrAttach)
+									else if(entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach)
 										result = attachEntityDelegate.Invoke(keyValues, dbContext);
 								}
 							}
@@ -324,7 +329,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
 			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
-			
 			var throwOnDuplicateEntity = efCoreMappingOptions?.ThrowOnDuplicateEntity
 				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
 
@@ -341,15 +345,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
-			// because we might attach provided entities instead of creating new ones
-			MappingOptions? destinationMappingOptions;
-			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
-					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
-						o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, o?.DbContextInstance, o?.ThrowOnDuplicateEntity));
-			}
-			else
-				destinationMappingOptions = mappingOptions;
+			// because we might attach provided entities instead of creating new ones, also do not remove null entities yet
+			var destinationMappingOptions = CreateDestinationMappingOptions(mappingOptions);
 
 			// Check if we are mapping a collection or just a single entity
 			if (isCollection) {
@@ -368,7 +365,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							var sourceEntitiesEnumerable = Map(source, sourceType, destinationType, destinationMappingOptions) as IEnumerable
 								?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
-							using(var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) { 
+							using(var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity)) { 
 								mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
 							}
 						}
@@ -487,7 +484,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			var dbContext = RetrieveDbContext(mappingOptions);
 			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
-			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var retrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
@@ -536,6 +534,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 
 					var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To);
+
+					var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+						?? _entityFrameworkCoreOptions.IgnoreNullEntities;
 
 					return new DisposableNewMapFactory(
 						sourceType, destinationType,
@@ -627,7 +628,8 @@ namespace NeatMapper.EntityFrameworkCore {
 									var destination = collectionFactory.Invoke();
 
 									foreach (var localAndPredicate in localsAndPredicates) {
-										addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+										if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 									}
 
 									result = collectionConversionDelegate.Invoke(destination);
@@ -733,16 +735,8 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
-			// because we might attach provided entities instead of creating new ones
-			MappingOptions? destinationMappingOptions;
-			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
-					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
-						o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, o?.DbContextInstance, o?.ThrowOnDuplicateEntity));
-			}
-			else
-				destinationMappingOptions = mappingOptions;
-			var destinationFactory = MapNewFactory(sourceType, destinationType, destinationMappingOptions);
+			// because we might attach provided entities instead of creating new ones, also do not remove null entities yet
+			var destinationFactory = MapNewFactory(sourceType, destinationType, CreateDestinationMappingOptions(mappingOptions));
 
 			try { 
 				var throwOnDuplicateEntity = efCoreMappingOptions?.ThrowOnDuplicateEntity
@@ -765,7 +759,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					var newFactory = MapNewFactory(sourceType, destinationType, mappingOptions);
 
 					try { 
-						var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
+						var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity);
 
 						try { 
 							return new DisposableMergeMapFactory(

@@ -150,8 +150,8 @@ namespace NeatMapper {
 									sourceCount++;
 								}
 
-								if (matchedDestinations.Count != sourceCount) {
-									foreach (var destinationElement in destinationEnumerable.Cast<object>().Except(matchedDestinations)) {
+								if (sourceCount != matchedDestinations.Count) {
+									foreach (var destinationElement in destinationEnumerable.Cast<object>().Except([..matchedDestinations])) {
 										bool found = false;
 										foreach (var sourceElement in sourceEnumerable.Cast<object>()) {
 											if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {
@@ -347,8 +347,8 @@ namespace NeatMapper {
 										sourceCount++;
 									}
 
-									if(matchedDestinations.Count != sourceCount) {
-										foreach(var destinationElement in destinationEnumerable.Cast<object>().Except(matchedDestinations)) {
+									if(sourceCount != matchedDestinations.Count) {
+										foreach(var destinationElement in destinationEnumerable.Cast<object>().Except([.. matchedDestinations])) {
 											bool found = false;
 											foreach (var sourceElement in sourceEnumerable.Cast<object>()) {
 												if (elementsMatcherFactory.Invoke(sourceElement, destinationElement)) {

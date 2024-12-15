@@ -356,6 +356,72 @@ namespace NeatMapper.Tests.Mapping {
 		}
 
 		[TestMethod]
+		public void ShouldMapReadonlyCollectionDestinationIfRecreateIsTrue() {
+			var options = new MappingOptions(new MergeCollectionsMappingOptions(recreateReadonlyDestination: true));
+
+			// Without elements comparer
+			{
+				Assert.IsTrue(_mapper.CanMapMerge<decimal[], Price[]>(options));
+
+				var a = new Price {
+					Amount = 12m,
+					Currency = "EUR"
+				};
+				var b = new Price {
+					Amount = 34m,
+					Currency = "EUR"
+				};
+				var c = new Price {
+					Amount = 56m,
+					Currency = "EUR"
+				};
+				var destination = new Price[] { a, b, c };
+				var result = _mapper.Map(new[] { 20m, 15.25m, 0m }, destination, options);
+				Assert.IsNotNull(result);
+				Assert.AreNotSame(destination, result);
+				Assert.AreEqual(3, result.Count());
+				Assert.IsTrue(result.All(v => v != a && v != b && v != c));
+			}
+
+			// With elements comparer
+			{
+				var a = new CategoryDto {
+					Id = 2,
+					Parent = 2
+				};
+				var b = new CategoryDto {
+					Id = 3
+				};
+				var c = new CategoryDto {
+					Id = 5
+				};
+				var destination = new CategoryDto[] { a, b, c };
+				var result = _mapper.Map(new[] {
+					new Category {
+						Id = 3,
+						Parent = new Category {
+							Id = 7
+						}
+					},
+					new Category {
+						Id = 2
+					},
+					new Category {
+						Id = 6
+					}
+				}, destination, options);
+				Assert.IsNotNull(result);
+				Assert.AreNotSame(destination, result);
+				Assert.AreEqual(3, result.Count());
+				Assert.AreSame(a, result[0]);
+				Assert.AreEqual(2, result[0].Parent);
+				Assert.AreSame(b, result[1]);
+				Assert.AreEqual(7, result[1].Parent);
+				Assert.AreEqual(6, result[2].Id);
+			}
+		}
+
+		[TestMethod]
 		public void ShouldMapCollectionsOfCollectionsWithoutElementsComparer() {
 			// Cannot determine
 			Assert.IsTrue(_mapper.CanMapMerge<int[][], List<ICollection<string>>>());
@@ -1058,5 +1124,5 @@ namespace NeatMapper.Tests.Mapping {
 		}
 	}
 
-	// DEV: test matching to edited elements (via previous elements mapping) and newly added elements)
+	// DEV: test matching to edited elements (via previous elements mapping) and newly added elements
 }

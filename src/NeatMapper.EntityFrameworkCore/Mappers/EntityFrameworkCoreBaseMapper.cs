@@ -371,11 +371,17 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		/// <remarks>Returned factory contains semaphore if dbContext is not null</remarks>
 		internal DisposableMergeCollectionFactory MergeCollection(
-			(Type From, Type To) types, DbContext? dbContext, IKey? key, EntitiesRetrievalMode entitiesRetrievalMode,
+			(Type From, Type To) types, DbContext? dbContext, IKey? key,
 			MappingOptions? mappingOptions, bool throwOnDuplicateEntity) {
 
 			var addDelegate = ObjectFactory.GetCollectionAddDelegate(types.To);
 			var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(types.To);
+
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
+				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
+			var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+				?? _entityFrameworkCoreOptions.IgnoreNullEntities;
 
 			var removeNotMatchedDestinationElements = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>()?.RemoveNotMatchedDestinationElements
 				?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
@@ -521,7 +527,8 @@ namespace NeatMapper.EntityFrameworkCore {
 								throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destinationEnumerable}");
 						}
 						foreach (var element in elementsToAdd) {
-							addDelegate.Invoke(destinationEnumerable, element);
+							if(!removeNullEntities || element != null)
+								addDelegate.Invoke(destinationEnumerable, element);
 						}
 					}
 					catch (MapNotFoundException) {
@@ -564,6 +571,33 @@ namespace NeatMapper.EntityFrameworkCore {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions? mappingOptions) {
 			return GetMatcher(mappingOptions).MatchFactory(types.Key.TupleToValueTuple(), types.Entity, mappingOptions);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected MappingOptions? CreateDestinationMappingOptions(MappingOptions? mappingOptions) {
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
+				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
+			var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+				?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
+			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
+			// because we might attach provided entities instead of creating new ones, also do not remove null entities yet
+			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach || removeNullEntities) {
+				return (mappingOptions ?? MappingOptions.Empty)
+					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
+						o => new EntityFrameworkCoreMappingOptions(
+							entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach ?
+								EntitiesRetrievalMode.LocalOnly :
+								o?.EntitiesRetrievalMode,
+							o?.DbContextInstance,
+							o?.ThrowOnDuplicateEntity,
+							removeNullEntities ?
+								false :
+								o?.IgnoreNullEntities));
+			}
+			else
+				return mappingOptions;
 		}
 	}
 }

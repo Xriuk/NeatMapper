@@ -117,7 +117,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			var dbContext = RetrieveDbContext(mappingOptions);
 			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
-			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var retrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
@@ -248,8 +249,12 @@ namespace NeatMapper.EntityFrameworkCore {
 								dbContextSemaphore.Release();
 							}
 
+							var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+								?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
 							foreach (var localAndPredicate in localsAndPredicates) {
-								addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+								if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 							}
 
 							result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
@@ -348,8 +353,12 @@ namespace NeatMapper.EntityFrameworkCore {
 									dbContextSemaphore.Release();
 								}
 
+								var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+								?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
 								foreach (var localAndPredicate in localsAndPredicates) {
-									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+									if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+										addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 								}
 
 								result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
@@ -449,7 +458,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
 			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
-
 			var throwOnDuplicateEntity = efCoreMappingOptions?.ThrowOnDuplicateEntity
 				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
 
@@ -467,14 +475,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
 			// because we might attach provided entities instead of creating new ones
-			MappingOptions? destinationMappingOptions;
-			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
-					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
-						o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, o?.DbContextInstance, o?.ThrowOnDuplicateEntity));
-			}
-			else
-				destinationMappingOptions = mappingOptions;
+			var destinationMappingOptions = CreateDestinationMappingOptions(mappingOptions);
 
 			// Check if we are mapping a collection or just a single entity
 			if (isCollection) {
@@ -535,7 +536,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							var sourceEntitiesEnumerable = await MapAsync(sourceCollection, newSourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
 								?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
-							using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) {
+							using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity)) {
 								mergeFactory.Invoke(destinationEnumerable, (IEnumerable)sourceCollection, sourceEntitiesEnumerable);
 							}
 						}
@@ -559,7 +560,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								var sourceEntitiesEnumerable = await MapAsync(source, sourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
 									?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
-								using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) {
+								using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity)) {
 									mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
 								}
 							}
@@ -679,7 +680,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			var dbContext = RetrieveDbContext(mappingOptions);
 			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
-			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var retrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			var key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
@@ -728,6 +730,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 
 					var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To);
+
+					var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+						?? _entityFrameworkCoreOptions.IgnoreNullEntities;
 
 					if (types.From.IsAsyncEnumerable()) {
 						var getAsyncEnumeratorDelegate = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.Key);
@@ -832,7 +837,8 @@ namespace NeatMapper.EntityFrameworkCore {
 										var destination = collectionFactory.Invoke();
 
 										foreach (var localAndPredicate in localsAndPredicates) {
-											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+											if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+												addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 										}
 
 										result = collectionConversionDelegate.Invoke(destination);
@@ -943,7 +949,8 @@ namespace NeatMapper.EntityFrameworkCore {
 										var destination = collectionFactory.Invoke();
 
 										foreach (var localAndPredicate in localsAndPredicates) {
-											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+											if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+												addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 										}
 
 										result = collectionConversionDelegate.Invoke(destination);
@@ -1050,15 +1057,8 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
-			// because we might attach provided entities instead of creating new ones
-			MappingOptions? destinationMappingOptions;
-			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
-					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
-						o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, o?.DbContextInstance, o?.ThrowOnDuplicateEntity));
-			}
-			else
-				destinationMappingOptions = mappingOptions;
+			// because we might attach provided entities instead of creating new ones, also do not remove null entities yet
+			var destinationMappingOptions = CreateDestinationMappingOptions(mappingOptions);
 
 			var throwOnDuplicateEntity = efCoreOptions?.ThrowOnDuplicateEntity
 				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
@@ -1080,7 +1080,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				var newFactory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
 
 				try {
-					var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
+					var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity);
 
 					try { 
 						if (types.From.IsAsyncEnumerable()) {

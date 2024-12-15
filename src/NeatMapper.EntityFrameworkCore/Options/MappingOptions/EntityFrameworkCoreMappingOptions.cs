@@ -7,6 +7,11 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// defined in <see cref="EntityFrameworkCoreOptions"/>.
 	/// </summary>
 	public sealed class EntityFrameworkCoreMappingOptions {
+		/// <inheritdoc cref="EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode?, DbContext?, bool?, bool?)"/>
+		public EntityFrameworkCoreMappingOptions(
+			EntitiesRetrievalMode? entitiesRetrievalMode,
+			DbContext? dbContextInstance,
+			bool? throwOnDuplicateEntity) : this(entitiesRetrievalMode, dbContextInstance, throwOnDuplicateEntity, null) {}
 		/// <summary>
 		/// Creates a new instance of <see cref="EntityFrameworkCoreMappingOptions"/>.
 		/// </summary>
@@ -18,18 +23,20 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <inheritdoc cref="DbContextInstance" path="/summary"/>
 		/// <inheritdoc cref="DbContextInstance" path="/remarks"/>
 		/// </param>
-		/// <param name="throwOnDuplicateEntity">
-		/// <inheritdoc cref="ThrowOnDuplicateEntity" path="/summary"/>
-		/// <inheritdoc cref="ThrowOnDuplicateEntity" path="/remarks"/>
+		/// <param name="ignoreNullEntities">
+		/// <inheritdoc cref="IgnoreNullEntities" path="/summary"/>
+		/// <inheritdoc cref="IgnoreNullEntities" path="/remarks"/>
 		/// </param>
 		public EntityFrameworkCoreMappingOptions(
 			EntitiesRetrievalMode? entitiesRetrievalMode = null,
 			DbContext? dbContextInstance = null,
-			bool? throwOnDuplicateEntity = null) {
+			bool? throwOnDuplicateEntity = null,
+			bool? ignoreNullEntities = null) {
 
 			EntitiesRetrievalMode = entitiesRetrievalMode;
 			DbContextInstance = dbContextInstance;
 			ThrowOnDuplicateEntity = throwOnDuplicateEntity;
+			IgnoreNullEntities = ignoreNullEntities;
 		}
 
 
@@ -48,10 +55,15 @@ namespace NeatMapper.EntityFrameworkCore {
 		public DbContext? DbContextInstance { get; init; }
 
 		/// <summary>
-		/// If <see langword="true"/> will throw a <see cref="DuplicateEntityException"/> when a duplicate entity is found
-		/// for the same key while merging, otherwise will return the entity from the <see cref="DbContext"/>.
+		/// <inheritdoc cref="EntityFrameworkCoreOptions.ThrowOnDuplicateEntity" path="/summary"/>
 		/// </summary>
-		/// <remarks><see langword="null"/> to use global setting.</remarks>
+		/// <remarks><see langword="null"/> to use global setting from <see cref="EntityFrameworkCoreOptions"/></remarks>
 		public bool? ThrowOnDuplicateEntity { get; init; }
+
+		/// <summary>
+		/// <inheritdoc cref="EntityFrameworkCoreOptions.IgnoreNullEntities" path="/summary"/>
+		/// </summary>
+		/// <remarks><see langword="null"/> to use global setting from <see cref="EntityFrameworkCoreOptions"/></remarks>
+		public bool? IgnoreNullEntities { get; init; }
 	}
 }

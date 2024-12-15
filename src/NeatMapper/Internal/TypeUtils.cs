@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -79,13 +80,41 @@ namespace NeatMapper {
 			}
 		}
 
+		public static bool IsCollectionReadonly(Type collectionType) {
+			if (collectionType.IsArray || collectionType == typeof(string))
+				return true;
+
+			if (collectionType.IsInterface) {
+				if (collectionType.IsGenericType) {
+					var collectionDefinition = collectionType.GetGenericTypeDefinition();
+					return (collectionDefinition == typeof(IEnumerable<>) ||
+						collectionDefinition == typeof(IAsyncEnumerable<>) ||
+						collectionDefinition == typeof(IReadOnlyCollection<>) ||
+						collectionDefinition == typeof(IReadOnlyList<>) ||
+						collectionDefinition == typeof(IReadOnlyDictionary<,>)
+#if NET5_0_OR_GREATER
+						|| collectionDefinition == typeof(IReadOnlySet<>)
+#endif
+						);
+				}
+			}
+			else if (collectionType.IsGenericType) {
+				var collectionDefinition = collectionType.GetGenericTypeDefinition();
+				return (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+					collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+					collectionDefinition == typeof(ReadOnlyObservableCollection<>));
+			}
+
+			return false;
+		}
+
 		public static bool IsCollectionReadonly(object? collection) {
 			if(collection == null)
 				return false;
 
 			// Just in case https://stackoverflow.com/questions/4482557/what-interfaces-do-all-arrays-implement-in-c#comment4902688_4482567
 			var collectionType = collection.GetType();
-			if(collectionType.IsArray)
+			if(collectionType.IsArray || !collectionType.IsCollection())
 				return true;
 
 			return ICollection_IsReadOnlyCache.GetOrAdd(collectionType.GetCollectionElementType(), type => {

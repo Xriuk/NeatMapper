@@ -396,5 +396,40 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 			Assert.IsNotNull(result[1]);
 			Assert.IsNotNull(result[2]);
 		}
+
+		[TestMethod]
+		public void ShouldNotReturnNullEntities() {
+			var options = new MappingOptions(new EntityFrameworkCoreMappingOptions(ignoreNullEntities: true), new MergeCollectionsMappingOptions(false));
+
+			// New destination
+			{
+				var result = _mapper.Map<IEnumerable<int>, ICollection<IntKey>>(new[] { 2, 0 }, null, options);
+				Assert.AreEqual(1, result.Count());
+				Assert.IsNotNull(result.First());
+			}
+
+			// Empty destination
+			{
+				var result = _mapper.Map(new[] { 2, 0 }, new List<IntKey>(), options);
+				Assert.AreEqual(1, result.Count);
+				Assert.IsNotNull(result.First());
+			}
+
+			// Non-null destination elements (no nulls added)
+			{
+				var result = _mapper.Map(new List<Guid> { Guid.Empty, new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new List<GuidKey> { new GuidKey{ Id = new Guid("5ce48972-47aa-4297-98d0-096a632eb1d5") } }, options);
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNotNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+
+			// Null destination elements (no new nulls added)
+			{
+				var result = _mapper.Map(new List<Guid> { Guid.Empty, new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new List<GuidKey> { null }, options);
+				Assert.AreEqual(2, result.Count);
+				Assert.IsNull(result[0]);
+				Assert.IsNotNull(result[1]);
+			}
+		}
 	}
 }

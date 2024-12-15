@@ -6,6 +6,10 @@
 
 - Updated NeatMapper dependency version.
 
+### Added
+
+- `EntityFrameworkCoreOptions` and `EntityFrameworkCoreMappingOptions` `IgnoreNullEntities` which can prevent adding `null` entities to the destination collections, and only return found entities.
+
 ### Fixed
 
 - Upgraded `Microsoft.EntityFrameworkCore` dependency version to minimum (6.0.35 for .NET6/7 and 8.0.10 for .NET8) to fix [reported vulnerability with Microsoft.Extensions.Caching.Memory](https://github.com/advisories/GHSA-qj66-m88j-hmgj).

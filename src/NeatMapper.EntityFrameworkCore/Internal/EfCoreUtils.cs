@@ -24,10 +24,11 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			return _tupleToValueTupleCache.GetOrAdd(tuple, tupleType => {
 				var keyParam = Expression.Parameter(typeof(object), "key");
+				var tupleArgs = tupleType.GetGenericArguments();
 				// (object)new ValueTuple<...>(((Tuple<...>)key).Item1, ...)
 				Expression body = Expression.Convert(Expression.New(
-					TupleUtils.GetValueTupleConstructor(tupleType.GetGenericArguments()),
-					Enumerable.Range(1, tupleType.GetGenericArguments().Length)
+					TupleUtils.GetValueTupleConstructor(tupleArgs),
+					Enumerable.Range(1, tupleArgs.Length)
 						.Select(n => Expression.Property(Expression.Convert(keyParam, tupleType), "Item" + n))), typeof(object));
 				return Expression.Lambda<Func<object, object>>(body, keyParam).Compile();
 			});

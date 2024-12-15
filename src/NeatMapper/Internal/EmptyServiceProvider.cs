@@ -2,7 +2,7 @@
 
 namespace NeatMapper {
 	internal sealed class EmptyServiceProvider : IServiceProvider {
-		internal static readonly EmptyServiceProvider Instance = new EmptyServiceProvider();
+		internal static readonly IServiceProvider Instance = new EmptyServiceProvider();
 
 
 		private EmptyServiceProvider() { }
