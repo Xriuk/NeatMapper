@@ -91,10 +91,10 @@ namespace NeatMapper {
 					o.Matchers.Add(m);
 					o.Matchers.Add(h);
 				})
-				.PostConfigure<IServiceProvider>((o, s) => {
-					o.Matchers.Add(EquatableMatcher.Instance);
+				.PostConfigure<EquatableMatcher, IServiceProvider>((o, e, s) => {
+					o.Matchers.Add(e);
 #if NET7_0_OR_GREATER
-					o.Matchers.Add(EqualityOperatorsMatcher.Instance);
+					o.Matchers.Add(s.GetRequiredService<EqualityOperatorsMatcher>());
 #endif
 
 					// Creating collection mapper with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
@@ -125,6 +125,20 @@ namespace NeatMapper {
 					s.GetService<IOptionsSnapshot<CustomHierarchyMatchAdditionalMapsOptions>>()?.Value,
 					s),
 				matchersLifetime));
+
+			// Equatable matcher
+			services.Add(new ServiceDescriptor(
+				typeof(EquatableMatcher),
+				s => new EquatableMatcher(s.GetService<IOptionsSnapshot<NullableTypesMatchingOptions>>()?.Value),
+				matchersLifetime));
+
+			// Equality operators matcher
+#if NET7_0_OR_GREATER
+			services.Add(new ServiceDescriptor(
+				typeof(EqualityOperatorsMatcher),
+				s => new EqualityOperatorsMatcher(s.GetService<IOptionsSnapshot<NullableTypesMatchingOptions>>()?.Value),
+				matchersLifetime));
+#endif
 
 			// Collection matcher
 			services.Add(new ServiceDescriptor(

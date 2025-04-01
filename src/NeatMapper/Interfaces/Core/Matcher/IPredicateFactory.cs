@@ -37,7 +37,8 @@ namespace NeatMapper {
 	public abstract class PredicateFactory<TComparer> : IPredicateFactory {
 		public abstract Type ComparandType { get; }
 
-		public abstract Type ComparerType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type ComparerType => typeof(TComparer);
 
 
 		/// <inheritdoc cref="IPredicateFactory.Invoke(object?)"/>
@@ -52,6 +53,8 @@ namespace NeatMapper {
 
 
 		bool IPredicateFactory.Invoke(object? comparer) {
+			TypeUtils.CheckObjectType(comparer, typeof(TComparer), nameof(comparer));
+
 			return Invoke((TComparer?)comparer);
 		}
 

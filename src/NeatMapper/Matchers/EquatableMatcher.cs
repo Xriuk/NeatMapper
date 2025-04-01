@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
 
 namespace NeatMapper {
 	/// <summary>
@@ -11,24 +10,36 @@ namespace NeatMapper {
 	/// The types are matched in the provided order: source type is checked for matching implementations of
 	/// <see cref="IEquatable{T}"/> (so multiple types can be matched too).
 	/// </summary>
-	public sealed class EquatableMatcher : IMatcher, IMatcherFactory {
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private static bool CanMatchInternal(Type sourceType, Type destinationType) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return sourceType.GetInterfaces().Contains(typeof(IEquatable<>).MakeGenericType(destinationType));
-		}
-
+	public sealed class EquatableMatcher : InterfaceNullableMatcher, IMatcher, IMatcherFactory {
 		/// <summary>
 		/// Cached map delegates.
 		/// </summary>
 		private static readonly ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>> _equalityComparersCache =
 			new ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>>();
 
-		private static Func<object?, object?, bool> GetOrCreateEqualityComparer(Type sourceType, Type destinationType) {
+		/// <summary>
+		/// Singleton instance of the matcher.
+		/// </summary>
+		[Obsolete("The singleton instance will be removed in future versions, use DI or explicit instance creation instead.")]
+		public static readonly IMatcher Instance = new EquatableMatcher();
+
+
+		/// <summary>
+		/// Creates a new instance of <see cref="EquatableMatcher"/>.
+		/// </summary>
+		/// <param name="nullableTypesOptions">
+		/// Additional options to handle <see cref="Nullable{T}"/> types automatic matching, null to use default.<br/>
+		/// Can be overridden during matching with <see cref="NullableTypesMatchingMappingOptions"/>.
+		/// </param>
+		public EquatableMatcher(NullableTypesMatchingOptions? nullableTypesOptions = null) : base(nullableTypesOptions) { }
+
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected override bool CanMatchTypes((Type From, Type To) types) {
+			return types.From.GetInterfaces().Contains(typeof(IEquatable<>).MakeGenericType(types.To));
+		}
+
+		protected override Func<object?, object?, bool> GetOrCreateDelegate(Type sourceType, Type destinationType) {
 			return _equalityComparersCache.GetOrAdd((sourceType, destinationType), types => {
 				var sourceParam = Expression.Parameter(typeof(object), "source");
 				var destinationParam = Expression.Parameter(typeof(object), "destination");
@@ -41,44 +52,6 @@ namespace NeatMapper {
 
 				return Expression.Lambda<Func<object?, object?, bool>>(body, sourceParam, destinationParam).Compile();
 			});
-		}
-
-		/// <summary>
-		/// Singleton instance of the matcher.
-		/// </summary>
-		public static readonly IMatcher Instance = new EquatableMatcher();
-
-
-		private EquatableMatcher() { }
-
-
-		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			return CanMatchInternal(sourceType, destinationType);
-		}
-
-		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatchInternal(sourceType, destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-			return GetOrCreateEqualityComparer(sourceType, destinationType).Invoke(source, destination);
-		}
-
-		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatchInternal(sourceType, destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			var comparer = GetOrCreateEqualityComparer(sourceType, destinationType);
-
-			return new DefaultMatchMapFactory(sourceType, destinationType,
-				(source, destination) => {
-					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-					TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-					return comparer.Invoke(source, destination);
-				});
 		}
 	}
 }

@@ -43,9 +43,11 @@ namespace NeatMapper {
 	/// <typeparam name="TDestination">Destination type.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class AsyncNewMapFactory<TSource, TDestination> : IAsyncNewMapFactory {
-		public abstract Type SourceType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type SourceType => typeof(TSource);
 
-		public abstract Type DestinationType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type DestinationType => typeof(TDestination);
 
 
 		/// <inheritdoc cref="IAsyncNewMapFactory.Invoke(object?, CancellationToken)" path="/summary"/>
@@ -67,6 +69,8 @@ namespace NeatMapper {
 
 
 		async Task<object?> IAsyncNewMapFactory.Invoke(object? source, CancellationToken cancellationToken) {
+			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
+
 			return await Invoke((TSource?)source, cancellationToken);
 		}
 

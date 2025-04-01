@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -12,15 +13,45 @@ namespace NeatMapper {
 	/// The types are matched in the provided order: source type is checked for matching implementations of
 	/// <see cref="IEqualityOperators{TSelf, TOther, TResult}"/> (so multiple types can be matched too).
 	/// </summary>
-	public sealed class EqualityOperatorsMatcher : IMatcher, IMatcherFactory {
+	public sealed class EqualityOperatorsMatcher : InterfaceNullableMatcher {
 		/// <summary>
 		/// Cached map delegates.
 		/// </summary>
-		private static readonly ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>> _equalityComparersCache =
+		private static readonly ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>> _equalityOperatorsCache =
 			new ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>>();
 
-		private static Func<object?, object?, bool> GetOrCreateEqualityComparer(Type sourceType, Type destinationType) {
-			return _equalityComparersCache.GetOrAdd((sourceType, destinationType), types => {
+		/// <summary>
+		/// Singleton instance of the matcher.
+		/// </summary>
+		[Obsolete("The singleton instance will be removed in future versions, use DI or explicit instance creation instead.")]
+		public static readonly IMatcher Instance = new EqualityOperatorsMatcher();
+
+
+		/// <summary>
+		/// Creates a new instance of <see cref="EqualityOperatorsMatcher"/>.
+		/// </summary>
+		/// <param name="nullableTypesOptions">
+		/// Additional options to handle <see cref="Nullable{T}"/> types automatic matching, null to use default.<br/>
+		/// Can be overridden during matching with <see cref="NullableTypesMatchingMappingOptions"/>.
+		/// </param>
+		public EqualityOperatorsMatcher(NullableTypesMatchingOptions? nullableTypesOptions = null) : base(nullableTypesOptions) {}
+
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected override bool CanMatchTypes((Type From, Type To) types) {
+			return types.From.GetInterfaces().Any(i => {
+				if (!i.IsGenericType || i.GetGenericTypeDefinition() != typeof(IEqualityOperators<,,>))
+					return false;
+				var args = i.GetGenericArguments();
+				return args.Length == 3 &&
+					args[0] == types.From &&
+					args[1] == types.To &&
+					args[2] == typeof(bool);
+			});
+		}
+
+		protected override Func<object?, object?, bool> GetOrCreateDelegate(Type sourceType, Type destinationType) {
+			return _equalityOperatorsCache.GetOrAdd((sourceType, destinationType), types => {
 				var sourceParam = Expression.Parameter(typeof(object), "source");
 				var destinationParam = Expression.Parameter(typeof(object), "destination");
 				var method = types.From.GetInterfaceMap(typeof(IEqualityOperators<,,>).MakeGenericType(sourceType, destinationType, typeof(bool)))
@@ -32,51 +63,11 @@ namespace NeatMapper {
 				Expression body;
 				if (method.Name == "op_Equality")
 					body = Expression.Equal(Expression.Convert(sourceParam, types.From), Expression.Convert(destinationParam, types.To));
-				else 
+				else
 					body = Expression.Call(method, Expression.Convert(sourceParam, types.From), Expression.Convert(destinationParam, types.To));
-				
+
 				return Expression.Lambda<Func<object?, object?, bool>>(body, sourceParam, destinationParam).Compile();
 			});
-		}
-
-		/// <summary>
-		/// Singleton instance of the matcher.
-		/// </summary>
-		public static readonly IMatcher Instance = new EqualityOperatorsMatcher();
-
-
-		private EqualityOperatorsMatcher() { }
-
-
-		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return sourceType.GetInterfaces().Any(i => {
-				if (!i.IsGenericType || i.GetGenericTypeDefinition() != typeof(IEqualityOperators<,,>))
-					return false;
-				var args = i.GetGenericArguments();
-				return args.Length == 3 &&
-					args[0] == sourceType &&
-					args[1] == destinationType &&
-					args[2] == typeof(bool);
-			});
-		}
-
-		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatch(sourceType, destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			return GetOrCreateEqualityComparer(sourceType, destinationType).Invoke(source, destination);
-		}
-
-		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatch(sourceType, destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			return new DefaultMatchMapFactory(sourceType, destinationType, GetOrCreateEqualityComparer(sourceType, destinationType));
 		}
 	}
 }

@@ -76,32 +76,33 @@ namespace NeatMapper.Transitive {
 				}
 				else
 					return (sourceType, destinationType) => CreateTypesPath(sourceType, destinationType, graph, options);
-			});
 
 
-			List<Type>? CreateTypesPath(Type sourceType, Type destinationType, TransitiveGraph graph, MappingOptions options) {
-				// Retrieve the graph and source and destination types from it
-				if (!graph.TypeToKeyMap.TryGetValue(sourceType, out var sourceKey) ||
-					!graph.TypeToKeyMap.TryGetValue(destinationType, out var destinationKey)) {
+				List<Type>? CreateTypesPath(Type sourceType, Type destinationType, TransitiveGraph graph, MappingOptions options) {
+					// Retrieve the graph and source and destination types from it
+					if (!graph.TypeToKeyMap.TryGetValue(sourceType, out var sourceKey) ||
+						!graph.TypeToKeyMap.TryGetValue(destinationType, out var destinationKey)) {
 
-					return null;
+						return null;
+					}
+
+					var length = options.GetOptions<TransitiveMappingOptions>()?.MaxChainLength
+						?? _transitiveOptions.MaxChainLength;
+					if (length < 2)
+						return null;
+
+					// Retrieve the path, if any
+					var path = graph.Graph.Dijkstra(sourceKey, destinationKey, length - 1);
+					if (!path.IsFounded)
+						return null;
+
+					var typesPath = path.GetPath().Select(p => graph.Graph[p].Item).ToList();
+					if (typesPath.Count < 2 || typesPath.Count > length || typesPath[0] != sourceType || typesPath[^1] != destinationType)
+						throw new InvalidOperationException("Returned types are invalid");
+
+					return typesPath;
 				}
-
-				var length = options.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
-				if (length < 2)
-					return null;
-
-				// Retrieve the path, if any
-				var path = graph.Graph.Dijkstra(sourceKey, destinationKey, length - 1);
-				if (!path.IsFounded)
-					return null;
-
-				var typesPath = path.GetPath().Select(p => graph.Graph[p].Item).ToList();
-				if (typesPath.Count < 2 || typesPath.Count > length || typesPath[0] != sourceType || typesPath[^1] != destinationType)
-					throw new InvalidOperationException("Returned types are invalid");
-
-				return typesPath;
-			}
+			});
 		}
 
 

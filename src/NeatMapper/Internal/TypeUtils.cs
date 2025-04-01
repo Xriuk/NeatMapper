@@ -72,6 +72,11 @@ namespace NeatMapper {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsNullable(this Type type) {
+			return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static void CheckObjectType(object? obj, Type type, string? argument = null) {
 			if(obj != null ? !type.IsAssignableFrom(obj.GetType()) : (type.IsValueType && Nullable.GetUnderlyingType(type) == null)) {
 				var message = (obj != null ? $"Object of type {obj.GetType().FullName ?? obj.GetType().Name}" : "null") + " " +

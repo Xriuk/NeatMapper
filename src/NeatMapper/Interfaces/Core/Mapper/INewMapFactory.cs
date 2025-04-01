@@ -35,9 +35,11 @@ namespace NeatMapper {
 	/// <typeparam name="TDestination">Destination type.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class NewMapFactory<TSource, TDestination> : INewMapFactory {
-		public abstract Type SourceType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type SourceType => typeof(TSource);
 
-		public abstract Type DestinationType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type DestinationType => typeof(TDestination);
 
 
 		/// <inheritdoc cref="INewMapFactory.Invoke(object?)" path="/summary"/>
@@ -55,6 +57,8 @@ namespace NeatMapper {
 		
 
 		object? INewMapFactory.Invoke(object? source) {
+			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
+
 			return Invoke((TSource?)source);
 		}
 

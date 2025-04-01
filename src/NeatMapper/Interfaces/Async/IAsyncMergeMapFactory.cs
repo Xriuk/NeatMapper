@@ -45,9 +45,11 @@ namespace NeatMapper {
 	/// <typeparam name="TDestination">Destination type.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class AsyncMergeMapFactory<TSource, TDestination> : IAsyncMergeMapFactory {
-		public abstract Type SourceType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type SourceType => typeof(TSource);
 
-		public abstract Type DestinationType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type DestinationType => typeof(TDestination);
 
 
 		/// <inheritdoc cref="IAsyncMergeMapFactory.Invoke(object?, object?, CancellationToken)" path="/summary"/>
@@ -70,6 +72,9 @@ namespace NeatMapper {
 
 
 		async Task<object?> IAsyncMergeMapFactory.Invoke(object? source, object? destination, CancellationToken cancellationToken) {
+			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
+			TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
+
 			return await Invoke((TSource?)source, (TDestination?)destination, cancellationToken);
 		}
 
