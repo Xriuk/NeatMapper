@@ -68,7 +68,7 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestInitialize]
 		public void Initialize() {
-			_matcher = new EqualityOperatorsMatcher();
+			_matcher = EqualityOperatorsMatcher.Instance;
 		}
 
 
@@ -93,41 +93,6 @@ namespace NeatMapper.Tests.Matching {
 				Assert.IsTrue(factory.Invoke(new EquatableClass { Member = 4 }, 4));
 				Assert.IsFalse(factory.Invoke(new EquatableClass { Member = 3 }, 4));
 			}
-		}
-
-		[TestMethod]
-		public void ShouldMatchCompatibleNullableIfSupported() {
-			var options = new MappingOptions(new NullableTypesMatchingMappingOptions(true));
-
-			Assert.IsTrue(_matcher.CanMatch<EquatableClass, int?>(options));
-
-			Assert.IsTrue(_matcher.Match<EquatableClass, int?>(new EquatableClass { Member = 4 }, 4, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, int?>(new EquatableClass { Member = 4 }, 3, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, int?>(new EquatableClass { Member = 4 }, null, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, int?>(null, 3, options));
-			Assert.IsTrue(_matcher.Match<EquatableClass, int?>(null, null, options));
-
-			using (var factory = _matcher.MatchFactory<EquatableClass, int?>(options)) {
-				Assert.IsTrue(factory.Invoke(new EquatableClass { Member = 4 }, 4));
-				Assert.IsFalse(factory.Invoke(new EquatableClass { Member = 4 }, 3));
-				Assert.IsTrue(factory.Invoke(null, null));
-				Assert.IsFalse(factory.Invoke(null, 4));
-				Assert.IsFalse(factory.Invoke(new EquatableClass { Member = 4 }, null));
-			}
-		}
-
-		[TestMethod]
-		public void ShouldPreferExplicitNullableOperatorIfImplemented() {
-			var options = new MappingOptions(new NullableTypesMatchingMappingOptions(true));
-
-			Assert.IsTrue(_matcher.CanMatch<EquatableClass, float>(options));
-			Assert.IsTrue(_matcher.CanMatch<EquatableClass, float?>(options));
-
-			Assert.IsTrue(_matcher.Match<EquatableClass, float>(new EquatableClass { Member = 4 }, 4f, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, float>(new EquatableClass { Member = 4 }, 8f, options));
-
-			Assert.IsTrue(_matcher.Match<EquatableClass, float?>(new EquatableClass { Member = 4 }, 8f, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, float?>(new EquatableClass { Member = 4 }, 4f, options));
 		}
 
 		[TestMethod]

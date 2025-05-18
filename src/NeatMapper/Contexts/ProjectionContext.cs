@@ -8,9 +8,12 @@ namespace NeatMapper {
 		public ProjectionContext(IServiceProvider serviceProvider, IProjector projector, MappingOptions mappingOptions) :
 			this(serviceProvider, new NestedProjector(projector ?? throw new ArgumentNullException(nameof(projector))), mappingOptions) {}
 		public ProjectionContext(IServiceProvider serviceProvider, NestedProjector projector, MappingOptions mappingOptions) {
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-			Projector = projector ?? throw new ArgumentNullException(nameof(projector));
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
+			Projector = projector
+				?? throw new ArgumentNullException(nameof(projector));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 

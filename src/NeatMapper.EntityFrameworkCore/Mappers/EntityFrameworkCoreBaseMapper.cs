@@ -80,17 +80,25 @@ namespace NeatMapper.EntityFrameworkCore {
 				l => l.Clear());
 
 
+		private static IQueryable DbContextDbSet<Type>(DbContext dbContext) where Type : class {
+			return dbContext.Set<Type>();
+		}
+		private static readonly MethodInfo this_DbContextDbSet = NeatMapper.TypeUtils.GetMethod(() => DbContextDbSet<object>(default!));
+		private static IEnumerable DbSetLocal<Type>(IQueryable dbSet) where Type : class {
+			return ((DbSet<Type>)dbSet).Local;
+		}
+		private static readonly MethodInfo this_DbSetLocal = NeatMapper.TypeUtils.GetMethod(() => DbSetLocal<object>(default!));
+
+
 		/// <summary>
 		/// <see cref="Enumerable.Contains{TSource}(IEnumerable{TSource}, TSource)"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_Contains = typeof(Enumerable).GetMethods()
-			.First(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2);
+		private static readonly MethodInfo Enumerable_Contains = NeatMapper.TypeUtils.GetMethod(() => default(IEnumerable<object>)!.Contains(default(object)));
 
 		/// <summary>
 		/// <see cref="DbContext.Set{TEntity}()"/>
 		/// </summary>
-		private static readonly MethodInfo DbContext_Set = typeof(DbContext).GetMethods()
-			.First(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set) && m.GetParameters().Length == 0);
+		private static readonly MethodInfo DbContext_Set = NeatMapper.TypeUtils.GetMethod(() => default(DbContext)!.Set<object>());
 
 		/// <summary>
 		/// Delegates which retrieve a new <see cref="DbSet{TEntity}"/>.
@@ -106,23 +114,15 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		protected static IQueryable RetrieveDbSet(DbContext context, Type type) {
-			return _setCache.GetOrAdd(type, t => {
-				var param = Expression.Parameter(typeof(DbContext), "dbContext");
-				// dbContext.Set<Type>()
-				var body = Expression.Call(param, DbContext_Set.MakeGenericMethod(t));
-				return Expression.Lambda<Func<DbContext, IQueryable>>(body, param).Compile();
-			}).Invoke(context);
+			return _setCache.GetOrAdd(type, t =>
+				(Func<DbContext, IQueryable>)Delegate.CreateDelegate(typeof(Func<DbContext, IQueryable>), this_DbContextDbSet.MakeGenericMethod(t)))
+					.Invoke(context);
 		}
 
 		protected static IEnumerable GetLocalFromDbSet(IQueryable dbSet) {
-			return _localCache.GetOrAdd(dbSet.ElementType, t => {
-				var param = Expression.Parameter(typeof(IQueryable), "dbSet");
-				var prop = typeof(DbSet<>).MakeGenericType(t).GetProperty(nameof(DbSet<object>.Local))
-					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
-				// dbSet.Local
-				var body = Expression.Property(Expression.Convert(param, typeof(DbSet<>).MakeGenericType(t)), prop);
-				return Expression.Lambda<Func<IQueryable, IEnumerable>>(body, param).Compile();
-			}).Invoke(dbSet);
+			return _localCache.GetOrAdd(dbSet.ElementType, t =>
+				(Func<IQueryable, IEnumerable>)Delegate.CreateDelegate(typeof(Func<IQueryable, IEnumerable>), this_DbSetLocal.MakeGenericMethod(t)))
+					.Invoke(dbSet);
 		}
 
 		protected static LambdaExpression GetEntitiesPredicate(Type keyType, Type entityType, IKey key, IEnumerable<object[]> keysValues) {
@@ -274,6 +274,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		// Returns object array from ArrayPool
+		private readonly MethodInfo ArrayPool_Get = NeatMapper.TypeUtils.GetMethod(() => ArrayPool.Get(default(int)));
 		protected Func<object, object[]> GetOrCreateKeyToValuesDelegate(Type key) {
 			return _keyToValuesCache.GetOrAdd(key, keyType => {
 				var keyParam = Expression.Parameter(typeof(object), "key");
@@ -283,7 +284,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					body = Expression.Block(
 						[ keyValuesVar ],
 						// keyValues = ArrayPool.Get(1);
-						Expression.Assign(keyValuesVar, Expression.Call(typeof(ArrayPool).GetMethod(nameof(ArrayPool.Get))!, Expression.Constant(1))),
+						Expression.Assign(keyValuesVar, Expression.Call(ArrayPool_Get, Expression.Constant(1))),
 						// keyValues[0] = key;
 						Expression.Assign(Expression.ArrayAccess(keyValuesVar, Expression.Constant(0)), keyParam),
 						keyValuesVar
@@ -295,7 +296,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					var bodyExpressions = new Expression[2 + length];
 					// keyValues = ArrayPool.Get(N);
-					bodyExpressions[0] = Expression.Assign(keyValuesVar, Expression.Call(typeof(ArrayPool).GetMethod(nameof(ArrayPool.Get))!, Expression.Constant(length)));
+					bodyExpressions[0] = Expression.Assign(keyValuesVar, Expression.Call(ArrayPool_Get, Expression.Constant(length)));
 					for(var i = 1; i <= length; i++) {
 						// keyValues[N] = ((ValueTuple<...>)key).ItemN;
 						bodyExpressions[i] = Expression.Assign(
@@ -358,10 +359,10 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 
 				body = Expression.Block(
-					new[] { entityVar },
+					[ entityVar ],
 					// entity = new ...
 					Expression.Assign(entityVar, body),
-					Expression.Block(new[] { entityEntryVar }, blockExprs),
+					Expression.Block([ entityEntryVar ], blockExprs),
 					entityVar
 				);
 

@@ -9,6 +9,7 @@
 ### Added
 
 - `EntityFrameworkCoreOptions` and `EntityFrameworkCoreMappingOptions` `IgnoreNullEntities` which can prevent adding `null` entities to the destination collections, and only return found entities.
+- `EntityFrameworkCoreMapper` can now convert keys (single, composite, collections) to predicate expressions (`Expression<Func<Entity, bool>>`).
 
 ### Fixed
 

@@ -19,7 +19,8 @@ namespace NeatMapper {
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
 		/// <returns>
-		/// A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.
+		/// A collection of type pairs (including generic open types which can be mapped by the mapper,
+		/// may contain duplicate type pairs.
 		/// </returns>
 		IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null);
 
@@ -32,7 +33,8 @@ namespace NeatMapper {
 		/// since some mappers may depend on specific options to map or not two given types.
 		/// </param>
 		/// <returns>
-		/// A collection of type pairs which can be mapped by the mapper, may contain duplicate type pairs.
+		/// A collection of type pairs (including generic open types which can be mapped by the mapper,
+		/// may contain duplicate type pairs.
 		/// </returns>
 		IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null);
 	}

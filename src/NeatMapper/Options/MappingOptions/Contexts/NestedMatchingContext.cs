@@ -28,5 +28,15 @@ namespace NeatMapper {
 		/// if this is the first nested matching operation.
 		/// </summary>
 		public NestedMatchingContext? ParentContext { get; }
+
+
+		/// <summary>
+		/// Checks if this context or any of its parents matches a given predicate.
+		/// </summary>
+		/// <param name="predicate">Condition to check on the context(s).</param>
+		/// <returns>True if this context or any of its parents matches the given predicate.</returns>
+		public bool CheckRecursive(Func<NestedMatchingContext, bool> predicate) {
+			return predicate.Invoke(this) || ParentContext?.CheckRecursive(predicate) == true;
+		}
 	}
 }

@@ -10,6 +10,11 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	internal static class TypeUtils {
+		private static bool CollectionIsReadOnly<Type>(object collection) {
+			return ((ICollection<Type?>)collection).IsReadOnly;
+		}
+		private static readonly MethodInfo this_CollectionIsReadOnly = TypeUtils.GetMethod(() => CollectionIsReadOnly<object>(default!));
+
 		private static readonly ConcurrentDictionary<Type, Func<object, bool>> ICollection_IsReadOnlyCache =
 			new ConcurrentDictionary<Type, Func<object, bool>>();
 
@@ -81,7 +86,7 @@ namespace NeatMapper {
 			if(obj != null ? !type.IsAssignableFrom(obj.GetType()) : (type.IsValueType && Nullable.GetUnderlyingType(type) == null)) {
 				var message = (obj != null ? $"Object of type {obj.GetType().FullName ?? obj.GetType().Name}" : "null") + " " +
 					$"is not assignable to type {type.FullName ?? type.Name}.";
-				throw argument != null ? (Exception)new ArgumentException(message) : new InvalidOperationException(message);
+				throw argument != null ? (Exception)new ArgumentException(message, argument) : new InvalidOperationException(message);
 			}
 		}
 
@@ -122,13 +127,9 @@ namespace NeatMapper {
 			if(collectionType.IsArray || !collectionType.IsCollection())
 				return true;
 
-			return ICollection_IsReadOnlyCache.GetOrAdd(collectionType.GetCollectionElementType(), type => {
-				var collectionInterfaceType = typeof(ICollection<>).MakeGenericType(type);
-				var param = Expression.Parameter(typeof(object), "collection");
-				// ((ICollection<Type>)collection).IsReadOnly
-				var body = Expression.Property(Expression.Convert(param, collectionInterfaceType), collectionInterfaceType.GetProperty(nameof(ICollection<object>.IsReadOnly))!);
-				return Expression.Lambda<Func<object, bool>>(body, param).Compile();
-			}).Invoke(collection);
+			return ICollection_IsReadOnlyCache.GetOrAdd(collectionType.GetCollectionElementType(), type => 
+				(Func<object, bool>)Delegate.CreateDelegate(typeof(Func<object, bool>), this_CollectionIsReadOnly.MakeGenericMethod(type)))
+					.Invoke(collection);
 		}
 
 
@@ -176,6 +177,22 @@ namespace NeatMapper {
 			}
 
 			return Expression.Lambda<TDelegate>(body, parameterExpressions).Compile();
+		}
+
+		public static MethodInfo GetMethod<TReturn>(Expression<Func<TReturn?>> methodExpression) {
+			var method = ((MethodCallExpression)methodExpression.Body).Method;
+			if(method.IsGenericMethod)
+				method = method.GetGenericMethodDefinition();
+			return method;
+		}
+		public static MethodInfo GetMethod(Expression<Action> methodExpression) {
+			var method = ((MethodCallExpression)methodExpression.Body).Method;
+			if (method.IsGenericMethod)
+				method = method.GetGenericMethodDefinition();
+			return method;
+		}
+		public static PropertyInfo GetProperty<TProperty>(Expression<Func<TProperty?>> propertyExpression) {
+			return (PropertyInfo)((MemberExpression)propertyExpression.Body).Member;
 		}
 	}
 }

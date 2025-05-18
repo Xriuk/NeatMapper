@@ -10,15 +10,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// <see cref="Queryable.Select{TSource, TResult}(IQueryable{TSource}, Expression{Func{TSource, TResult}})"/>
 		/// </summary>
-		private static readonly MethodInfo Queryable_Select = typeof(Queryable).GetMethods().Single(m => {
-			if (m.Name != nameof(Queryable.Select))
-				return false;
-			var parameters = m.GetParameters();
-			if (parameters.Length != 2 || !parameters[1].ParameterType.IsGenericType)
-				return false;
-			var genericArguments = parameters[1].ParameterType.GetGenericArguments();
-			return genericArguments.Length == 1 && genericArguments[0].IsGenericType && genericArguments[0].GetGenericTypeDefinition() == typeof(Func<,>);
-		});
+		private static readonly MethodInfo Queryable_Select = TypeUtils.GetMethod(() => default(IQueryable<object>)!.Select(q => q));
 
 
 		#region Project

@@ -47,7 +47,7 @@ namespace NeatMapper {
 		/// <see cref="IMapper"/> which is used to map the elements of the collections, will be also provided
 		/// as a nested mapper in <see cref="MapperOverrideMappingOptions"/> (if not already present).
 		/// </summary>
-		private readonly IMapper _elementsMapper;
+		private readonly CompositeMapper _elementsMapper;
 
 		/// <summary>
 		/// <see cref="IMatcher"/> which is used to match source elements with destination elements
@@ -717,7 +717,8 @@ namespace NeatMapper {
 
 				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
 				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-				elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
+				elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
+					?? _elementsMapper;
 
 				return elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions) ||
 					(ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions));

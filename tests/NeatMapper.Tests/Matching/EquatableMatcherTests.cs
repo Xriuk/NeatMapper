@@ -36,7 +36,7 @@ namespace NeatMapper.Tests.Matching {
 
 		[TestInitialize]
 		public void Initialize() {
-			_matcher = new EquatableMatcher();
+			_matcher = EquatableMatcher.Instance;
 		}
 
 
@@ -89,80 +89,6 @@ namespace NeatMapper.Tests.Matching {
 				Assert.IsTrue(factory.Invoke(4, 4));
 				Assert.IsFalse(factory.Invoke(4, 3));
 			}
-		}
-
-		[TestMethod]
-		public void ShouldMatchCompatibleNullableIfSupported() {
-			var options = new MappingOptions(new NullableTypesMatchingMappingOptions(true));
-
-			Assert.IsTrue(_matcher.CanMatch<EquatableClass, int?>(options));
-
-			Assert.IsFalse(_matcher.CanMatch<string, int?>(options));
-			Assert.IsFalse(_matcher.CanMatch<int?, string>(options));
-
-			Assert.IsTrue(_matcher.CanMatch<int, int?>(options));
-			Assert.IsTrue(_matcher.CanMatch<int?, int>(options));
-			Assert.IsTrue(_matcher.CanMatch<int?, int?>(options));
-
-			Assert.IsTrue(_matcher.Match<EquatableClass, int?>(new EquatableClass(), 4, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, int?>(new EquatableClass(), 3, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, int?>(new EquatableClass(), null, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, int?>(null, 3, options));
-			Assert.IsTrue(_matcher.Match<EquatableClass, int?>(null, null, options));
-
-			Assert.IsTrue(_matcher.Match<int, int?>(4, 4, options));
-			Assert.IsFalse(_matcher.Match<int, int?>(4, 3, options));
-			Assert.IsFalse(_matcher.Match<int, int?>(4, null, options));
-
-			Assert.IsTrue(_matcher.Match<int?, int>(4, 4, options));
-			Assert.IsFalse(_matcher.Match<int?, int>(4, 3, options));
-			Assert.IsFalse(_matcher.Match<int?, int>(null, 3, options));
-
-			Assert.IsTrue(_matcher.Match<int?, int?>(4, 4, options));
-			Assert.IsFalse(_matcher.Match<int?, int?>(4, 3, options));
-			Assert.IsFalse(_matcher.Match<int?, int?>(4, null, options));
-			Assert.IsFalse(_matcher.Match<int?, int?>(null, 3, options));
-			Assert.IsTrue(_matcher.Match<int?, int?>(null, null, options));
-
-			using (var factory = _matcher.MatchFactory<EquatableClass, int?>(options)) {
-				Assert.IsTrue(factory.Invoke(new EquatableClass(), 4));
-				Assert.IsFalse(factory.Invoke(new EquatableClass(), 3));
-				Assert.IsTrue(factory.Invoke(null, null));
-				Assert.IsFalse(factory.Invoke(null, 4));
-				Assert.IsFalse(factory.Invoke(new EquatableClass(), null));
-			}
-
-			using (var factory = _matcher.MatchFactory<int, int?>(options)) {
-				Assert.IsTrue(factory.Invoke(4, 4));
-				Assert.IsFalse(factory.Invoke(4, 3));
-				Assert.IsFalse(factory.Invoke(4, null));
-			}
-			using (var factory = _matcher.MatchFactory<int?, int>(options)) {
-				Assert.IsTrue(factory.Invoke(4, 4));
-				Assert.IsFalse(factory.Invoke(4, 3));
-				Assert.IsFalse(factory.Invoke(null, 3));
-			}
-			using (var factory = _matcher.MatchFactory<int?, int?>(options)) {
-				Assert.IsTrue(factory.Invoke(4, 4));
-				Assert.IsFalse(factory.Invoke(4, 3));
-				Assert.IsFalse(factory.Invoke(4, null));
-				Assert.IsFalse(factory.Invoke(null, 3));
-				Assert.IsTrue(factory.Invoke(null, null));
-			}
-		}
-
-		[TestMethod]
-		public void ShouldPreferExplicitNullableEquatableIfImplemented() {
-			var options = new MappingOptions(new NullableTypesMatchingMappingOptions(true));
-
-			Assert.IsTrue(_matcher.CanMatch<EquatableClass, decimal>(options));
-			Assert.IsTrue(_matcher.CanMatch<EquatableClass, decimal?>(options));
-
-			Assert.IsTrue(_matcher.Match<EquatableClass, decimal>(new EquatableClass(), 8m, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, decimal>(new EquatableClass(), 4m, options));
-
-			Assert.IsTrue(_matcher.Match<EquatableClass, decimal?>(new EquatableClass(), 12m, options));
-			Assert.IsFalse(_matcher.Match<EquatableClass, decimal?>(new EquatableClass(), 8m, options));
 		}
 
 		[TestMethod]

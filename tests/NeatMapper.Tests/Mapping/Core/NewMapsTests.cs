@@ -283,7 +283,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(string source, MappingContext context) {
 
-				return new KeyValuePair<string, int>(source, source.Length);
+				return new KeyValuePair<string, int>(source, source?.Length ?? -1);
 			}
 
 #if NET7_0_OR_GREATER

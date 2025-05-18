@@ -19,19 +19,20 @@ namespace NeatMapper {
 			IAsyncMapper parentMapper,
 			MappingOptions mappingOptions) {
 
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
 
 			if (parentMapper == null)
 				throw new ArgumentNullException(nameof(parentMapper));
 
 			_mapper = new Lazy<IAsyncMapper>(() => {
 				var nestedMappingContext = new AsyncNestedMappingContext(parentMapper);
-				return new AsyncNestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
-					.ReplaceOrAdd<AsyncNestedMappingContext>(
-						n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
+				return new AsyncNestedMapper(nestedMapper, o => o.ReplaceOrAdd<AsyncNestedMappingContext>(
+					n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, o.Cached));
 			}, true);
 
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 

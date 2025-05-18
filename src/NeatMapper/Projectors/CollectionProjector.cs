@@ -16,47 +16,25 @@ namespace NeatMapper {
 		/// <summary>
 		/// <see cref="Queryable.Select{TSource, TResult}(IQueryable{TSource}, Expression{Func{TSource, TResult}})"/>
 		/// </summary>
-		private static readonly MethodInfo Queryable_Select = typeof(Queryable).GetMethods().Single(m => {
-			if(m.Name != nameof(Queryable.Select))
-				return false;
-			var parameters = m.GetParameters();
-			if(parameters.Length != 2 || !parameters[1].ParameterType.IsGenericType)
-				return false;
-			var genericArguments = parameters[1].ParameterType.GetGenericArguments();
-			return genericArguments.Length == 1 && genericArguments[0].IsGenericType && genericArguments[0].GetGenericTypeDefinition() == typeof(Func<,>);
-		});
+		private static readonly MethodInfo Queryable_Select = TypeUtils.GetMethod(() => default(IQueryable<object>)!.Select(q => q));
 		/// <summary>
 		/// <see cref="Enumerable.Select{TSource, TResult}(IEnumerable{TSource}, Func{TSource, TResult})"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_Select = typeof(Enumerable).GetMethods().Single(m => {
-			if (m.Name != nameof(Enumerable.Select))
-				return false;
-			var parameters = m.GetParameters();
-			return parameters.Length == 2 && parameters[1].ParameterType.IsGenericType &&
-				parameters[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>);
-		});
+		private static readonly MethodInfo Enumerable_Select = TypeUtils.GetMethod(() => default(IEnumerable<object>)!.Select(e => e));
 		/// <summary>
 		/// <see cref="Enumerable.ToArray{TSource}(IEnumerable{TSource})"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
-			?? throw new InvalidOperationException("Could not find Enumerable.ToArray<T>()");
+		private static readonly MethodInfo Enumerable_ToArray = TypeUtils.GetMethod(() => default(IEnumerable<object>)!.ToArray());
 		/// <summary>
 		/// <see cref="Enumerable.ToList{TSource}(IEnumerable{TSource})"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_ToList = typeof(Enumerable).GetMethod(nameof(Enumerable.ToList))
-			?? throw new InvalidOperationException("Could not find Enumerable.ToList<T>()");
+		private static readonly MethodInfo Enumerable_ToList = TypeUtils.GetMethod(() => default(IEnumerable<object>)!.ToList());
+#if !NETCOREAPP3_1_OR_GREATER && !NET5_0_OR_GREATER
 		/// <summary>
 		/// <see cref="Enumerable.ToDictionary{TSource, TKey, TElement}(IEnumerable{TSource}, Func{TSource, TKey}, Func{TSource, TElement})"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_ToDictionary = typeof(Enumerable).GetMethods().Single(m => {
-			if (m.Name != nameof(Enumerable.ToDictionary))
-				return false;
-			var parameters = m.GetParameters();
-			return parameters.Length == 3 && parameters[1].ParameterType.IsGenericType &&
-				parameters[1].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>) &&
-				parameters[2].ParameterType.IsGenericType &&
-				parameters[2].ParameterType.GetGenericTypeDefinition() == typeof(Func<,>);
-		});
+		private static readonly MethodInfo Enumerable_ToDictionary = TypeUtils.GetMethod(() => default(IEnumerable<object>)!.ToDictionary(e => e, e => e));
+#endif
 		/// <summary>
 		/// <see cref="string.String(char[])"/>
 		/// </summary>
@@ -71,9 +49,11 @@ namespace NeatMapper {
 			else if (type.IsGenericType) {
 				var genericDefinition = type.GetGenericTypeDefinition();
 				if (type.IsInterface) {
-					if (genericDefinition == typeof(IEnumerable<>) || genericDefinition == typeof(IList<>) || genericDefinition == typeof(ICollection<>) ||
-						genericDefinition == typeof(IReadOnlyList<>) || genericDefinition == typeof(IReadOnlyCollection<>) ||
-						genericDefinition == typeof(IDictionary<,>) || genericDefinition == typeof(IReadOnlyDictionary<,>) || genericDefinition == typeof(ISet<>)
+					if (genericDefinition == typeof(IEnumerable<>) ||
+						genericDefinition == typeof(ICollection<>) || genericDefinition == typeof(IReadOnlyCollection<>) ||
+						genericDefinition == typeof(IList<>) || genericDefinition == typeof(IReadOnlyList<>) ||
+						genericDefinition == typeof(IDictionary<,>) || genericDefinition == typeof(IReadOnlyDictionary<,>) ||
+						genericDefinition == typeof(ISet<>)
 #if NET5_0_OR_GREATER
 						|| genericDefinition == typeof(IReadOnlySet<>)
 #endif
@@ -181,9 +161,9 @@ namespace NeatMapper {
 								collection = CreateDictionary(body, elementTypes.To);
 							}
 							else if(genericDefinition == typeof(ISet<>)
-	#if NET5_0_OR_GREATER
+#if NET5_0_OR_GREATER
 							|| genericDefinition == typeof(IReadOnlySet<>)
-	#endif
+#endif
 								) {
 
 								// new HashSet(PROJECTION)
@@ -300,7 +280,8 @@ namespace NeatMapper {
 					elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
 
 					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-					elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector ?? _elementsProjector;
+					elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector
+						?? _elementsProjector;
 
 					return elementsProjector.CanProject(elementTypes.From, elementTypes.To, mappingOptions);
 				}

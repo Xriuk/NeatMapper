@@ -94,7 +94,7 @@ namespace NeatMapper.Analyzers {
 
 				context1.ReportDiagnostic(
 					Diagnostic.Create(Descriptor, nodeToDiagnose.GetLocation(), properties.ToImmutable(),
-						contextArgumentName, invocation.TargetMethod.Name ));
+						contextArgumentName, invocation.TargetMethod.Name));
 			},
 			OperationKind.Invocation);
 		}

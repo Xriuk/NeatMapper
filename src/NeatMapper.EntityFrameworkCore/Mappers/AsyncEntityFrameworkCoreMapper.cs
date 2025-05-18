@@ -36,14 +36,6 @@ namespace NeatMapper.EntityFrameworkCore {
 				t => EntityFrameworkQueryableExtensions_ToArrayAsync.MakeGenericMethod(t),
 				"queryable", "cancellationToken");
 
-		private static bool CheckAsyncCollectionMapperNestedContextRecursive(AsyncNestedMappingContext? context) {
-			if (context == null)
-				return false;
-			if (context.ParentMapper is AsyncCollectionMapper)
-				return true;
-			return CheckAsyncCollectionMapperNestedContextRecursive(context.ParentContext);
-		}
-
 
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncEntityFrameworkCoreMapper"/>.
@@ -1451,7 +1443,9 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		override protected bool CheckCollectionMapperNestedContextRecursive(MappingOptions? mappingOptions) {
-			return CheckAsyncCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<AsyncNestedMappingContext>());
+			return mappingOptions
+				?.GetOptions<AsyncNestedMappingContext>()
+				?.CheckRecursive(c => c.ParentMapper is AsyncCollectionMapper) == true;
 		}
 	}
 }

@@ -8,6 +8,7 @@ namespace NeatMapper {
 	/// Singleton <see cref="IAsyncMapper"/> which returns the provided source element (for both new and merge maps).
 	/// Supports only the same source/destination types. Can be used to merge collections of elements of the same type.
 	/// </summary>
+	[Obsolete("AsyncIdentityMapper will be made static in future versions, make sure you're using AsyncIdentityMapper.Instance")]
 	public sealed class AsyncIdentityMapper : IAsyncMapper, IAsyncMapperFactory {
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		private static bool CanMap(Type sourceType, Type destinationType) {
@@ -23,7 +24,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// Singleton instance of the mapper.
 		/// </summary>
-		public static readonly IAsyncMapper Instance = new AsyncIdentityMapper();
+		public static readonly IAsyncMapper Instance = new AsyncIMapperWrapperMapper(IdentityMapper.Instance);
 
 
 		private AsyncIdentityMapper() { }

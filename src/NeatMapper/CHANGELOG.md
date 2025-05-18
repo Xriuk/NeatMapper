@@ -6,7 +6,6 @@
 
 - Deprecated `IMatcher` and `IMatchMapFactory` `Predicate()` extension methods with destination to avoid ambiguities with the same types. New extension methods `PredicateDestination()` should be used instead.
 - Deprecated `(Async)EmptyMapper` `I(Async)MapperFactory` implementation in favor of the corresponding `I(Async)Mapper` extension methods which now check for `CanMap(Async)*()` methods and throw accordingly.
-- Deprecated `EquatableMatcher` and `EqualityOperatorsMatcher` singletons instance in favor of DI/explicit creation to support `NullableTypesMatchingOptions`.
 - Typed implementations of factories (`NewMapFactory<TSource, TDestination>`, ...) now have type members as virtual instead of abstract, and correspond to the type arguments by default where available.
 
 ### Added
@@ -17,9 +16,9 @@
 - `CanProject` method to `NestedProjector` (which can be used outside expressions unlike `Project`), which just forwards the calls to the underlying `IProjector`.
 - `CollectionMatcher` which allows matching collections by matching elements inside, supports ordered matches and not.
 - `MergeCollectionsOptions` `RecreateReadonlyDestination` which allows merge mapping to readonly collections (normal and async) by recreating them, all the merged elements will be copied from the original destination and new ones added.
-- `EquatableMatcher` and `EqualityOperatorsMatcher` are now available as services through the DI.
-- `NullableTypesMatchingOptions` (and `NullableTypesMatchingMappingOptions`) which allow handling automatically `Nullable<T>` types where the corresponding value types are supported for `EquatableMatcher`, `EqualityComparerMatcher` and `EqualityOperatorsMatcher`.
-- `EqualityComparerMatcher` static constructor for value types which also allows specifying `NullableTypesMatchingOptions`.
+- `NullableMapper`/`AsyncNullableMapper`/`NullableMatcher` which allows mapping/matching `Nullable<T>` types by mapping/matching underlying types.
+- `NestedMappingContext`/`AsyncNestedMappingContext`/`NestedMatchingContext`/`NestedProjectionContext` method `CheckRecursive` which allows to check if the context itself or any of its parent contexts matches a given predicate.
+- `AsyncIMapperWrapperMapper` which allows wrapping an `IMapper` for async calls.
 
 ### Fixed
 

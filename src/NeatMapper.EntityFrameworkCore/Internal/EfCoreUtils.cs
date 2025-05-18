@@ -95,43 +95,36 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// <see cref="SemaphoreSlim.Wait()"/>
 		/// </summary>
-		public static readonly MethodInfo SemaphoreSlim_Wait = typeof(SemaphoreSlim).GetMethods().First(m =>
-			m.Name == nameof(SemaphoreSlim.Wait) && m.GetParameters().Length == 0);
+		public static readonly MethodInfo SemaphoreSlim_Wait = NeatMapper.TypeUtils.GetMethod(() => default(SemaphoreSlim)!.Wait());
 
 		/// <summary>
 		/// <see cref="SemaphoreSlim.Release()"/>
 		/// </summary>
-		public static readonly MethodInfo SemaphoreSlim_Release = typeof(SemaphoreSlim).GetMethods().First(m =>
-			m.Name == nameof(SemaphoreSlim.Release) && m.GetParameters().Length == 0);
+		public static readonly MethodInfo SemaphoreSlim_Release = NeatMapper.TypeUtils.GetMethod(() => default(SemaphoreSlim)!.Release());
 
 		/// <summary>
 		/// <see cref="DbContext.Entry(object)"/>
 		/// </summary>
-		public static readonly MethodInfo DbContext_Entry = typeof(DbContext).GetMethods().First(m =>
-			m.Name == nameof(DbContext.Entry) && !m.IsGenericMethod);
+		public static readonly MethodInfo DbContext_Entry = NeatMapper.TypeUtils.GetMethod(() => default(DbContext)!.Entry(default(object)!));
 
 		/// <summary>
 		/// <see cref="EntityEntry.State"/>
 		/// </summary>
-		public static readonly PropertyInfo EntityEntry_State = typeof(EntityEntry).GetProperty(nameof(EntityEntry.State))
-			?? throw new Exception("Could not find EntityEntry.State");
+		public static readonly PropertyInfo EntityEntry_State = NeatMapper.TypeUtils.GetProperty(() => default(EntityEntry)!.State);
 
 		/// <summary>
 		/// <see cref="EntityEntry.Property(string)"/>
 		/// </summary>
-		public static readonly MethodInfo EntityEntry_Property = typeof(EntityEntry).GetMethod(nameof(EntityEntry.Property), [ typeof(string) ])
-			?? throw new Exception("Could not find EntityEntry.Property(string)");
+		public static readonly MethodInfo EntityEntry_Property = NeatMapper.TypeUtils.GetMethod(() => default(EntityEntry)!.Property(default(string)!));
 
 		/// <summary>
 		/// <see cref="MemberEntry.CurrentValue"/>
 		/// </summary>
-		public static readonly PropertyInfo MemberEntry_CurrentValue = typeof(MemberEntry).GetProperty(nameof(MemberEntry.CurrentValue))
-			?? throw new Exception("Could not find MemberEntry.CurrentValue");
+		public static readonly PropertyInfo MemberEntry_CurrentValue = NeatMapper.TypeUtils.GetProperty(() => default(MemberEntry)!.CurrentValue);
 
 		/// <summary>
 		/// <see cref="EF.Property{TProperty}(object, string)"/>
 		/// </summary>
-		public static readonly MethodInfo EF_Property = typeof(EF).GetMethod(nameof(EF.Property))
-			?? throw new Exception("Could not find EF.Property<T>(object, string)");
+		public static readonly MethodInfo EF_Property = NeatMapper.TypeUtils.GetMethod(() => EF.Property<object>(default(object)!, default(string)!));
 	}
 }

@@ -6,11 +6,12 @@ namespace NeatMapper{
 	/// <summary>
 	/// Singleton <see cref="IAsyncMapper"/> which cannot map any type.
 	/// </summary>
+	[Obsolete("AsyncEmptyMapper will be made static in future versions, make sure you're using AsyncEmptyMapper.Instance")]
 	public sealed class AsyncEmptyMapper : IAsyncMapper, IAsyncMapperFactory {
 		/// <summary>
 		/// Singleton instance of the mapper
 		/// </summary>
-		public static readonly IAsyncMapper Instance = new AsyncEmptyMapper();
+		public static readonly IAsyncMapper Instance = new AsyncIMapperWrapperMapper(EmptyMapper.Instance);
 
 
 		private AsyncEmptyMapper() { }

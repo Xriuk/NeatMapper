@@ -497,9 +497,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// <see cref="RuntimeHelpers.IsReferenceOrContainsReferences{T}"/>
 		/// </summary>
-        static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference =
-            typeof(RuntimeHelpers).GetMethod(nameof(RuntimeHelpers.IsReferenceOrContainsReferences))!
-                ?? throw new InvalidOperationException("Could not find RuntimeHelpers.IsReferenceOrContainsReferences");
+        static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference = TypeUtils.GetMethod(() => RuntimeHelpers.IsReferenceOrContainsReferences<object>());
 #endif
 		static bool IsUnmanaged(Type type) {
 #if NET47 || NET48

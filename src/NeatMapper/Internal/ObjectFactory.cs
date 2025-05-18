@@ -12,11 +12,45 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	internal static class ObjectFactory {
+		private static object ConstructType<Type>() where Type : new() {
+			return new Type();
+		}
+		private static readonly MethodInfo this_ConstructType = TypeUtils.GetMethod(() => ConstructType<object>());
+
+		private static void CollectionAdd<Type>(object collection, object? element) {
+			((ICollection<Type?>)collection).Add((Type?)element);
+		}
+		private static readonly MethodInfo this_CollectionAdd = TypeUtils.GetMethod(() => CollectionAdd<object>(default!, default));
+
+		private static bool CollectionRemove<Type>(object collection, object? element) {
+			return ((ICollection<Type?>)collection).Remove((Type?)element);
+		}
+		private static readonly MethodInfo this_CollectionRemove = TypeUtils.GetMethod(() => CollectionRemove<object>(default!, default));
+
+		private static object CollectionToArray<Type>(object collection) {
+			return ((IEnumerable<Type?>)collection).ToArray();
+		}
+		private static readonly MethodInfo this_CollectionToArray = TypeUtils.GetMethod(() => CollectionToArray<object>(default!));
+
+		private static IAsyncDisposable AsyncEnumerableGetAsyncEnumerator<Type>(object enumerable, CancellationToken cancellationToken) {
+			return ((IAsyncEnumerable<Type>)enumerable).GetAsyncEnumerator(cancellationToken);
+		}
+		private static readonly MethodInfo this_AsyncEnumerableGetAsyncEnumerator = TypeUtils.GetMethod(() => AsyncEnumerableGetAsyncEnumerator<object>(default!, default));
+
+		private static ValueTask<bool> AsyncEnumeratorMoveNextAsync<Type>(IAsyncDisposable enumerator) {
+			return ((IAsyncEnumerator<Type>)enumerator).MoveNextAsync();
+		}
+		private static readonly MethodInfo this_AsyncEnumeratorMoveNextAsync = TypeUtils.GetMethod(() => AsyncEnumeratorMoveNextAsync<object>(default!));
+
+		private static object? AsyncEnumeratorCurrent<Type>(IAsyncDisposable enumerator) {
+			return ((IAsyncEnumerator<Type>)enumerator).Current;
+		}
+		private static readonly MethodInfo this_AsyncEnumeratorCurrent = TypeUtils.GetMethod(() => AsyncEnumeratorCurrent<object>(default!));
+
 		/// <summary>
 		/// <see cref="Enumerable.ToArray{TSource}(IEnumerable{TSource})"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_ToArray = typeof(Enumerable).GetMethod(nameof(Enumerable.ToArray))
-			?? throw new InvalidOperationException($"Cannot find method {nameof(Enumerable)}.{nameof(Enumerable.ToArray)}");
+		private static readonly MethodInfo Enumerable_ToArray = TypeUtils.GetMethod(() => default(IEnumerable<object>)!.ToArray());
 
 		private static readonly ConcurrentDictionary<Type, object> typeInstancesCache = new ConcurrentDictionary<Type, object>();
 
@@ -70,11 +104,8 @@ namespace NeatMapper {
 				}
 
 				// Check if the type has a parameterless constructor
-				if(type.IsValueType || type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null) { 
-					// new ValueType() or new Constr()
-					var body = Expression.New(type);
-					return (Expression.Lambda<Func<object>>(Expression.Convert(body, typeof(object))).Compile(), type);
-				}
+				if(type.IsValueType || type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null)  
+					return ((Func<object>)Delegate.CreateDelegate(typeof(Func<object>), this_ConstructType.MakeGenericMethod(type)), type);
 
 				return (null!, null!);
 			});
@@ -210,25 +241,13 @@ namespace NeatMapper {
 			});
 		}
 		public static Action<object, object?> GetCollectionAddDelegate(Type elementType) {
-			return collectionsAddMethodsCache.GetOrAdd(elementType, element => {
-				var collectionType = typeof(ICollection<>).MakeGenericType(elementType);
-				var collectionParam = Expression.Parameter(typeof(object), "collection");
-				var elementParam = Expression.Parameter(typeof(object), "element");
-				// ((ICollection<Type>)collection).Add((Type)element)
-				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Add))!, Expression.Convert(elementParam, elementType));
-				return Expression.Lambda<Action<object, object?>>(body, collectionParam, elementParam).Compile();
-			});
+			return collectionsAddMethodsCache.GetOrAdd(elementType, element => 
+				(Action<object, object?>)Delegate.CreateDelegate(typeof(Action<object, object?>), this_CollectionAdd.MakeGenericMethod(elementType)));
 		}
 
 		public static Func<object, object?, bool> GetCollectionRemoveDelegate(Type elementType) {
-			return collectionsRemoveMethodsCache.GetOrAdd(elementType, element => {
-				var collectionType = typeof(ICollection<>).MakeGenericType(elementType);
-				var collectionParam = Expression.Parameter(typeof(object), "collection");
-				var elementParam = Expression.Parameter(typeof(object), "element");
-				// ((ICollection<Type>)collection).Remove((Type)element)
-				var body = Expression.Call(Expression.Convert(collectionParam, collectionType), collectionType.GetMethod(nameof(ICollection<object>.Remove))!, Expression.Convert(elementParam, elementType));
-				return Expression.Lambda<Func<object, object?, bool>>(body, collectionParam, elementParam).Compile();
-			});
+			return collectionsRemoveMethodsCache.GetOrAdd(elementType, element =>
+				(Func<object, object?, bool>)Delegate.CreateDelegate(typeof(Func<object, object?, bool>), this_CollectionRemove.MakeGenericMethod(elementType)));
 		}
 
 		public static Func<object, object> CreateCollectionConversionFactory(Type actualType, Type destinationType) {
@@ -238,10 +257,8 @@ namespace NeatMapper {
 				else if(destinationType.IsArray || destinationType.IsGenericType) { 
 					return collectionsConversionMethodsCache.GetOrAdd(destinationType, destination => {
 						if (destination.IsArray) {
-							var collectionParam = Expression.Parameter(typeof(object), "collection");
 							// ((Type)collection).ToArray()
-							var body = Expression.Call(Enumerable_ToArray.MakeGenericMethod(destination.GetElementType()!), Expression.Convert(collectionParam, actualType));
-							return Expression.Lambda<Func<object, object>>(Expression.Convert(body, typeof(object)), collectionParam).Compile();
+							return (Func<object, object>)Delegate.CreateDelegate(typeof(Func<object, object>), this_CollectionToArray.MakeGenericMethod(destination.GetArrayElementType()));
 						}
 						else if (destination.IsGenericType){
 							ConstructorInfo constr = null!;
@@ -291,41 +308,16 @@ namespace NeatMapper {
 		}
 
 		public static Func<object, CancellationToken, IAsyncDisposable> GetAsyncEnumerableGetAsyncEnumerator(Type elementType) {
-			return asyncGetEnumeratorMethodsCache.GetOrAdd(elementType, type => {
-				var enumerableType = typeof(IAsyncEnumerable<>).MakeGenericType(type);
-				var enumerableParam = Expression.Parameter(typeof(object), "enumerable");
-				var cancellationParam = Expression.Parameter(typeof(CancellationToken), "cancellationToken");
-				// ((IAsyncEnumerator<Type>)enumerable).GetAsyncEnumerator(cancellationToken)
-				var body = Expression.Call(
-					Expression.Convert(enumerableParam, enumerableType),
-					enumerableType.GetMethod(nameof(IAsyncEnumerable<object>.GetAsyncEnumerator))!,
-					cancellationParam);
-				return Expression.Lambda<Func<object, CancellationToken, IAsyncDisposable>>(body, enumerableParam, cancellationParam).Compile();
-			});
+			return asyncGetEnumeratorMethodsCache.GetOrAdd(elementType, type =>
+				(Func<object, CancellationToken, IAsyncDisposable>)Delegate.CreateDelegate(typeof(Func<object, CancellationToken, IAsyncDisposable>), this_AsyncEnumerableGetAsyncEnumerator.MakeGenericMethod(type)));
 		}
 		public static Func<IAsyncDisposable, ValueTask<bool>> GetAsyncEnumeratorMoveNextAsync(Type elementType) {
-			return asyncMoveNextMethodsCache.GetOrAdd(elementType, type => {
-				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
-				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
-				// ((IAsyncEnumerator<Type>)enumerator).MoveNextAsync()
-				var body = Expression.Call(
-					Expression.Convert(enumeratorParam, enumeratorType),
-					enumeratorType.GetMethod(nameof(IAsyncEnumerator<object>.MoveNextAsync))!);
-				return Expression.Lambda<Func<IAsyncDisposable, ValueTask<bool>>>(body, enumeratorParam).Compile();
-			});
+			return asyncMoveNextMethodsCache.GetOrAdd(elementType, type =>
+				(Func<IAsyncDisposable, ValueTask<bool>>)Delegate.CreateDelegate(typeof(Func<IAsyncDisposable, ValueTask<bool>>), this_AsyncEnumeratorMoveNextAsync.MakeGenericMethod(type)));
 		}
 		public static Func<IAsyncDisposable, object?> GetAsyncEnumeratorCurrent(Type elementType) {
-			return asyncCurrentMethodsCache.GetOrAdd(elementType, type => {
-				var enumeratorType = typeof(IAsyncEnumerator<>).MakeGenericType(type);
-				var enumeratorParam = Expression.Parameter(typeof(IAsyncDisposable), "enumerator");
-				// (object)((IAsyncEnumerator<Type>)enumerator).Current
-				var body = Expression.Convert(
-					Expression.Property(
-						Expression.Convert(enumeratorParam, enumeratorType),
-						enumeratorType.GetProperty(nameof(IAsyncEnumerator<object>.Current))!),
-					typeof(object));
-				return Expression.Lambda<Func<IAsyncDisposable, object?>>(body, enumeratorParam).Compile();
-			});
+			return asyncCurrentMethodsCache.GetOrAdd(elementType, type =>
+				(Func<IAsyncDisposable, object?>)Delegate.CreateDelegate(typeof(Func<IAsyncDisposable, object?>), this_AsyncEnumeratorCurrent.MakeGenericMethod(type)));
 		}
 	}
 }

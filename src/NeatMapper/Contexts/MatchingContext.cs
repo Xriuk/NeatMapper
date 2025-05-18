@@ -10,19 +10,20 @@ namespace NeatMapper {
 		public MatchingContext(IServiceProvider serviceProvider, IMatcher matcher, MappingOptions mappingOptions) :
 			this(serviceProvider, matcher, matcher, mappingOptions) {}
 		public MatchingContext(IServiceProvider serviceProvider, IMatcher nestedMatcher, IMatcher parentMatcher, MappingOptions mappingOptions) {
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
 
 			if(parentMatcher == null)
 				throw new ArgumentNullException(nameof(parentMatcher));
 
 			_matcher = new Lazy<IMatcher>(() => {
 				var nestedMatchingContext = new NestedMatchingContext(parentMatcher);
-				return new NestedMatcher(nestedMatcher, o => (o ?? MappingOptions.Empty)
-					.ReplaceOrAdd<NestedMatchingContext>(
-						n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext, (o ?? MappingOptions.Empty).Cached));
+				return new NestedMatcher(nestedMatcher, o => o.ReplaceOrAdd<NestedMatchingContext>(
+					n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext, o.Cached));
 			}, true);
 
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 

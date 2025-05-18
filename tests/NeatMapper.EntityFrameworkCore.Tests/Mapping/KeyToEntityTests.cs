@@ -217,7 +217,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldNotMapCompositeKeyToEntitysIfOrderIsWrong() {
+		public void ShouldNotMapCompositeKeyToEntityIfOrderIsWrong() {
 			// Tuple
 			{
 				Assert.IsFalse(_mapper.CanMapNew<Tuple<Guid, int>, CompositePrimitiveKey>());
@@ -244,7 +244,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapShadowKeyToEntities() {
+		public void ShouldMapShadowKeyToEntity() {
 			Assert.IsTrue(_mapper.CanMapNew<int, ShadowIntKey>());
 
 			Assert.IsNotNull(_mapper.Map<ShadowIntKey>(1));
@@ -319,7 +319,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Mapping {
 		}
 
 		[TestMethod]
-		public void ShouldMapNullableKeysCollectioToEntitiesCollection() {
+		public void ShouldMapNullableKeysCollectionToEntitiesCollection() {
 			Assert.IsTrue(_mapper.CanMapNew<IEnumerable<int?>, IntKey[]>());
 
 			{

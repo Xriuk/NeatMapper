@@ -59,53 +59,6 @@ namespace NeatMapper.Tests.Matching {
 		}
 
 		[TestMethod]
-		public void ShouldMatchCompatibleNullableIfSupported() {
-			IMatcher matcher = EqualityComparerMatcher.Create<int>(new EqualityComparerClass(), new NullableTypesMatchingOptions {
-				SupportNullableTypes = true
-			});
-
-			Assert.IsFalse(matcher.CanMatch<string, int?>());
-			Assert.IsFalse(matcher.CanMatch<int?, string>());
-
-			Assert.IsTrue(matcher.CanMatch<int, int?>());
-			Assert.IsTrue(matcher.CanMatch<int?, int>());
-			Assert.IsTrue(matcher.CanMatch<int?, int?>());
-
-			Assert.IsTrue(matcher.Match<int, int?>(4, 4));
-			Assert.IsFalse(matcher.Match<int, int?>(4, 3));
-			Assert.IsTrue(matcher.Match<int, int?>(3, 3));
-			Assert.IsFalse(matcher.Match<int, int?>(4, null));
-
-			Assert.IsTrue(matcher.Match<int?, int>(4, 4));
-			Assert.IsFalse(matcher.Match<int?, int>(4, 3));
-			Assert.IsFalse(matcher.Match<int?, int>(null, 3));
-
-			Assert.IsTrue(matcher.Match<int?, int?>(4, 4));
-			Assert.IsFalse(matcher.Match<int?, int?>(4, 3));
-			Assert.IsFalse(matcher.Match<int?, int?>(4, null));
-			Assert.IsFalse(matcher.Match<int?, int?>(null, 3));
-			Assert.IsTrue(matcher.Match<int?, int?>(null, null));
-
-			using (var factory = matcher.MatchFactory<int, int?>()) {
-				Assert.IsTrue(factory.Invoke(4, 4));
-				Assert.IsFalse(factory.Invoke(4, 3));
-				Assert.IsFalse(factory.Invoke(4, null));
-			}
-			using (var factory = matcher.MatchFactory<int?, int>()) {
-				Assert.IsTrue(factory.Invoke(4, 4));
-				Assert.IsFalse(factory.Invoke(4, 3));
-				Assert.IsFalse(factory.Invoke(null, 3));
-			}
-			using (var factory = matcher.MatchFactory<int?, int?>()) {
-				Assert.IsTrue(factory.Invoke(4, 4));
-				Assert.IsFalse(factory.Invoke(4, 3));
-				Assert.IsFalse(factory.Invoke(4, null));
-				Assert.IsFalse(factory.Invoke(null, 3));
-				Assert.IsTrue(factory.Invoke(null, null));
-			}
-		}
-
-		[TestMethod]
 		public void ShouldThrowExceptionsCorrectly() {
 			IMatcher matcher = EqualityComparerMatcher.Create<short>(new EqualityComparerClass());
 

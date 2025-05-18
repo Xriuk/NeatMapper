@@ -18,7 +18,8 @@ namespace NeatMapper {
 			IMapper parentMapper,
 			MappingOptions mappingOptions) {
 
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
 
 			if(parentMapper == null)
 				throw new ArgumentNullException(nameof(parentMapper));
@@ -26,10 +27,11 @@ namespace NeatMapper {
 			_mapper = new Lazy<IMapper>(() => {
 				var nestedMappingContext = new NestedMappingContext(parentMapper);
 				return new NestedMapper(nestedMapper, o => o.ReplaceOrAdd<NestedMappingContext>(
-					n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
+					n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, o.Cached));
 			}, true);
 
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 

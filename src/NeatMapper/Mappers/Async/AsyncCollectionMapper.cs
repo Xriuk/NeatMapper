@@ -55,7 +55,7 @@ namespace NeatMapper {
 		/// <see cref="IMapper"/> which is used to map the elements of the collections, will be also provided
 		/// as a nested mapper in <see cref="AsyncMapperOverrideMappingOptions"/> (if not already present).
 		/// </summary>
-		private readonly IAsyncMapper _elementsMapper;
+		private readonly AsyncCompositeMapper _elementsMapper;
 
 		/// <summary>
 		/// <see cref="IMatcher"/> which is used to match source elements with destination elements

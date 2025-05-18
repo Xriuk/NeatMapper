@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
@@ -306,7 +305,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncNewMap<string, KeyValuePair<string, int>>
 #endif
 				.MapAsync(string source, AsyncMappingContext context) {
-				return Task.FromResult(new KeyValuePair<string, int>(source, source.Length));
+				return Task.FromResult(new KeyValuePair<string, int>(source, source?.Length ?? -1));
 			}
 
 #if NET7_0_OR_GREATER
