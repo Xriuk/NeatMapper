@@ -59,7 +59,7 @@ jobs:
           target: "docs/_includes/License.md"
           flags: "-f"
       - name: Setup Ruby
-        uses: ruby/setup-ruby@8575951200e472d5f2d95c625da0c7bec8217c42 # v1.161.0
+        uses: ruby/setup-ruby@bb0f760b6c925183520ee0bcc9c4a432a7c8c3c6 # v1.241.0
         with:
           working-directory: "docs"
           ruby-version: '3.1' # Not needed with a .ruby-version file
