@@ -150,7 +150,7 @@ This is not an option, but a context created by mappers which use projectors to 
 public class MyMaps :
     INewMap<Product, ProductDto>
 {
-    Expression<Func<Book, BookDto>> Project(ProjectionContext context){
+    Expression<Func<Book?, BookDto?>> Project(ProjectionContext context){
         // EF.Property below projects the shadow key directly from the DB,
         // so it cannot be compiled into a delegate because the function 
         // cannot be invoked but must be converted into an SQL query,

@@ -15,3 +15,8 @@ has_children: true
 Transitive maps for NeatMapper.
 
 Allows mapping types by automatically chaining maps together, eg: If you have maps for types A -> B and B -> C you can also map A -> C by chaining A -> B -> C, supports normal maps and asynchronous ones, also supports collections.
+
+New maps are mapped in sequence, while for merge maps, new maps are applied until the last two, which are merged together:
+A -> C
+A -> B (new)
+B -> C (merge)

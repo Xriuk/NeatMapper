@@ -1,6 +1,6 @@
 # Changelog
 
-## [5.1.0] - Unreleased
+## [5.1.0] - 2025-05-18
 
 ### Changed
 
@@ -30,6 +30,7 @@
 - Source/destination type checks for `EqualityComparerMatcher` and `EqualityOperatorsMatcher`.
 - `EquatableMatcher`, `EqualityComparerMatcher` and `EqualityOperatorsMatcher` exceptions handling.
 - Mappers and matchers added type checks for non-generic factories.
+- Internal code cleanup
 
 
 ## [5.0.0] - 2024-11-03

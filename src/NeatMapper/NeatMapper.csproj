@@ -11,16 +11,15 @@
     <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#500---2024-11-03</PackageReleaseNotes>
-    <PackAsTool>False</PackAsTool>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <IncludeSymbols>True</IncludeSymbols>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>mapper;mapping;projector;projection</PackageTags>
-    <Copyright>Xriuk</Copyright>
-    <PackageIcon>icon.png</PackageIcon>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#510---2025-05-18</PackageReleaseNotes>
+		<Copyright>Xriuk</Copyright>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>mapper;mapping;projector;projection</PackageTags>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<IncludeSymbols>True</IncludeSymbols>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
