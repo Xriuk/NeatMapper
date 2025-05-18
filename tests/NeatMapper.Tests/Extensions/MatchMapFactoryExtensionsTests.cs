@@ -34,7 +34,7 @@ namespace NeatMapper.Tests.Extensions {
 				// Explicit source and destination
 				{
 					genericFactory1.Predicate("Test");
-					genericFactory1.Predicate(2);
+					genericFactory1.PredicateDestination(2);
 					//genericFactory2.Predicate("Test"); // Ambiguous
 				}
 
@@ -141,7 +141,7 @@ namespace NeatMapper.Tests.Extensions {
 			}
 
 			// Explicit source and destination (destination)
-			using (var predicate = _matcher.MatchFactory<Product, ProductDto>().Predicate<Product, ProductDto>(match1)) {
+			using (var predicate = _matcher.MatchFactory<Product, ProductDto>().PredicateDestination<Product, ProductDto>(match1)) {
 				var matchingProduct = products1.First(predicate);
 
 				Assert.AreEqual("DEF", matchingProduct.Code);

@@ -10,26 +10,20 @@ namespace NeatMapper {
 	/// </summary>
 	/// <remarks>All options inside are assumed to be immutable.</remarks>
 	public sealed class MappingOptions {
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private static readonly IReadOnlyDictionary<Type, object> emptyDictionary = new Dictionary<Type, object>();
 
 		/// <summary>
 		/// Empty instance with no options inside.
 		/// </summary>
-		public static readonly MappingOptions Empty = new MappingOptions((IEnumerable)null, true);
+		public static readonly MappingOptions Empty = new MappingOptions((IEnumerable?)null, true);
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 
 		/// <summary>
-		/// Types and instances of the present options
+		/// Types and instances of the present options.
 		/// </summary>
 		private readonly IReadOnlyDictionary<Type, object> options;
 
+		// DEV: consider making public?
 		internal bool Cached { get; }
 
 
@@ -44,15 +38,7 @@ namespace NeatMapper {
 		/// <exception cref="ArgumentException">
 		/// <paramref name="options"/> have more than one instance for the same type.
 		/// </exception>
-		public MappingOptions(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			options,
-			bool cached = false) {
-
+		public MappingOptions(IEnumerable? options,bool cached = false) {
 			if(options != null) {
 				options = options.Cast<object>().Where(o => o != null);
 
@@ -70,14 +56,7 @@ namespace NeatMapper {
 		}
 
 		/// <inheritdoc cref="MappingOptions(IEnumerable, bool)"/>
-		public MappingOptions(
-			params
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?[]?
-#else
-			object[]
-#endif
-			options) : this(options?.Length > 0 ? (IEnumerable)options : null) { }
+		public MappingOptions(params object?[]? options) : this(options?.Length > 0 ? (IEnumerable)options : null) { }
 
 		// Internal faster constructor
 		internal MappingOptions(IEnumerable<KeyValuePair<Type, object>> options,
@@ -99,13 +78,7 @@ namespace NeatMapper {
 		/// <param name="optionsType">Type of the option to retrieve.</param>
 		/// <returns>The retrieved option if found or <see langword="null"/>.</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="optionsType"/> was null.</exception>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			GetOptions(Type optionsType){
+		public object? GetOptions(Type optionsType){
 
 			if(optionsType == null)
 				throw new ArgumentNullException(nameof(optionsType));
@@ -135,19 +108,7 @@ namespace NeatMapper {
 		/// replaced with the provided factories.
 		/// </returns>
 		/// <exception cref="ArgumentNullException"><paramref name="factories"/> was null.</exception>
-		public MappingOptions Replace(IDictionary<Type, Func<object,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			>> factories,
-			bool cached = false) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public MappingOptions Replace(IDictionary<Type, Func<object, object?>> factories, bool cached = false) {
 			if (factories == null)
 				throw new ArgumentNullException(nameof(factories));
 			if(factories.Count == 0)
@@ -159,12 +120,12 @@ namespace NeatMapper {
 				.Select(f => {
 					var opt = GetOptions(f.Key);
 					if(opt == null)
-						return new KeyValuePair<Type, object>(f.Key, opt);
+						return new KeyValuePair<Type, object>(f.Key, opt!);
 
 					var ret = f.Value.Invoke(opt);
 					if(!changed && !object.Equals(ret, opt))
 						changed = true;
-					return new KeyValuePair<Type, object>(f.Key, ret);
+					return new KeyValuePair<Type, object>(f.Key, ret!);
 				})
 				.Where(o => o.Value != null)
 				.ToList();
@@ -173,10 +134,6 @@ namespace NeatMapper {
 				return this;
 
 			return new MappingOptions(newValues.Concat(options.Where(o => !factories.ContainsKey(o.Key))), cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <summary>
@@ -199,25 +156,7 @@ namespace NeatMapper {
 		/// replaced/added with the provided factories.
 		/// </returns>
 		/// <exception cref="ArgumentNullException"><paramref name="factories"/> was null.</exception>
-		public MappingOptions ReplaceOrAdd(IDictionary<Type, Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			>> factories,
-			bool cached = false) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public MappingOptions ReplaceOrAdd(IDictionary<Type, Func<object?, object?>> factories, bool cached = false) {
 			if (factories == null)
 				throw new ArgumentNullException(nameof(factories));
 			if (factories.Count == 0)
@@ -231,7 +170,7 @@ namespace NeatMapper {
 					var ret = f.Value.Invoke(opt);
 					if (!object.Equals(ret, opt))
 						changed = true;
-					return new KeyValuePair<Type, object>(f.Key, ret);
+					return new KeyValuePair<Type, object>(f.Key, ret!);
 				})
 				.Where(o => o.Value != null)
 				.ToList();
@@ -240,10 +179,6 @@ namespace NeatMapper {
 				return this;
 
 			return new MappingOptions(newValues.Concat(options.Where(o => !factories.ContainsKey(o.Key))), cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <summary>

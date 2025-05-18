@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NeatMapper.Transitive {
 	/// <summary>
@@ -49,14 +50,7 @@ namespace NeatMapper.Transitive {
 		/// Options to apply when mapping types.<br/>
 		/// Can be overridden during mapping with <see cref="TransitiveMappingOptions"/>.
 		/// </param>
-		public AsyncTransitiveMapper(IAsyncMapper mapper,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			TransitiveOptions?
-#else
-			TransitiveOptions
-#endif
-			transitiveOptions = null) {
-
+		public AsyncTransitiveMapper(IAsyncMapper mapper, TransitiveOptions? transitiveOptions = null) {
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 			_transitiveOptions = transitiveOptions ?? new TransitiveOptions();
 			_graphCreator = new GraphCreator(mappingOptions =>
@@ -72,16 +66,7 @@ namespace NeatMapper.Transitive {
 
 
 		#region IAsyncMapper methods
-		public bool CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -94,45 +79,16 @@ namespace NeatMapper.Transitive {
 			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions)) != null;
 		}
 
-		public bool CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out _, out _);
 		}
 
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public async Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -152,10 +108,12 @@ namespace NeatMapper.Transitive {
 				?? _mapper;
 
 			try {
-				object result = source;
-				foreach(var types in typesPath.Zip(typesPath.Skip(1), (t1, t2) => (From: t1, To: t2))) {
+				object? result = source;
+#pragma warning disable IDE0042
+				foreach (var types in typesPath.Zip(typesPath.Skip(1), (t1, t2) => (From: t1, To: t2))) {
 					result = await mapper.MapAsync(result, types.From, types.To, mappingOptions, cancellationToken);
 				}
+#pragma warning restore IDE0042
 				return result;
 			}
 			catch (OperationCanceledException) {
@@ -164,44 +122,15 @@ namespace NeatMapper.Transitive {
 			catch (Exception e) {
 				throw new MappingException(e, (sourceType, destinationType));
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public async Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
+			object? destination,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (!CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out var mergeMapFrom, out var newMappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
@@ -233,28 +162,11 @@ namespace NeatMapper.Transitive {
 					mappingOptions,
 					cancellationToken);
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
 		#region IAsyncMapperFactory methods
-		public IAsyncNewMapFactory MapAsyncNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IAsyncNewMapFactory MapAsyncNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -276,16 +188,18 @@ namespace NeatMapper.Transitive {
 			var factories = new IAsyncNewMapFactory[typesPath.Count - 1];
 			try {
 				var i = 0;
+#pragma warning disable IDE0042
 				foreach (var types in typesPath.Zip(typesPath.Skip(1), (t1, t2) => (From: t1, To: t2))) {
 					factories[i] = mapper.MapAsyncNewFactory(types.From, types.To, mappingOptions);
 					i++;
 				}
+#pragma warning restore IDE0042
 
 				return new DisposableAsyncNewMapFactory(
 					sourceType, destinationType,
 					async (source, cancellationToken) => {
 						try {
-							object result = source;
+							object? result = source;
 							foreach (var factory in factories) {
 								result = await factory.Invoke(result, cancellationToken);
 							}
@@ -306,26 +220,9 @@ namespace NeatMapper.Transitive {
 				}
 				throw;
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IAsyncMergeMapFactory MapAsyncMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IAsyncMergeMapFactory MapAsyncMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out var mergeMapFrom, out var newMappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
@@ -357,22 +254,14 @@ namespace NeatMapper.Transitive {
 					throw;
 				}
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private bool CanMapMergeInternal(
 			Type sourceType,
 			Type destinationType,
-			ref MappingOptions mappingOptions,
+			[NotNullWhen(true)] ref MappingOptions? mappingOptions,
 			out Type mergeMapFrom,
 			out MappingOptions newMappingOptions) {
 
@@ -381,11 +270,11 @@ namespace NeatMapper.Transitive {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			newMappingOptions = null;
+			newMappingOptions = null!;
 
 			// We cannot map identical types
 			if (sourceType == destinationType) {
-				mergeMapFrom = null;
+				mergeMapFrom = null!;
 				return false;
 			}
 
@@ -393,7 +282,7 @@ namespace NeatMapper.Transitive {
 
 			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
 			if (length < 2) {
-				mergeMapFrom = null;
+				mergeMapFrom = null!;
 				return false;
 			}
 
@@ -401,6 +290,7 @@ namespace NeatMapper.Transitive {
 				?? _mapper;
 
 			// Retrieve all the merge maps with the selected destination type
+#pragma warning disable IDE0042
 			foreach (var mergeMap in mapper.GetAsyncMergeMaps(mappingOptions).Distinct().Where(m => m.To == destinationType)) {
 				// 2 new map + 1 merge map
 				if (mergeMap.From == sourceType) {
@@ -410,8 +300,7 @@ namespace NeatMapper.Transitive {
 				else if (length < 2 + 1)
 					continue;
 
-				if (newMappingOptions == null)
-					newMappingOptions = _mergeNewOptionsCache.GetOrCreate(mappingOptions);
+				newMappingOptions ??= _mergeNewOptionsCache.GetOrCreate(mappingOptions);
 
 				// Try creating a new maps path to the retrieved source type of the merge map
 				if (mapper.CanMapAsyncNew(sourceType, mergeMap.From, newMappingOptions)) { 
@@ -419,13 +308,10 @@ namespace NeatMapper.Transitive {
 					return true;
 				}
 			}
+#pragma warning restore IDE0042
 
-			mergeMapFrom = null;
+			mergeMapFrom = null!;
 			return false;
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

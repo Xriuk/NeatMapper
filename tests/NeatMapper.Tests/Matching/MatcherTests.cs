@@ -299,5 +299,20 @@ namespace NeatMapper.Tests.Matching {
 			Assert.IsTrue(matcher.Match("Test", 4));
 			Assert.IsFalse(matcher.Match("Test", 2));
 		}
+
+		[TestMethod]
+		public void ShouldCheckCanMatchWithAdditionalMaps() {
+			var options = new CustomMatchAdditionalMapsOptions();
+			options.AddMap<string, int>((s, d, _) => s?.Length == d, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			var matcher = new CustomMatcher(null, options);
+
+			Assert.IsTrue(matcher.CanMatch<string, int>());
+			Assert.IsFalse(matcher.CanMatch<string, int>(ProjectionCompilationContext.Instance));
+
+			Assert.IsTrue(matcher.Match("Test", 4));
+			Assert.IsFalse(matcher.Match("Test", 2));
+			TestUtils.AssertMapNotFound(() => matcher.Match("Test", 4, new object[] { ProjectionCompilationContext.Instance }));
+			TestUtils.AssertMapNotFound(() => matcher.Match("Test", 2, new object[] { ProjectionCompilationContext.Instance }));
+		}
 	}
 }

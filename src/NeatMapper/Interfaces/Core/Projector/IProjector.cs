@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IProjector {
 		/// <summary>
-		/// Checks if the projector could project a given object to another. It does not guarantee that the actual map will succeed.
+		/// Checks if the projector could project a given object to another.
 		/// </summary>
 		/// <param name="sourceType">Type of the object to project, used to retrieve the available maps.</param>
 		/// <param name="destinationType">
@@ -23,15 +23,7 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be projected
 		/// to an object of type <paramref name="destinationType"/>.
 		/// </returns>
-		bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Projects an object to a new one.
@@ -53,14 +45,6 @@ namespace NeatMapper {
 		/// An exception was thrown while creating the projection map for the types,
 		/// check the inner exception for details.
 		/// </exception>
-		LambdaExpression Project(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 	}
 }

@@ -873,9 +873,22 @@ namespace NeatMapper.Tests.Mapping {
 			options.AddMap<string, int>((s, d, _) => s?.Length ?? 0);
 			var mapper = new CustomMapper(null, null, options);
 
-			Assert.IsTrue(_mapper.CanMapMerge<string, int>());
+			Assert.IsTrue(mapper.CanMapMerge<string, int>());
 
 			Assert.AreEqual(4, mapper.Map("Test", 2));
+		}
+
+		[TestMethod]
+		public void ShouldCheckCanMapWithAdditionalMaps() {
+			var options = new CustomMergeAdditionalMapsOptions();
+			options.AddMap<string, int>((s, d, _) => s?.Length ?? 0, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			var mapper = new CustomMapper(null, null, options);
+
+			Assert.IsTrue(mapper.CanMapMerge<string, int>());
+			Assert.IsFalse(mapper.CanMapMerge<string, int>(ProjectionCompilationContext.Instance));
+
+			Assert.AreEqual(4, mapper.Map("Test", 2));
+			TestUtils.AssertMapNotFound(() => mapper.Map("Test", 2, new object[] { ProjectionCompilationContext.Instance }));
 		}
 	}
 }

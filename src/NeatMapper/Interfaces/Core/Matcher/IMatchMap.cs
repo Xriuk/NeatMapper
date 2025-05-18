@@ -2,8 +2,8 @@
 	/// <summary>
 	/// Interface which allows matching two objects of two given types.
 	/// </summary>
-	/// <typeparam name="TSource">Source type.</typeparam>
-	/// <typeparam name="TDestination">Destination type.</typeparam>
+	/// <typeparam name="TSource">Source type, can be an open generic.</typeparam>
+	/// <typeparam name="TDestination">Destination type, can be an open generic.</typeparam>
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMatchMap<in TSource, in TDestination> {
 		/// <summary>
@@ -19,19 +19,6 @@
 		/// <exception cref="MatcherException">
 		/// An exception was thrown while matching the types, check the inner exception for details.
 		/// </exception>
-		bool Match(
-#if NET5_0_OR_GREATER
-			TSource? 
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination? 
-#else
-			TDestination
-#endif
-			destination,
-			MatchingContext context);
+		bool Match(TSource? source, TDestination? destination, MatchingContext context);
 	}
 }

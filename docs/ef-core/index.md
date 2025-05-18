@@ -15,3 +15,5 @@ has_children: true
 Entity Framework Core maps for NeatMapper.
 
 Creates automatic maps and projections between entities and their keys (even composite and shadow keys), supports normal maps and asynchronous ones, also supports collections (not nested).
+
+It can also map keys to predicates (`Expression<Func<Entity, bool>>`) for filtering.

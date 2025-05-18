@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Threading;
 
 namespace NeatMapper {
@@ -23,19 +19,20 @@ namespace NeatMapper {
 			IAsyncMapper parentMapper,
 			MappingOptions mappingOptions) {
 
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
 
 			if (parentMapper == null)
 				throw new ArgumentNullException(nameof(parentMapper));
 
 			_mapper = new Lazy<IAsyncMapper>(() => {
 				var nestedMappingContext = new AsyncNestedMappingContext(parentMapper);
-				return new AsyncNestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
-					.ReplaceOrAdd<AsyncNestedMappingContext>(
-						n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
+				return new AsyncNestedMapper(nestedMapper, o => o.ReplaceOrAdd<AsyncNestedMappingContext>(
+					n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, o.Cached));
 			}, true);
 
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 
@@ -74,39 +71,23 @@ namespace NeatMapper {
 		/// <summary>
 		/// Service provider which can be used to retrieve additional services.
 		/// </summary>
-		public 
-#if NET5_0_OR_GREATER
-			readonly 
-#endif
-			IServiceProvider ServiceProvider => _options.ServiceProvider;
+		public readonly IServiceProvider ServiceProvider => _options.ServiceProvider;
 
 		/// <summary>
 		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
 		/// The only option forwarded automatically is <see cref="AsyncNestedMappingContext"/>.
 		/// </summary>
-		public
-#if NET5_0_OR_GREATER
-			readonly
-#endif
-			IAsyncMapper Mapper => _options.Mapper;
+		public readonly IAsyncMapper Mapper => _options.Mapper;
 
 		/// <summary>
 		/// Additional mapping options, contains multiple options of different types,
 		/// each mapper/map should try to retrieve its options and use them.
 		/// </summary>
-		public
-#if NET5_0_OR_GREATER
-			readonly
-#endif
-			MappingOptions MappingOptions => _options.MappingOptions;
+		public readonly MappingOptions MappingOptions => _options.MappingOptions;
 
 		/// <summary>
 		/// Cancellation token of the mapping which should be passed to all the async methods inside the maps.
 		/// </summary>
-		public
-#if NET5_0_OR_GREATER
-			readonly
-#endif
-			CancellationToken CancellationToken { get; }
+		public readonly CancellationToken CancellationToken { get; }
 	}
 }

@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 
 namespace NeatMapper {
 	/// <summary>
@@ -12,9 +8,12 @@ namespace NeatMapper {
 		public ProjectionContext(IServiceProvider serviceProvider, IProjector projector, MappingOptions mappingOptions) :
 			this(serviceProvider, new NestedProjector(projector ?? throw new ArgumentNullException(nameof(projector))), mappingOptions) {}
 		public ProjectionContext(IServiceProvider serviceProvider, NestedProjector projector, MappingOptions mappingOptions) {
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
-			Projector = projector ?? throw new ArgumentNullException(nameof(projector));
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
+			Projector = projector
+				?? throw new ArgumentNullException(nameof(projector));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 
@@ -25,7 +24,8 @@ namespace NeatMapper {
 
 		/// <summary>
 		/// Projector to be used for nested projections.
-		/// Can be used as a regular <see cref="IProjector"/>, the invocations will be replaced with the expanded maps.
+		/// NestedProjector.Project invocations will be replaced with the expanded maps from the underlying
+		/// <see cref="IProjector"/> (so it works kinda like an <see cref="IMapper"/> inside expressions).
 		/// </summary>
 		public NestedProjector Projector { get; }
 

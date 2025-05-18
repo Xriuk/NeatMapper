@@ -1,5 +1,38 @@
 # Changelog
 
+## [5.1.0] - 2025-05-18
+
+### Changed
+
+- Deprecated `IMatcher` and `IMatchMapFactory` `Predicate()` extension methods with destination to avoid ambiguities with the same types. New extension methods `PredicateDestination()` should be used instead.
+- Deprecated `(Async)EmptyMapper` `I(Async)MapperFactory` implementation in favor of the corresponding `I(Async)Mapper` extension methods which now check for `CanMap(Async)*()` methods and throw accordingly.
+- Typed implementations of factories (`NewMapFactory<TSource, TDestination>`, ...) now have type members as virtual instead of abstract, and correspond to the type arguments by default where available.
+
+### Added
+
+- New optional interfaces `ICanMapNew`, `ICanMapMerge`, `ICanMapAsyncNew`, `ICanMapAsyncMerge`, `ICanMatch`, `ICanMatchHierarchy` and `ICanProject` (and their static counterparts) which can be implemented to validate the corresponding custom maps, this should be especially useful for generic custom maps, because it allows to validate the generic type arguments (as a map can no longer reject itself by throwing `MapNotFoundException`, which now gets wrapped in a `MappingException`/`MatchingException`/`ProjectionException`).
+- `IMatcher` and `IMatchMapFactory` `PredicateDestination()` extension methods to create `Predicate()` factories by passing the destination instead of source and inferring its type.
+- `ObjectEqualsMatcher` now implements `IMatcherFactory`.
+- `CanProject` method to `NestedProjector` (which can be used outside expressions unlike `Project`), which just forwards the calls to the underlying `IProjector`.
+- `CollectionMatcher` which allows matching collections by matching elements inside, supports ordered matches and not.
+- `MergeCollectionsOptions` `RecreateReadonlyDestination` which allows merge mapping to readonly collections (normal and async) by recreating them, all the merged elements will be copied from the original destination and new ones added.
+- `NullableMapper`/`AsyncNullableMapper`/`NullableMatcher` which allows mapping/matching `Nullable<T>` types by mapping/matching underlying types.
+- `NestedMappingContext`/`AsyncNestedMappingContext`/`NestedMatchingContext`/`NestedProjectionContext` method `CheckRecursive` which allows to check if the context itself or any of its parent contexts matches a given predicate.
+- `AsyncIMapperWrapperMapper` which allows wrapping an `IMapper` for async calls.
+
+### Fixed
+
+- Collection mappers for `string`s (which use `StringBuilder` as their backing collection) now handle correctly `null` chars which result in adding the null char (`'\0'`).
+- `ObjectEqualsMatcher` source and destination typechecking.
+- `AsyncCollectionMappersOptions`, `AsyncCompositeMapperOptions`, `CompositeMapperOptions`, `CompositeProjectorOptions` and `MergeCollectionsOptions` copy constructors added null checks.
+- `TypeConverterMapper` `IMapperFactory` missing implementation.
+- `AsyncCollectionMapper` mapper removed parallel mentions from merge maps docs, as it is not supported.
+- Source/destination type checks for `EqualityComparerMatcher` and `EqualityOperatorsMatcher`.
+- `EquatableMatcher`, `EqualityComparerMatcher` and `EqualityOperatorsMatcher` exceptions handling.
+- Mappers and matchers added type checks for non-generic factories.
+- Internal code cleanup
+
+
 ## [5.0.0] - 2024-11-03
 
 ### Removed

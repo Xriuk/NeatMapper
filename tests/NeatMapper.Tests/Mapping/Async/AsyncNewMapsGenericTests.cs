@@ -1,4 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Tests.Classes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,11 +35,15 @@ namespace NeatMapper.Tests.Mapping.Async {
 #if NET7_0_OR_GREATER
 			IAsyncNewMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IAsyncNewMapStatic<T1[], T2[]>,
-			IAsyncNewMapStatic<List<T1>, List<T2>>
+			IAsyncNewMapStatic<List<T1>, List<T2>>,
+			ICanMapAsyncNewStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IAsyncNewMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #else
 			IAsyncNewMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
 			IAsyncNewMap<T1[], T2[]>,
-			IAsyncNewMap<List<T1>, List<T2>>
+			IAsyncNewMap<List<T1>, List<T2>>,
+			ICanMapAsyncNew<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IAsyncNewMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #endif
 			{
 
@@ -86,6 +91,42 @@ namespace NeatMapper.Tests.Mapping.Async {
 
 				await Task.Delay(0);
 				throw new MapNotFoundException((typeof(List<T1>), typeof(List<T2>)));
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				ICanMapAsyncNewStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				ICanMapAsyncNew<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.CanMapAsyncNew(AsyncMappingContextOptions context) {
+
+				return context.Mapper.CanMapAsyncNew<T1, T2>(context.MappingOptions);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			async Task<CustomCollectionComplex<T2>>
+#if NET7_0_OR_GREATER
+				IAsyncNewMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				IAsyncNewMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.MapAsync(IEnumerable<T1> source, AsyncMappingContext context) {
+
+				var coll = new CustomCollectionComplex<T2>();
+				using (var factory = context.Mapper.MapAsyncNewFactory<T1, T2>(context.MappingOptions)) {
+					foreach (var el in source) {
+						coll.Add(await factory.Invoke(el, context.CancellationToken));
+					}
+				}
+
+				return coll;
 			}
 		}
 
@@ -843,6 +884,26 @@ namespace NeatMapper.Tests.Mapping.Async {
 				Assert.AreEqual(5, tuples.ElementAt(1).Item1);
 				Assert.AreEqual("Test2", tuples.ElementAt(1).Item2);
 			}
+		}
+
+
+		[TestMethod]
+		public async Task ShouldCheckCanMapAsyncIfPresent() {
+			var nestedMapper = new AsyncCustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(AsyncNewMapsTests.Maps) }
+			});
+
+			var options = new MappingOptions(new AsyncMapperOverrideMappingOptions(nestedMapper));
+
+			Assert.IsTrue(_mapper.CanMapAsyncNew<IEnumerable<int>, CustomCollectionComplex<string>>(options));
+			Assert.IsFalse(_mapper.CanMapAsyncNew<IEnumerable<int>, CustomCollectionComplex<decimal>>(options));
+
+			var result = await _mapper.MapAsync<IEnumerable<int>, CustomCollectionComplex<string>>(new[] { 2, -3, 0 }, options);
+			Assert.AreEqual(3, result.Elements.Count());
+			Assert.AreEqual("4", result.Elements.ElementAt(0));
+			Assert.AreEqual("-6", result.Elements.ElementAt(1));
+			Assert.AreEqual("0", result.Elements.ElementAt(2));
+			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<IEnumerable<int>, CustomCollectionComplex<decimal>>(new[] { 2, -3, 0 }, options));
 		}
 	}
 }

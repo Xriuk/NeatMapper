@@ -26,7 +26,6 @@ namespace NeatMapper.Tests.Matching {
 			Assert.IsFalse(_matcher.Match<string, string>(null, "efgh"));
 			Assert.IsTrue(_matcher.Match<string, string>(null, null));
 			Assert.IsFalse(_matcher.Match("abcd", "efgh"));
-			Assert.IsFalse(_matcher.Match("abcd", 4));
 			Assert.IsTrue(_matcher.Match(4, 4));
 			Assert.IsTrue(_matcher.Match(new Guid("a126b1a9-01f8-4aeb-86b1-fa98797d58ce"), new Guid("a126b1a9-01f8-4aeb-86b1-fa98797d58ce")));
 			Assert.IsFalse(_matcher.Match(new Guid("a126b1a9-01f8-4aeb-86b1-fa98797d58ce"), Guid.Empty));

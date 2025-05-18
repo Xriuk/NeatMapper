@@ -12,10 +12,6 @@ namespace NeatMapper.Transitive {
 	/// the Dijkstra algorithm, the resulting expressions are then merged each into the next one by replacing them.
 	/// </summary>
 	public sealed class TransitiveProjector : IProjector {
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private class ParameterReplacer : ExpressionVisitor {
 			private readonly ParameterExpression _search;
 			private readonly Expression _replace;
@@ -34,10 +30,6 @@ namespace NeatMapper.Transitive {
 			}
 		}
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-
 
 		/// <summary>
 		/// <see cref="IProjector"/> which is used to project the types, will be also provided as a nested projector
@@ -51,24 +43,11 @@ namespace NeatMapper.Transitive {
 		private readonly GraphCreator _graphCreator;
 
 		/// <summary>
-		/// Cached nested context with no parents.
-		/// </summary>
-		private readonly NestedProjectionContext _nestedProjectionContext;
-
-		/// <summary>
 		/// Cached input <see cref="MappingOptions"/> (only if <see cref="MappingOptions.Cached"/> is
 		/// <see langword="true"/>) and output <see cref="MappingOptions"/> (with 
 		///	<see cref="MappingOptions.Cached"/> also set to <see langword="true"/>).
 		/// </summary>
-		private readonly ConcurrentDictionary<MappingOptions, MappingOptions> _optionsCache =
-			new ConcurrentDictionary<MappingOptions, MappingOptions>();
-
-		/// <summary>
-		/// Cached output <see cref="MappingOptions"/> for <see langword="null"/> <see cref="MappingOptions"/>
-		/// (since a dictionary can't have null keys) and <see cref="MappingOptions.Empty"/> inputs,
-		/// also provides faster access since locking isn't needed for thread-safety.
-		/// </summary>
-		private readonly MappingOptions _optionsCacheNull;
+		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
 
 		/// <summary>
@@ -82,32 +61,19 @@ namespace NeatMapper.Transitive {
 		/// Options to apply when mapping types.<br/>
 		/// Can be overridden during mapping with <see cref="TransitiveMappingOptions"/>.
 		/// </param>
-		public TransitiveProjector(IProjector projector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			TransitiveOptions?
-#else
-			TransitiveOptions
-#endif
-			transitiveOptions = null) {
-
+		public TransitiveProjector(IProjector projector, TransitiveOptions? transitiveOptions = null) {
 			_projector = projector ?? throw new ArgumentNullException(nameof(projector));
 			_graphCreator = new GraphCreator(mappingOptions =>
 				(mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector
 					?? _projector).GetMaps(mappingOptions).Distinct(), transitiveOptions);
-
-			_nestedProjectionContext = new NestedProjectionContext(this);
-			_optionsCacheNull = MergeMappingOptions(MappingOptions.Empty);
+			var nestedProjectionContext = new NestedProjectionContext(this);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options =>
+				options.ReplaceOrAdd<NestedProjectionContext>(
+					n => n != null ? new NestedProjectionContext(nestedProjectionContext.ParentProjector, n) : nestedProjectionContext, options.Cached));
 		}
 
 
-		public bool CanProject(Type sourceType, Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -117,17 +83,10 @@ namespace NeatMapper.Transitive {
 			if (sourceType == destinationType)
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions)) != null;
+			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions)) != null;
 		}
 
-		public LambdaExpression Project(Type sourceType, Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -137,7 +96,7 @@ namespace NeatMapper.Transitive {
 			if (sourceType == destinationType)
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var typesPath = _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, mappingOptions)
 				?? throw new MapNotFoundException((sourceType, destinationType));
@@ -160,29 +119,5 @@ namespace NeatMapper.Transitive {
 				throw new ProjectionException(e, (sourceType, destinationType));
 			}
 		}
-
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private MappingOptions MergeOrCreateMappingOptions(MappingOptions options) {
-			if (options == null || options == MappingOptions.Empty)
-				return _optionsCacheNull;
-			else if (options.Cached)
-				return _optionsCache.GetOrAdd(options, MergeMappingOptions);
-			else
-				return MergeMappingOptions(options);
-		}
-
-		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private MappingOptions MergeMappingOptions(MappingOptions options) {
-			return options.ReplaceOrAdd<NestedProjectionContext>(
-				n => n != null ? new NestedProjectionContext(_nestedProjectionContext.ParentProjector, n) : _nestedProjectionContext, options.Cached);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

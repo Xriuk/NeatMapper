@@ -18,18 +18,6 @@
 		/// <exception cref="MappingException">
 		/// An exception was thrown while mapping the types, check the inner exception for details.
 		/// </exception>
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-			Map(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-			MappingContext context);
+		TDestination? Map(TSource? source, MappingContext context);
 	}
 }

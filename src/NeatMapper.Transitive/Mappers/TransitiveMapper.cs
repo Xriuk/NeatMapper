@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace NeatMapper.Transitive {
@@ -47,14 +48,7 @@ namespace NeatMapper.Transitive {
 		/// Options to apply when mapping types.<br/>
 		/// Can be overridden during mapping with <see cref="TransitiveMappingOptions"/>.
 		/// </param>
-		public TransitiveMapper(IMapper mapper,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			TransitiveOptions?
-#else
-			TransitiveOptions
-#endif
-			transitiveOptions = null) {
-
+		public TransitiveMapper(IMapper mapper, TransitiveOptions? transitiveOptions = null) {
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
 			_transitiveOptions = transitiveOptions ?? new TransitiveOptions();
 			_graphCreator = new GraphCreator(mappingOptions =>
@@ -70,16 +64,7 @@ namespace NeatMapper.Transitive {
 
 
 		#region IMapper methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -92,45 +77,11 @@ namespace NeatMapper.Transitive {
 			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions)) != null;
 		}
 
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out _, out _);
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -158,44 +109,9 @@ namespace NeatMapper.Transitive {
 			catch (Exception e) {
 				throw new MappingException(e, (sourceType, destinationType));
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out var mergeMapFrom, out var newMappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
@@ -223,28 +139,11 @@ namespace NeatMapper.Transitive {
 					destinationType,
 					mappingOptions);
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
 		#region IMapperFactory methods
-		public INewMapFactory MapNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -266,10 +165,12 @@ namespace NeatMapper.Transitive {
 			var factories = new INewMapFactory[typesPath.Count - 1];
 			try {
 				var i = 0;
+#pragma warning disable IDE0042
 				foreach (var types in typesPath.Zip(typesPath.Skip(1), (t1, t2) => (From: t1, To: t2))) {
 					factories[i] = mapper.MapNewFactory(types.From, types.To, mappingOptions);
 					i++;
 				}
+#pragma warning restore IDE0042
 
 				return new DisposableNewMapFactory(
 					sourceType, destinationType,
@@ -292,26 +193,9 @@ namespace NeatMapper.Transitive {
 				}
 				throw;
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IMergeMapFactory MapMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out var mergeMapFrom, out var newMappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
@@ -343,22 +227,14 @@ namespace NeatMapper.Transitive {
 					throw;
 				}
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private bool CanMapMergeInternal(
 			Type sourceType,
 			Type destinationType,
-			ref MappingOptions mappingOptions,
+			[NotNullWhen(true)] ref MappingOptions? mappingOptions,
 			out Type mergeMapFrom,
 			out MappingOptions newMappingOptions) {
 
@@ -367,11 +243,11 @@ namespace NeatMapper.Transitive {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			newMappingOptions = null;
+			newMappingOptions = null!;
 
 			// We cannot map identical types
 			if (sourceType == destinationType) {
-				mergeMapFrom = null;
+				mergeMapFrom = null!;
 				return false;
 			}
 
@@ -379,7 +255,7 @@ namespace NeatMapper.Transitive {
 
 			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
 			if (length < 2) {
-				mergeMapFrom = null;
+				mergeMapFrom = null!;
 				return false;
 			}
 
@@ -387,6 +263,7 @@ namespace NeatMapper.Transitive {
 				?? _mapper;
 
 			// Retrieve all the merge maps with the selected destination type
+#pragma warning disable IDE0042
 			foreach (var mergeMap in mapper.GetMergeMaps(mappingOptions).Distinct().Where(m => m.To == destinationType)) {
 				// 2 new map + 1 merge map
 				if (mergeMap.From == sourceType) {
@@ -396,8 +273,7 @@ namespace NeatMapper.Transitive {
 				else if (length < 2 + 1)
 					continue;
 
-				if (newMappingOptions == null)
-					newMappingOptions = _mergeNewOptionsCache.GetOrCreate(mappingOptions);
+				newMappingOptions ??= _mergeNewOptionsCache.GetOrCreate(mappingOptions);
 
 				// Try creating a new maps path to the retrieved source type of the merge map
 				if (mapper.CanMapNew(sourceType, mergeMap.From, newMappingOptions)) { 
@@ -405,13 +281,10 @@ namespace NeatMapper.Transitive {
 					return true;
 				}
 			}
+#pragma warning restore IDE0042
 
-			mergeMapFrom = null;
+			mergeMapFrom = null!;
 			return false;
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

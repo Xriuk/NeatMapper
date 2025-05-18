@@ -26,19 +26,7 @@ namespace NeatMapper {
 		/// <param name="destination">Destination object, may be null.</param>
 		/// <returns><see langword="true"/> if the two objects match.</returns>
 		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
-		bool Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination);
+		bool Invoke(object? source, object? destination);
 	}
 
 	/// <summary>
@@ -48,25 +36,15 @@ namespace NeatMapper {
 	/// <typeparam name="TDestination">Destination type.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class MatchMapFactory<TSource, TDestination> : IMatchMapFactory {
-		public abstract Type SourceType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type SourceType => typeof(TSource);
 
-		public abstract Type DestinationType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type DestinationType => typeof(TDestination);
 
 
-		/// <inheritdoc cref="IMatchMapFactory.Invoke(object, object)"/>
-		public abstract bool Invoke(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination);
+		/// <inheritdoc cref="IMatchMapFactory.Invoke(object?, object?)"/>
+		public abstract bool Invoke(TSource? source, TDestination? destination);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -76,58 +54,15 @@ namespace NeatMapper {
 		}
 
 
-		bool IMatchMapFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination) {
+		bool IMatchMapFactory.Invoke(object? source, object? destination) {
+			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
+			TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return Invoke((TSource)source, (TDestination)destination);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return Invoke((TSource?)source, (TDestination?)destination);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			,
-			bool>(
-			MatchMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TSource?, TDestination?, bool>(
+			MatchMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 	}
 }

@@ -20,11 +20,6 @@
 		/// <see langword="1"/> means that the mappings will be sequential and not parallel.<br/>
 		/// </summary>
 		/// <remarks><see langword="null"/> to use global setting from <see cref="AsyncCollectionMappersMappingOptions"/>.</remarks>
-		public int? MaxParallelMappings {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public int? MaxParallelMappings { get; init; }
 	}
 }

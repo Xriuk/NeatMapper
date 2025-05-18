@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System.Linq;
+﻿using System.Linq;
 using System.Reflection;
 using System;
 using System.Collections.Generic;
@@ -57,9 +53,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			/// <summary>
 			/// Normalized key of the entity, primitive type or <see cref="ValueTuple"/>.
 			/// </summary>
-			public object Key { get; set; }
+			public object Key { get; set; } = null!;
 
-			public object LocalEntity { get; set; }
+			public object? LocalEntity { get; set; }
 		}
 
 		internal static class ArrayPool {
@@ -68,33 +64,41 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 			public static object[] Get(int size) {
-				var bag = _objects.GetOrAdd(size, _ => new ConcurrentBag<object[]>());
+				var bag = _objects.GetOrAdd(size, _ => []);
 				return bag.TryTake(out var item) ? item : new object[size];
 			}
 
 			public static void Return(object[] item) {
-				var bag = _objects.GetOrAdd(item.Length, _ => new ConcurrentBag<object[]>());
+				var bag = _objects.GetOrAdd(item.Length, _ => []);
 				bag.Add(item);
 			}
 		}
 
 		internal static readonly ObjectPool<List<object[]>> ListsPool =
 			new ObjectPool<List<object[]>>(
-				() => new List<object[]>(),
+				() => [],
 				l => l.Clear());
+
+
+		private static IQueryable DbContextDbSet<Type>(DbContext dbContext) where Type : class {
+			return dbContext.Set<Type>();
+		}
+		private static readonly MethodInfo this_DbContextDbSet = NeatMapper.TypeUtils.GetMethod(() => DbContextDbSet<object>(default!));
+		private static IEnumerable DbSetLocal<Type>(IQueryable dbSet) where Type : class {
+			return ((DbSet<Type>)dbSet).Local;
+		}
+		private static readonly MethodInfo this_DbSetLocal = NeatMapper.TypeUtils.GetMethod(() => DbSetLocal<object>(default!));
 
 
 		/// <summary>
 		/// <see cref="Enumerable.Contains{TSource}(IEnumerable{TSource}, TSource)"/>
 		/// </summary>
-		private static readonly MethodInfo Enumerable_Contains = typeof(Enumerable).GetMethods()
-			.First(m => m.Name == nameof(Enumerable.Contains) && m.GetParameters().Length == 2);
+		private static readonly MethodInfo Enumerable_Contains = NeatMapper.TypeUtils.GetMethod(() => default(IEnumerable<object>)!.Contains(default(object)));
 
 		/// <summary>
 		/// <see cref="DbContext.Set{TEntity}()"/>
 		/// </summary>
-		private static readonly MethodInfo DbContext_Set = typeof(DbContext).GetMethods()
-			.First(m => m.IsGenericMethod && m.Name == nameof(DbContext.Set) && m.GetParameters().Length == 0);
+		private static readonly MethodInfo DbContext_Set = NeatMapper.TypeUtils.GetMethod(() => default(DbContext)!.Set<object>());
 
 		/// <summary>
 		/// Delegates which retrieve a new <see cref="DbSet{TEntity}"/>.
@@ -110,23 +114,15 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		protected static IQueryable RetrieveDbSet(DbContext context, Type type) {
-			return _setCache.GetOrAdd(type, t => {
-				var param = Expression.Parameter(typeof(DbContext), "dbContext");
-				// dbContext.Set<Type>()
-				var body = Expression.Call(param, DbContext_Set.MakeGenericMethod(t));
-				return Expression.Lambda<Func<DbContext, IQueryable>>(body, param).Compile();
-			}).Invoke(context);
+			return _setCache.GetOrAdd(type, t =>
+				(Func<DbContext, IQueryable>)Delegate.CreateDelegate(typeof(Func<DbContext, IQueryable>), this_DbContextDbSet.MakeGenericMethod(t)))
+					.Invoke(context);
 		}
 
 		protected static IEnumerable GetLocalFromDbSet(IQueryable dbSet) {
-			return _localCache.GetOrAdd(dbSet.ElementType, t => {
-				var param = Expression.Parameter(typeof(IQueryable), "dbSet");
-				var prop = typeof(DbSet<>).MakeGenericType(t).GetProperty(nameof(DbSet<object>.Local))
-					?? throw new InvalidOperationException("Cannot retrieve DbSet<T>.Local");
-				// dbSet.Local
-				var body = Expression.Property(Expression.Convert(param, typeof(DbSet<>).MakeGenericType(t)), prop);
-				return Expression.Lambda<Func<IQueryable, IEnumerable>>(body, param).Compile();
-			}).Invoke(dbSet);
+			return _localCache.GetOrAdd(dbSet.ElementType, t =>
+				(Func<IQueryable, IEnumerable>)Delegate.CreateDelegate(typeof(Func<IQueryable, IEnumerable>), this_DbSetLocal.MakeGenericMethod(t)))
+					.Invoke(dbSet);
 		}
 
 		protected static LambdaExpression GetEntitiesPredicate(Type keyType, Type entityType, IKey key, IEnumerable<object[]> keysValues) {
@@ -134,7 +130,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (key.Properties.Count == 1) {
 				bool hasOne;
 				try {
-					keysValues.Single();
+					_ = keysValues.Single();
 					hasOne = true;
 				}
 				catch {
@@ -153,7 +149,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
 								(prop.PropertyInfo != null ?
 									Expression.Property(param, prop.PropertyInfo) :
-									Expression.Field(param, prop.FieldInfo))),
+									Expression.Field(param, prop.FieldInfo!))),
 						param);
 				}
 			}
@@ -169,7 +165,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
 								(prop.PropertyInfo != null ?
 									Expression.Property(param, prop.PropertyInfo) :
-									Expression.Field(param, prop.FieldInfo)),
+									Expression.Field(param, prop.FieldInfo!)),
 							Expression.Constant(values[i], prop.ClrType)))
 						.Aggregate(Expression.AndAlso))
 					.Aggregate(Expression.OrElse),
@@ -227,9 +223,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			IModel model,
 			Type dbContextType,
 			IServiceProvider serviceProvider,
-			EntityFrameworkCoreOptions entityFrameworkCoreOptions = null,
-			IMatcher elementsMatcher = null,
-			MergeCollectionsOptions mergeCollectionsOptions = null) {
+			EntityFrameworkCoreOptions? entityFrameworkCoreOptions = null,
+			IMatcher? elementsMatcher = null,
+			MergeCollectionsOptions? mergeCollectionsOptions = null) {
 
 			_model = model ?? throw new ArgumentNullException(nameof(model));
 			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
@@ -268,7 +264,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				return false;
 			if (elementTypes.Key.IsCompositeKeyType()) {
 				var keyTypes = elementTypes.Key.UnwrapNullable().GetGenericArguments();
-				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
+				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (KeyType: k1, PropertyType: k2.ClrType)).All(keys => keys.KeyType == keys.PropertyType))
 					return false;
 			}
 			else if (key.Properties.Count != 1 || (key.Properties[0].ClrType != elementTypes.Key && !elementTypes.Key.IsNullable(key.Properties[0].ClrType)))
@@ -278,6 +274,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		// Returns object array from ArrayPool
+		private readonly MethodInfo ArrayPool_Get = NeatMapper.TypeUtils.GetMethod(() => ArrayPool.Get(default(int)));
 		protected Func<object, object[]> GetOrCreateKeyToValuesDelegate(Type key) {
 			return _keyToValuesCache.GetOrAdd(key, keyType => {
 				var keyParam = Expression.Parameter(typeof(object), "key");
@@ -285,30 +282,30 @@ namespace NeatMapper.EntityFrameworkCore {
 				Expression body;
 				if (!keyType.IsCompositeKeyType()) {
 					body = Expression.Block(
-						new[] { keyValuesVar },
+						[ keyValuesVar ],
 						// keyValues = ArrayPool.Get(1);
-						Expression.Assign(keyValuesVar, Expression.Call(typeof(ArrayPool).GetMethod(nameof(ArrayPool.Get)), Expression.Constant(1))),
+						Expression.Assign(keyValuesVar, Expression.Call(ArrayPool_Get, Expression.Constant(1))),
 						// keyValues[0] = key;
 						Expression.Assign(Expression.ArrayAccess(keyValuesVar, Expression.Constant(0)), keyParam),
 						keyValuesVar
 					);
 				}
 				else {
-					var tupleType = TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType;
+					var tupleType = TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType!;
 					var length = tupleType.GetGenericArguments().Length;
 
 					var bodyExpressions = new Expression[2 + length];
 					// keyValues = ArrayPool.Get(N);
-					bodyExpressions[0] = Expression.Assign(keyValuesVar, Expression.Call(typeof(ArrayPool).GetMethod(nameof(ArrayPool.Get)), Expression.Constant(length)));
+					bodyExpressions[0] = Expression.Assign(keyValuesVar, Expression.Call(ArrayPool_Get, Expression.Constant(length)));
 					for(var i = 1; i <= length; i++) {
 						// keyValues[N] = ((ValueTuple<...>)key).ItemN;
 						bodyExpressions[i] = Expression.Assign(
 							Expression.ArrayAccess(keyValuesVar, Expression.Constant(i-1)),
 							Expression.Convert(Expression.PropertyOrField(Expression.Convert(keyParam, tupleType), "Item" + i), typeof(object)));
 					}
-					bodyExpressions[bodyExpressions.Length-1] = keyValuesVar;
+					bodyExpressions[^1] = keyValuesVar;
 
-					body = Expression.Block(new[] { keyValuesVar }, bodyExpressions);
+					body = Expression.Block([ keyValuesVar ], bodyExpressions);
 				}
 
 				return Expression.Lambda<Func<object, object[]>>(body, keyParam).Compile();
@@ -325,7 +322,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					Expression.New(type),
 					key.Properties.Select((kp, i) => (kp, i))
 						.Where(kpi => !kpi.kp.IsShadowProperty())
-						.Select(kpi => Expression.Bind((MemberInfo)kpi.kp.PropertyInfo ?? kpi.kp.FieldInfo, Expression.Convert(Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i)), kpi.kp.ClrType))));
+						.Select(kpi => Expression.Bind((MemberInfo?)kpi.kp.PropertyInfo ?? kpi.kp.FieldInfo!, Expression.Convert(Expression.ArrayIndex(keyValuesParam, Expression.Constant(kpi.i)), kpi.kp.ClrType))));
 
 				var entityVar = Expression.Variable(typeof(object), "entity");
 				var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
@@ -362,10 +359,10 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 
 				body = Expression.Block(
-					new[] { entityVar },
+					[ entityVar ],
 					// entity = new ...
 					Expression.Assign(entityVar, body),
-					Expression.Block(new[] { entityEntryVar }, blockExprs),
+					Expression.Block([ entityEntryVar ], blockExprs),
 					entityVar
 				);
 
@@ -375,11 +372,17 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		/// <remarks>Returned factory contains semaphore if dbContext is not null</remarks>
 		internal DisposableMergeCollectionFactory MergeCollection(
-			(Type From, Type To) types, DbContext dbContext, IKey key, EntitiesRetrievalMode entitiesRetrievalMode,
-			MappingOptions mappingOptions, bool throwOnDuplicateEntity) {
+			(Type From, Type To) types, DbContext? dbContext, IKey? key,
+			MappingOptions? mappingOptions, bool throwOnDuplicateEntity) {
 
 			var addDelegate = ObjectFactory.GetCollectionAddDelegate(types.To);
 			var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(types.To);
+
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
+				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
+			var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+				?? _entityFrameworkCoreOptions.IgnoreNullEntities;
 
 			var removeNotMatchedDestinationElements = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>()?.RemoveNotMatchedDestinationElements
 				?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
@@ -387,8 +390,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(types.From);
 			var keyValuesDelegate = GetOrCreateKeyToValuesDelegate(types.From);
 
-			var attachEntityDelegate = GetOrCreateAttachEntityDelegate(types.To, key);
-
+			var attachEntityDelegate = dbContext != null ? GetOrCreateAttachEntityDelegate(types.To, key!) : null;
 			var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
 			// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher), may contain semaphore
@@ -406,14 +408,14 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					try {
 						if(entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && dbContext != null)
-							dbContextSemaphore.Wait();
+							dbContextSemaphore!.Wait();
 						try {
 							// Added/updated elements, also attach entities if needed
 							foreach (var sourceElement in sourceEnumerable) {
 								// Retrieve matching destination element
 								bool destinationFound = false;
-								object matchingDestinationElement = null;
-								foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
+								object? matchingDestinationElement = null;
+								foreach (var destinationElement in destinationEnumerable.Cast<object?>().Concat(elementsToAdd)) {
 									if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
 										!elementsToRemove.Contains(destinationElement)) {
 
@@ -426,7 +428,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 								// Retrieve matching mapped element
 								bool sourceEntityFound = false;
-								object matchingSourceEntityElement = null;
+								object? matchingSourceEntityElement = null;
 								foreach (var sourceEntityElement in sourceEntitiesEnumerable) {
 									if (elementsMatcherFactory.Invoke(sourceElement, sourceEntityElement)) {
 										matchingSourceEntityElement = sourceEntityElement;
@@ -442,18 +444,22 @@ namespace NeatMapper.EntityFrameworkCore {
 												if (matchingDestinationElement != null) 
 													dbContext.Attach(matchingDestinationElement);
 												else {
-													var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-														tupleToValueTupleDelegate.Invoke(sourceElement) :
-														sourceElement);
-													try { 
-														matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
-													}
-													finally {
-														ArrayPool.Return(keyValues);
+													if (sourceElement != null) {
+														var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+															tupleToValueTupleDelegate.Invoke(sourceElement) :
+															sourceElement);
+														try {
+															matchingSourceEntityElement = attachEntityDelegate!.Invoke(keyValues, dbContext);
+														}
+														finally {
+															ArrayPool.Return(keyValues);
+														}
 													}
 
-													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(matchingSourceEntityElement);
+													if(matchingDestinationElement != null || matchingSourceEntityElement != null) { 
+														elementsToRemove.Add(matchingDestinationElement);
+														elementsToAdd.Add(matchingSourceEntityElement);
+													}
 												}
 											}
 											else
@@ -462,20 +468,21 @@ namespace NeatMapper.EntityFrameworkCore {
 										else {
 											if (throwOnDuplicateEntity) {
 												if (sourceEntityFound && matchingSourceEntityElement != null) {
+													// If we have an entity we also had a key
 													var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-														tupleToValueTupleDelegate.Invoke(sourceElement) :
-														sourceElement);
+														tupleToValueTupleDelegate.Invoke(sourceElement!) :
+														sourceElement!);
 													try { 
-														throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+														throw new DuplicateEntityException($"A duplicate entity of type {types.To.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
 													}
 													finally {
 														ArrayPool.Return(keyValues);
 													}
 												}
 												else
-													throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
+													throw new DuplicateEntityException($"A non-null entity of type {types.To.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
 											}
-											else {
+											else if(matchingDestinationElement != null || matchingSourceEntityElement != null) {
 												elementsToRemove.Add(matchingDestinationElement);
 												elementsToAdd.Add(matchingSourceEntityElement);
 											}
@@ -484,29 +491,36 @@ namespace NeatMapper.EntityFrameworkCore {
 								}
 								else {
 									if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && (!sourceEntityFound || matchingSourceEntityElement == null)) {
-										var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
-											tupleToValueTupleDelegate.Invoke(sourceElement) :
-											sourceElement);
+										if (dbContext != null) {
+											if (sourceElement != null) {
+												var keyValues = keyValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
+													tupleToValueTupleDelegate.Invoke(sourceElement) :
+													sourceElement);
 
-										try { 
-											matchingSourceEntityElement = attachEntityDelegate.Invoke(keyValues, dbContext);
+												try {
+													matchingSourceEntityElement = attachEntityDelegate!.Invoke(keyValues, dbContext);
+												}
+												finally {
+													ArrayPool.Return(keyValues);
+												}
+											}
 										}
-										finally {
-											ArrayPool.Return(keyValues);
-										}
+										else
+											throw new InvalidOperationException("DbContext to attach entities not provided");
 									}
+
 									elementsToAdd.Add(matchingSourceEntityElement);
 								}
 							}
 						}
 						finally {
 							if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach && dbContext != null)
-								dbContextSemaphore.Release();
+								dbContextSemaphore!.Release();
 						}
 
 						// Deleted elements
 						if (removeNotMatchedDestinationElements)
-							elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+							elementsToRemove.AddRange(destinationEnumerable.Cast<object?>().Except(matchedDestinations!));
 
 						// Update destination collection
 						foreach (var element in elementsToRemove) {
@@ -514,7 +528,8 @@ namespace NeatMapper.EntityFrameworkCore {
 								throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destinationEnumerable}");
 						}
 						foreach (var element in elementsToAdd) {
-							addDelegate.Invoke(destinationEnumerable, element);
+							if(!removeNullEntities || element != null)
+								addDelegate.Invoke(destinationEnumerable, element);
 						}
 					}
 					catch (MapNotFoundException) {
@@ -537,7 +552,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		private IMatcher GetMatcher(MappingOptions mappingOptions) {
+		private IMatcher GetMatcher(MappingOptions? mappingOptions) {
 			var mergeMappingOptions = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>();
 			if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
 				// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
@@ -555,8 +570,35 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// Normalizes <see cref="Tuple"/> key types to <see cref="ValueTuple"/>
 		/// </summary>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions mappingOptions) {
+		protected IMatchMapFactory GetNormalizedMatchFactory((Type Key, Type Entity) types, MappingOptions? mappingOptions) {
 			return GetMatcher(mappingOptions).MatchFactory(types.Key.TupleToValueTuple(), types.Entity, mappingOptions);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		protected MappingOptions? CreateDestinationMappingOptions(MappingOptions? mappingOptions) {
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
+				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
+			var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+				?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
+			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
+			// because we might attach provided entities instead of creating new ones, also do not remove null entities yet
+			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach || removeNullEntities) {
+				return (mappingOptions ?? MappingOptions.Empty)
+					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
+						o => new EntityFrameworkCoreMappingOptions(
+							entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach ?
+								EntitiesRetrievalMode.LocalOnly :
+								o?.EntitiesRetrievalMode,
+							o?.DbContextInstance,
+							o?.ThrowOnDuplicateEntity,
+							removeNullEntities ?
+								false :
+								o?.IgnoreNullEntities));
+			}
+			else
+				return mappingOptions;
 		}
 	}
 }

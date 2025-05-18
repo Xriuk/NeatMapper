@@ -49,14 +49,14 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// Delegates which compare an entity with its key, keys are entity types, the order of the parameters is: entity, key.
 		/// </summary>
-		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>> _entityKeyComparerCache =
-			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>>();
+		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>> _entityKeyComparerCache =
+			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>>();
 
 		/// <summary>
 		/// Delegates which compare an entity with another entity of the same type, keys are entity types.
 		/// </summary>
-		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>> _entityEntityComparerCache =
-			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim, DbContext, bool>>();
+		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>> _entityEntityComparerCache =
+			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>>();
 
 
 		/// <summary>
@@ -73,12 +73,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		public EntityFrameworkCoreMatcher(
 			IModel model,
 			Type dbContextType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
+			IServiceProvider? serviceProvider = null) {
 
 			_model = model ?? throw new ArgumentNullException(nameof(model));
 			_dbContextType = dbContextType ?? throw new ArgumentNullException(nameof(dbContextType));
@@ -86,59 +81,16 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMatchInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
-		public bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			using(var factory = MatchFactory(sourceType, destinationType, mappingOptions)) {
 				return factory.Invoke(source, destination);
 			}
 		}
-		public IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if(!CanMatchInternal(sourceType, destinationType, mappingOptions, out var keyType, out var entityType))
 				throw new MapNotFoundException((sourceType, destinationType));
 
@@ -157,10 +109,10 @@ namespace NeatMapper.EntityFrameworkCore {
 					var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
 
 					var keyParamType = keyType.IsCompositeKeyType() ?
-						TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType :
+						TupleUtils.GetValueTupleConstructor(keyType.UnwrapNullable().GetGenericArguments()).DeclaringType! :
 						keyType.UnwrapNullable();
 					var modelEntity = _model.GetEntityTypes().First(e => e.ClrType == entityType);
-					var key = modelEntity.FindPrimaryKey();
+					var key = modelEntity.FindPrimaryKey()!;
 					var keyProperties = key.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
 
 					var properties = keyProperties.Select((p, i) => {
@@ -205,7 +157,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
 								Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Wait)),
 							Expression.TryFinally(
-								Expression.Block(typeof(bool), new[] { entityEntryVar },
+								Expression.Block(typeof(bool), [ entityEntryVar ],
 									// var entityEntry = dbContext.Entry(entity)
 									Expression.Assign(
 										entityEntryVar,
@@ -215,7 +167,7 @@ namespace NeatMapper.EntityFrameworkCore {
 										Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
 										Expression.Throw(
 											Expression.New(
-												typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+												typeof(InvalidOperationException).GetConstructor([ typeof(string) ])!,
 												Expression.Constant($"The entity of type {entityType.FullName ?? entityType.Name} is not being tracked " +
 													$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
 													$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
@@ -230,7 +182,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							);
 					}
 
-					return Expression.Lambda<Func<object, object, SemaphoreSlim, DbContext, bool>>(body, entityParam, keyParam, dbContextSemaphoreParam, dbContextParam).Compile();
+					return Expression.Lambda<Func<object, object, SemaphoreSlim?, DbContext?, bool>>(body, entityParam, keyParam, dbContextSemaphoreParam, dbContextParam).Compile();
 				});
 				
 				// If the key is a tuple we convert it to a value tuple, because maps are with value tuples only
@@ -238,8 +190,8 @@ namespace NeatMapper.EntityFrameworkCore {
 
 				// Retrieve DbContext and semaphore if dealing with shadow keys (semaphore will be retrieved
 				// and used only if we are not already inside a semaphore lock)
-				DbContext dbContext;
-				SemaphoreSlim dbContextSemaphore;
+				DbContext? dbContext;
+				SemaphoreSlim? dbContextSemaphore;
 				if (_entityShadowKeyCache.TryGetValue(entityType, out var shadowKey) && shadowKey) {
 					dbContext = RetrieveDbContext(mappingOptions) ?? throw new MapNotFoundException((sourceType, destinationType));
 					dbContextSemaphore = mappingOptions?.GetOptions<NestedSemaphoreContext>() == null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
@@ -296,7 +248,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					var entityEntry2Var = Expression.Variable(typeof(EntityEntry), "entityEntry2");
 
 					var modelEntity = _model.GetEntityTypes().First(e => e.ClrType == entityType);
-					var key = modelEntity.FindPrimaryKey();
+					var key = modelEntity.FindPrimaryKey()!;
 
 					var keyProperties = key.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
 
@@ -331,8 +283,8 @@ namespace NeatMapper.EntityFrameworkCore {
 							else{
 								// ((EntityType)entity1)._key1 == ((EntityType)entity2)._key1
 								return Expression.Equal(
-									Expression.Field(Expression.Convert(entity1Param, type), p.FieldInfo),
-									Expression.Field(Expression.Convert(entity2Param, type), p.FieldInfo));
+									Expression.Field(Expression.Convert(entity1Param, type), p.FieldInfo!),
+									Expression.Field(Expression.Convert(entity2Param, type), p.FieldInfo!));
 							}
 						})
 						.Aggregate(Expression.AndAlso);
@@ -346,7 +298,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								Expression.NotEqual(dbContextSemaphoreParam, Expression.Constant(null, dbContextSemaphoreParam.Type)),
 								Expression.Call(dbContextSemaphoreParam, EfCoreUtils.SemaphoreSlim_Wait)),
 							Expression.TryFinally(
-								Expression.Block(typeof(bool), new[] { entityEntry1Var, entityEntry2Var },
+								Expression.Block(typeof(bool), [ entityEntry1Var, entityEntry2Var ],
 									// var entityEntry1 = dbContext.Entry(entity1)
 									Expression.Assign(
 										entityEntry1Var,
@@ -363,7 +315,7 @@ namespace NeatMapper.EntityFrameworkCore {
 											Expression.Equal(Expression.Property(entityEntry2Var, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached))),
 										Expression.Throw(
 											Expression.New(
-												typeof(InvalidOperationException).GetConstructor(new[] { typeof(string) }),
+												typeof(InvalidOperationException).GetConstructor([ typeof(string) ])!,
 												Expression.Constant($"The entity(ies) of type {sourceType.FullName ?? sourceType.Name} is/are not being tracked " +
 													$"by the provided {nameof(DbContext)}, so its/their shadow key(s) cannot be retrieved locally. " +
 													$"Either provide a valid {nameof(DbContext)} or pass a tracked entity(ies).")),
@@ -378,12 +330,12 @@ namespace NeatMapper.EntityFrameworkCore {
 						);
 					}
 
-					return Expression.Lambda<Func<object, object, SemaphoreSlim, DbContext, bool>>(body, entity1Param, entity2Param, dbContextSemaphoreParam, dbContextParam).Compile();
+					return Expression.Lambda<Func<object, object, SemaphoreSlim?, DbContext?, bool>>(body, entity1Param, entity2Param, dbContextSemaphoreParam, dbContextParam).Compile();
 				});
 
 				// Retrieve DbContext and semaphore if dealing with shadow keys
-				DbContext dbContext;
-				SemaphoreSlim dbContextSemaphore;
+				DbContext? dbContext;
+				SemaphoreSlim? dbContextSemaphore;
 				if (_entityShadowKeyCache.TryGetValue(sourceType, out var shadowKey) && shadowKey) {
 					dbContext = RetrieveDbContext(mappingOptions) ?? throw new MapNotFoundException((sourceType, destinationType));
 					dbContextSemaphore = mappingOptions?.GetOptions<NestedSemaphoreContext>() == null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
@@ -419,22 +371,14 @@ namespace NeatMapper.EntityFrameworkCore {
 						}
 					});
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 		bool CanMatchInternal(
 			Type sourceType,
 			Type destinationType,
-			MappingOptions mappingOptions,
-			out Type keyType,
+			MappingOptions? mappingOptions,
+			out Type? keyType,
 			out Type entityType) {
 
 			if (sourceType == null)
@@ -458,7 +402,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else { 
 				keyType = null;
-				entityType = null;
+				entityType = null!;
 				return false;
 			}
 
@@ -504,7 +448,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (keyType != null) {
 				if (keyType.IsCompositeKeyType()) {
 					var keyTypes = keyType.UnwrapNullable().GetGenericArguments();
-					if (keyPropertiesCount != keyTypes.Length || !keyTypes.Zip(keyProperties, (k1, k2) => (k1, k2.ClrType)).All(keys => keys.Item1 == keys.Item2))
+					if (keyPropertiesCount != keyTypes.Length || !keyTypes.Zip(keyProperties, (k1, k2) => (KeyType: k1, PropertyType: k2.ClrType)).All(keys => keys.KeyType == keys.PropertyType))
 						return false;
 				}
 				else if (keyPropertiesCount != 1 || keyProperties.First().ClrType != keyType.UnwrapNullable())
@@ -519,21 +463,15 @@ namespace NeatMapper.EntityFrameworkCore {
 		}
 
 		// Retrieves the DbContext if available, may return null
-		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
+		private DbContext? RetrieveDbContext(MappingOptions? mappingOptions) {
 			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;
 			if (dbContext != null && dbContext.GetType() != _dbContextType)
 				dbContext = null;
 
-			if (dbContext == null) {
-				dbContext = (mappingOptions?.GetOptions<MatcherOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
-					.GetService(_dbContextType) as DbContext;
-			}
+			dbContext ??= (mappingOptions?.GetOptions<MatcherOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
+				.GetService(_dbContextType) as DbContext;
 
 			return dbContext;
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

@@ -25,14 +25,6 @@ namespace NeatMapper{
 		/// A factory which can be used to check if two objects are equivalent.
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 	}
 }

@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -21,7 +17,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			
 			TContext instance;
 			try {
-				instance = ObjectFactory.Create(typeof(TContext)) as TContext;
+				instance = ObjectFactory.Create(typeof(TContext)) as TContext
+					?? throw new Exception();
 			}
 			catch {
 				if(!services.Any(s => s.ServiceType == typeof(TContext)))

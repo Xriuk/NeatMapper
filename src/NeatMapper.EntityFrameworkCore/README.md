@@ -8,6 +8,8 @@ Entity Framework Core maps for [NeatMapper](https://www.nuget.org/packages/NeatM
 
 Creates automatic maps and projections between entities and their keys (even composite and shadow keys), supports normal maps and asynchronous ones, also supports collections (not nested).
 
+It can also map keys to predicates (`Expression<Func<Entity, bool>>`) for filtering.
+
 ## How to install
 
 You can find all the other packages on Nuget https://www.nuget.org/profiles/xriuk
@@ -49,10 +51,21 @@ var entities = await asyncMapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 (int MyIntKey, string MyStringKey) = mapper.Map<(int, string)>(myEntity);
 
 
-// Project an entity into its key
+// Project an entity into its key (even shadow)
 var myEntitiesKeys = db.Set<MyEntity>()
     .Project<int>(projector)
     .ToArray();
+
+
+// Create a filtering expression from key(s)
+var expr1 = mapper.Map<Expression<Func<MyEntity, bool>>>(2);
+// entity => entity.Id == 2
+
+var expr2 = mapper.Map<Expression<Func<MyEntity, bool>>>(new int[]{ 2, 3, ... });
+// entity => new int[]{ 2, 3, ... }.Contains(entity.Id)
+
+var expr3 = mapper.Map<Expression<Func<MyEntityWithCompositeKey, bool>>>(new []{ (2, "StringKey1"), (3, "StringKey2"), ... });
+// entity => (entity.MyIntKey == 2 && entity.MyStringKey == "StringKey1") || (entity.MyIntKey == 3 && entity.MyStringKey == "StringKey2") || ...
 ```
 
 ## Advanced options

@@ -1,16 +1,10 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using System.Linq.Expressions;
 
 namespace NeatMapper {
 	internal sealed class LambdaParameterReplacer : ExpressionVisitor {
-		private ReadOnlyCollection<ParameterExpression> parameters = null;
+		private ReadOnlyCollection<ParameterExpression>? parameters;
 		private readonly Expression[] replacements;
 
 		public LambdaParameterReplacer(params Expression[] replacements) {
@@ -20,7 +14,7 @@ namespace NeatMapper {
 
 		override protected Expression VisitParameter(ParameterExpression node) {
 			var parameter = parameters?.IndexOf(node);
-			if (parameter == null || parameter < 0 || parameter >= parameters.Count)
+			if (parameter == null || parameter < 0 || parameter >= parameters!.Count)
 				return base.VisitParameter(node);
 
 			if (replacements[parameter.Value].Type != parameters[parameter.Value].Type)

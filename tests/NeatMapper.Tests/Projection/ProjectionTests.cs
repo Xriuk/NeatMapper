@@ -324,5 +324,19 @@ namespace NeatMapper.Tests.Projection {
 			Expression<Func<string, int>> expr = s => s != null ? s.Length : 0;
 			TestUtils.AssertExpressionsEqual(expr, projector.Project<string, int>());
 		}
+
+		[TestMethod]
+		public void ShouldCheckCanProjectWithAdditionalMaps() {
+			var options = new CustomProjectionAdditionalMapsOptions();
+			options.AddMap<string, int>(c => s => s != null ? s.Length : 0, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			var projector = new CustomProjector(null, options);
+
+			Assert.IsTrue(projector.CanProject<string, int>());
+			Assert.IsFalse(projector.CanProject<string, int>(ProjectionCompilationContext.Instance));
+
+			Expression<Func<string, int>> expr = s => s != null ? s.Length : 0;
+			TestUtils.AssertExpressionsEqual(expr, projector.Project<string, int>());
+			TestUtils.AssertMapNotFound(() => projector.Project<string, int>(ProjectionCompilationContext.Instance));
+		}
 	}
 }

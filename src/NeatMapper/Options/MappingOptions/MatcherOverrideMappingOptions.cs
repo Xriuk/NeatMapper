@@ -15,20 +15,7 @@ namespace NeatMapper {
 		/// <param name="serviceProvider">
 		/// <inheritdoc cref="ServiceProvider" path="/summary"/><inheritdoc cref="ServiceProvider" path="/remarks"/>
 		/// </param>
-		public MatcherOverrideMappingOptions(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			matcher = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
-
+		public MatcherOverrideMappingOptions(IMatcher? matcher = null, IServiceProvider? serviceProvider = null) {
 			Matcher = matcher;
 			ServiceProvider = serviceProvider;
 		}
@@ -38,34 +25,12 @@ namespace NeatMapper {
 		/// Matcher to be used for nested matches.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent matcher.</remarks>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			Matcher {
-				get;
-#if NET5_0_OR_GREATER
-				init;
-#endif
-		}
+		public IMatcher? Matcher { get; init; }
 
 		/// <summary>
 		/// Service provider to use for the matches.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use the one provided by the parent matcher.</remarks>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			ServiceProvider {
-				get;
-#if NET5_0_OR_GREATER
-				init;
-#endif
-		}
+		public IServiceProvider? ServiceProvider { get; init; }
 	}
 }

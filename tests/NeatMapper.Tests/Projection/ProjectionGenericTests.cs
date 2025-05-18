@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
+using NeatMapper.Tests.Classes;
 
 namespace NeatMapper.Tests.Projection {
 	[TestClass]
@@ -32,10 +33,14 @@ namespace NeatMapper.Tests.Projection {
 		public class Maps<T1, T2> :
 #if NET7_0_OR_GREATER
 			IProjectionMapStatic<Tuple<T1, T2>, ValueTuple<T2, T1>>,
-			IProjectionMapStatic<T1[], T2[]>
+			IProjectionMapStatic<T1[], T2[]>,
+			ICanProjectStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IProjectionMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #else
 			IProjectionMap<Tuple<T1, T2>, ValueTuple<T2, T1>>,
-			IProjectionMap<T1[], T2[]>
+			IProjectionMap<T1[], T2[]>,
+			ICanProject<IEnumerable<T1>, CustomCollectionComplex<T2>>,
+			IProjectionMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
 #endif
 			{
 
@@ -66,6 +71,35 @@ namespace NeatMapper.Tests.Projection {
 				.Project(ProjectionContext context) {
 
 				throw new MapNotFoundException((typeof(T1[]), typeof(T2[])));
+			}
+
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			bool
+#if NET7_0_OR_GREATER
+				ICanProjectStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				ICanProject<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.CanProject(ProjectionContext context) {
+
+				return context.Projector.CanProject<T1, T2>(context.MappingOptions);
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<IEnumerable<T1>, CustomCollectionComplex<T2>>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#else
+				IProjectionMap<IEnumerable<T1>, CustomCollectionComplex<T2>>
+#endif
+				.Project(ProjectionContext context) {
+
+				return s => new CustomCollectionComplex<T2>();
 			}
 		}
 
@@ -745,6 +779,22 @@ namespace NeatMapper.Tests.Projection {
 		public void ShouldPreferSpecificMaps() {
 			Expression<Func<IEnumerable<bool>, IList<bool>>> expr = source => new List<bool>(32);
 			TestUtils.AssertExpressionsEqual(expr, _projector.Project<IEnumerable<bool>, IList<bool>>());
+		}
+
+
+		[TestMethod]
+		public void ShouldCheckCanProjectIfPresent() {
+			var nestedProjector = new CustomProjector(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(ProjectionTests.Maps) }
+			});
+
+			var options = new MappingOptions(new ProjectorOverrideMappingOptions(nestedProjector));
+
+			Assert.IsTrue(_projector.CanProject<IEnumerable<int>, CustomCollectionComplex<string>>(options));
+			Assert.IsFalse(_projector.CanProject<IEnumerable<int>, CustomCollectionComplex<float>>(options));
+
+			_projector.Project<IEnumerable<int>, CustomCollectionComplex<string>>(options);
+			TestUtils.AssertMapNotFound(() => _projector.Project<IEnumerable<int>, CustomCollectionComplex<float>>(options));
 		}
 	}
 }

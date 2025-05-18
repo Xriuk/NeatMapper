@@ -50,7 +50,9 @@ namespace NeatMapper.Transitive {
 			// Creating mapper with AsyncEmptyMapper to avoid recursion, the nested mapper will be overridden by composite mapper
 			services.AddOptions<AsyncCompositeMapperOptions>()
 				.Configure(o => {
+#pragma warning disable CS0618
 					o.Mappers.Add(new AsyncTransitiveMapper(AsyncEmptyMapper.Instance));
+#pragma warning restore CS0618
 				});
 
 			services.Add(new ServiceDescriptor(

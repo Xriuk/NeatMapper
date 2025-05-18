@@ -10,10 +10,22 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CustomMapper : IMapper, IMapperFactory, IMapperMaps {
 		/// <summary>
+		/// Configuration for <see cref="ICanMapNew{TSource, TDestination}"/> (and the static version) classes
+		/// for the mapper.
+		/// </summary>
+		internal readonly CustomMapsConfiguration _canMapNewConfiguration;
+
+		/// <summary>
 		/// Configuration for <see cref="INewMap{TSource, TDestination}"/> (and the static version) classes and
 		/// <see cref="CustomNewAdditionalMapsOptions"/> additional maps for the mapper.
 		/// </summary>
 		internal readonly CustomMapsConfiguration _newMapsConfiguration;
+
+		/// <summary>
+		/// Configuration for <see cref="ICanMapMerge{TSource, TDestination}"/> (and the static version) classes
+		/// for the mapper.
+		/// </summary>
+		internal readonly CustomMapsConfiguration _canMapMergeConfiguration;
 
 		/// <summary>
 		/// Configuration for <see cref="IMergeMap{TSource, TDestination}"/> (and the static version) classes and
@@ -28,9 +40,7 @@ namespace NeatMapper {
 
 
 		/// <summary>
-		/// Creates a new instance of <see cref="CustomMapper"/>.<br/>
-		/// At least one between <paramref name="mapsOptions"/>, <paramref name="additionalNewMapsOptions"/>
-		/// and <paramref name="additionalMergeMapsOptions"/> should be specified.
+		/// Creates a new instance of <see cref="CustomMapper"/>.
 		/// </summary>
 		/// <param name="mapsOptions">Options to retrieve user-defined maps for the mapper, null to ignore.</param>
 		/// <param name="additionalNewMapsOptions">Additional user-defined maps for the mapper, null to ignore.</param>
@@ -40,32 +50,30 @@ namespace NeatMapper {
 		/// null to pass an empty service provider.<br/>
 		/// Can be overridden during mapping with <see cref="MapperOverrideMappingOptions.ServiceProvider"/>.
 		/// </param>
+		/// <remarks>
+		/// At least one between <paramref name="mapsOptions"/>, <paramref name="additionalNewMapsOptions"/>
+		/// and <paramref name="additionalMergeMapsOptions"/> should be specified.
+		/// </remarks>
 		public CustomMapper(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomMapsOptions?
-#else
-			CustomMapsOptions
-#endif
-			mapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomNewAdditionalMapsOptions?
-#else
-			CustomNewAdditionalMapsOptions
-#endif
-			additionalNewMapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			CustomMergeAdditionalMapsOptions?
-#else
-			CustomMergeAdditionalMapsOptions
-#endif
-			additionalMergeMapsOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
+			CustomMapsOptions? mapsOptions = null,
+			CustomNewAdditionalMapsOptions? additionalNewMapsOptions = null,
+			CustomMergeAdditionalMapsOptions? additionalMergeMapsOptions = null,
+			IServiceProvider? serviceProvider = null) {
 
+			var typesToScan = (mapsOptions ?? new CustomMapsOptions()).TypesToScan;
+			_canMapNewConfiguration = new CustomMapsConfiguration(
+				(_, i) => {
+					if (!i.IsGenericType)
+						return false;
+					var type = i.GetGenericTypeDefinition();
+					return type == typeof(ICanMapNew<,>)
+#if NET7_0_OR_GREATER
+						|| type == typeof(ICanMapNewStatic<,>)
+#endif
+					;
+				},
+				typesToScan,
+				additionalNewMapsOptions?._canMaps.Values);
 			_newMapsConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
 					if (!i.IsGenericType)
@@ -77,9 +85,21 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
-				additionalNewMapsOptions?._maps.Values
-			);
+				typesToScan,
+				additionalNewMapsOptions?._maps.Values);
+			_canMapMergeConfiguration = new CustomMapsConfiguration(
+				(_, i) => {
+					if (!i.IsGenericType)
+						return false;
+					var type = i.GetGenericTypeDefinition();
+					return type == typeof(ICanMapMerge<,>)
+#if NET7_0_OR_GREATER
+						|| type == typeof(ICanMapMergeStatic<,>)
+#endif
+					;
+				},
+				typesToScan,
+				additionalMergeMapsOptions?._canMaps.Values);
 			_mergeMapsConfiguration = new CustomMapsConfiguration(
 				(_, i) => {
 					if (!i.IsGenericType)
@@ -91,13 +111,13 @@ namespace NeatMapper {
 #endif
 					;
 				},
-				(mapsOptions ?? new CustomMapsOptions()).TypesToScan,
-				additionalMergeMapsOptions?._maps.Values
-			);
+				typesToScan,
+				additionalMergeMapsOptions?._maps.Values);
+			serviceProvider ??= EmptyServiceProvider.Instance;
 			_contextsCache = new MappingOptionsFactoryCache<MappingContext>(options => {
 				var overrideOptions = options.GetOptions<MapperOverrideMappingOptions>();
 				return new MappingContext(
-					overrideOptions?.ServiceProvider ?? serviceProvider ?? EmptyServiceProvider.Instance,
+					overrideOptions?.ServiceProvider ?? serviceProvider,
 					overrideOptions?.Mapper ?? this,
 					this,
 					options
@@ -107,75 +127,17 @@ namespace NeatMapper {
 
 
 		#region IMapper methods
-		public bool CanMapNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return _newMapsConfiguration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out _) ||
+		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			return CanMapNewInternal(sourceType, destinationType, mappingOptions, out _, out _) ||
 				(ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType, mappingOptions));
 		}
 
-		public bool CanMapMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			return _mergeMapsConfiguration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out _);
+		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			return CanMapMergeInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_newMapsConfiguration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out var map)) {
+		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			if(!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context)) {
 				// Forward new map to merge by creating a destination
 				if (ObjectFactory.CanCreate(destinationType))
 					return Map(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions);
@@ -185,60 +147,20 @@ namespace NeatMapper {
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
-			var context = _contextsCache.GetOrCreate(mappingOptions);
-
 			var result = map.Invoke(source, context);
 
 			// Should not happen
 			TypeUtils.CheckObjectType(result, destinationType);
 
 			return result;
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			Map(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_mergeMapsConfiguration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out var map))
+		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (!CanMapMergeInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
-
-			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			var result = map.Invoke(source, destination, context);
 
@@ -250,29 +172,9 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperFactory methods
-		public INewMapFactory MapNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_newMapsConfiguration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out var map))
+		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
 				return MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
-
-			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultNewMapFactory(
 				sourceType, destinationType,
@@ -286,31 +188,11 @@ namespace NeatMapper {
 
 					return result;
 				});
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IMergeMapFactory MapMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			if (!_mergeMapsConfiguration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out var map))
+		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (!CanMapMergeInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
 				throw new MapNotFoundException((sourceType, destinationType));
-
-			var context = _contextsCache.GetOrCreate(mappingOptions);
 
 			return new DefaultMergeMapFactory(
 				sourceType, destinationType,
@@ -329,27 +211,66 @@ namespace NeatMapper {
 		#endregion
 
 		#region IMapperMaps methods
-		public IEnumerable<(Type From, Type To)> GetNewMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
 			return _newMapsConfiguration.GetMaps();
 		}
 
-		public IEnumerable<(Type From, Type To)> GetMergeMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
 			return _mergeMapsConfiguration.GetMaps();
 		}
 		#endregion
+
+
+		private bool CanMapNewInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions,
+			out Func<object?, MappingContext, object?> map,
+			out MappingContext context) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (_newMapsConfiguration.TryGetSingleMap<MappingContext>((sourceType, destinationType), out map)) {
+				context = _contextsCache.GetOrCreate(mappingOptions);
+
+				if (_canMapNewConfiguration.TryGetContextMap<MappingContext>((sourceType, destinationType), out var canMapNew))
+					return (bool)canMapNew.Invoke(context)!;
+				else
+					return true;
+			}
+			else {
+				context = null!;
+				return false;
+			}
+		}
+
+		private bool CanMapMergeInternal(
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions,
+			out Func<object?, object?, MappingContext, object?> map,
+			out MappingContext context) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			if (_mergeMapsConfiguration.TryGetDoubleMap<MappingContext>((sourceType, destinationType), out map)) {
+				context = _contextsCache.GetOrCreate(mappingOptions);
+
+				if (_canMapMergeConfiguration.TryGetContextMap<MappingContext>((sourceType, destinationType), out var canMapMerge))
+					return (bool)canMapMerge.Invoke(context)!;
+				else
+					return true;
+			}
+			else {
+				context = null!;
+				return false;
+			}
+		}
 	}
 }

@@ -1,7 +1,7 @@
 <!-- https://stackoverflow.com/a/73098203 -->
 <Project>
 	<PropertyGroup>
-		<GlobalVersion>5.0.0</GlobalVersion>
+		<GlobalVersion>5.1.0</GlobalVersion>
 	</PropertyGroup>
 
 	<Target Name="UseExplicitPackageVersions" BeforeTargets="GenerateNuspec">

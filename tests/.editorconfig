@@ -1,0 +1,27 @@
+[*.cs]
+
+dotnet_diagnostic.IDE0018.severity = none
+dotnet_diagnostic.IDE0019.severity = none
+dotnet_diagnostic.IDE0028.severity = none
+dotnet_diagnostic.IDE0034.severity = none
+dotnet_diagnostic.IDE0044.severity = none
+dotnet_diagnostic.IDE0060.severity = none
+dotnet_diagnostic.IDE0074.severity = none
+dotnet_diagnostic.IDE0079.severity = none
+dotnet_diagnostic.IDE0090.severity = none
+dotnet_diagnostic.IDE0130.severity = none
+dotnet_diagnostic.IDE0290.severity = none
+dotnet_diagnostic.IDE0300.severity = none
+dotnet_diagnostic.IDE0301.severity = none
+
+dotnet_diagnostic.CA1513.severity = none
+
+dotnet_diagnostic.CA1806.severity = none
+dotnet_diagnostic.CA1816.severity = none
+dotnet_diagnostic.CA1822.severity = none
+dotnet_diagnostic.CA1829.severity = none
+dotnet_diagnostic.CA1847.severity = none
+dotnet_diagnostic.CA1859.severity = none
+dotnet_diagnostic.CA1861.severity = none
+
+dotnet_diagnostic.CA2211.severity = none

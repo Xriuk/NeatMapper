@@ -8,8 +8,8 @@ namespace NeatMapper {
 	/// </summary>
 	/// <remarks>
 	/// Note to implementers: if a mapper does not support one of the methods
-	/// (<see cref="MapAsync(object, Type, Type, MappingOptions, CancellationToken)"/> or
-	/// <see cref="MapAsync(object, Type, object, Type, MappingOptions, CancellationToken)"/>) it should throw
+	/// (<see cref="MapAsync(object?, Type, Type, MappingOptions, CancellationToken)"/> or
+	/// <see cref="MapAsync(object?, Type, object?, Type, MappingOptions, CancellationToken)"/>) it should throw
 	/// <see cref="MapNotFoundException"/> inside.<br/>
 	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
@@ -27,17 +27,9 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <paramref name="destinationType"/> can be created
-		/// from a parameter of type <paramref name="sourceType"/>.
+		/// from an object of type <paramref name="sourceType"/> asynchronously.
 		/// </returns>
-		bool CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Checks if the mapper can merge an object into an existing one asynchronously.
@@ -54,15 +46,7 @@ namespace NeatMapper {
 		/// <see langword="true"/> if an object of type <paramref name="sourceType"/> can be merged
 		/// into an object of type <paramref name="destinationType"/>.
 		/// </returns>
-		bool CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null);
 
 		/// <summary>
 		/// Maps an object to a new one asynchronously.
@@ -86,27 +70,11 @@ namespace NeatMapper {
 		/// <exception cref="MappingException">
 		/// An exception was thrown while mapping the types, check the inner exception for details.
 		/// </exception>
-		Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default);
 
 		/// <summary>
@@ -133,33 +101,12 @@ namespace NeatMapper {
 		/// <exception cref="MappingException">
 		/// An exception was thrown while mapping the types, check the inner exception for details.
 		/// </exception>
-		Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
+			object? destination,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default);
 	}
 }

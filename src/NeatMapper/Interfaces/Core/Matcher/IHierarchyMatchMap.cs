@@ -4,6 +4,7 @@
 	/// </summary>
 	/// <typeparam name="TSource">Source type, includes derived types.</typeparam>
 	/// <typeparam name="TDestination">Destination type, includes derived types.</typeparam>
+	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IHierarchyMatchMap<in TSource, in TDestination> {
 		/// <summary>
 		/// Checks if two objects are equivalent (usually by comparing the keys of the two).
@@ -18,19 +19,6 @@
 		/// <exception cref="MatcherException">
 		/// An exception was thrown while matching the types, check the inner exception for details.
 		/// </exception>
-		bool Match(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination,
-			MatchingContext context);
+		bool Match(TSource? source, TDestination? destination, MatchingContext context);
 	}
 }

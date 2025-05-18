@@ -12,32 +12,14 @@ namespace NeatMapper {
 		public static readonly IProjector Instance = new EmptyProjector();
 
 
-		internal EmptyProjector() { }
+		private EmptyProjector() { }
 
 
-		public bool CanProject(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return false;
 		}
 
-		public LambdaExpression Project(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 	}

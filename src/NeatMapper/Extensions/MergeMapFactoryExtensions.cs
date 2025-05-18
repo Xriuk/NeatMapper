@@ -63,18 +63,19 @@ namespace NeatMapper {
 		/// <inheritdoc cref="MapNewFactory(IMergeMapFactory, bool)" path="/param"/>
 		/// <inheritdoc cref="MapNewFactory(IMergeMapFactory, bool)" path="/returns"/>
 		/// <inheritdoc cref="MapNewFactory(IMergeMapFactory, bool)" path="/exception"/>
-		public static NewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this MergeMapFactory<TSource, TDestination> factory, bool shouldDispose = true) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+		public static NewMapFactory<TSource, TDestination> MapNewFactory<TSource, TDestination>(this MergeMapFactory<TSource, TDestination> factory,
+			bool shouldDispose = true) {
 
 			var newFactory = ((IMergeMapFactory)factory).MapNewFactory(shouldDispose);
-			return new DisposableNewMapFactory<TSource, TDestination>(source => (TDestination)newFactory.Invoke(source), newFactory);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			try { 
+				return new DisposableNewMapFactory<TSource, TDestination>(
+					source => (TDestination?)newFactory.Invoke(source),
+					newFactory);
+			}
+			catch {
+				newFactory.Dispose();
+				throw;
+			}
 		} 
 		#endregion
 	}

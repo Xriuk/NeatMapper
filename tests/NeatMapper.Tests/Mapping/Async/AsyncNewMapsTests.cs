@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace NeatMapper.Tests.Mapping.Async {
@@ -306,7 +305,7 @@ namespace NeatMapper.Tests.Mapping.Async {
 				IAsyncNewMap<string, KeyValuePair<string, int>>
 #endif
 				.MapAsync(string source, AsyncMappingContext context) {
-				return Task.FromResult(new KeyValuePair<string, int>(source, source.Length));
+				return Task.FromResult(new KeyValuePair<string, int>(source, source?.Length ?? -1));
 			}
 
 #if NET7_0_OR_GREATER
@@ -678,6 +677,19 @@ namespace NeatMapper.Tests.Mapping.Async {
 			Assert.IsTrue(mapper.CanMapAsyncNew<string, int>());
 
 			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
+		}
+
+		[TestMethod]
+		public async Task ShouldCheckCanMapWithAdditionalMaps() {
+			var options = new CustomAsyncNewAdditionalMapsOptions();
+			options.AddMap<string, int>((s, _) => Task.FromResult(s?.Length ?? 0), c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			var mapper = new AsyncCustomMapper(null, options);
+
+			Assert.IsTrue(mapper.CanMapAsyncNew<string, int>());
+			Assert.IsFalse(mapper.CanMapAsyncNew<string, int>(ProjectionCompilationContext.Instance));
+
+			Assert.AreEqual(4, await mapper.MapAsync<int>("Test"));
+			await TestUtils.AssertMapNotFound(() => mapper.MapAsync<int>("Test", new object[] { ProjectionCompilationContext.Instance }));
 		}
 	}
 }

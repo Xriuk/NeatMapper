@@ -26,18 +26,6 @@ namespace NeatMapper {
 		/// An expression which can be used to project an instance of <typeparamref name="TSource"/> type (which may be null)
 		/// to an instance <typeparamref name="TDestination"/> type (which may be null).
 		/// </returns>
-		Expression<Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			>> Project(ProjectionContext context);
+		Expression<Func<TSource?, TDestination?>> Project(ProjectionContext context);
 	}
 }

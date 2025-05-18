@@ -11,14 +11,7 @@ namespace NeatMapper {
 		/// <param name="parentProjector"><inheritdoc cref="ParentProjector" path="/summary"/></param>
 		/// <param name="parentContext"><inheritdoc cref="ParentContext" path="/summary"/></param>
 		/// <exception cref="ArgumentNullException"><paramref name="parentProjector"/> was null.</exception>
-		public NestedProjectionContext(IProjector parentProjector,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			NestedProjectionContext?
-#else
-			NestedProjectionContext
-#endif
-			parentContext = null) {
-
+		public NestedProjectionContext(IProjector parentProjector, NestedProjectionContext? parentContext = null) {
 			ParentProjector = parentProjector ?? throw new ArgumentNullException(nameof(parentProjector));
 			ParentContext = parentContext;
 		}
@@ -34,12 +27,16 @@ namespace NeatMapper {
 		/// was part of another nested projection operation too, or <see langword="null"/>
 		/// if this is the first nested projection operation.
 		/// </summary>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			NestedProjectionContext?
-#else
-			NestedProjectionContext
-#endif
-			ParentContext { get; }
+		public NestedProjectionContext? ParentContext { get; }
+
+
+		/// <summary>
+		/// Checks if this context or any of its parents matches a given predicate.
+		/// </summary>
+		/// <param name="predicate">Condition to check on the context(s).</param>
+		/// <returns>True if this context or any of its parents matches the given predicate.</returns>
+		public bool CheckRecursive(Func<NestedProjectionContext, bool> predicate) {
+			return predicate.Invoke(this) || ParentContext?.CheckRecursive(predicate) == true;
+		}
 	}
 }

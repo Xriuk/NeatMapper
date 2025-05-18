@@ -49,4 +49,15 @@ var entities = await asyncMapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 var myEntitiesKeys = db.Set<MyEntity>()
     .Project<int>(projector)
     .ToArray();
+
+
+// Create a filtering expression from key(s)
+var expr1 = mapper.Map<Expression<Func<MyEntity, bool>>>(2);
+// entity => entity.Id == 2
+
+var expr2 = mapper.Map<Expression<Func<MyEntity, bool>>>(new int[]{ 2, 3, ... });
+// entity => new int[]{ 2, 3, ... }.Contains(entity.Id)
+
+var expr3 = mapper.Map<Expression<Func<MyEntityWithCompositeKey, bool>>>(new []{ (2, "StringKey1"), (3, "StringKey2"), ... });
+// entity => (entity.MyIntKey == 2 && entity.MyStringKey == "StringKey1") || (entity.MyIntKey == 3 && entity.MyStringKey == "StringKey2") || ...
 ```

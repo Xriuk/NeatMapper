@@ -22,12 +22,7 @@ namespace NeatMapper {
 		/// of the provided factory.
 		/// </exception>
 		public static IPredicateFactory Predicate(this IMatchMapFactory factory,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+			object? source,
 			bool shouldDispose = true) {
 
 			if (factory == null)
@@ -43,6 +38,46 @@ namespace NeatMapper {
 			}
 			catch {
 				if(shouldDispose)
+					factory.Dispose();
+				throw;
+			}
+		}
+
+		/// <summary>
+		/// Creates a factory which can be used as a predicate to match multiple objects against a single one.
+		/// </summary>
+		/// <param name="destination">
+		/// Object to compare other objects to of type <see cref="IMatchMapFactory.DestinationType"/>, may be null.
+		/// </param>
+		/// <param name="shouldDispose">
+		/// True if the method should dispose the provided factory on creation exceptions or inside the returned factory,
+		/// false if the provided factory will be disposed elsewhere.
+		/// </param>
+		/// <returns>
+		/// A factory which can be used as a predicate to compare objects of type <see cref="IMatchMapFactory.SourceType"/>
+		/// with the provided object <paramref name="destination"/>.
+		/// </returns>
+		/// <exception cref="ArgumentException">
+		/// <paramref name="destination"/> type is not assignable to <see cref="IMatchMapFactory.DestinationType"/>
+		/// of the provided factory.
+		/// </exception>
+		public static IPredicateFactory PredicateDestination(this IMatchMapFactory factory,
+			object? destination,
+			bool shouldDispose = true) {
+
+			if (factory == null)
+				throw new ArgumentNullException(nameof(factory));
+
+			try {
+				TypeUtils.CheckObjectType(destination, factory.DestinationType, nameof(destination));
+
+				return new DisposablePredicateFactory(
+					factory.SourceType, factory.DestinationType,
+					source => factory.Invoke(source, destination),
+					shouldDispose ? factory : null);
+			}
+			catch {
+				if (shouldDispose)
 					factory.Dispose();
 				throw;
 			}
@@ -86,12 +121,7 @@ namespace NeatMapper {
 		/// </list>
 		/// </exception>
 		public static PredicateFactory<TComparer> Predicate<TComparer>(this IMatchMapFactory factory,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			comparand,
+			object? comparand,
 			bool shouldDispose = true) {
 
 			if (factory == null)
@@ -136,29 +166,23 @@ namespace NeatMapper {
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
 		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
+			TSource? source,
 			bool shouldDispose = true) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+			
 			if (factory == null)
 				throw new ArgumentNullException(nameof(factory));
 
-			return new DisposablePredicateFactory<TDestination>(
-				factory.SourceType,
-				destination => factory.Invoke(source, destination),
-				shouldDispose ? factory : null);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			try { 
+				return new DisposablePredicateFactory<TDestination>(
+					factory.SourceType,
+					destination => factory.Invoke(source, destination),
+					shouldDispose ? factory : null);
+			}
+			catch {
+				if(shouldDispose)
+					factory.Dispose();
+				throw;
+			}
 		}
 		
 		/// <inheritdoc cref="Predicate(IMatchMapFactory, object, bool)" path="/summary"/>
@@ -169,30 +193,34 @@ namespace NeatMapper {
 		/// A factory which can be used as a predicate to compare objects of type <typeparamref name="TSource"/>
 		/// with the provided object <paramref name="destination"/>.
 		/// </returns>
-		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination,
+		public static PredicateFactory<TSource> PredicateDestination<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
+			TDestination? destination,
 			bool shouldDispose = true) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (factory == null)
 				throw new ArgumentNullException(nameof(factory));
 
-			return new DisposablePredicateFactory<TSource>(
-				factory.DestinationType,
-				source => factory.Invoke(source, destination),
-				shouldDispose ? factory : null);
+			try { 
+				return new DisposablePredicateFactory<TSource>(
+					factory.DestinationType,
+					source => factory.Invoke(source, destination),
+					shouldDispose ? factory : null);
+			}
+			catch {
+				if(shouldDispose)
+					factory.Dispose();
+				throw;
+			}
+		}
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+
+		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(MatchMapFactory{TSource, TDestination}, TDestination, bool)"/>
+		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
+		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
+			TDestination? destination,
+			bool shouldDispose = true) {
+
+			return factory.PredicateDestination(destination, shouldDispose);
 		}
 		#endregion
 	}

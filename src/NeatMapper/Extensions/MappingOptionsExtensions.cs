@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace NeatMapper {
 	public static class MappingOptionsExtensions {
@@ -9,14 +8,7 @@ namespace NeatMapper {
 		/// </summary>
 		/// <typeparam name="TOptions">Type of the options to retrieve.</typeparam>
 		/// <returns>The retrieved options, <see langword="null"/> if not found.</returns>
-		public static
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			TOptions?
-#else
-			TOptions
-#endif
-			GetOptions<TOptions>(this MappingOptions options) where TOptions : class {
-
+		public static TOptions? GetOptions<TOptions>(this MappingOptions options) where TOptions : class {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
 
@@ -39,167 +31,96 @@ namespace NeatMapper {
 		/// to avoid recomputing them.
 		/// </param>
 		/// <returns>The new generated options.</returns>
-		public static MappingOptions Replace<TOptions>(this MappingOptions options, Func<TOptions,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			TOptions?
-#else
-			TOptions
-#endif
-			> factory,
+		public static MappingOptions Replace<TOptions>(this MappingOptions options,
+			Func<TOptions, TOptions?> factory,
 			bool cached = false) where TOptions : class {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory == null)
+				throw new ArgumentNullException(nameof(factory));
 
-			return options.Replace(new Dictionary<Type, Func<object, object>> {
-				{ typeof(TOptions), o => o is TOptions opts ? (object)factory.Invoke(opts) : null }
+			return options.Replace(new Dictionary<Type, Func<object, object?>> {
+				{ typeof(TOptions), o => o is TOptions opts ? factory.Invoke(opts) : null }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions Replace<TOptions1, TOptions2>(this MappingOptions options,
-			Func<TOptions1,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<TOptions2,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
+			Func<TOptions1, TOptions1?> factory1,
+			Func<TOptions2, TOptions2?> factory2,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
 
-			return options.Replace(new Dictionary<Type, Func<object, object>> {
-				{ typeof(TOptions1), o => o is TOptions1 opts ? (object)factory1.Invoke(opts) : null },
-				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null }
+			return options.Replace(new Dictionary<Type, Func<object, object?>> {
+				{ typeof(TOptions1), o => o is TOptions1 opts ? factory1.Invoke(opts) : null },
+				{ typeof(TOptions2), o => o is TOptions2 opts ? factory2.Invoke(opts) : null }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3>(this MappingOptions options,
-			Func<TOptions1,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<TOptions2,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
-			Func<TOptions3,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				> factory3,
+			Func<TOptions1, TOptions1?> factory1,
+			Func<TOptions2, TOptions2?> factory2,
+			Func<TOptions3, TOptions3?> factory3,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
+			if (factory3 == null)
+				throw new ArgumentNullException(nameof(factory3));
 
-			return options.Replace(new Dictionary<Type, Func<object, object>> {
-				{ typeof(TOptions1), o => o is TOptions1 opts ? (object)factory1.Invoke(opts) : null },
-				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null },
-				{ typeof(TOptions3), o => o is TOptions3 opts ? (object)factory3.Invoke(opts) : null }
+			return options.Replace(new Dictionary<Type, Func<object, object?>> {
+				{ typeof(TOptions1), o => o is TOptions1 opts ? factory1.Invoke(opts) : null },
+				{ typeof(TOptions2), o => o is TOptions2 opts ? factory2.Invoke(opts) : null },
+				{ typeof(TOptions3), o => o is TOptions3 opts ? factory3.Invoke(opts) : null }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <inheritdoc cref="Replace{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3, TOptions4>(this MappingOptions options,
-			Func<TOptions1,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<TOptions2,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
-			Func<TOptions3,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				> factory3,
-			Func<TOptions4,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions4?
-#else
-				TOptions4
-#endif
-				> factory4,
+			Func<TOptions1, TOptions1?> factory1,
+			Func<TOptions2, TOptions2?> factory2,
+			Func<TOptions3, TOptions3?> factory3,
+			Func<TOptions4, TOptions4?> factory4,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class
 				where TOptions4 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
+			if (factory3 == null)
+				throw new ArgumentNullException(nameof(factory3));
+			if (factory4 == null)
+				throw new ArgumentNullException(nameof(factory4));
 
-			return options.Replace(new Dictionary<Type, Func<object, object>> {
-				{ typeof(TOptions1), o => o is TOptions1 opts ? (object)factory1.Invoke(opts) : null },
-				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null },
-				{ typeof(TOptions3), o => o is TOptions3 opts ? (object)factory3.Invoke(opts) : null },
-				{ typeof(TOptions4), o => o is TOptions4 opts ? (object)factory4.Invoke(opts) : null }
+			return options.Replace(new Dictionary<Type, Func<object, object?>> {
+				{ typeof(TOptions1), o => o is TOptions1 opts ? factory1.Invoke(opts) : null },
+				{ typeof(TOptions2), o => o is TOptions2 opts ? factory2.Invoke(opts) : null },
+				{ typeof(TOptions3), o => o is TOptions3 opts ? factory3.Invoke(opts) : null },
+				{ typeof(TOptions4), o => o is TOptions4 opts ? factory4.Invoke(opts) : null }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <summary>
@@ -242,41 +163,11 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>The new generated options.</returns>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
-			Func<TOptions1,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<TOptions2,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
-			Func<TOptions3,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				> factory3,
-			Func<TOptions4,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions4?
-#else
-				TOptions4
-#endif
-				> factory4,
-			Func<TOptions5,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions5?
-#else
-				TOptions5
-#endif
-				> factory5,
+			Func<TOptions1, TOptions1?> factory1,
+			Func<TOptions2, TOptions2?> factory2,
+			Func<TOptions3, TOptions3?> factory3,
+			Func<TOptions4, TOptions4?> factory4,
+			Func<TOptions5, TOptions5?> factory5,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
@@ -284,24 +175,26 @@ namespace NeatMapper {
 				where TOptions4 : class
 				where TOptions5 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
+			if (factory3 == null)
+				throw new ArgumentNullException(nameof(factory3));
+			if (factory4 == null)
+				throw new ArgumentNullException(nameof(factory4));
+			if (factory5 == null)
+				throw new ArgumentNullException(nameof(factory5));
 
-			return options.Replace(new Dictionary<Type, Func<object, object>> {
-				{ typeof(TOptions1), o => o is TOptions1 opts ? (object)factory1.Invoke(opts) : null },
-				{ typeof(TOptions2), o => o is TOptions2 opts ? (object)factory2.Invoke(opts) : null },
-				{ typeof(TOptions3), o => o is TOptions3 opts ? (object)factory3.Invoke(opts) : null },
-				{ typeof(TOptions4), o => o is TOptions4 opts ? (object)factory4.Invoke(opts) : null },
-				{ typeof(TOptions5), o => o is TOptions5 opts ? (object)factory5.Invoke(opts) : null }
+			return options.Replace(new Dictionary<Type, Func<object, object?>> {
+				{ typeof(TOptions1), o => o is TOptions1 opts ? factory1.Invoke(opts) : null },
+				{ typeof(TOptions2), o => o is TOptions2 opts ? factory2.Invoke(opts) : null },
+				{ typeof(TOptions3), o => o is TOptions3 opts ? factory3.Invoke(opts) : null },
+				{ typeof(TOptions4), o => o is TOptions4 opts ? factory4.Invoke(opts) : null },
+				{ typeof(TOptions5), o => o is TOptions5 opts ? factory5.Invoke(opts) : null }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
@@ -321,227 +214,96 @@ namespace NeatMapper {
 		/// to avoid recomputing them.
 		/// </param>
 		/// <returns>The new generated options.</returns>
-		public static MappingOptions ReplaceOrAdd<TOptions>(this MappingOptions options, Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions?
-#else
-				TOptions
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions?
-#else
-				TOptions
-#endif
-				> factory,
+		public static MappingOptions ReplaceOrAdd<TOptions>(this MappingOptions options,
+			Func<TOptions?, TOptions?> factory,
 			bool cached = false) where TOptions : class {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+			 
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory == null)
+				throw new ArgumentNullException(nameof(factory));
 
-			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
+			return options.ReplaceOrAdd(new Dictionary<Type, Func<object?, object?>> {
 				{ typeof(TOptions), o => factory.Invoke(o as TOptions) }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2>(this MappingOptions options,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
+			Func<TOptions1?, TOptions1?> factory1,
+			Func<TOptions2?, TOptions2?> factory2,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
 
-			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
+			return options.ReplaceOrAdd(new Dictionary<Type, Func<object?, object?>> {
 				{ typeof(TOptions1), o => factory1.Invoke(o as TOptions1) },
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3>(this MappingOptions options,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				> factory3,
+			Func<TOptions1?, TOptions1?> factory1,
+			Func<TOptions2?, TOptions2?> factory2,
+			Func<TOptions3?, TOptions3?> factory3,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
+			if (factory3 == null)
+				throw new ArgumentNullException(nameof(factory3));
 
-			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
+			return options.ReplaceOrAdd(new Dictionary<Type, Func<object?, object?>> {
 				{ typeof(TOptions1), o => factory1.Invoke(o as TOptions1) },
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) },
 				{ typeof(TOptions3), o => factory3.Invoke(o as TOptions3) }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <inheritdoc cref="ReplaceOrAdd{TOptions1, TOptions2, TOptions3, TOptions4, TOptions5}(MappingOptions, Func{TOptions1, TOptions1}, Func{TOptions2, TOptions2}, Func{TOptions3, TOptions3}, Func{TOptions4, TOptions4}, Func{TOptions5, TOptions5}, bool)"/>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4>(this MappingOptions options,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				> factory3,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions4?
-#else
-				TOptions4
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions4?
-#else
-				TOptions4
-#endif
-				> factory4,
+			Func<TOptions1?, TOptions1?> factory1,
+			Func<TOptions2?, TOptions2?> factory2,
+			Func<TOptions3?, TOptions3?> factory3,
+			Func<TOptions4?, TOptions4?> factory4,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
 				where TOptions3 : class
 				where TOptions4 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
+			if (factory3 == null)
+				throw new ArgumentNullException(nameof(factory3));
+			if (factory4 == null)
+				throw new ArgumentNullException(nameof(factory4));
 
-			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
+			return options.ReplaceOrAdd(new Dictionary<Type, Func<object?, object?>> {
 				{ typeof(TOptions1), o => factory1.Invoke(o as TOptions1) },
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) },
 				{ typeof(TOptions3), o => factory3.Invoke(o as TOptions3) },
 				{ typeof(TOptions4), o => factory4.Invoke(o as TOptions4) }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		/// <summary>
@@ -584,71 +346,11 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>The new generated options.</returns>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions1?
-#else
-				TOptions1
-#endif
-				> factory1,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions2?
-#else
-				TOptions2
-#endif
-				> factory2,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions3?
-#else
-				TOptions3
-#endif
-				> factory3,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions4?
-#else
-				TOptions4
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions4?
-#else
-				TOptions4
-#endif
-				> factory4,
-			Func<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions5?
-#else
-				TOptions5
-#endif
-				,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-				TOptions5?
-#else
-				TOptions5
-#endif
-				> factory5,
+			Func<TOptions1?, TOptions1?> factory1,
+			Func<TOptions2?, TOptions2?> factory2,
+			Func<TOptions3?, TOptions3?> factory3,
+			Func<TOptions4?, TOptions4?> factory4,
+			Func<TOptions5?, TOptions5?> factory5,
 			bool cached = false)
 				where TOptions1 : class
 				where TOptions2 : class
@@ -656,24 +358,26 @@ namespace NeatMapper {
 				where TOptions4 : class
 				where TOptions5 : class {
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (factory1 == null)
+				throw new ArgumentNullException(nameof(factory1));
+			if (factory2 == null)
+				throw new ArgumentNullException(nameof(factory2));
+			if (factory3 == null)
+				throw new ArgumentNullException(nameof(factory3));
+			if (factory4 == null)
+				throw new ArgumentNullException(nameof(factory4));
+			if (factory5 == null)
+				throw new ArgumentNullException(nameof(factory5));
 
-			return options.ReplaceOrAdd(new Dictionary<Type, Func<object, object>> {
+			return options.ReplaceOrAdd(new Dictionary<Type, Func<object?, object?>> {
 				{ typeof(TOptions1), o => factory1.Invoke(o as TOptions1) },
 				{ typeof(TOptions2), o => factory2.Invoke(o as TOptions2) },
 				{ typeof(TOptions3), o => factory3.Invoke(o as TOptions3) },
 				{ typeof(TOptions4), o => factory4.Invoke(o as TOptions4) },
 				{ typeof(TOptions5), o => factory5.Invoke(o as TOptions5) }
 			}, cached);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
@@ -686,8 +390,10 @@ namespace NeatMapper {
 		public static MappingOptions AddMergeCollectionMatchers(this MappingOptions options, params IMatcher[] matchers) {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
+			if (matchers == null)
+				throw new ArgumentNullException(nameof(matchers));
 
-			if(matchers?.Length > 0) {
+			if (matchers.Length > 0) {
 				return options.ReplaceOrAdd<MergeCollectionsMappingOptions>(m => {
 					if(m?.Matcher != null || matchers.Length > 1) { 
 						var opts = new CompositeMatcherOptions();

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,9 +24,11 @@ namespace NeatMapper {
 	/// </para>
 	/// <para>
 	/// For merge maps merges a <see cref="IEnumerable{T}"/> or <see cref="IAsyncEnumerable{T}"/>
-	/// (even nested) with an existing <see cref="ICollection{T}"/> (not readonly) asynchronously
-	/// (even in parallel, check below for details),
+	/// (even nested) with an existing <see cref="ICollection{T}"/> (not readonly) asynchronously,
 	/// will create a new <see cref="ICollection{T}"/> if destination is null.<br/>
+	/// If <see cref="MergeCollectionsOptions.RecreateReadonlyDestination"/> (or overrides) is
+	/// <see langword="true"/>, destination collections can also be <see cref="IEnumerable{T}"/>
+	/// or <see cref="IAsyncEnumerable{T}"/> (also readonly), just like new maps.<br/>
 	/// Will try to match elements of the source collection with the destination by using an
 	/// <see cref="IMatcher"/> if provided:
 	/// <list type="bullet">
@@ -53,7 +55,7 @@ namespace NeatMapper {
 		/// <see cref="IMapper"/> which is used to map the elements of the collections, will be also provided
 		/// as a nested mapper in <see cref="AsyncMapperOverrideMappingOptions"/> (if not already present).
 		/// </summary>
-		private readonly IAsyncMapper _elementsMapper;
+		private readonly AsyncCompositeMapper _elementsMapper;
 
 		/// <summary>
 		/// <see cref="IMatcher"/> which is used to match source elements with destination elements
@@ -99,24 +101,9 @@ namespace NeatMapper {
 		/// </param>
 		public AsyncCollectionMapper(
 			IAsyncMapper elementsMapper,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncCollectionMappersOptions?
-#else
-			AsyncCollectionMappersOptions
-#endif
-			asyncCollectionMappersOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			elementsMatcher = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MergeCollectionsOptions?
-#else
-			MergeCollectionsOptions
-#endif
-			mergeCollectionsOptions = null) {
+			AsyncCollectionMappersOptions? asyncCollectionMappersOptions = null,
+			IMatcher? elementsMatcher = null,
+			MergeCollectionsOptions? mergeCollectionsOptions = null) {
 
 			_elementsMapper = new AsyncCompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
 			_asyncCollectionMappersOptions = asyncCollectionMappersOptions ?? new AsyncCollectionMappersOptions();
@@ -134,58 +121,20 @@ namespace NeatMapper {
 
 
 		#region IAsyncMapper methods
-		public bool CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapAsyncNewInternal(sourceType, destinationType, ref mappingOptions, out _, out _);
 		}
 
-		public bool CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapAsyncMergeInternal(sourceType, destinationType, ref mappingOptions, out _, out _);
 		}
 
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public async Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			(Type From, Type To) types = (sourceType, destinationType);
 
@@ -226,7 +175,7 @@ namespace NeatMapper {
 
 				// Since the method above is not 100% accurate in checking if the type is an actual collection
 				// we check again here, if we do not get back a method to add elements then it is not a collection
-				Action<object, object> addDelegate;
+				Action<object, object?> addDelegate;
 				try {
 					addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
 				}
@@ -246,7 +195,7 @@ namespace NeatMapper {
 						if (parallelMappings > 1) {
 							try {
 								// Create and await all the tasks
-								var tasks = new List<Task<object>>();
+								var tasks = new List<Task<object?>>();
 								using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
 									var asyncEnumerator = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.From)
 										.Invoke(source, cancellationSource.Token);
@@ -254,7 +203,7 @@ namespace NeatMapper {
 										while (await moveNextAsyncDelegate.Invoke(asyncEnumerator)) {
 											var sourceElement = currentDelegate.Invoke(asyncEnumerator);
 
-											await semaphore.WaitAsync(cancellationSource.Token);
+											await semaphore!.WaitAsync(cancellationSource.Token);
 
 											tasks.Add(Task.Run(async () => {
 												try {
@@ -279,7 +228,7 @@ namespace NeatMapper {
 										if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
 											throw;
 										else
-											throw a.InnerException;
+											throw a.InnerException!;
 									}
 								}
 
@@ -314,10 +263,10 @@ namespace NeatMapper {
 							if (parallelMappings > 1) {
 								try {
 									// Create and await all the tasks
-									var tasks = new List<Task<object>>();
+									var tasks = new List<Task<object?>>();
 									using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
 										foreach (var sourceElement in sourceEnumerable) {
-											await semaphore.WaitAsync(cancellationSource.Token);
+											await semaphore!.WaitAsync(cancellationSource.Token);
 
 											tasks.Add(Task.Run(async () => {
 												try {
@@ -338,7 +287,7 @@ namespace NeatMapper {
 											if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
 												throw;
 											else
-												throw a.InnerException;
+												throw a.InnerException!;
 										}
 									}
 
@@ -380,44 +329,15 @@ namespace NeatMapper {
 
 				return result;
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public async Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
+			object? destination,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -438,19 +358,18 @@ namespace NeatMapper {
 				newElementsFactory = elementsMapper.MapAsyncNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				newElementsFactory = null;
+				newElementsFactory = null!;
 			}
 
 			// Need to use try/finally with newElementsFactory because it may be assigned after mergeElementsFactory
 			try {
-				IAsyncMergeMapFactory mergeElementsFactory;
+				IAsyncMergeMapFactory? mergeElementsFactory;
 				try {
 					mergeElementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
 
 					// newElementsFactory cannot be null, so if we have a merge factory we also create a new one from it (without disposing it)
 					try {
-						if (newElementsFactory == null)
-							newElementsFactory = mergeElementsFactory.MapAsyncNewFactory(false);
+						newElementsFactory ??= mergeElementsFactory.MapAsyncNewFactory(false);
 					}
 					catch {
 						mergeElementsFactory.Dispose();
@@ -469,25 +388,9 @@ namespace NeatMapper {
 					var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 
 					// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
-					IMatcher elementsMatcher;
-					if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
-						// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
-						// so all the others should be available
-						var options = new CompositeMatcherOptions();
-						options.Matchers.Add(mergeMappingOptions.Matcher);
-						options.Matchers.Add(_elementsMatcher);
-						elementsMatcher = new SafeMatcher(new CompositeMatcher(options));
-					}
-					else
-						elementsMatcher = _elementsMatcher;
-
-					using (var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions)) {
+					using (var elementsMatcherFactory = GetMatcher(mergeMappingOptions).MatchFactory(elementTypes.From, elementTypes.To, mappingOptions)) {
 						var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
 							?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
-
-						// Do not throw since we are dealing with ICollection<T>
-						var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
-						var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
 
 						TypeUtils.CheckObjectType(source, types.From, nameof(source));
 						TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
@@ -504,7 +407,8 @@ namespace NeatMapper {
 								try {
 									// If we have to create the destination collection we know that we can always map to it,
 									// otherwise we check that it's not readonly
-									Type actualCollectionType;
+									Type? actualCollectionType;
+									object? newDestination;
 									if (destination == null) {
 										try {
 											destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
@@ -512,12 +416,24 @@ namespace NeatMapper {
 										catch (ObjectCreationException) {
 											throw new MapNotFoundException(types);
 										}
+										newDestination = null;
 									}
-									else {
-										if (TypeUtils.IsCollectionReadonly(destination)) {
+									else if (TypeUtils.IsCollectionReadonly(destination)) {
+										if (mergeMappingOptions?.RecreateReadonlyDestination ?? _mergeCollectionOptions.RecreateReadonlyDestination) {
+											try {
+												newDestination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
+											}
+											catch (ObjectCreationException) {
+												throw new MapNotFoundException(types);
+											}
+										}
+										else {
 											throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
 												(destination.GetType().FullName ?? destination.GetType().Name));
 										}
+									}
+									else {
+										newDestination = null;
 										actualCollectionType = null;
 									}
 
@@ -538,7 +454,7 @@ namespace NeatMapper {
 													var sourceElement = currentDelegate.Invoke(asyncEnumerator);
 
 													bool found = false;
-													object matchingDestinationElement = null;
+													object? matchingDestinationElement = null;
 													foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
 														if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
 															!elementsToRemove.Contains(destinationElement)) {
@@ -574,15 +490,33 @@ namespace NeatMapper {
 
 											// Deleted elements
 											if (removeNotMatchedDestinationElements)
-												elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+												elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations!));
 
-											// Update destination collection
-											foreach (var element in elementsToAdd) {
-												addDelegate.Invoke(destination, element);
+											if (newDestination != null) {
+												var addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
+
+												// Fill new destination collection
+												foreach (var element in destinationEnumerable.Cast<object?>().Except(elementsToRemove)) {
+													addDelegate.Invoke(newDestination, element);
+												}
+												foreach (var element in elementsToAdd) {
+													addDelegate.Invoke(newDestination, element);
+												}
+												destination = newDestination;
 											}
-											foreach (var element in elementsToRemove) {
-												if (!removeDelegate.Invoke(destination, element))
-													throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+											else {
+												// Do not throw since we are dealing with ICollection<T>
+												var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
+												var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
+
+												// Update destination collection
+												foreach (var element in elementsToAdd) {
+													addDelegate.Invoke(destination, element);
+												}
+												foreach (var element in elementsToRemove) {
+													if (!removeDelegate.Invoke(destination, element))
+														throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+												}
 											}
 										}
 										finally {
@@ -619,7 +553,8 @@ namespace NeatMapper {
 								try {
 									// If we have to create the destination collection we know that we can always map to it,
 									// otherwise we check that it's not readonly
-									Type actualCollectionType;
+									Type? actualCollectionType;
+									object? newDestination;
 									if (destination == null) {
 										try {
 											destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
@@ -627,12 +562,24 @@ namespace NeatMapper {
 										catch (ObjectCreationException) {
 											throw new MapNotFoundException(types);
 										}
+										newDestination = null;
 									}
-									else {
-										if (TypeUtils.IsCollectionReadonly(destination)) {
+									else if (TypeUtils.IsCollectionReadonly(destination)) {
+										if (mergeMappingOptions?.RecreateReadonlyDestination ?? _mergeCollectionOptions.RecreateReadonlyDestination) {
+											try {
+												newDestination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
+											}
+											catch (ObjectCreationException) {
+												throw new MapNotFoundException(types);
+											}
+										}
+										else { 
 											throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
 												(destination.GetType().FullName ?? destination.GetType().Name));
 										}
+									}
+									else { 
+										newDestination = null;
 										actualCollectionType = null;
 									}
 
@@ -649,7 +596,7 @@ namespace NeatMapper {
 											// Added/updated elements
 											foreach (var sourceElement in sourceEnumerable) {
 												bool found = false;
-												object matchingDestinationElement = null;
+												object? matchingDestinationElement = null;
 												foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
 													if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
 														!elementsToRemove.Contains(destinationElement)) {
@@ -681,15 +628,33 @@ namespace NeatMapper {
 
 											// Deleted elements
 											if (removeNotMatchedDestinationElements)
-												elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+												elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations!));
 
-											// Update destination collection
-											foreach (var element in elementsToAdd) {
-												addDelegate.Invoke(destination, element);
+											if(newDestination != null) {
+												var addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
+
+												// Fill new destination collection
+												foreach (var element in destinationEnumerable.Cast<object?>().Except(elementsToRemove)) {
+													addDelegate.Invoke(newDestination, element);
+												}
+												foreach (var element in elementsToAdd) {
+													addDelegate.Invoke(newDestination, element);
+												}
+												destination = newDestination;
 											}
-											foreach (var element in elementsToRemove) {
-												if (!removeDelegate.Invoke(destination, element))
-													throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+											else {
+												// Do not throw since we are dealing with ICollection<T>
+												var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
+												var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
+
+												// Update destination collection
+												foreach (var element in elementsToAdd) {
+													addDelegate.Invoke(destination, element);
+												}
+												foreach (var element in elementsToRemove) {
+													if (!removeDelegate.Invoke(destination, element))
+														throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+												}
 											}
 										}
 										finally {
@@ -743,16 +708,7 @@ namespace NeatMapper {
 		public IAsyncNewMapFactory MapAsyncNewFactory(
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+			MappingOptions? mappingOptions = null) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -793,7 +749,7 @@ namespace NeatMapper {
 
 				// Since the method above is not 100% accurate in checking if the type is an actual collection
 				// we check again here, if we do not get back a method to add elements then it is not a collection
-				Action<object, object> addDelegate;
+				Action<object, object?> addDelegate;
 				try {
 					addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
 				}
@@ -827,7 +783,7 @@ namespace NeatMapper {
 										object result;
 										try {
 											// Create and await all the tasks
-											var tasks = new List<Task<object>>();
+											var tasks = new List<Task<object?>>();
 											using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
 												var asyncEnumerator = getAsyncEnumeratorDelegate.Invoke(source, cancellationSource.Token);
 												try {
@@ -859,7 +815,7 @@ namespace NeatMapper {
 													if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
 														throw;
 													else
-														throw a.InnerException;
+														throw a.InnerException!;
 												}
 											}
 
@@ -948,7 +904,7 @@ namespace NeatMapper {
 										object result;
 										try {
 											// Create and await all the tasks
-											var tasks = new List<Task<object>>();
+											var tasks = new List<Task<object?>>();
 											using (var cancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken)) {
 												foreach (var sourceElement in sourceEnumerable) {
 													await semaphore.WaitAsync(cancellationSource.Token);
@@ -972,7 +928,7 @@ namespace NeatMapper {
 													if (!(e is AggregateException a) || a.InnerExceptions.Count > 1)
 														throw;
 													else
-														throw a.InnerException;
+														throw a.InnerException!;
 												}
 											}
 
@@ -1053,25 +1009,12 @@ namespace NeatMapper {
 			}
 
 			throw new MapNotFoundException(types);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 		public IAsyncMergeMapFactory MapAsyncMergeFactory(
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+			MappingOptions? mappingOptions = null) {
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -1092,18 +1035,17 @@ namespace NeatMapper {
 				newElementsFactory = elementsMapper.MapAsyncNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				newElementsFactory = null;
+				newElementsFactory = null!;
 			}
 
 			try {
-				IAsyncMergeMapFactory mergeElementsFactory;
+				IAsyncMergeMapFactory? mergeElementsFactory;
 				try {
 					mergeElementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
 
 					// newElementsFactory cannot be null, so if we have a merge factory we also create a new one from it (without disposing it)
 					try {
-						if (newElementsFactory == null)
-							newElementsFactory = mergeElementsFactory.MapAsyncNewFactory(false);
+						newElementsFactory ??= mergeElementsFactory.MapAsyncNewFactory(false);
 					}
 					catch {
 						mergeElementsFactory.Dispose();
@@ -1122,18 +1064,7 @@ namespace NeatMapper {
 					var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 
 					// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
-					IMatcher elementsMatcher;
-					if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
-						// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
-						// so all the others should be available
-						var options = new CompositeMatcherOptions();
-						options.Matchers.Add(mergeMappingOptions.Matcher);
-						options.Matchers.Add(_elementsMatcher);
-						elementsMatcher = new SafeMatcher(new CompositeMatcher(options));
-					}
-					else
-						elementsMatcher = _elementsMatcher;
-					var elementsMatcherFactory = elementsMatcher.MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
+					var elementsMatcherFactory = GetMatcher(mergeMappingOptions).MatchFactory(elementTypes.From, elementTypes.To, mappingOptions);
 
 					try {
 						var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
@@ -1198,7 +1129,7 @@ namespace NeatMapper {
 															var sourceElement = currentDelegate.Invoke(asyncEnumerator);
 
 															bool found = false;
-															object matchingDestinationElement = null;
+															object? matchingDestinationElement = null;
 															foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
 																if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
 																	!elementsToRemove.Contains(destinationElement)) {
@@ -1234,7 +1165,7 @@ namespace NeatMapper {
 
 													// Deleted elements
 													if (removeNotMatchedDestinationElements)
-														elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+														elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations!));
 
 													// Update destination collection
 													foreach (var element in elementsToAdd) {
@@ -1304,7 +1235,7 @@ namespace NeatMapper {
 													// Added/updated elements
 													foreach (var sourceElement in sourceEnumerable) {
 														bool found = false;
-														object matchingDestinationElement = null;
+														object? matchingDestinationElement = null;
 														foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
 															if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
 																!elementsToRemove.Contains(destinationElement)) {
@@ -1336,7 +1267,7 @@ namespace NeatMapper {
 
 													// Deleted elements
 													if (removeNotMatchedDestinationElements)
-														elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations));
+														elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations!));
 
 													// Update destination collection
 													foreach (var element in elementsToAdd) {
@@ -1404,14 +1335,10 @@ namespace NeatMapper {
 		#endregion
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private bool CanMapAsyncNewInternal(
 			Type sourceType,
 			Type destinationType,
-			ref MappingOptions mappingOptions,
+			[NotNullWhen(true)] ref MappingOptions? mappingOptions,
 			out (Type From, Type To) elementTypes,
 			out IAsyncMapper elementsMapper) {
 
@@ -1434,7 +1361,7 @@ namespace NeatMapper {
 			}
 			else {
 				elementTypes = default;
-				elementsMapper = null;
+				elementsMapper = null!;
 
 				return false;
 			}
@@ -1443,7 +1370,7 @@ namespace NeatMapper {
 		private bool CanMapAsyncMergeInternal(
 			Type sourceType,
 			Type destinationType,
-			ref MappingOptions mappingOptions,
+			[NotNullWhen(true)] ref MappingOptions? mappingOptions,
 			out (Type From, Type To) elementTypes,
 			out IAsyncMapper elementsMapper) {
 
@@ -1452,26 +1379,25 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			var recreate = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>()?.RecreateReadonlyDestination
+				?? _mergeCollectionOptions.RecreateReadonlyDestination;
+
 			if ((sourceType.IsEnumerable() || sourceType.IsAsyncEnumerable()) &&
-				destinationType.IsCollection() && !destinationType.IsArray &&
+				((destinationType.IsCollection() && !destinationType.IsArray) ||
+					(recreate && (destinationType.IsEnumerable() || destinationType.IsAsyncEnumerable()))) &&
 				ObjectFactory.CanCreateCollection(destinationType)) {
 
-				// If the destination type is not an interface, check if it is not readonly
-				if (!destinationType.IsInterface && destinationType.IsGenericType) {
-					var collectionDefinition = destinationType.GetGenericTypeDefinition();
-					if (collectionDefinition == typeof(ReadOnlyCollection<>) ||
-						collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
-						collectionDefinition == typeof(ReadOnlyObservableCollection<>)) {
+				// If we are not recreating, check if the destination type is not readonly
+				if (!recreate && TypeUtils.IsCollectionReadonly(destinationType)) {
+					elementTypes = default;
+					elementsMapper = null!;
 
-						elementTypes = default;
-						elementsMapper = null;
-
-						return false;
-					}
+					return false;
 				}
 
-				elementTypes = (From: sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
-					To: destinationType.GetCollectionElementType());
+				elementTypes = (
+					sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
+					recreate ? (destinationType.IsEnumerable() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType()) : destinationType.GetCollectionElementType());
 				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 				elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
@@ -1480,14 +1406,23 @@ namespace NeatMapper {
 			}
 			else {
 				elementTypes = default;
-				elementsMapper = null;
+				elementsMapper = null!;
 
 				return false;
 			}
 		}
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+		private IMatcher GetMatcher(MergeCollectionsMappingOptions? mergeMappingOptions) {
+			if (mergeMappingOptions?.Matcher != null && mergeMappingOptions.Matcher != _elementsMatcher) {
+				// Creating a CompositeMatcher because the provided matcher just overrides any maps in _elementsMatcher
+				// so all the others should be available
+				var options = new CompositeMatcherOptions();
+				options.Matchers.Add(mergeMappingOptions.Matcher);
+				options.Matchers.Add(_elementsMatcher);
+				return new SafeMatcher(new CompositeMatcher(options));
+			}
+			else
+				return _elementsMatcher;
+		}
 	}
 }

@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 
 namespace NeatMapper {
@@ -35,7 +31,7 @@ namespace NeatMapper {
 		}
 
 
-		public TOutput GetOrCreate(MappingOptions options) {
+		public TOutput GetOrCreate(MappingOptions? options) {
 			if (options == null || options == MappingOptions.Empty)
 				return _optionsCacheNull;
 			else if (options.Cached)

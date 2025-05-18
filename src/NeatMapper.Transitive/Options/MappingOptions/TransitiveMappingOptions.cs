@@ -20,11 +20,6 @@
 		/// Maximum length of the chain of types to map, must be at least 2.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use global setting from <see cref="TransitiveOptions"/>.</remarks>
-		public int? MaxChainLength {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public int? MaxChainLength { get; init; }
 	}
 }

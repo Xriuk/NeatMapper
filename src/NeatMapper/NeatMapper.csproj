@@ -2,7 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
-		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">enable</Nullable>
+		<LangVersion>13.0</LangVersion>
+		<Nullable>enable</Nullable>
     <PackageId>NeatMapper</PackageId>
 	  <Version>$(GlobalVersion)</Version>
     <Authors>Xriuk</Authors>
@@ -10,22 +11,23 @@
     <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#500---2024-11-03</PackageReleaseNotes>
-    <PackAsTool>False</PackAsTool>
-    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
-    <IncludeSymbols>True</IncludeSymbols>
-    <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageTags>mapper;mapping;projector;projection</PackageTags>
-    <Copyright>Xriuk</Copyright>
-    <PackageIcon>icon.png</PackageIcon>
-    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <GenerateDocumentationFile>True</GenerateDocumentationFile>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#510---2025-05-18</PackageReleaseNotes>
+		<Copyright>Xriuk</Copyright>
+		<PackageIcon>icon.png</PackageIcon>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>mapper;mapping;projector;projection</PackageTags>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<IncludeSymbols>True</IncludeSymbols>
+		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<CheckEolTargetFramework>false</CheckEolTargetFramework>
   </PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.3.1" PrivateAssets="All" />
+		<PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="All" />
 	</ItemGroup>
+	
 	<ItemGroup Condition="'$(TargetFramework)' == 'net47' Or '$(TargetFramework)' == 'net48' Or '$(TargetFramework)' == 'netstandard2.1' Or '$(TargetFramework)' == 'net6.0' Or '$(TargetFramework)' == 'net7.0'">
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="[7,8)" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="[7,8)" />

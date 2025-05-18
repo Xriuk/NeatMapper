@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 namespace NeatMapper {
 	internal sealed class DefaultAsyncEnumerable<T> : IAsyncEnumerable<T> {
 		private class DefaultAsyncEnumerator : IAsyncEnumerator<T>, IDisposable {
-			IEnumerator<T> _enumerator;
+			private readonly IEnumerator<T> _enumerator;
 
 			public DefaultAsyncEnumerator(IEnumerator<T> enumerator) {
 				_enumerator = enumerator;
@@ -19,7 +19,7 @@ namespace NeatMapper {
 			}
 
 			public ValueTask DisposeAsync() {
-				((IDisposable)this).Dispose();
+				Dispose();
 #if NET5_0_OR_GREATER
 				return ValueTask.CompletedTask;
 #else

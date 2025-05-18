@@ -2,7 +2,8 @@
 
   <PropertyGroup>
 		<TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
-		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">enable</Nullable>
+		<LangVersion>13.0</LangVersion>
+		<Nullable>enable</Nullable>
 		<PackageId>NeatMapper.Transitive</PackageId>
 		<Version>$(GlobalVersion)</Version>
 		<Authors>Xriuk</Authors>
@@ -10,7 +11,7 @@
 		<Description>Allows mapping types by automatically chaining maps together, eg: If you have maps for types A -&gt; B and B -&gt; C you can also map A -&gt; C by chaining A -&gt; B -&gt; C, supports normal maps and asynchronous ones, also supports collections.</Description>
 		<PackageProjectUrl>https://www.neatmapper.org/transitive/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.Transitive</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#500---2024-11-03</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#510---2025-05-18</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -23,8 +24,7 @@
   </PropertyGroup>
 
 	<ItemGroup>
-		<None Remove="..\..\LICENSE.md" />
-		<None Remove="README.md" />
+		<PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="All" />
 	</ItemGroup>
 	
 	<ItemGroup>
@@ -32,7 +32,12 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\NeatMapper\NeatMapper.csproj" PackageVersion="[5,6)" />
+		<ProjectReference Include="..\NeatMapper\NeatMapper.csproj" PackageVersion="[5.1,6)" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Remove="..\..\LICENSE.md" />
+		<None Remove="README.md" />
 	</ItemGroup>
 
 	<ItemGroup>

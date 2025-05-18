@@ -217,12 +217,12 @@ namespace NeatMapper.Tests.Configuration {
 
 		internal static CustomMapsConfiguration Configure(CustomMapsOptions options, CustomMatchAdditionalMapsOptions additionalMaps = null) {
 			var matcher = new CustomMatcher(options, additionalMaps);
-			return (CustomMapsConfiguration)typeof(CustomMatcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
+			return (CustomMapsConfiguration)typeof(CustomMatcher).GetField("_matchConfiguration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
 		}
 
 		internal static CustomMapsConfiguration ConfigureHierachy(CustomMapsOptions options, CustomHierarchyMatchAdditionalMapsOptions additionalMaps = null) {
 			var matcher = new HierarchyCustomMatcher(options, additionalMaps);
-			return (CustomMapsConfiguration)typeof(HierarchyCustomMatcher).GetField("_configuration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
+			return (CustomMapsConfiguration)typeof(HierarchyCustomMatcher).GetField("_matchConfiguration", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(matcher);
 		}
 
 

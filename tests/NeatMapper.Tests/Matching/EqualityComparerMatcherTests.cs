@@ -5,7 +5,11 @@ using System.Collections.Generic;
 namespace NeatMapper.Tests.Matching {
 	[TestClass]
 	public class EqualityComparerMatcherTests {
-		public class EqualityComparerClass : IEqualityComparer<string> {
+		public class EqualityComparerClass :
+			IEqualityComparer<string>,
+			IEqualityComparer<int>,
+			IEqualityComparer<short>{
+
 			public bool Equals(string x, string y) {
 				return x.Length == y.Length;
 			}
@@ -13,33 +17,54 @@ namespace NeatMapper.Tests.Matching {
 			public int GetHashCode(string obj) {
 				throw new NotImplementedException();
 			}
-		}
 
 
-		IMatcher _matcher = null;
+			public bool Equals(int x, int y) {
+				return x == y;
+			}
 
-		[TestInitialize]
-		public void Initialize() {
-			_matcher = EqualityComparerMatcher.Create(new EqualityComparerClass());
+			public int GetHashCode(int obj) {
+				throw new NotImplementedException();
+			}
+
+
+			public bool Equals(short x, short y) {
+				throw new InvalidOperationException("Error");
+			}
+
+			public int GetHashCode(short obj) {
+				throw new NotImplementedException();
+			}
 		}
 
 
 		[TestMethod]
 		public void ShouldMatch() {
-			Assert.IsTrue(_matcher.CanMatch<string, string>());
-			Assert.IsFalse(_matcher.CanMatch<string, int>());
-			Assert.IsFalse(_matcher.CanMatch<int, string>());
-			Assert.IsFalse(_matcher.CanMatch<int, int>());
+			IMatcher matcher = EqualityComparerMatcher.Create<string>(new EqualityComparerClass());
 
-			Assert.IsTrue(_matcher.Match("abcd", "efgh"));
-			Assert.IsFalse(_matcher.Match("abc", "efgh"));
-			Assert.IsFalse(_matcher.Match("abcd", "efg"));
+			Assert.IsTrue(matcher.CanMatch<string, string>());
+			Assert.IsFalse(matcher.CanMatch<string, int>());
+			Assert.IsFalse(matcher.CanMatch<int, string>());
+			Assert.IsFalse(matcher.CanMatch<int, int>());
 
-			using (var factory = _matcher.MatchFactory<string, string>()) {
+			Assert.IsTrue(matcher.Match("abcd", "efgh"));
+			Assert.IsFalse(matcher.Match("abc", "efgh"));
+			Assert.IsFalse(matcher.Match("abcd", "efg"));
+
+			using (var factory = matcher.MatchFactory<string, string>()) {
 				Assert.IsTrue(factory.Invoke("abcd", "efgh"));
 				Assert.IsFalse(factory.Invoke("abc", "efgh"));
 				Assert.IsFalse(factory.Invoke("abcd", "efg"));
 			}
+		}
+
+		[TestMethod]
+		public void ShouldThrowExceptionsCorrectly() {
+			IMatcher matcher = EqualityComparerMatcher.Create<short>(new EqualityComparerClass());
+
+			var exc = Assert.ThrowsException<MatcherException>(() => matcher.Match<short, short>(2, 2));
+			Assert.IsTrue(exc.InnerException is InvalidOperationException);
+			Assert.AreEqual("Error", exc.InnerException.Message);
 		}
 	}
 }

@@ -19,22 +19,8 @@ namespace NeatMapper {
 		/// <returns>A new instance of <see cref="DelegateMatcher"/> for the given delegate.</returns>
 		public static DelegateMatcher Create<TSource, TDestination>(
 			MatchMapDelegate<TSource, TDestination> matchDelegate,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			nestedMatcher = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+			IMatcher? nestedMatcher = null,
+			IServiceProvider? serviceProvider = null) {
 
 			return new DelegateMatcher(typeof(TSource), typeof(TDestination),
 				(source, destination, context) => {
@@ -42,7 +28,7 @@ namespace NeatMapper {
 					TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
 
 					try {
-						return matchDelegate.Invoke((TSource)source, (TDestination)destination, context);
+						return matchDelegate.Invoke((TSource?)source, (TDestination?)destination, context);
 					}
 					catch (OperationCanceledException) {
 						throw;
@@ -53,10 +39,6 @@ namespace NeatMapper {
 				},
 				nestedMatcher,
 				serviceProvider);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 
@@ -101,39 +83,20 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 			MatchMapDelegate<object, object> matchDelegate,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			nestedMatcher = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IServiceProvider?
-#else
-			IServiceProvider
-#endif
-			serviceProvider = null) {
+			IMatcher? nestedMatcher = null,
+			IServiceProvider? serviceProvider = null) {
 
 			_sourceType = sourceType ?? throw new ArgumentNullException(nameof(sourceType));
 			_destinationType = destinationType ?? throw new ArgumentNullException(nameof(destinationType));
 			_matchDelegate = matchDelegate ?? throw new ArgumentNullException(nameof(matchDelegate));
 			_nestedMatcher = nestedMatcher != null ? (IMatcher)new CompositeMatcher(new CompositeMatcherOptions {
-				Matchers = new List<IMatcher> { this, nestedMatcher }
+				Matchers = [ this, nestedMatcher ]
 			}) : (IMatcher)this;
 			_serviceProvider = serviceProvider ?? EmptyServiceProvider.Instance;
 		}
 
 
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -142,74 +105,27 @@ namespace NeatMapper {
 			return sourceType == _sourceType && destinationType == _destinationType;
 		}
 
-		public bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMatch(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			var context = GetContext(mappingOptions);
 
 			return _matchDelegate.Invoke(source, destination, context);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMatch(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			var context = GetContext(mappingOptions);
 
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => _matchDelegate.Invoke(source, destination, context));
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
 
-
 		// Not caching context (for now), because DelegateMatcher is pretty short-lived and created when needed (or at least it should be)
-		private MatchingContext GetContext(MappingOptions mappingOptions) {
+		private MatchingContext GetContext(MappingOptions? mappingOptions) {
 			var overrideOptions = mappingOptions?.GetOptions<MatcherOverrideMappingOptions>();
 			return new MatchingContext(
 				overrideOptions?.ServiceProvider ?? _serviceProvider,

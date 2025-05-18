@@ -1,4 +1,7 @@
-﻿#pragma warning disable CA1822
+﻿#if NET5_0_OR_GREATER
+#pragma warning disable IDE0079
+#pragma warning disable CA1822
+#endif
 
 using System;
 using System.Collections;
@@ -22,10 +25,29 @@ namespace NeatMapper {
 		public IProjector Projector { get; }
 
 
+		/// <summary>
+		/// Creates a new instance of <see cref="NestedProjector"/>.
+		/// </summary>
+		/// <param name="projector">Underlying projector to forward the actual projections to.</param>
 		internal NestedProjector(IProjector projector) {
 			Projector = projector ?? throw new ArgumentNullException(nameof(projector));
 		}
 
+
+		/// <inheritdoc cref="ProjectorExtensions.CanProject{TSource, TDestination}(IProjector, MappingOptions?)"/>
+		public bool CanProject<TSource, TDestination>(MappingOptions? mappingOptions) {
+			return Projector.CanProject<TSource, TDestination>(mappingOptions);
+		}
+
+		/// <inheritdoc cref="ProjectorExtensions.CanProject{TSource, TDestination}(IProjector, MappingOptions?)"/>
+		public bool CanProject<TSource, TDestination>(IEnumerable? mappingOptions) {
+			return Projector.CanProject<TSource, TDestination>(mappingOptions);
+		}
+
+		/// <inheritdoc cref="ProjectorExtensions.CanProject{TSource, TDestination}(IProjector, MappingOptions?)"/>
+		public bool CanProject<TSource, TDestination>(params object?[]? mappingOptions) {
+			return Projector.CanProject<TSource, TDestination>(mappingOptions);
+		}
 
 		/// <summary>
 		/// Projects an object by injecting it into a projection map.
@@ -36,10 +58,11 @@ namespace NeatMapper {
 		/// Source object, the source type will be retrieved from it and will be used to retrieve the available maps.
 		/// </para>
 		/// <para>
-		/// NOTE: Contrary to how <see cref="MapperExtensions.Map{TDestination}(IMapper, object, MappingOptions)"/>
+		/// NOTE: Contrary to how <see cref="MapperExtensions.Map{TDestination}(IMapper, object, MappingOptions?)"/>
 		/// behaves for example, the inferred type will be the type of the variable passed and not the runtime type
 		/// (the one obtained by using <see cref="object.GetType()"/>), because expressions are created and replaced
 		/// before they are actually run, so we have no way of getting the runtime type.
+		/// This allows the passed variable to be null as long as it is typed.
 		/// </para>
 		/// <code>
 		/// LimitedProduct limitedProd = new LimitedProduct();
@@ -53,128 +76,61 @@ namespace NeatMapper {
 		/// The passed options should NOT come from the <paramref name="source"/> object as they are replaced before the final map is run,
 		/// you can access members from the context of the nested map or externally.
 		/// </param>
-		/// <returns>The projected object</returns>
-		public TDestination Project<TDestination>(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions) {
-
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <returns>The projected object.</returns>
+		public TDestination Project<TDestination>(object? source, MappingOptions? mappingOptions) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)"/>
-		public TDestination Project<TDestination>(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)"/>
+		public TDestination Project<TDestination>(object? source, IEnumerable? mappingOptions) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)"/>
-		public TDestination Project<TDestination>(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			params object[] mappingOptions) {
-
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)"/>
+		public TDestination Project<TDestination>(object? source, params object?[]? mappingOptions) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)"/>
-		public TDestination Project<TDestination>(object source) {
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)"/>
+		public TDestination Project<TDestination>(object? source) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)" path="/summary"/>
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)" path="/summary"/>
 		/// <typeparam name="TSource">Source type of the projection, used to retrieve the available maps.</typeparam>
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)" path="/typeparam[@name='TDestination']"/>
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)" path="/typeparam[@name='TDestination']"/>
 		/// <param name="source">Source object.</param>
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)" path="/param[@name='mappingOptions']"/>
-		/// <inheritdoc cref="Project{TDestination}(object, MappingOptions)" path="/returns"/>
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="Project{TDestination}(object?, MappingOptions?)" path="/returns"/>
+#if !NETCOREAPP3_1
 #pragma warning disable CS1712
-		public TDestination Project<TSource, TDestination>(
+#endif
+		public TDestination Project<TSource, TDestination>(TSource? source, MappingOptions? mappingOptions) {
+#if !NETCOREAPP3_1
 #pragma warning restore CS1712
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
 #endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions) {
 
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions)"/>
-		public TDestination Project<TSource, TDestination>(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IEnumerable?
-#else
-			IEnumerable
-#endif
-			mappingOptions) {
-
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
+		public TDestination Project<TSource, TDestination>(TSource? source, IEnumerable? mappingOptions) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions)"/>
-		public TDestination Project<TSource, TDestination>(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-			params object[] mappingOptions) {
-
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
+		public TDestination Project<TSource, TDestination>(TSource? source, params object?[]? mappingOptions) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 
-		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions)"/>
-		public TDestination Project<TSource, TDestination>(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source) {
-
-			throw new InvalidOperationException("NestedProjector cannot be used outside expressions");
+		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
+		public TDestination Project<TSource, TDestination>(TSource? source) {
+			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
 		}
 	}
 }
 
+#if NET5_0_OR_GREATER
 #pragma warning restore CA1822
+#pragma warning restore IDE0079
+#endif

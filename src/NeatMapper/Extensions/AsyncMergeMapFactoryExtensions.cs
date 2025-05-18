@@ -56,18 +56,19 @@ namespace NeatMapper {
 		/// <typeparam name="TDestination">Type of the destination objects.</typeparam>
 		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMergeMapFactory, bool)" path="/param[@name='shouldDispose']"/>
 		/// <inheritdoc cref="MapAsyncNewFactory(IAsyncMergeMapFactory, bool)" path="/returns"/>
-		public static AsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this AsyncMergeMapFactory<TSource, TDestination> factory, bool shouldDispose = true) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+		public static AsyncNewMapFactory<TSource, TDestination> MapAsyncNewFactory<TSource, TDestination>(this AsyncMergeMapFactory<TSource, TDestination> factory,
+			bool shouldDispose = true) {
 
 			var newFactory = ((IAsyncMergeMapFactory)factory).MapAsyncNewFactory(shouldDispose);
-			return new DisposableAsyncNewMapFactory<TSource, TDestination>((source, cancellationToken) => TaskUtils.AwaitTask<TDestination>(newFactory.Invoke(source, cancellationToken)), newFactory);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			try {
+				return new DisposableAsyncNewMapFactory<TSource, TDestination>(
+					(source, cancellationToken) => TaskUtils.AwaitTask<TDestination>(newFactory.Invoke(source, cancellationToken)),
+					newFactory);
+			}
+			catch {
+				newFactory.Dispose();
+				throw;
+			}
 		} 
 		#endregion
 	}

@@ -37,23 +37,6 @@ namespace NeatMapper.EntityFrameworkCore {
 				"queryable", "cancellationToken");
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-		private static bool CheckAsyncCollectionMapperNestedContextRecursive(AsyncNestedMappingContext context) {
-			if (context == null)
-				return false;
-			if (context.ParentMapper is AsyncCollectionMapper)
-				return true;
-			return CheckAsyncCollectionMapperNestedContextRecursive(context.ParentContext);
-		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
-
-
 		/// <summary>
 		/// Creates a new instance of <see cref="AsyncEntityFrameworkCoreMapper"/>.
 		/// </summary>
@@ -82,24 +65,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			IModel model,
 			Type dbContextType,
 			IServiceProvider serviceProvider,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			EntityFrameworkCoreOptions?
-#else
-			EntityFrameworkCoreOptions
-#endif
-			entityFrameworkCoreOptions = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			IMatcher?
-#else
-			IMatcher
-#endif
-			elementsMatcher = null,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MergeCollectionsOptions?
-#else
-			MergeCollectionsOptions
-#endif
-			mergeCollectionsOptions = null) : 
+			EntityFrameworkCoreOptions? entityFrameworkCoreOptions = null,
+			IMatcher? elementsMatcher = null,
+			MergeCollectionsOptions? mergeCollectionsOptions = null) : 
 				base(model, dbContextType, serviceProvider,
 					entityFrameworkCoreOptions != null ? new EntityFrameworkCoreOptions(entityFrameworkCoreOptions) : null,
 					elementsMatcher,
@@ -107,58 +75,20 @@ namespace NeatMapper.EntityFrameworkCore {
 
 
 		#region IAsyncMapper methods
-		public bool CanMapAsyncNew(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapNewInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
-		public bool CanMapAsyncMerge(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapMergeInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public async Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -177,13 +107,13 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Retrieve the db context from the services
 			var dbContext = RetrieveDbContext(mappingOptions);
-
 			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
-			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var retrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
-			var key = _model.FindEntityType(elementTypes.Entity).FindPrimaryKey();
+			var key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
 
 			var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
 			var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
@@ -193,7 +123,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			var localView = GetLocalFromDbSet(dbSet);
 
 			// Create the matcher used to retrieve local elements (it will never throw because of SafeMatcher/EmptyMatcher), won't contain semaphore
-			using (var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(elementTypes, mappingOptions
+			using (var normalizedElementsMatcherFactory = GetNormalizedMatchFactory(elementTypes, (mappingOptions ?? MappingOptions.Empty)
 				.ReplaceOrAdd<NestedSemaphoreContext>(c => c ?? NestedSemaphoreContext.Instance))) {
 
 				// Check if we are mapping a collection or just a single entity
@@ -212,7 +142,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					// Since the method above is not 100% accurate in checking if the type is an actual collection
 					// we check again here, if we do not get back a method to add elements then it is not a collection
-					Action<object, object> addDelegate;
+					Action<object, object?> addDelegate;
 					try {
 						addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
 					}
@@ -311,8 +241,12 @@ namespace NeatMapper.EntityFrameworkCore {
 								dbContextSemaphore.Release();
 							}
 
+							var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+								?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
 							foreach (var localAndPredicate in localsAndPredicates) {
-								addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+								if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 							}
 
 							result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
@@ -411,8 +345,12 @@ namespace NeatMapper.EntityFrameworkCore {
 									dbContextSemaphore.Release();
 								}
 
+								var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+								?? _entityFrameworkCoreOptions.IgnoreNullEntities;
+
 								foreach (var localAndPredicate in localsAndPredicates) {
-									addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+									if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+										addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 								}
 
 								result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
@@ -437,7 +375,7 @@ namespace NeatMapper.EntityFrameworkCore {
 					if (TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
 						return null;
 
-					object result;
+					object? result;
 					try {
 						var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 							tupleToValueTupleDelegate.Invoke(source) :
@@ -486,44 +424,15 @@ namespace NeatMapper.EntityFrameworkCore {
 					return result;
 				}
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public async Task<
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			> MapAsync(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
+		public async Task<object?> MapAsync(
+			object? source,
 			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
+			object? destination,
 			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null,
+			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
 
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
@@ -541,16 +450,15 @@ namespace NeatMapper.EntityFrameworkCore {
 			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
 			var entitiesRetrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
-
 			var throwOnDuplicateEntity = efCoreMappingOptions?.ThrowOnDuplicateEntity
 				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
 
 			// Retrieve the db context from the services if we need to attach entities
-			DbContext dbContext;
-			IKey key;
+			DbContext? dbContext;
+			IKey? key;
 			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
 				dbContext = RetrieveDbContext(mappingOptions);
-				key = _model.FindEntityType(elementTypes.Entity).FindPrimaryKey();
+				key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
 			}
 			else {
 				dbContext = null;
@@ -559,14 +467,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
 			// because we might attach provided entities instead of creating new ones
-			MappingOptions destinationMappingOptions;
-			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
-					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
-						o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, o?.DbContextInstance, o?.ThrowOnDuplicateEntity));
-			}
-			else
-				destinationMappingOptions = mappingOptions;
+			var destinationMappingOptions = CreateDestinationMappingOptions(mappingOptions);
 
 			// Check if we are mapping a collection or just a single entity
 			if (isCollection) {
@@ -589,7 +490,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					// Since the method above is not 100% accurate in checking if the type is an actual collection
 					// we check again here, if we do not get back a method to add elements then it is not a collection
-					Action<object, object> sourceAddDelegate;
+					Action<object, object?> sourceAddDelegate;
 					try {
 						sourceAddDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualSourceCollectionType);
 					}
@@ -627,7 +528,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							var sourceEntitiesEnumerable = await MapAsync(sourceCollection, newSourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
 								?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
-							using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) {
+							using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity)) {
 								mergeFactory.Invoke(destinationEnumerable, (IEnumerable)sourceCollection, sourceEntitiesEnumerable);
 							}
 						}
@@ -651,7 +552,7 @@ namespace NeatMapper.EntityFrameworkCore {
 								var sourceEntitiesEnumerable = await MapAsync(source, sourceType, destinationType, destinationMappingOptions, cancellationToken) as IEnumerable
 									?? throw new InvalidOperationException("Invalid result"); // Should not happen
 
-								using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity)) {
+								using (var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity)) {
 									mergeFactory.Invoke(destinationEnumerable, sourceEnumerable, sourceEntitiesEnumerable);
 								}
 							}
@@ -683,11 +584,11 @@ namespace NeatMapper.EntityFrameworkCore {
 				var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
 				var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 
-				object result;
+				object? result;
 				try {
 					if (source == null || TypeUtils.IsDefaultValue(types.From.UnwrapNullable(), source)) {
 						if (destination != null && throwOnDuplicateEntity)
-							throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for the default key. When merging objects make sure that they match");
+							throw new DuplicateEntityException($"A non-null entity of type {types.To.FullName ?? types.To.Name} was provided for the default key. When merging objects make sure that they match");
 
 						return null;
 					}
@@ -696,11 +597,11 @@ namespace NeatMapper.EntityFrameworkCore {
 					result = await MapAsync(source, sourceType, destinationType, destinationMappingOptions, cancellationToken);
 
 					if (result == null && entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-						var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
+						var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext!);
 						await dbContextSemaphore.WaitAsync(cancellationToken);
 						try {
 							if (destination != null) {
-								dbContext.Attach(destination);
+								dbContext!.Attach(destination);
 
 								result = destination;
 							}
@@ -710,7 +611,7 @@ namespace NeatMapper.EntityFrameworkCore {
 									source);
 
 								try { 
-									result = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key).Invoke(keyValues, dbContext);
+									result = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key!).Invoke(keyValues, dbContext!);
 								}
 								finally {
 									ArrayPool.Return(keyValues);
@@ -727,14 +628,14 @@ namespace NeatMapper.EntityFrameworkCore {
 								tupleToValueTupleDelegate.Invoke(source) :
 								source);
 							try { 
-								throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+								throw new DuplicateEntityException($"A duplicate entity of type {types.To.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
 							}
 							finally {
 								ArrayPool.Return(keyValues);
 							}
 						}
 						else
-							throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
+							throw new DuplicateEntityException($"A non-null entity of type {types.To.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
 					}
 				}
 				catch (MappingException) {
@@ -752,28 +653,11 @@ namespace NeatMapper.EntityFrameworkCore {
 
 				return result;
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
 		#region IAsyncMapperFactory methods
-		public IAsyncNewMapFactory MapAsyncNewFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IAsyncNewMapFactory MapAsyncNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -788,10 +672,11 @@ namespace NeatMapper.EntityFrameworkCore {
 			var dbContext = RetrieveDbContext(mappingOptions);
 			var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
 
-			var retrievalMode = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.EntitiesRetrievalMode
+			var efCoreMappingOptions = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>();
+			var retrievalMode = efCoreMappingOptions?.EntitiesRetrievalMode
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
-			var key = _model.FindEntityType(elementTypes.Entity).FindPrimaryKey();
+			var key = _model.FindEntityType(elementTypes.Entity)!.FindPrimaryKey()!;
 			IQueryable dbSet;
 			IEnumerable localView;
 			dbContextSemaphore.Wait();
@@ -828,7 +713,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 					// Since the method above is not 100% accurate in checking if the type is an actual collection
 					// we check again here, if we do not get back a method to add elements then it is not a collection
-					Action<object, object> addDelegate;
+					Action<object, object?> addDelegate;
 					try {
 						addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType);
 					}
@@ -837,6 +722,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					}
 
 					var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To);
+
+					var removeNullEntities = efCoreMappingOptions?.IgnoreNullEntities
+						?? _entityFrameworkCoreOptions.IgnoreNullEntities;
 
 					if (types.From.IsAsyncEnumerable()) {
 						var getAsyncEnumeratorDelegate = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.Key);
@@ -941,7 +829,8 @@ namespace NeatMapper.EntityFrameworkCore {
 										var destination = collectionFactory.Invoke();
 
 										foreach (var localAndPredicate in localsAndPredicates) {
-											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+											if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+												addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 										}
 
 										result = collectionConversionDelegate.Invoke(destination);
@@ -1052,7 +941,8 @@ namespace NeatMapper.EntityFrameworkCore {
 										var destination = collectionFactory.Invoke();
 
 										foreach (var localAndPredicate in localsAndPredicates) {
-											addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
+											if (!removeNullEntities || localAndPredicate.LocalEntity != null)
+												addDelegate.Invoke(destination, localAndPredicate.LocalEntity);
 										}
 
 										result = collectionConversionDelegate.Invoke(destination);
@@ -1086,7 +976,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							if (source == null || TypeUtils.IsDefaultValue(sourceType.UnwrapNullable(), source))
 								return null;
 
-							object result;
+							object? result;
 							try {
 								var keyValues = keyToValuesDelegate.Invoke(tupleToValueTupleDelegate != null ?
 									tupleToValueTupleDelegate.Invoke(source) :
@@ -1141,26 +1031,9 @@ namespace NeatMapper.EntityFrameworkCore {
 				normalizedElementsMatcherFactory.Dispose();
 				throw;
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 
-		public IAsyncMergeMapFactory MapAsyncMergeFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
+		public IAsyncMergeMapFactory MapAsyncMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -1176,25 +1049,18 @@ namespace NeatMapper.EntityFrameworkCore {
 				?? _entityFrameworkCoreOptions.EntitiesRetrievalMode;
 
 			// Adjust LocalOrAttach options to prevent attaching inside NewMap, we'll do it here when merging instead,
-			// because we might attach provided entities instead of creating new ones
-			MappingOptions destinationMappingOptions;
-			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-				destinationMappingOptions = (mappingOptions ?? MappingOptions.Empty)
-					.ReplaceOrAdd<EntityFrameworkCoreMappingOptions>(
-						o => new EntityFrameworkCoreMappingOptions(EntitiesRetrievalMode.LocalOnly, o?.DbContextInstance, o?.ThrowOnDuplicateEntity));
-			}
-			else
-				destinationMappingOptions = mappingOptions;
+			// because we might attach provided entities instead of creating new ones, also do not remove null entities yet
+			var destinationMappingOptions = CreateDestinationMappingOptions(mappingOptions);
 
 			var throwOnDuplicateEntity = efCoreOptions?.ThrowOnDuplicateEntity
 				?? _entityFrameworkCoreOptions.ThrowOnDuplicateEntity;
 
 			// Retrieve the db context from the services if we need to attach entities
-			DbContext dbContext;
-			IKey key;
+			DbContext? dbContext;
+			IKey? key;
 			if (entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
 				dbContext = RetrieveDbContext(mappingOptions);
-				key = _model.FindEntityType(types.To).FindPrimaryKey();
+				key = _model.FindEntityType(types.To)!.FindPrimaryKey()!;
 			}
 			else {
 				dbContext = null;
@@ -1206,7 +1072,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				var newFactory = MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
 
 				try {
-					var mergeFactory = MergeCollection(elementTypes, dbContext, key, entitiesRetrievalMode, destinationMappingOptions, throwOnDuplicateEntity);
+					var mergeFactory = MergeCollection(elementTypes, dbContext, key, mappingOptions, throwOnDuplicateEntity);
 
 					try { 
 						if (types.From.IsAsyncEnumerable()) {
@@ -1229,7 +1095,7 @@ namespace NeatMapper.EntityFrameworkCore {
 							
 							// Since the method above is not 100% accurate in checking if the type is an actual collection
 							// we check again here, if we do not get back a method to add elements then it is not a collection
-							Action<object, object> sourceAddDelegate;
+							Action<object, object?> sourceAddDelegate;
 							try {
 								sourceAddDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualSourceCollectionType);
 							}
@@ -1377,8 +1243,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				var tupleToValueTupleDelegate = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(elementTypes.Key);
 				var keyToValuesDelegate = GetOrCreateKeyToValuesDelegate(elementTypes.Key);
 
-				var attachEntityDelegate = GetOrCreateAttachEntityDelegate(elementTypes.Entity, key);
-
+				var attachEntityDelegate = dbContext != null ? GetOrCreateAttachEntityDelegate(elementTypes.Entity, key!) : null;
 				var dbContextSemaphore = dbContext != null ? EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext) : null;
 
 				var destinationFactory = MapAsyncNewFactory(sourceType, destinationType, destinationMappingOptions);
@@ -1390,11 +1255,11 @@ namespace NeatMapper.EntityFrameworkCore {
 							NeatMapper.TypeUtils.CheckObjectType(source, types.From, nameof(source));
 							NeatMapper.TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
 
-							object result;
+							object? result;
 							try {
 								if (source == null || TypeUtils.IsDefaultValue(types.From.UnwrapNullable(), source)) {
 									if (destination != null && throwOnDuplicateEntity)
-										throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for the default key. When merging objects make sure that they match");
+										throw new DuplicateEntityException($"A non-null entity of type {types.To.FullName ?? types.To.Name} was provided for the default key. When merging objects make sure that they match");
 
 									return null;
 								}
@@ -1403,10 +1268,10 @@ namespace NeatMapper.EntityFrameworkCore {
 								result = await destinationFactory.Invoke(source, cancellationToken);
 
 								if (result == null && entitiesRetrievalMode == EntitiesRetrievalMode.LocalOrAttach) {
-									await dbContextSemaphore.WaitAsync(cancellationToken);
+									await dbContextSemaphore!.WaitAsync(cancellationToken);
 									try {
 										if (destination != null) {
-											dbContext.Attach(destination);
+											dbContext!.Attach(destination);
 
 											result = destination;
 										}
@@ -1416,7 +1281,7 @@ namespace NeatMapper.EntityFrameworkCore {
 												source);
 
 											try { 
-												result = attachEntityDelegate.Invoke(keyValues, dbContext);
+												result = attachEntityDelegate!.Invoke(keyValues, dbContext!);
 											}
 											finally {
 												ArrayPool.Return(keyValues);
@@ -1433,14 +1298,14 @@ namespace NeatMapper.EntityFrameworkCore {
 											tupleToValueTupleDelegate.Invoke(source) :
 											source);
 										try { 
-											throw new DuplicateEntityException($"A duplicate entity of type {types.To?.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
+											throw new DuplicateEntityException($"A duplicate entity of type {types.To.FullName ?? types.To.Name} was found for the key {string.Join(", ", keyValues)}");
 										}
 										finally {
 											ArrayPool.Return(keyValues);
 										}
 									}
 									else
-										throw new DuplicateEntityException($"A non-null entity of type {types.To?.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
+										throw new DuplicateEntityException($"A non-null entity of type {types.To.FullName ?? types.To.Name} was provided for a not found entity. When merging objects make sure that they match");
 								}
 							}
 							catch (MappingException) {
@@ -1465,22 +1330,14 @@ namespace NeatMapper.EntityFrameworkCore {
 					throw;
 				}
 			}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 		}
 		#endregion
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
 		private bool CanMapNewInternal(
 			Type sourceType,
 			Type destinationType,
-			MappingOptions mappingOptions,
+			MappingOptions? mappingOptions,
 			out bool isCollection,
 			out (Type Key, Type Entity) elementTypes) {
 
@@ -1519,7 +1376,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		private bool CanMapMergeInternal(
 			Type sourceType,
 			Type destinationType,
-			MappingOptions mappingOptions,
+			MappingOptions? mappingOptions,
 			out bool isCollection,
 			out (Type Key, Type Entity) elementTypes) {
 
@@ -1566,7 +1423,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			return CanMapTypesInternal(elementTypes);
 		}
 
-		private DbContext RetrieveDbContext(MappingOptions mappingOptions) {
+		private DbContext RetrieveDbContext(MappingOptions? mappingOptions) {
 			var dbContext = mappingOptions?.GetOptions<EntityFrameworkCoreMappingOptions>()?.DbContextInstance;
 			if (dbContext != null && dbContext.GetType() != _dbContextType)
 				dbContext = null;
@@ -1585,12 +1442,10 @@ namespace NeatMapper.EntityFrameworkCore {
 			return dbContext;
 		}
 
-		override protected bool CheckCollectionMapperNestedContextRecursive(MappingOptions mappingOptions) {
-			return CheckAsyncCollectionMapperNestedContextRecursive(mappingOptions?.GetOptions<AsyncNestedMappingContext>());
+		override protected bool CheckCollectionMapperNestedContextRecursive(MappingOptions? mappingOptions) {
+			return mappingOptions
+				?.GetOptions<AsyncNestedMappingContext>()
+				?.CheckRecursive(c => c.ParentMapper is AsyncCollectionMapper) == true;
 		}
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
 	}
 }

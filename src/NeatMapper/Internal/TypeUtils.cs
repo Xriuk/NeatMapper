@@ -1,10 +1,7 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -13,6 +10,11 @@ using System.Threading.Tasks;
 
 namespace NeatMapper {
 	internal static class TypeUtils {
+		private static bool CollectionIsReadOnly<Type>(object collection) {
+			return ((ICollection<Type?>)collection).IsReadOnly;
+		}
+		private static readonly MethodInfo this_CollectionIsReadOnly = TypeUtils.GetMethod(() => CollectionIsReadOnly<object>(default!));
+
 		private static readonly ConcurrentDictionary<Type, Func<object, bool>> ICollection_IsReadOnlyCache =
 			new ConcurrentDictionary<Type, Func<object, bool>>();
 
@@ -39,9 +41,9 @@ namespace NeatMapper {
 		public static Type GetArrayElementType(this Type arrayType) {
 			var rank = arrayType.GetArrayRank();
 			if(rank == 1)
-				return arrayType.GetElementType();
+				return arrayType.GetElementType()!;
 			else
-				return arrayType.GetElementType().MakeArrayType(rank - 1);
+				return arrayType.GetElementType()!.MakeArrayType(rank - 1);
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -75,30 +77,59 @@ namespace NeatMapper {
 		}
 
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static void CheckObjectType(object obj, Type type, string argument = null) {
+		public static bool IsNullable(this Type type) {
+			return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+		}
+
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static void CheckObjectType(object? obj, Type type, string? argument = null) {
 			if(obj != null ? !type.IsAssignableFrom(obj.GetType()) : (type.IsValueType && Nullable.GetUnderlyingType(type) == null)) {
 				var message = (obj != null ? $"Object of type {obj.GetType().FullName ?? obj.GetType().Name}" : "null") + " " +
 					$"is not assignable to type {type.FullName ?? type.Name}.";
-				throw argument != null ? (Exception)new ArgumentException(message) : new InvalidOperationException(message);
+				throw argument != null ? (Exception)new ArgumentException(message, argument) : new InvalidOperationException(message);
 			}
 		}
 
-		public static bool IsCollectionReadonly(object collection) {
+		public static bool IsCollectionReadonly(Type collectionType) {
+			if (collectionType.IsArray || collectionType == typeof(string))
+				return true;
+
+			if (collectionType.IsInterface) {
+				if (collectionType.IsGenericType) {
+					var collectionDefinition = collectionType.GetGenericTypeDefinition();
+					return (collectionDefinition == typeof(IEnumerable<>) ||
+						collectionDefinition == typeof(IAsyncEnumerable<>) ||
+						collectionDefinition == typeof(IReadOnlyCollection<>) ||
+						collectionDefinition == typeof(IReadOnlyList<>) ||
+						collectionDefinition == typeof(IReadOnlyDictionary<,>)
+#if NET5_0_OR_GREATER
+						|| collectionDefinition == typeof(IReadOnlySet<>)
+#endif
+						);
+				}
+			}
+			else if (collectionType.IsGenericType) {
+				var collectionDefinition = collectionType.GetGenericTypeDefinition();
+				return (collectionDefinition == typeof(ReadOnlyCollection<>) ||
+					collectionDefinition == typeof(ReadOnlyDictionary<,>) ||
+					collectionDefinition == typeof(ReadOnlyObservableCollection<>));
+			}
+
+			return false;
+		}
+
+		public static bool IsCollectionReadonly(object? collection) {
 			if(collection == null)
 				return false;
 
 			// Just in case https://stackoverflow.com/questions/4482557/what-interfaces-do-all-arrays-implement-in-c#comment4902688_4482567
 			var collectionType = collection.GetType();
-			if(collectionType.IsArray)
+			if(collectionType.IsArray || !collectionType.IsCollection())
 				return true;
 
-			return ICollection_IsReadOnlyCache.GetOrAdd(collectionType.GetCollectionElementType(), type => {
-				var collectionInterfaceType = typeof(ICollection<>).MakeGenericType(type);
-				var param = Expression.Parameter(typeof(object), "collection");
-				// ((ICollection<Type>)collection).IsReadOnly
-				var body = Expression.Property(Expression.Convert(param, collectionInterfaceType), collectionInterfaceType.GetProperty(nameof(ICollection<object>.IsReadOnly)));
-				return Expression.Lambda<Func<object, bool>>(body, param).Compile();
-			}).Invoke(collection);
+			return ICollection_IsReadOnlyCache.GetOrAdd(collectionType.GetCollectionElementType(), type => 
+				(Func<object, bool>)Delegate.CreateDelegate(typeof(Func<object, bool>), this_CollectionIsReadOnly.MakeGenericMethod(type)))
+					.Invoke(collection);
 		}
 
 
@@ -130,22 +161,38 @@ namespace NeatMapper {
 			if (method.IsStatic)
 				body = Expression.Call(method, parametersList);
 			else {
-				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType)),
+				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType!)),
 					method, parametersList);
 			}
 
 			// Cast return type if needed (we check for not equal instead of IsAssignableFrom
 			// because Expressions require convert even for implicit casts)
-			if (method.ReturnType != typeof(void) && method.ReturnType != delegateArguments[delegateArguments.Length - 1]) {
+			if (method.ReturnType != typeof(void) && method.ReturnType != delegateArguments[^1]) {
 				// (Destination)(await task) or
 				// (Destination)result
 				if (method.ReturnType.IsGenericType && method.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
-					body = Expression.Call(this_ConvertTask.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0], delegateArguments[delegateArguments.Length - 1].GetGenericArguments()[0]), body);
+					body = Expression.Call(this_ConvertTask.MakeGenericMethod(method.ReturnType.GetGenericArguments()[0], delegateArguments[^1].GetGenericArguments()[0]), body);
 				else
-					body = Expression.Convert(body, delegateArguments[delegateArguments.Length - 1]);
+					body = Expression.Convert(body, delegateArguments[^1]);
 			}
 
 			return Expression.Lambda<TDelegate>(body, parameterExpressions).Compile();
+		}
+
+		public static MethodInfo GetMethod<TReturn>(Expression<Func<TReturn?>> methodExpression) {
+			var method = ((MethodCallExpression)methodExpression.Body).Method;
+			if(method.IsGenericMethod)
+				method = method.GetGenericMethodDefinition();
+			return method;
+		}
+		public static MethodInfo GetMethod(Expression<Action> methodExpression) {
+			var method = ((MethodCallExpression)methodExpression.Body).Method;
+			if (method.IsGenericMethod)
+				method = method.GetGenericMethodDefinition();
+			return method;
+		}
+		public static PropertyInfo GetProperty<TProperty>(Expression<Func<TProperty?>> propertyExpression) {
+			return (PropertyInfo)((MemberExpression)propertyExpression.Body).Member;
 		}
 	}
 }

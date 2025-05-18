@@ -2,6 +2,9 @@
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Numerics;
+using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -10,26 +13,19 @@ namespace NeatMapper {
 	/// <see cref="IEquatable{T}"/> (so multiple types can be matched too).
 	/// </summary>
 	public sealed class EquatableMatcher : IMatcher, IMatcherFactory {
+		private static bool EquatableEquals<TSource, TDestination>(object? source, object? destination) where TSource : IEquatable<TDestination> {
+			if(source == null)
+				return destination == null;
+			else
+				return ((TSource)source).Equals((TDestination?)destination!);
+		}
+		private static readonly MethodInfo this_EquatableEquals = TypeUtils.GetMethod(() => EquatableEquals<int, int>(default, default));
+
 		/// <summary>
 		/// Cached map delegates.
 		/// </summary>
-		private static readonly ConcurrentDictionary<(Type From, Type To), Func<object, object, bool>> _equalityComparersCache =
-			new ConcurrentDictionary<(Type From, Type To), Func<object, object, bool>>();
-
-		private static Func<object, object, bool> GetOrCreateEqualityComparer(Type sourceType, Type destinationType) {
-			return _equalityComparersCache.GetOrAdd((sourceType, destinationType), types => {
-				var sourceParam = Expression.Parameter(typeof(object), "source");
-				var destinationParam = Expression.Parameter(typeof(object), "destination");
-				var method = types.From.GetInterfaceMap(typeof(IEquatable<>).MakeGenericType(types.To)).TargetMethods.Single();
-
-				// (source != null) ? ((TSource)source).Equals((TDestination)destination) : (destination == null)
-				var body = Expression.Condition(Expression.NotEqual(sourceParam, Expression.Constant(null)),
-					Expression.Call(Expression.Convert(sourceParam, types.From), method, Expression.Convert(destinationParam, types.To)),
-					Expression.Equal(destinationParam, Expression.Constant(null)));
-
-				return Expression.Lambda<Func<object, object, bool>>(body, sourceParam, destinationParam).Compile();
-			});
-		}
+		private static readonly ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>> _equalityComparersCache =
+			new ConcurrentDictionary<(Type From, Type To), Func<object?, object?, bool>>();
 
 		/// <summary>
 		/// Singleton instance of the matcher.
@@ -37,19 +33,11 @@ namespace NeatMapper {
 		public static readonly IMatcher Instance = new EquatableMatcher();
 
 
-		private EquatableMatcher() { }
+		private EquatableMatcher(){ }
 
 
-		public bool CanMatch(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -58,56 +46,53 @@ namespace NeatMapper {
 			return sourceType.GetInterfaces().Contains(typeof(IEquatable<>).MakeGenericType(destinationType));
 		}
 
-		public bool Match(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-			Type sourceType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (!CanMatch(sourceType, destinationType))
+		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (!CanMatch(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-			return GetOrCreateEqualityComparer(sourceType, destinationType).Invoke(source, destination);
+			var comparer = GetOrCreateDelegate(sourceType, destinationType);
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			try {
+				return comparer.Invoke(source, destination);
+			}
+			catch (OperationCanceledException) {
+				throw;
+			}
+			catch (Exception e) {
+				throw new MatcherException(e, (sourceType, destinationType));
+			}
 		}
 
-		public IMatchMapFactory MatchFactory(
-			Type sourceType,
-			Type destinationType,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null) {
-
-			if (!CanMatch(sourceType, destinationType))
+		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (!CanMatch(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			return new DefaultMatchMapFactory(sourceType, destinationType, GetOrCreateEqualityComparer(sourceType, destinationType));
+			var comparer = GetOrCreateDelegate(sourceType, destinationType);
+
+			return new DefaultMatchMapFactory(sourceType, destinationType,
+				(source, destination) => {
+					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+					TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+					try {
+						return comparer.Invoke(source, destination);
+					}
+					catch (OperationCanceledException) {
+						throw;
+					}
+					catch (Exception e) {
+						throw new MatcherException(e, (sourceType, destinationType));
+					}
+				});
+		}
+
+
+		private static Func<object?, object?, bool> GetOrCreateDelegate(Type sourceType, Type destinationType) {
+			return _equalityComparersCache.GetOrAdd((sourceType, destinationType), types =>
+				(Func<object?, object?, bool>)Delegate.CreateDelegate(typeof(Func<object?, object?, bool>), this_EquatableEquals.MakeGenericMethod(types.From, types.To)));
 		}
 	}
 }

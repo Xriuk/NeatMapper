@@ -29,24 +29,7 @@ namespace NeatMapper {
 		/// <paramref name="destination"/> or a new one, may be null.
 		/// </returns>
 		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination);
+		object? Invoke(object? source, object? destination);
 	}
 
 	/// <summary>
@@ -56,37 +39,21 @@ namespace NeatMapper {
 	/// <typeparam name="TDestination">Destination type.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class MergeMapFactory<TSource, TDestination> : IMergeMapFactory {
-		public abstract Type SourceType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type SourceType => typeof(TSource);
 
-		public abstract Type DestinationType { get; }
+		// DEV: virtual to be backwards compatible, should remove
+		public virtual Type DestinationType => typeof(TDestination);
 
 
-		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/summary"/>
-		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IMergeMapFactory.Invoke(object?, object?)" path="/summary"/>
+		/// <inheritdoc cref="IMergeMapFactory.Invoke(object?, object?)" path="/param[@name='source']"/>
 		/// <returns>
 		/// The resulting object of the mapping of type <typeparamref name="TDestination"/>, can be the same as
 		/// <paramref name="destination"/> or a new one, may be null.
 		/// </returns>
-		/// <inheritdoc cref="IMergeMapFactory.Invoke(object, object)" path="/exception"/>
-		public abstract
-#if NET5_0_OR_GREATER
-		TDestination?
-#else
-		TDestination
-#endif
-			Invoke(
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			source,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			destination);
+		/// <inheritdoc cref="IMergeMapFactory.Invoke(object?, object?)" path="/exception"/>
+		public abstract TDestination? Invoke(TSource? source, TDestination? destination);
 
 		protected abstract void Dispose(bool disposing);
 
@@ -96,68 +63,15 @@ namespace NeatMapper {
 		}
 
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-		object?
-#else
-		object
-#endif
-			IMergeMapFactory.Invoke(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			source,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			object?
-#else
-			object
-#endif
-			destination) {
+		object? IMergeMapFactory.Invoke(object? source, object? destination) {
+			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
+			TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
 
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-			return Invoke((TSource)source, (TDestination)destination);
-
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable enable
-#endif
+			return Invoke((TSource?)source, (TDestination?)destination);
 		}
 
 
-		public static implicit operator Func<
-#if NET5_0_OR_GREATER
-			TSource?
-#else
-			TSource
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			,
-#if NET5_0_OR_GREATER
-			TDestination?
-#else
-			TDestination
-#endif
-			>(
-			MergeMapFactory<
-#if NET5_0_OR_GREATER
-				TSource?
-#else
-				TSource
-#endif
-				,
-#if NET5_0_OR_GREATER
-				TDestination?
-#else
-				TDestination
-#endif
-				> factory) => factory.Invoke;
+		public static implicit operator Func<TSource?, TDestination?, TDestination?>(
+			MergeMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
 	}
 }

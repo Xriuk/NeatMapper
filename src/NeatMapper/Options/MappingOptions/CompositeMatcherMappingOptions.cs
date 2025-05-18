@@ -17,11 +17,6 @@
 		/// types, the types will be inverted and a new search will be performed.
 		/// </summary>
 		/// <remarks><see langword="null"/> to use global setting from <see cref="CompositeMatcherOptions"/>.</remarks>
-		public bool? ReverseTypes {
-			get;
-#if NET5_0_OR_GREATER
-			init;
-#endif
-		}
+		public bool? ReverseTypes { get; init; }
 	}
 }

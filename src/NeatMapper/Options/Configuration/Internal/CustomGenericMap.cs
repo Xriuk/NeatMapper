@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 
 namespace NeatMapper {
 	/// <summary>
@@ -14,18 +10,18 @@ namespace NeatMapper {
 		/// Source type of the map.
 		/// </summary>
 		/// <remarks>May be an open generic type.</remarks>
-		public Type From { get; set; }
+		public Type From { get; set; } = null!;
 
 		/// <summary>
 		/// Destination type of the map.
 		/// </summary>
 		/// <remarks>May be an open generic type.</remarks>
-		public Type To { get; set; }
+		public Type To { get; set; } = null!;
 
 		/// <summary>
 		/// Declaring class of the <see cref="Method"/>.
 		/// </summary>
-		public Type Class { get; set; }
+		public Type Class { get; set; } = null!;
 
 		/// <summary>
 		/// Handle of the generic method to be invoked, used with

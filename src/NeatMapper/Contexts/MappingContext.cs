@@ -1,8 +1,4 @@
-﻿#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-#nullable disable
-#endif
-
-using System;
+﻿using System;
 
 namespace NeatMapper {
 	/// <summary>
@@ -22,19 +18,20 @@ namespace NeatMapper {
 			IMapper parentMapper,
 			MappingOptions mappingOptions) {
 
-			ServiceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
+			ServiceProvider = serviceProvider
+				?? throw new ArgumentNullException(nameof(serviceProvider));
 
 			if(parentMapper == null)
 				throw new ArgumentNullException(nameof(parentMapper));
 
 			_mapper = new Lazy<IMapper>(() => {
 				var nestedMappingContext = new NestedMappingContext(parentMapper);
-				return new NestedMapper(nestedMapper, o => (o ?? MappingOptions.Empty)
-					.ReplaceOrAdd<NestedMappingContext>(
-						n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, (o ?? MappingOptions.Empty).Cached));
+				return new NestedMapper(nestedMapper, o => o.ReplaceOrAdd<NestedMappingContext>(
+					n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, o.Cached));
 			}, true);
 
-			MappingOptions = mappingOptions ?? throw new ArgumentNullException(nameof(mappingOptions));
+			MappingOptions = mappingOptions
+				?? throw new ArgumentNullException(nameof(mappingOptions));
 		}
 
 

@@ -11,14 +11,7 @@ namespace NeatMapper {
 		/// <param name="parentMapper"><inheritdoc cref="ParentMapper" path="/summary"/></param>
 		/// <param name="parentContext"><inheritdoc cref="ParentContext" path="/summary"/></param>
 		/// <exception cref="ArgumentNullException"><paramref name="parentMapper"/> was null.</exception>
-		public AsyncNestedMappingContext(IAsyncMapper parentMapper,
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncNestedMappingContext?
-#else
-			AsyncNestedMappingContext
-#endif
-			parentContext = null) {
-
+		public AsyncNestedMappingContext(IAsyncMapper parentMapper, AsyncNestedMappingContext? parentContext = null) {
 			ParentMapper = parentMapper ?? throw new ArgumentNullException(nameof(parentMapper));
 			ParentContext = parentContext;
 		}
@@ -34,12 +27,16 @@ namespace NeatMapper {
 		/// was part of another nested asynchronous mapping operation too, or <see langword="null"/>
 		/// if this is the first nested asynchronous mapping operation.
 		/// </summary>
-		public
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			AsyncNestedMappingContext?
-#else
-			AsyncNestedMappingContext
-#endif
-			ParentContext { get; }
+		public AsyncNestedMappingContext? ParentContext { get; }
+
+
+		/// <summary>
+		/// Checks if this context or any of its parents matches a given predicate.
+		/// </summary>
+		/// <param name="predicate">Condition to check on the context(s).</param>
+		/// <returns>True if this context or any of its parents matches the given predicate.</returns>
+		public bool CheckRecursive(Func<AsyncNestedMappingContext, bool> predicate) {
+			return predicate.Invoke(this) || ParentContext?.CheckRecursive(predicate) == true;
+		}
 	}
 }

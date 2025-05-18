@@ -13,7 +13,10 @@ namespace NeatMapper.Tests.Matching {
 #pragma warning restore CS0660
 			IEqualityOperators<EquatableClass, string, bool>,
 			IEqualityOperators<EquatableClass, int, bool>,
-			IEqualityOperators<EquatableClass, decimal, string> {
+			IEqualityOperators<EquatableClass, decimal, string>,
+			IEqualityOperators<EquatableClass, float, bool>,
+			IEqualityOperators<EquatableClass, float?, bool>,
+			IEqualityOperators<EquatableClass, short, bool> {
 
 			public int Member { get; set; }
 
@@ -36,6 +39,26 @@ namespace NeatMapper.Tests.Matching {
 				throw new NotImplementedException();
 			}
 			public static string operator !=(EquatableClass? left, decimal right) {
+				throw new NotImplementedException();
+			}
+
+			static bool IEqualityOperators<EquatableClass, float, bool>.operator ==(EquatableClass? left, float right) {
+				return left?.Member == right;
+			}
+			static bool IEqualityOperators<EquatableClass, float, bool>.operator !=(EquatableClass? left, float right) {
+				throw new NotImplementedException();
+			}
+			static bool IEqualityOperators<EquatableClass, float?, bool>.operator ==(EquatableClass? left, float? right) {
+				return left?.Member * 2f == right;
+			}
+			static bool IEqualityOperators<EquatableClass, float?, bool>.operator !=(EquatableClass? left, float? right) {
+				throw new NotImplementedException();
+			}
+
+			static bool IEqualityOperators<EquatableClass, short, bool>.operator ==(EquatableClass? left, short right) {
+				throw new InvalidOperationException("Error");
+			}
+			static bool IEqualityOperators<EquatableClass, short, bool>.operator !=(EquatableClass? left, short right) {
 				throw new NotImplementedException();
 			}
 		}
@@ -69,6 +92,19 @@ namespace NeatMapper.Tests.Matching {
 			using (var factory = _matcher.MatchFactory<EquatableClass, int>()) {
 				Assert.IsTrue(factory.Invoke(new EquatableClass { Member = 4 }, 4));
 				Assert.IsFalse(factory.Invoke(new EquatableClass { Member = 3 }, 4));
+			}
+		}
+
+		[TestMethod]
+		public void ShouldThrowExceptionsCorrectly() {
+			var exc = Assert.ThrowsException<MatcherException>(() => _matcher.Match<EquatableClass, short>(new EquatableClass(), 2));
+			Assert.IsTrue(exc.InnerException is InvalidOperationException);
+			Assert.AreEqual("Error", exc.InnerException.Message);
+
+			using(var factory = _matcher.MatchFactory<EquatableClass, short>()) {
+				exc = Assert.ThrowsException<MatcherException>(() => factory.Invoke(new EquatableClass(), 2));
+				Assert.IsTrue(exc.InnerException is InvalidOperationException);
+				Assert.AreEqual("Error", exc.InnerException.Message);
 			}
 		}
 	}

@@ -3,27 +3,30 @@ using System;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Options used to define a list of <see cref="IAsyncMapper"/>s to use for <see cref="AsyncCompositeMapper"/>
+	/// Options used to define a list of <see cref="IAsyncMapper"/>s to use for <see cref="AsyncCompositeMapper"/>.
 	/// </summary>
 	public sealed class AsyncCompositeMapperOptions {
 		/// <summary>
-		/// Creates a new instance
+		/// Creates a new instance of <see cref="AsyncCompositeMapperOptions"/>.
 		/// </summary>
 		public AsyncCompositeMapperOptions() {
-			Mappers = new List<IAsyncMapper>();
+			Mappers = [];
 		}
 		/// <summary>
-		/// Creates a new instance by copying options from another instance
+		/// Creates a new instance of <see cref="AsyncCompositeMapperOptions"/> by copying options from another instance.
 		/// </summary>
-		/// <param name="options">Options to copy from</param>
+		/// <param name="options">Options to copy from.</param>
 		public AsyncCompositeMapperOptions(AsyncCompositeMapperOptions options) {
 			if (options == null)
 				throw new ArgumentNullException(nameof(options));
 
-			Mappers = new List<IAsyncMapper>(options.Mappers);
+			Mappers = new List<IAsyncMapper>(options.Mappers ?? throw new InvalidOperationException("Mappers cannot be null"));
 		}
 
 
+		/// <summary>
+		/// Ordered list of mappers, each mapper will be tried and the first one to succeed will map the types.
+		/// </summary>
 		public IList<IAsyncMapper> Mappers { get; set; }
 	}
 }

@@ -283,7 +283,7 @@ namespace NeatMapper.Tests.Mapping {
 #endif
 				.Map(string source, MappingContext context) {
 
-				return new KeyValuePair<string, int>(source, source.Length);
+				return new KeyValuePair<string, int>(source, source?.Length ?? -1);
 			}
 
 #if NET7_0_OR_GREATER
@@ -606,9 +606,22 @@ namespace NeatMapper.Tests.Mapping {
 			options.AddMap<string, int>((s, _) => s?.Length ?? 0);
 			var mapper = new CustomMapper(null, options);
 
-			Assert.IsTrue(_mapper.CanMapNew<string, int>());
+			Assert.IsTrue(mapper.CanMapNew<string, int>());
 
 			Assert.AreEqual(4, mapper.Map<int>("Test"));
+		}
+
+		[TestMethod]
+		public void ShouldCheckCanMapWithAdditionalMaps() {
+			var options = new CustomNewAdditionalMapsOptions();
+			options.AddMap<string, int>((s, _) => s?.Length ?? 0, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			var mapper = new CustomMapper(null, options);
+
+			Assert.IsTrue(mapper.CanMapNew<string, int>());
+			Assert.IsFalse(mapper.CanMapNew<string, int>(ProjectionCompilationContext.Instance));
+
+			Assert.AreEqual(4, mapper.Map<int>("Test"));
+			TestUtils.AssertMapNotFound(() => mapper.Map<int>("Test", new object[]{ ProjectionCompilationContext.Instance }));
 		}
 
 		// DEV: factories should not affect each other, create 2 factories and invoke them in reverse order

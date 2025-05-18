@@ -21,12 +21,6 @@ namespace NeatMapper {
 		/// <returns>
 		/// A collection of type pairs which can be projected by the projector, may contain duplicate type pairs.
 		/// </returns>
-		IEnumerable<(Type From, Type To)> GetMaps(
-#if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
-			MappingOptions?
-#else
-			MappingOptions
-#endif
-			mappingOptions = null);
+		IEnumerable<(Type From, Type To)> GetMaps(MappingOptions? mappingOptions = null);
 	}
 }
