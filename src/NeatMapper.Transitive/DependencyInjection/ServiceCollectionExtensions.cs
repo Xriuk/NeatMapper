@@ -41,7 +41,7 @@ namespace NeatMapper.Transitive {
 				typeof(TransitiveMapper),
 				s => new TransitiveMapper(
 					s.GetRequiredService<IMapper>(),
-					s.GetService<IOptionsSnapshot<TransitiveOptions>>()?.Value),
+					s.GetService<IOptionsMonitor<TransitiveOptions>>()?.CurrentValue),
 				mapper.Lifetime));
 			#endregion
 
@@ -59,7 +59,7 @@ namespace NeatMapper.Transitive {
 				typeof(AsyncTransitiveMapper),
 				s => new AsyncTransitiveMapper(
 					s.GetRequiredService<IAsyncMapper>(),
-					s.GetService<IOptionsSnapshot<TransitiveOptions>>()?.Value),
+					s.GetService<IOptionsMonitor<TransitiveOptions>>()?.CurrentValue),
 				asyncMapper.Lifetime));
 			#endregion
 
@@ -75,7 +75,7 @@ namespace NeatMapper.Transitive {
 				typeof(TransitiveProjector),
 				s => new TransitiveProjector(
 					s.GetRequiredService<IProjector>(),
-					s.GetService<IOptionsSnapshot<TransitiveOptions>>()?.Value),
+					s.GetService<IOptionsMonitor<TransitiveOptions>>()?.CurrentValue),
 				projector.Lifetime));
 			#endregion
 

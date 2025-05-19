@@ -5,13 +5,13 @@
 		<LangVersion>13.0</LangVersion>
 		<Nullable>enable</Nullable>
     <PackageId>NeatMapper</PackageId>
-	  <Version>$(GlobalVersion)</Version>
+	  <Version>$(GlobalCurrentVersion)</Version>
     <Authors>Xriuk</Authors>
     <Title>.NEaT Mapper</Title>
     <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#510---2025-05-18</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#520---2025-05-19</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>

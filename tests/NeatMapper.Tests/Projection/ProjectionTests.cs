@@ -94,6 +94,11 @@ namespace NeatMapper.Tests.Projection {
 					};
 			}
 
+			static Expression<Func<ICollection<Category>, ICollection<int>>> CategoriesExpression =
+				categories => categories != null ?
+					categories.Select(c => c.Id).ToList() :
+					new List<int>();
+
 #if NET7_0_OR_GREATER
 			static
 #endif
@@ -109,13 +114,7 @@ namespace NeatMapper.Tests.Projection {
 					null :
 					new LimitedProductDto {
 						Code = source.Code,
-						Categories = source.Categories != null ?
-							source.Categories
-								.Select(c => context.Projector.Project<Category, int?>(c, context.MappingOptions))
-								.Where(i => i != null)
-								.Cast<int>()
-								.ToList() :
-							new List<int>(),
+						Categories = context.Projector.Inline(CategoriesExpression, source.Categories),
 						Copies = source.Copies
 					};
 			}
@@ -152,7 +151,7 @@ namespace NeatMapper.Tests.Projection {
 					null :
 					new CategoryDto {
 						Id = source.Id,
-						Parent = context.Projector.Project<int?>(source.Parent, MappingOptionsUtils.options)
+						Parent = context.Projector.Project<Category, int?>(source.Parent, MappingOptionsUtils.options)
 					};
 			}
 
@@ -308,7 +307,24 @@ namespace NeatMapper.Tests.Projection {
 		}
 
 		[TestMethod]
-		public void ShouldCatchExceptionsInProjectionss() {
+		public void ShouldInlineExpressionIntoProjection() {
+			Assert.IsTrue(_projector.CanProject<LimitedProduct, LimitedProductDto>());
+
+			var value = new Maps();
+			Expression<Func<LimitedProduct, LimitedProductDto>> expr = source => source == null ?
+				null :
+				new LimitedProductDto {
+					Code = source.Code,
+					Categories = source.Categories != null ?
+						source.Categories.Select(c => c.Id).ToList() :
+						new List<int>(),
+					Copies = source.Copies
+				};
+			TestUtils.AssertExpressionsEqual(expr, _projector.Project<LimitedProduct, LimitedProductDto>());
+		}
+
+		[TestMethod]
+		public void ShouldCatchExceptionsInProjections() {
 			var exc = Assert.ThrowsException<ProjectionException>(() => _projector.Project<float, int>());
 			Assert.IsInstanceOfType(exc.InnerException, typeof(NotImplementedException));
 		}

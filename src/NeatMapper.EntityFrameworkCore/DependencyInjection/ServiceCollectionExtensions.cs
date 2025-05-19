@@ -89,9 +89,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					model,
 					typeof(TContext),
 					s,
-					s.GetService<IOptionsSnapshot<EntityFrameworkCoreOptions>>()?.Value,
+					s.GetService<IOptionsMonitor<EntityFrameworkCoreOptions>>()?.CurrentValue,
 					s.GetService<IMatcher>(),
-					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
+					s.GetService<IOptionsMonitor<MergeCollectionsOptions>>()?.CurrentValue),
 				mapper.Lifetime));
 			#endregion
 
@@ -108,9 +108,9 @@ namespace NeatMapper.EntityFrameworkCore {
 					model,
 					typeof(TContext),
 					s,
-					s.GetService<IOptionsSnapshot<EntityFrameworkCoreOptions>>()?.Value,
+					s.GetService<IOptionsMonitor<EntityFrameworkCoreOptions>>()?.CurrentValue,
 					s.GetService<IMatcher>(),
-					s.GetService<IOptionsSnapshot<MergeCollectionsOptions>>()?.Value),
+					s.GetService<IOptionsMonitor<MergeCollectionsOptions>>()?.CurrentValue),
 				asyncMapper.Lifetime));
 			#endregion
 

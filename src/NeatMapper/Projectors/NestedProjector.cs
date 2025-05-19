@@ -6,6 +6,7 @@
 using System;
 using System.Collections;
 using System.ComponentModel;
+using System.Linq.Expressions;
 
 namespace NeatMapper {
 	/// <summary>
@@ -14,7 +15,7 @@ namespace NeatMapper {
 	/// </para>
 	/// <para>
 	/// This class is only used inside expressions where it is expanded into the actual nested maps,
-	/// so its methods should not be used outside of expressions.
+	/// so its methods should not be used outside of expressions (except CanProject).
 	/// </para>
 	/// </summary>
 	public sealed class NestedProjector {
@@ -126,6 +127,22 @@ namespace NeatMapper {
 		/// <inheritdoc cref="Project{TSource, TDestination}(TSource, MappingOptions?)"/>
 		public TDestination Project<TSource, TDestination>(TSource? source) {
 			throw new InvalidOperationException("NestedProjector.Project cannot be used outside expressions");
+		}
+
+		/// <summary>
+		/// Projects an object by injecting it into an inline expression. This allows incorporating
+		/// external expressions into projection maps.
+		/// </summary>
+		/// <typeparam name="TSource">Source type of the projection.</typeparam>
+		/// <typeparam name="TDestination">Destination type of the projection.</typeparam>
+		/// <param name="expression">
+		/// Expression to inline in the projection, its argument will be replaced with
+		/// <paramref name="source"/>.
+		/// </param>
+		/// <param name="source">Source object, will replace <paramref name="expression"/> argument.</param>
+		/// <returns>The projected object.</returns>
+		public TDestination Inline<TSource, TDestination>(Expression<Func<TSource?, TDestination?>> expression, TSource? source) {
+			throw new InvalidOperationException("NestedProjector.Inline cannot be used outside expressions");
 		}
 	}
 }

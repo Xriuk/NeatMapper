@@ -22,13 +22,13 @@ namespace NeatMapper {
 					if (expr is ConstantExpression cons)
 						return cons.Value;
 					else if (expr is MemberExpression memb) {
-						value = RetrieveValueRecursively(memb.Expression!);
-						if(value != null) {
-							if(memb.Member is PropertyInfo prop)
+						value = memb.Expression != null ? RetrieveValueRecursively(memb.Expression) : null;
+						if(memb.Member is PropertyInfo prop) {
+							if(value != null || prop.GetGetMethod()?.IsStatic == true)
 								return prop.GetValue(value);
-							else if(memb.Member is FieldInfo field)
-								return field.GetValue(value);
 						}
+						else if(memb.Member is FieldInfo field && (value != null || field.IsStatic))
+							return field.GetValue(value);
 					}
 				}
 				
@@ -49,12 +49,10 @@ namespace NeatMapper {
 
 
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
-				// Expand mapper.Project into the corresponding expressions
+				// Expand projector.Project into the corresponding expressions
 				if (node.Method.DeclaringType == typeof(NestedProjector) &&
 					node.Method.Name == nameof(NestedProjector.Project) &&
 					RetrieveValueRecursively(node.Object!) is NestedProjector nestedProjector) {
-
-					var argumentType = node.Arguments[0].Type;
 
 					// Validate mapping options if not null
 					MappingOptions? mappingOptions;
@@ -82,13 +80,15 @@ namespace NeatMapper {
 					else
 						mappingOptions = null;
 
+					var argumentType = node.Arguments[0].Type;
+
 					// Retrieve the map types, the source may be inferred or explicit
 					(Type From, Type To) types;
 					var genericArguments = node.Method.GetGenericArguments();
 					if (genericArguments.Length == 1) 
 						types = (argumentType, genericArguments[0]);
 					else 
-						types = (genericArguments[0], genericArguments[0]);
+						types = (genericArguments[0], genericArguments[1]);
 
 					// Retrieve the nested expression from the projector
 					var nestedExpression = nestedProjector.Projector.Project(types.From, types.To, mappingOptions);
@@ -100,6 +100,14 @@ namespace NeatMapper {
 							$"{nestedExpression.Parameters[1].Type.FullName ?? nestedExpression.Parameters[1].Type.Name}");
 					}
 					return new LambdaParameterReplacer(node.Arguments[0]).SetupAndVisitBody(nestedExpression);
+				}
+
+				// Expand projector.Inline into the corresponding expressions
+				if (node.Method.DeclaringType == typeof(NestedProjector) &&
+					node.Method.Name == nameof(NestedProjector.Inline) &&
+					CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2) {
+
+					return new LambdaParameterReplacer(node.Arguments[1]).SetupAndVisitBody(nestedExpression2);
 				}
 
 				return base.VisitMethodCall(node);
@@ -232,8 +240,8 @@ namespace NeatMapper {
 			if (_projectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out map)) {
 				context = _contextsCache.GetOrCreate(mappingOptions);
 
-				if (_canProjectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out var canMatch))
-					return (bool)canMatch.Invoke(context)!;
+				if (_canProjectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out var canProject))
+					return (bool)canProject.Invoke(context)!;
 				else
 					return true;
 			}

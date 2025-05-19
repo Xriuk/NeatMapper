@@ -1,5 +1,16 @@
 # Changelog
 
+## [5.2.0] - 2025-05-19
+
+### Changed
+
+- Updated NeatMapper dependency version.
+
+### Fixed
+
+- Dependency Injection (DI) now uses `IOptionsMonitor<T>` instead of `IOptionsSnapshot<T>` to allow instantiating services for all the lifetime options.
+
+
 ## [5.1.0] - 2025-05-18
 
 ### Changed

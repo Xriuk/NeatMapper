@@ -5,13 +5,13 @@
 		<LangVersion>13.0</LangVersion>
 		<Nullable>enable</Nullable>
 		<PackageId>NeatMapper.Transitive</PackageId>
-		<Version>$(GlobalVersion)</Version>
+		<Version>$(GlobalCurrentVersion)</Version>
 		<Authors>Xriuk</Authors>
 		<Title>.NEaT Mapper - Transitive</Title>
 		<Description>Allows mapping types by automatically chaining maps together, eg: If you have maps for types A -&gt; B and B -&gt; C you can also map A -&gt; C by chaining A -&gt; B -&gt; C, supports normal maps and asynchronous ones, also supports collections.</Description>
 		<PackageProjectUrl>https://www.neatmapper.org/transitive/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.Transitive</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#510---2025-05-18</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#520---2025-05-19</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -32,7 +32,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\NeatMapper\NeatMapper.csproj" PackageVersion="[5.1,6)" />
+		<ProjectReference Include="..\NeatMapper\NeatMapper.csproj" PackageVersion="[$(GlobalCurrentVersion),$(GlobalNextVersion))" />
 	</ItemGroup>
 
 	<ItemGroup>

@@ -1,5 +1,18 @@
 # Changelog
 
+## [5.2.0] - 2025-05-19
+
+### Added
+
+- `Inline` method to `NestedProjector`, which allows inserting an external expression into the projection by replacing its argument with the provided one.
+
+### Fixed
+
+- `CustomProjector` now supports using static properties/fields in nested projections.
+- Nested projections with 2 generic arguments now work as expected.
+- Dependency Injection (DI) now uses `IOptionsMonitor<T>` instead of `IOptionsSnapshot<T>` to allow instantiating services for all the lifetime options.
+
+
 ## [5.1.0] - 2025-05-18
 
 ### Changed
