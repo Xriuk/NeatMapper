@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
@@ -122,7 +122,7 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 
-		#region NewMap
+		#region Map (new)
 		#region Runtime
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -153,7 +153,7 @@ namespace NeatMapper {
 		/// which will be used to retrieve the available maps.
 		/// </param>
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
-		/// <returns>The newly created object, may be null.</returns>
+		/// <returns>The newly created object of type <typeparamref name="TDestination"/>, may be null.</returns>
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static TDestination? Map<TDestination>(this IMapper mapper, object source, MappingOptions? mappingOptions = null) {
@@ -165,7 +165,7 @@ namespace NeatMapper {
 			return (TDestination?)mapper.Map(source, source.GetType(), typeof(TDestination), mappingOptions);
 		}
 
-		/// <inheritdoc cref="Map{TDestination}(IMapper, object?, MappingOptions?)"/>
+		/// <inheritdoc cref="Map{TDestination}(IMapper, object, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public static TDestination? Map<TDestination>(this IMapper mapper, object source, IEnumerable? mappingOptions) {
 			if (mapper == null)
@@ -183,11 +183,13 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <inheritdoc cref="Map{TDestination}(IMapper, object?, MappingOptions?)" path="/typeparam[@name='TDestination']"/>
+		/// <typeparam name="TSource">
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/>
+		/// </typeparam>
+		/// <inheritdoc cref="Map{TDestination}(IMapper, object, MappingOptions?)" path="/typeparam[@name='TDestination']"/>
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='source']"/>
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
-		/// <returns>The newly created object, may be null.</returns>
+		/// <returns>The newly created object of type <typeparamref name="TDestination"/>, may be null.</returns>
 		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 #if !NETCOREAPP3_1
@@ -219,7 +221,7 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 
-		#region MergeMap
+		#region Map (merge)
 		#region Runtime
 		/// <inheritdoc cref="IMapper.Map(object?, Type, object?, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -764,6 +766,124 @@ namespace NeatMapper {
 			else
 				return [];
 		}
+		#endregion
+
+
+		#region MapRequired (new)
+		#region Runtime
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/summary"/>
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/>
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/>
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
+		/// <returns>
+		/// The newly created object of type <paramref name="destinationType"/>, won't be null
+		/// if <paramref name="source"/> is not null, may be null otherwise.
+		/// </returns>
+		/// <inheritdoc cref="IMapper.Map(object?, Type, Type, MappingOptions?)" path="/exception"/>
+		/// <exception cref="NullReferenceException">
+		/// The mapper returned a null value when <paramref name="source"/> was not null.
+		/// </exception>
+		[return: NotNullIfNotNull(nameof(source))]
+		public static object? MapRequired(this IMapper mapper, object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+
+			var result = mapper.Map(source, sourceType, destinationType, mappingOptions);
+			if (result == null && source != null)
+				throw new NullReferenceException("Returned value from mapper was null while the provided source was not null.");
+			else
+				return result;
+		}
+
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[return: NotNullIfNotNull(nameof(source))]
+		public static object? MapRequired(this IMapper mapper, object? source, Type sourceType, Type destinationType, IEnumerable? mappingOptions) {
+			return mapper.MapRequired(source, sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[return: NotNullIfNotNull(nameof(source))]
+		public static object? MapRequired(this IMapper mapper, object? source, Type sourceType, Type destinationType, params object?[]? mappingOptions) {
+			return mapper.MapRequired(source, sourceType, destinationType, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+		}
+		#endregion
+
+		#region Explicit destination, inferred source
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/summary"/>
+		/// <typeparam name="TDestination">
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/>
+		/// </typeparam>
+		/// <param name="source">
+		/// Object to map, CANNOT be null as the source type will be retrieved from it at runtime,
+		/// which will be used to retrieve the available maps.
+		/// </param>
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
+		/// <returns>
+		/// The newly created object of type <typeparamref name="TDestination"/>, won't be null.
+		/// </returns>
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static TDestination MapRequired<TDestination>(this IMapper mapper, object source, MappingOptions? mappingOptions = null) {
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return (TDestination)mapper.MapRequired(source, source.GetType(), typeof(TDestination), mappingOptions);
+		}
+
+		/// <inheritdoc cref="MapRequired{TDestination}(IMapper, object, MappingOptions?)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static TDestination MapRequired<TDestination>(this IMapper mapper, object source, IEnumerable? mappingOptions) {
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return (TDestination)mapper.MapRequired(source, source.GetType(), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		// No params overload because it may become problematic if people try to use it to merge types
+		// like: mapper.MapRequired<TDestination>(source, destination), in this case destination is actually passed
+		// to mappingOptions
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/summary"/>
+		/// <typeparam name="TSource">
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/>
+		/// </typeparam>
+		/// <inheritdoc cref="MapRequired{TDestination}(IMapper, object, MappingOptions?)" path="/typeparam[@name='TDestination']"/>
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
+		/// <returns>
+		/// The newly created object of type <typeparamref name="TDestination"/>, won't be null
+		/// if <paramref name="source"/> is not null, may be null otherwise.
+		/// </returns>
+		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[return: NotNullIfNotNull(nameof(source))]
+#if !NETCOREAPP3_1
+#pragma warning disable CS1712
+#endif
+		public static TDestination? MapRequired<TSource, TDestination>(this IMapper mapper, TSource? source, MappingOptions? mappingOptions = null) {
+#if !NETCOREAPP3_1
+#pragma warning restore CS1712
+#endif
+
+			return (TDestination?)mapper.MapRequired(source, typeof(TSource), typeof(TDestination), mappingOptions);
+		}
+
+		/// <inheritdoc cref="MapRequired{TSource, TDestination}(IMapper, TSource, MappingOptions?)" />
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[return: NotNullIfNotNull(nameof(source))]
+		public static TDestination? MapRequired<TSource, TDestination>(this IMapper mapper, TSource? source, IEnumerable? mappingOptions) {
+			return (TDestination?)mapper.MapRequired(source, typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+		}
+
+		// No params overload because it overlaps with merge map with explicit source and destination:
+		// mapper.MapRequired<TSource, TDestination>(source, destination, option1, ...), in this case destination
+		// is actually passed to mappingOptions
+		#endregion
 		#endregion
 	}
 }

@@ -1,7 +1,11 @@
-﻿using System.Collections;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+using NeatMapper.Tests.Mapping;
+using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace NeatMapper.Tests.Extensions {
+	[TestClass]
 	public class MapperExtensionsTests {
 		// No need to test because it is a compile-time issue
 		public static void ShouldNotHaveAmbiguousInvocations() {
@@ -411,6 +415,36 @@ namespace NeatMapper.Tests.Extensions {
 #if NETCOREAPP3_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER || NET5_0_OR_GREATER
 #nullable disable
 #endif
+		}
+
+		[TestMethod]
+		public void ShouldRespectMapRequired() {
+			var additionalMaps = new CustomNewAdditionalMapsOptions();
+			additionalMaps.AddMap<int?, string>((_, __) => null);
+			IMapper mapper = new CustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(NewMapsTests.Maps) }
+			}, additionalMaps);
+
+
+			// Returns null only if null
+			{
+				Assert.IsNull(mapper.MapRequired<Product, ProductDto>(null));
+				Assert.IsNotNull(mapper.MapRequired<Product, ProductDto>(new Product {
+					Code = "Test"
+				}));
+			}
+
+			// Never returns null
+			{
+				Assert.IsNotNull(mapper.MapRequired<string, ClassWithoutParameterlessConstructor>(null));
+				Assert.IsNotNull(mapper.MapRequired<string, ClassWithoutParameterlessConstructor>("Test"));
+			}
+
+			// Always returns null
+			{
+				Assert.IsNull(mapper.MapRequired<int?, string>(null));
+				Assert.ThrowsException<NullReferenceException>(() => mapper.MapRequired<int?, string>(2));
+			}
 		}
 	}
 }

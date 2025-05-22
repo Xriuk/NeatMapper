@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -126,7 +125,7 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 
-		#region AsyncNewMap
+		#region MapAsync (new)
 		#region Runtime
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -155,7 +154,9 @@ namespace NeatMapper {
 
 		#region Explicit destination, inferred source
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/summary"/>
-		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TDestination">
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='destinationType']"/>
+		/// </typeparam>
 		/// <param name="source">
 		/// Object to map, CANNOT be null as the source type will be retrieved from it,
 		/// which will be used to retrieve the available maps.
@@ -181,7 +182,7 @@ namespace NeatMapper {
 			return TaskUtils.AwaitTask<TDestination>(mapper.MapAsync(source, source.GetType(), typeof(TDestination), mappingOptions, cancellationToken));
 		}
 
-		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object?, MappingOptions?, CancellationToken)"/>
+		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object, MappingOptions?, CancellationToken)"/>
 		public static Task<TDestination?> MapAsync<TDestination>(this IAsyncMapper mapper, object source, CancellationToken cancellationToken) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
@@ -191,7 +192,7 @@ namespace NeatMapper {
 			return TaskUtils.AwaitTask<TDestination>(mapper.MapAsync(source, source.GetType(), typeof(TDestination), null, cancellationToken));
 		}
 
-		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object?, MappingOptions?, CancellationToken)"/>
+		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object, MappingOptions?, CancellationToken)"/>
 		public static Task<TDestination?> MapAsync<TDestination>(this IAsyncMapper mapper,
 			object source,
 			IEnumerable? mappingOptions,
@@ -208,7 +209,9 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='sourceType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='sourceType']"/>
+		/// </typeparam>
 		/// <inheritdoc cref="MapAsync{TDestination}(IAsyncMapper, object?, MappingOptions?, CancellationToken)" path="/typeparam[@name='TDestination']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='source']"/>
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='mappingOptions']"/>
@@ -263,7 +266,7 @@ namespace NeatMapper {
 		#endregion
 		#endregion
 
-		#region AsyncMergeMap
+		#region MapAsync (merge)
 		#region Runtime
 		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, object?, Type, MappingOptions?, CancellationToken)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -865,6 +868,165 @@ namespace NeatMapper {
 			else
 				return [];
 		}
+		#endregion
+
+
+		// DEV: NotNullIfNotNull is not supported yet on Task<T>
+		// https://github.com/dotnet/roslyn/issues/45228
+		#region MapRequiredAsync (new)
+		#region Runtime
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/summary"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='sourceType']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='destinationType']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A task which when completed returns the newly created object of type <paramref name="destinationType"/>,
+		/// which won't be null if <paramref name="source"/> is not null, may be null otherwise.
+		/// </returns>
+		/// <inheritdoc cref="IAsyncMapper.MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)" path="/exception"/>
+		/// <exception cref="NullReferenceException">
+		/// The mapper returned a task which returned a null value when <paramref name="source"/> was not null.
+		/// </exception>
+		public static async Task<object?> MapRequiredAsync(this IAsyncMapper mapper,
+			object? source,
+			Type sourceType,
+			Type destinationType,
+			MappingOptions? mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			if (mapper == null)
+				throw new ArgumentNullException(nameof(mapper));
+
+			var result = await mapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken);
+			if (result == null && source != null)
+				throw new NullReferenceException("Returned value from mapper was null while the provided source was not null.");
+			else
+				return result;
+		}
+
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Task<object?> MapRequiredAsync(this IAsyncMapper mapper,
+			object? source,
+			Type sourceType,
+			Type destinationType,
+			CancellationToken cancellationToken) {
+
+			return mapper.MapRequiredAsync(source, sourceType, destinationType, (MappingOptions?)null, cancellationToken);
+		}
+
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Task<object?> MapRequiredAsync(this IAsyncMapper mapper,
+			object? source,
+			Type sourceType,
+			Type destinationType,
+			IEnumerable? mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			return mapper.MapRequiredAsync(source, sourceType, destinationType, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+		}
+		#endregion
+
+		#region Explicit destination, inferred source
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TDestination">
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='destinationType']"/>
+		/// </typeparam>
+		/// <param name="source">
+		/// Object to map, CANNOT be null as the source type will be retrieved from it,
+		/// which will be used to retrieve the available maps.
+		/// </param>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A task which when completed returns the newly created object of type <typeparamref name="TDestination"/>,
+		/// which won't be null.
+		/// </returns>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Task<TDestination> MapRequiredAsync<TDestination>(this IAsyncMapper mapper,
+			object source,
+			MappingOptions? mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return TaskUtils.AwaitTask<TDestination>(mapper.MapRequiredAsync(source, source.GetType(), typeof(TDestination), mappingOptions, cancellationToken))!;
+		}
+
+		/// <inheritdoc cref="MapRequiredAsync{TDestination}(IAsyncMapper, object, MappingOptions?, CancellationToken)"/>
+		public static Task<TDestination> MapRequiredAsync<TDestination>(this IAsyncMapper mapper, object source, CancellationToken cancellationToken) {
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return TaskUtils.AwaitTask<TDestination>(mapper.MapRequiredAsync(source, source.GetType(), typeof(TDestination), (MappingOptions?)null, cancellationToken))!;
+		}
+
+		/// <inheritdoc cref="MapRequiredAsync{TDestination}(IAsyncMapper, object, MappingOptions?, CancellationToken)"/>
+		public static Task<TDestination> MapRequiredAsync<TDestination>(this IAsyncMapper mapper,
+			object source,
+			IEnumerable? mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			if (source == null)
+				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
+
+			return TaskUtils.AwaitTask<TDestination>(mapper.MapRequiredAsync(source, source.GetType(), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken))!;
+		}
+		#endregion
+
+		#region Explicit source and destination
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/summary"/>
+		/// <typeparam name="TSource">
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='sourceType']"/>
+		/// </typeparam>
+		/// <inheritdoc cref="MapRequiredAsync{TDestination}(IAsyncMapper, object?, MappingOptions?, CancellationToken)" path="/typeparam[@name='TDestination']"/>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='source']"/>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='mappingOptions']"/>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/param[@name='cancellationToken']"/>
+		/// <returns>
+		/// A task which when completed returns the newly created object of type <typeparamref name="TDestination"/>,
+		/// which won't be null if <paramref name="source"/> is not null, may be null otherwise.
+		/// </returns>
+		/// <inheritdoc cref="MapRequiredAsync(IAsyncMapper, object?, Type, Type, MappingOptions?, CancellationToken)" path="/exception"/>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+#if !NETCOREAPP3_1
+#pragma warning disable CS1712
+#endif
+		public static Task<TDestination?> MapRequiredAsync<TSource, TDestination>(this IAsyncMapper mapper,
+#if !NETCOREAPP3_1
+#pragma warning restore CS1712
+#endif
+			TSource? source,
+			MappingOptions? mappingOptions = null,
+			CancellationToken cancellationToken = default) {
+
+			return TaskUtils.AwaitTask<TDestination>(mapper.MapRequiredAsync(source, typeof(TSource), typeof(TDestination), mappingOptions, cancellationToken));
+		}
+
+		/// <inheritdoc cref="MapRequiredAsync{TSource, TDestination}(IAsyncMapper, TSource, MappingOptions?, CancellationToken)" />
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Task<TDestination?> MapRequiredAsync<TSource, TDestination>(this IAsyncMapper mapper,
+			TSource? source,
+			CancellationToken cancellationToken) {
+
+			return TaskUtils.AwaitTask<TDestination>(mapper.MapRequiredAsync(source, typeof(TSource), typeof(TDestination), (MappingOptions?)null, cancellationToken));
+		}
+
+		/// <inheritdoc cref="MapRequiredAsync{TSource, TDestination}(IAsyncMapper, TSource, MappingOptions?, CancellationToken)" />
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static Task<TDestination?> MapRequiredAsync<TSource, TDestination>(this IAsyncMapper mapper,
+			TSource? source,
+			IEnumerable? mappingOptions,
+			CancellationToken cancellationToken = default) {
+
+			return TaskUtils.AwaitTask<TDestination>(mapper.MapRequiredAsync(source, typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken));
+		}
+		#endregion
 		#endregion
 	}
 }

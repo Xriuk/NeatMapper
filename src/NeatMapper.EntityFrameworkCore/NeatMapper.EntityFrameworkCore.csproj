@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
+	<PropertyGroup>
 		<TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
 		<LangVersion>13.0</LangVersion>
 		<Nullable>enable</Nullable>
@@ -21,7 +21,7 @@
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<CheckEolTargetFramework>false</CheckEolTargetFramework>
-  </PropertyGroup>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="PolySharp" Version="1.14.1" PrivateAssets="All" />
@@ -75,31 +75,31 @@
 	</ItemGroup>
 
 	<ItemGroup>
-	  <None Update="Internal\MethodCacheAction.tt">
-	    <LastGenOutput>MethodCacheAction.cs</LastGenOutput>
-	    <Generator>TextTemplatingFileGenerator</Generator>
-	  </None>
-	  <None Update="Internal\MethodCacheFunc.tt">
-	    <Generator>TextTemplatingFileGenerator</Generator>
-	    <LastGenOutput>MethodCacheFunc.cs</LastGenOutput>
-	  </None>
+		<None Update="Internal\MethodCacheAction.tt">
+			<LastGenOutput>MethodCacheAction.cs</LastGenOutput>
+			<Generator>TextTemplatingFileGenerator</Generator>
+		</None>
+		<None Update="Internal\MethodCacheFunc.tt">
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>MethodCacheFunc.cs</LastGenOutput>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
 	</ItemGroup>
 
 	<ItemGroup>
-	  <Compile Update="Internal\MethodCacheAction.cs">
-	    <DependentUpon>MethodCacheAction.tt</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Internal\MethodCacheFunc.cs">
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>MethodCacheFunc.tt</DependentUpon>
-	  </Compile>
+		<Compile Update="Internal\MethodCacheAction.cs">
+			<DependentUpon>MethodCacheAction.tt</DependentUpon>
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+		</Compile>
+		<Compile Update="Internal\MethodCacheFunc.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>MethodCacheFunc.tt</DependentUpon>
+		</Compile>
 	</ItemGroup>
 
 </Project>

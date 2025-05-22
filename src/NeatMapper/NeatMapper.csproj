@@ -1,14 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
+	<PropertyGroup>
+		<TargetFrameworks>net47;net48;netcoreapp3.1;netstandard2.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
 		<LangVersion>13.0</LangVersion>
 		<Nullable>enable</Nullable>
-    <PackageId>NeatMapper</PackageId>
-	  <Version>$(GlobalCurrentVersion)</Version>
-    <Authors>Xriuk</Authors>
-    <Title>.NEaT Mapper</Title>
-    <Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
+		<PackageId>NeatMapper</PackageId>
+		<Version>$(GlobalCurrentVersion)</Version>
+		<Authors>Xriuk</Authors>
+		<Title>.NEaT Mapper</Title>
+		<Description>Object mapper and projector, with configurable and reusable mappings. Supports collections, generic types and asynchronous mappings. Also supports projections (expressions).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper</RepositoryUrl>
 		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/changelog#520---2025-05-19</PackageReleaseNotes>
@@ -21,7 +21,7 @@
 		<GeneratePackageOnBuild>True</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 		<CheckEolTargetFramework>false</CheckEolTargetFramework>
-  </PropertyGroup>
+	</PropertyGroup>
 
 	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.3.1" PrivateAssets="All" />
@@ -57,47 +57,47 @@
 		<None Remove="README.md" />
 	</ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="..\..\LICENSE.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </EmbeddedResource>
-    <EmbeddedResource Include="README.md">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </EmbeddedResource>
-  </ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="..\..\LICENSE.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</EmbeddedResource>
+		<EmbeddedResource Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</EmbeddedResource>
+	</ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\..\icon.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Include="..\..\icon.png">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
 
 	<ItemGroup>
 		<None Include="..\NeatMapper.Analyzers\tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" Visible="false" />
 		<None Include="..\NeatMapper.Analyzers\bin\$(Configuration)\netstandard2.0\NeatMapper.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
 	</ItemGroup>
 
-  <ItemGroup>
-    <None Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>CustomAdditionalMapsOptions.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
+	<ItemGroup>
+		<None Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.tt">
+			<Generator>TextTemplatingFileGenerator</Generator>
+			<LastGenOutput>CustomAdditionalMapsOptions.cs</LastGenOutput>
+		</None>
+	</ItemGroup>
 
-  <ItemGroup>
-    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
-  </ItemGroup>
+	<ItemGroup>
+		<Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Compile Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.cs">
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>CustomAdditionalMapsOptions.tt</DependentUpon>
-    </Compile>
-  </ItemGroup>
+	<ItemGroup>
+		<Compile Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.cs">
+			<DesignTime>True</DesignTime>
+			<AutoGen>True</AutoGen>
+			<DependentUpon>CustomAdditionalMapsOptions.tt</DependentUpon>
+		</Compile>
+	</ItemGroup>
 
 	<ItemGroup>
 		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig" />
