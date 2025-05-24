@@ -1,10 +1,14 @@
 # Changelog
 
-## [5.3.0] - Unreleased
+## [5.3.0] - 2025-05-24
+
+### Changed
+
+- `IProjectionMap`'s (and its static counterpart `IProjectionMapStatic`'s) expression are not nullable by default but must be explicitly specified by the user. This eases the type checks, since expressions could be translated they might not always want to handle null values.
 
 ### Added
 
-- `MapRequired`/`MapRequiredAsync` extension methods for `IMapper`/`IAsyncMapper`, which throw `NullReferenceException` when a null value is returned for a non-null source in (async) new maps. Also for `IMapper` it also implements the `NotNullIfNotNull` attribute, which helps with references nullability (cannot be currently implemented for `IAsyncMapper` because `Task<T>` does not support the attribute).
+- `MapRequired`/`MapRequiredAsync` extension methods for `IMapper`/`IAsyncMapper`, which throw `NullReferenceException` when a null value is returned for a non-null source in (async) new maps. Also for `IMapper` it implements the `NotNullIfNotNull` attribute, which helps with references nullability (cannot be currently implemented for `IAsyncMapper` because `Task<T>` does not support the attribute).
 
 
 ## [5.2.0] - 2025-05-19

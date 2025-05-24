@@ -5,9 +5,9 @@ using System;
 using System.Collections.Generic;
 
 namespace NeatMapper {
-  /// <summary>
-	/// Options which allow to specify additional user-defined mappings (and optionally checks for them), to be added to maps found
-	/// in types in <see cref="CustomMapsOptions"/>.
+	/// <summary>
+	/// Options which allow to specify additional user-defined mappings (and optionally checks for them),
+	/// to be added to maps found in types in <see cref="CustomMapsOptions"/>.
 	/// </summary>
 	public sealed class CustomMergeAdditionalMapsOptions {
 		/// <summary>

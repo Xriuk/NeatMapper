@@ -1,6 +1,6 @@
 # Changelog
 
-## [5.3.0] - Unreleased
+## [5.3.0] - 2025-05-24
 
 ### Changed
 
