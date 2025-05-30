@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.4.0] - Unreleased
+
+### Added
+
+- `StructuralEquatableMatcher` which allows matching types implementing `IStructuralEquatable`.
+
+
 ## [5.3.0] - 2025-05-24
 
 ### Changed

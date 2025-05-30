@@ -18,6 +18,7 @@ namespace NeatMapper {
 		/// <item><see cref="EquatableMatcher"/></item>
 		/// <item>EqualityOperatorsMatcher for (.NET 7+)</item>
 		/// <item><see cref="ObjectEqualsMatcher"/></item>
+		/// <item><see cref="StructuralEquatableMatcher"/></item>
 		/// </list>
 		/// </item>
 		/// </list>
@@ -99,6 +100,7 @@ namespace NeatMapper {
 #if NET7_0_OR_GREATER
 					o.Matchers.Add(EqualityOperatorsMatcher.Instance);
 #endif
+					//o.Matchers.Add(StructuralEquatableMatcher.Instance);
 
 					// Creating nullable and collection matchers with EmptyMatcher to avoid recursion, the element matcher will be overridden by composite matcher
 					o.Matchers.Add(new NullableMatcher(EmptyMatcher.Instance));

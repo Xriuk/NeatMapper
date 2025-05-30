@@ -1,5 +1,13 @@
 # Changelog
 
+## [5.4.0] - Unreleased
+
+### Changed
+
+- Updated NeatMapper dependency version.
+- Updated EntityFrameworkCore dependency version.
+
+
 ## [5.3.0] - 2025-05-24
 
 ### Changed
