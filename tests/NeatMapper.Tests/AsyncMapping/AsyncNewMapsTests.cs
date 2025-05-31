@@ -74,10 +74,13 @@ namespace NeatMapper.Tests.AsyncMapping {
 #endif
 				.MapAsync(int source, AsyncMappingContext context) {
 
-				MappingOptionsUtils.asyncContext = context;
-				MappingOptionsUtils.asyncContexts.Add(context);
-				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
-				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				lock (MappingOptionsUtils.lockObj) { 
+					MappingOptionsUtils.asyncContext = context;
+					MappingOptionsUtils.asyncContexts.Add(context);
+					MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
+					MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				}
+
 				return Task.FromResult((source * 2).ToString());
 			}
 
@@ -192,8 +195,12 @@ namespace NeatMapper.Tests.AsyncMapping {
 				IAsyncNewMap<Category, CategoryDto>
 #endif
 				.MapAsync(Category source, AsyncMappingContext context) {
-				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
-				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+
+				lock (MappingOptionsUtils.lockObj) {
+					MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
+					MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				}
+
 				if (source == null)
 					return null;
 				else {
@@ -214,8 +221,12 @@ namespace NeatMapper.Tests.AsyncMapping {
 				IAsyncNewMap<float, string>
 #endif
 				.MapAsync(float source, AsyncMappingContext context) {
-				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
-				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+
+				lock (MappingOptionsUtils.lockObj) {
+					MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
+					MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				}
+
 				return Task.FromResult((source * 3).ToString());
 			}
 
@@ -242,8 +253,12 @@ namespace NeatMapper.Tests.AsyncMapping {
 				IAsyncNewMap<decimal, Price>
 #endif
 				.MapAsync(decimal source, AsyncMappingContext context) {
-				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
-				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+
+				lock (MappingOptionsUtils.lockObj) {
+					MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
+					MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				}
+
 				return Task.FromResult(new Price {
 					Amount = source,
 					Currency = "EUR"
@@ -360,8 +375,12 @@ namespace NeatMapper.Tests.AsyncMapping {
 				IAsyncNewMap<int, float>
 #endif
 				.MapAsync(int source, AsyncMappingContext context) {
-				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
-				MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+
+				lock (MappingOptionsUtils.lockObj) {
+					MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
+					MappingOptionsUtils.mergeOptions = context.MappingOptions.GetOptions<MergeCollectionsMappingOptions>();
+				}
+
 				await Task.Delay(10);
 				return (source * 2);
 			}
