@@ -30,7 +30,7 @@ namespace NeatMapper {
 	}
 
 	/// <summary>
-	/// Typed version of <see cref="IPredicateFactory"/>.
+	/// Partially typed version of <see cref="IPredicateFactory"/>.
 	/// </summary>
 	/// <typeparam name="TComparer">Type of the objects to compare.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
@@ -65,4 +65,16 @@ namespace NeatMapper {
 		public static implicit operator Predicate<TComparer?>(
 			PredicateFactory<TComparer?> factory) => factory.Invoke;
 	}
+
+	/*/// <summary>
+	/// Full typed version of <see cref="PredicateFactory{TComparer}"/>.
+	/// </summary>
+	/// <typeparam name="TComparand">Type of the object to compare to.</typeparam>
+	/// <typeparam name="TComparer">Type of the objects to compare.</typeparam>
+	/// <remarks>Implementations of this class must be thread-safe.</remarks>
+	public abstract class PredicateFactory<TComparand, TComparer> : PredicateFactory<TComparer> {
+		public override Type ComparandType => typeof(TComparand);
+
+
+	}*/
 }
