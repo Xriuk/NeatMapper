@@ -37,6 +37,8 @@ jobs:
     runs-on: windows-2019
     needs: build
     steps:
+      - name: Add Nuget.ord as source
+        run: dotnet nuget add source https://api.nuget.org/v3/index.json -n nuget.org
       - name: Publish NeatMapper core to Nuget
         run: dotnet nuget push "src/NeatMapper/bin/Release/*.symbols.nupkg" -sk ${{ secrets.API_KEY }}
       - name: Publish NeatMapper EF Core to Nuget
