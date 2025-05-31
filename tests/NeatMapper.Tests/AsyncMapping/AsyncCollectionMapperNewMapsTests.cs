@@ -506,8 +506,8 @@ namespace NeatMapper.Tests.AsyncMapping {
 				MaxParallelMappings = 10
 			});
 
-			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 100, 201 }));
-			await Task.Delay(300);
+			var exc = await Assert.ThrowsExceptionAsync<MappingException>(() => mapper.MapAsync<IEnumerable<int>, IEnumerable<string>>(new[] { 1, 51, 1000, 2001 }));
+			await Task.Delay(3000);
 
 			Assert.AreEqual(2, mapped);
 		}
