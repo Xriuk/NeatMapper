@@ -56,6 +56,9 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition)
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var projector = _projectors.FirstOrDefault(p => p.CanProject(sourceType, destinationType, mappingOptions));

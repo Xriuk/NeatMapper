@@ -52,7 +52,7 @@ namespace NeatMapper.Tests.Extensions {
 		[TestInitialize]
 		public void Initialize() {
 			_mapper = new AsyncCustomMapper(new CustomMapsOptions {
-				TypesToScan = new List<Type> { typeof(Mapping.Async.AsyncMergeMapsTests.Maps) }
+				TypesToScan = new List<Type> { typeof(AsyncMapping.AsyncMergeMapsTests.Maps) }
 			});
 		}
 

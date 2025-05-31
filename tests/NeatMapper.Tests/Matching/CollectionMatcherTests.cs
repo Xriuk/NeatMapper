@@ -58,5 +58,12 @@ namespace NeatMapper.Tests.Matching {
 			Assert.IsFalse(_matcher.Match<IEnumerable<int>, string[]>(new[] { 2, 0, -3 }, new[] { "4", "0" }, options));
 			Assert.IsFalse(_matcher.Match<IEnumerable<int>, string[]>(new[] { 2, 0 }, new[] { "4", "-6", "0" }, options));
 		}
+
+		[TestMethod]
+		public void ShouldCheckButNotMatchOpenCollections() {
+			Assert.IsTrue(_matcher.CanMatch(typeof(IEnumerable<>), typeof(ICollection<>)));
+
+			Assert.ThrowsException<MapNotFoundException>(() => _matcher.Match(new[] { 2, 0, -3 }, typeof(IEnumerable<>), new[] { "4", "-6", "0" }, typeof(ICollection<>)));
+		}
 	}
 }

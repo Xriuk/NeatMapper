@@ -142,6 +142,39 @@ namespace NeatMapper.Tests.Projection {
 		}
 
 		[TestMethod]
+		public void ShouldCheckButNotMapOpenCollections() {
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(int[]), typeof(Queue<>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(int[]), typeof(Queue<>)));
+			}
+
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(string[]), typeof(SortedList<,>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(string[]), typeof(SortedList<,>)));
+			}
+
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(IEnumerable<>), typeof(Stack<>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(IEnumerable<>), typeof(Stack<>)));
+			}
+
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(string[]), typeof(ReadOnlyDictionary<,>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(string[]), typeof(ReadOnlyDictionary<,>)));
+			}
+
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(IList<>), typeof(CustomCollectionWithEnumerableConstructor<>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(IList<>), typeof(CustomCollectionWithEnumerableConstructor<>)));
+			}
+		}
+
+		[TestMethod]
 		public void ShouldNotProjectCustomCollectionsWithoutAppropriateConstructor() {
 			{
 				Assert.IsFalse(_projector.CanProject<int[], CustomCollection<string>>());

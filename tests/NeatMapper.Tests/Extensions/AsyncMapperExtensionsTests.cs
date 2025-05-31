@@ -1,5 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Tests.Mapping.Async;
+using NeatMapper.Tests.AsyncMapping;
 using System;
 using System.Collections;
 using System.Collections.Generic;

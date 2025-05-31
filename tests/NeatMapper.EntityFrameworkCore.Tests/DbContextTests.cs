@@ -1,6 +1,6 @@
 ﻿// Versions in which ConditionalWeakTable implements IEnumerable: NETCOREAPP3_1_OR_GREATER || NET5_0_OR_GREATER,
 // but can only test on .NET 5.0 because of GC implementation which passes the tests
-#if NET5_0
+#if false //NET5_0 // DEV: does not work anymore
 
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

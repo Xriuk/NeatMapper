@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
@@ -49,6 +50,7 @@ namespace NeatMapper {
 		}
 
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
 		public bool CanMatch(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));

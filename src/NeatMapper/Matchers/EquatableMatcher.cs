@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -43,11 +41,15 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			// Cannot construct open generic types interfaces
+			if(destinationType.IsGenericTypeDefinition)
+				return false;
+
 			return sourceType.GetInterfaces().Contains(typeof(IEquatable<>).MakeGenericType(destinationType));
 		}
 
 		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatch(sourceType, destinationType, mappingOptions))
+			if (!CanMatch(sourceType, destinationType, mappingOptions) || sourceType.IsGenericTypeDefinition)
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -67,7 +69,7 @@ namespace NeatMapper {
 		}
 
 		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatch(sourceType, destinationType, mappingOptions))
+			if (!CanMatch(sourceType, destinationType, mappingOptions) || sourceType.IsGenericTypeDefinition)
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			var comparer = GetOrCreateDelegate(sourceType, destinationType);

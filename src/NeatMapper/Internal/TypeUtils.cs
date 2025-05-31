@@ -90,6 +90,7 @@ namespace NeatMapper {
 			}
 		}
 
+		// Also supports open generics
 		public static bool IsCollectionReadonly(Type collectionType) {
 			if (collectionType.IsArray || collectionType == typeof(string))
 				return true;

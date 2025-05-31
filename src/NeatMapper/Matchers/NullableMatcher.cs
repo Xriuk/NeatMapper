@@ -71,7 +71,7 @@ namespace NeatMapper {
 		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var concreteMatcher, out var underlyingTypes))
+			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var concreteMatcher, out var underlyingTypes) || concreteMatcher == null)
 				throw new MapNotFoundException(types);
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -110,7 +110,7 @@ namespace NeatMapper {
 		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var concreteMatcher, out var underlyingTypes))
+			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var concreteMatcher, out var underlyingTypes) || concreteMatcher == null)
 				throw new MapNotFoundException(types);
 
 			IMatchMapFactory concreteFactory;
@@ -174,48 +174,56 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			// DEV: disallow nested matching if one of the most recent matchers is ourselves or a composite matcher containing us?
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			concreteMatcher = mappingOptions.GetOptions<MatcherOverrideMappingOptions>()?.Matcher
-				?? _concreteMatcher;
-
-			Type? destinationNullableUnderlying;
-			if (destinationType.IsNullable()) {
-				destinationNullableUnderlying = Nullable.GetUnderlyingType(destinationType)!;
-				// Type1? == Type2
-				if (concreteMatcher.CanMatch(sourceType, destinationNullableUnderlying, mappingOptions)) {
-					underlyingTypes = (sourceType, destinationNullableUnderlying);
-					return true;
-				}
-			}
-			else
-				destinationNullableUnderlying = null;
-
-			Type? sourceNullableUnderlying;
-			if (sourceType.IsNullable()) {
-				sourceNullableUnderlying = Nullable.GetUnderlyingType(sourceType)!;
-				// Type1 == Type2?
-				if (concreteMatcher.CanMatch(sourceNullableUnderlying, destinationType, mappingOptions)) {
-					underlyingTypes = (sourceNullableUnderlying, destinationType);
-					return true;
-				}
-			}
-			else
-				sourceNullableUnderlying = null;
-
-
-			// Type1 == Type2
-			if (sourceNullableUnderlying != null && destinationNullableUnderlying != null &&
-				concreteMatcher.CanMatch(sourceNullableUnderlying, destinationNullableUnderlying, mappingOptions)) {
-
-				underlyingTypes = (sourceNullableUnderlying, destinationNullableUnderlying);
-				return true;
-			}
-			else {
+			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
+				concreteMatcher = null!;
 				underlyingTypes = default;
-				return false;
+
+				return sourceType == typeof(Nullable<>) || destinationType == typeof(Nullable<>);
+			}
+			else { 
+				// DEV: disallow nested matching if one of the most recent matchers is ourselves or a composite matcher containing us?
+
+				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+				concreteMatcher = mappingOptions.GetOptions<MatcherOverrideMappingOptions>()?.Matcher
+					?? _concreteMatcher;
+
+				Type? destinationNullableUnderlying;
+				if (destinationType.IsNullable()) {
+					destinationNullableUnderlying = Nullable.GetUnderlyingType(destinationType)!;
+					// Type1? == Type2
+					if (concreteMatcher.CanMatch(sourceType, destinationNullableUnderlying, mappingOptions)) {
+						underlyingTypes = (sourceType, destinationNullableUnderlying);
+						return true;
+					}
+				}
+				else
+					destinationNullableUnderlying = null;
+
+				Type? sourceNullableUnderlying;
+				if (sourceType.IsNullable()) {
+					sourceNullableUnderlying = Nullable.GetUnderlyingType(sourceType)!;
+					// Type1 == Type2?
+					if (concreteMatcher.CanMatch(sourceNullableUnderlying, destinationType, mappingOptions)) {
+						underlyingTypes = (sourceNullableUnderlying, destinationType);
+						return true;
+					}
+				}
+				else
+					sourceNullableUnderlying = null;
+
+
+				// Type1 == Type2
+				if (sourceNullableUnderlying != null && destinationNullableUnderlying != null &&
+					concreteMatcher.CanMatch(sourceNullableUnderlying, destinationNullableUnderlying, mappingOptions)) {
+
+					underlyingTypes = (sourceNullableUnderlying, destinationNullableUnderlying);
+					return true;
+				}
+				else {
+					underlyingTypes = default;
+					return false;
+				}
 			}
 		}
 	}

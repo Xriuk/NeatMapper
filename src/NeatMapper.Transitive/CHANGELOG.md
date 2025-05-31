@@ -1,5 +1,12 @@
 # Changelog
 
+## [5.4.0] - 2025-05-31
+
+### Changed
+
+- Updated NeatMapper dependency version.
+
+
 ## [5.3.0] - 2025-05-24
 
 ### Changed

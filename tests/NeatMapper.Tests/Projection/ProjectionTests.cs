@@ -19,7 +19,8 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMapStatic<string, KeyValuePair<string, int>>,
 			IProjectionMapStatic<int, char>,
 			IProjectionMapStatic<char, float>,
-			IProjectionMapStatic<float, double>
+			IProjectionMapStatic<float, double>,
+			IProjectionMapStatic<string, int>
 #else
 			IProjectionMap<int, string>,
 			IProjectionMap<Price, decimal>,
@@ -31,7 +32,8 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMap<string, KeyValuePair<string, int>>,
 			IProjectionMap<int, char>,
 			IProjectionMap<char, float>,
-			IProjectionMap<float, double>
+			IProjectionMap<float, double>,
+			IProjectionMap<string, int>
 #endif
 			{
 
@@ -225,6 +227,20 @@ namespace NeatMapper.Tests.Projection {
 				.Project(ProjectionContext context) {
 
 				throw new MapNotFoundException((typeof(float), typeof(double)));
+			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<string, int>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<string, int>
+#else
+				IProjectionMap<string, int>
+#endif
+				.Project(ProjectionContext context) {
+
+				return source => source != null ? source.Length : -1;
 			}
 		}
 

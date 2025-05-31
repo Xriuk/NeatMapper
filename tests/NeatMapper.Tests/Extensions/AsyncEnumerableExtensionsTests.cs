@@ -1,7 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -88,6 +87,11 @@ namespace NeatMapper.Tests.Extensions {
 				await enumerator.DisposeAsync();
 			}
 			Assert.AreEqual(2, Maps.maps); // Only 2 elements actually mapped, not 3
+		}
+
+		[TestMethod]
+		public void ShouldThrowMapNotFoundCorrectly() {
+			Assert.ThrowsException<MapNotFoundException>(() => new DefaultAsyncEnumerable<string>(new[] { "AAA", "BB", "C" }).Project<string, float>(_mapper));
 		}
 	}
 }

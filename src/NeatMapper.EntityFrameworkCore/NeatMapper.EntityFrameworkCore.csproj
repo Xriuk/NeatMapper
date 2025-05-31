@@ -11,7 +11,7 @@
 		<Description>Creates automatic maps and projections between entities and their keys (even composite and shadow keys), supports normal maps and asynchronous ones, also supports collections (not nested).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org/ef-core/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.EntityFrameworkCore</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/ef-core/changelog#530---2025-05-24</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/ef-core/changelog#540---2025-05-31</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
@@ -34,10 +34,10 @@
 		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[5,6)" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net6.0' Or '$(TargetFramework)' == 'net7.0'">
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[6.0.35,8)" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[6.0.36,8)" />
 	</ItemGroup>
 	<ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8.0.10,9)" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="[8.0.16,9)" />
 	</ItemGroup>
 
 	<ItemGroup>

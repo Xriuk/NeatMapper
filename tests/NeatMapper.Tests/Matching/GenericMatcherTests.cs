@@ -77,5 +77,16 @@ namespace NeatMapper.Tests.Matching {
 			Assert.IsFalse(_matcher.Match<IEnumerable<int>, CustomCollectionComplex<string>>(new[] { 2, -3 }, coll, options));
 			TestUtils.AssertMapNotFound(() => _matcher.Match<IEnumerable<int>, CustomCollectionComplex<float>>(new[] { 2, -3, 0 }, new CustomCollectionComplex<float>(), options));
 		}
+
+		[TestMethod]
+		public void ShouldCheckButNotMatchOpenGenericTypes() {
+			Assert.IsTrue(_matcher.CanMatch(typeof(IEnumerable<>), typeof(CustomCollectionComplex<>)));
+
+			var coll = new CustomCollectionComplex<string>();
+			coll.Add("4");
+			coll.Add("-6");
+			coll.Add("0");
+			Assert.ThrowsException<MapNotFoundException>(() => _matcher.Match(new[] { 2, -3, 0 }, typeof(IEnumerable<>), coll, typeof(CustomCollectionComplex<>)));
+		}
 	}
 }

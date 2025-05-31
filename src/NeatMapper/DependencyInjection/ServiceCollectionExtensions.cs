@@ -17,6 +17,7 @@ namespace NeatMapper {
 		/// <list type="bullet">
 		/// <item><see cref="EquatableMatcher"/></item>
 		/// <item>EqualityOperatorsMatcher for (.NET 7+)</item>
+		/// <item><see cref="StructuralEquatableMatcher"/></item>
 		/// <item><see cref="ObjectEqualsMatcher"/></item>
 		/// </list>
 		/// </item>
@@ -53,7 +54,8 @@ namespace NeatMapper {
 		/// <list type="bullet">
 		/// <item><see cref="IProjector"/></item>
 		/// <item>
-		/// <see cref="CustomProjector"/>, <see cref="CollectionProjector"/> and <see cref="CompositeProjector"/>
+		/// <see cref="CustomProjector"/>, <see cref="NullableProjector"/>,
+		/// <see cref="CollectionProjector"/> and <see cref="CompositeProjector"/>
 		/// which also contains all the previous.
 		/// </item>
 		/// </list>
@@ -106,6 +108,8 @@ namespace NeatMapper {
 						EmptyMatcher.Instance,
 						s.GetService<IOptionsMonitor<CollectionMatchersOptions>>()?.CurrentValue));
 
+					// Last because they are fallbacks
+					o.Matchers.Add(StructuralEquatableMatcher.Instance);
 					o.Matchers.Add(ObjectEqualsMatcher.Instance);
 				});
 
@@ -272,7 +276,8 @@ namespace NeatMapper {
 					o.Projectors.Add(p);
 				})
 				.PostConfigure(o => {
-					// Creating collection mappers with EmptyProjector to avoid recursion, the element projector will be overridden by composite projector
+					// Creating nullable and collection mappers with EmptyProjector to avoid recursion, the element projector will be overridden by composite projector
+					o.Projectors.Add(new NullableProjector(EmptyProjector.Instance));
 					o.Projectors.Add(new CollectionProjector(EmptyProjector.Instance));
 				});
 
@@ -288,7 +293,13 @@ namespace NeatMapper {
 					s),
 				projectorsLifetime));
 
-			// Collection projectors
+			// Nullable projector
+			services.Add(new ServiceDescriptor(
+				typeof(NullableProjector),
+				s => new NullableProjector(s.GetRequiredService<IProjector>()),
+				projectorsLifetime));
+
+			// Collection projector
 			services.Add(new ServiceDescriptor(
 				typeof(CollectionProjector),
 				s => new CollectionProjector(s.GetRequiredService<IProjector>()),

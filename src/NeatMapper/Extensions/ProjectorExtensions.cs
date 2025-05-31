@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 
@@ -24,8 +23,12 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// Type of the object to project, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestination">
+		/// Type of the destination object to project to, used to retrieve the available maps.
+		/// </typeparam>
 		/// <inheritdoc cref="IProjector.CanProject(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be projected
@@ -79,33 +82,33 @@ namespace NeatMapper {
 		/// to an instance <typeparamref name="TDestination"/> type (which may be null).
 		/// </returns>
 		/// <inheritdoc cref="IProjector.Project(Type, Type, MappingOptions?)" path="/exception"/>
-		public static Expression<Func<TSource?, TDestination?>> Project<TSource, TDestination>(this IProjector projector,
+		public static Expression<Func<TSource, TDestination>> Project<TSource, TDestination>(this IProjector projector,
 			MappingOptions? mappingOptions = null) {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
 
-			return (Expression<Func<TSource?, TDestination?>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions);
+			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions);
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IProjector, MappingOptions?)"/>
-		public static Expression<Func<TSource?, TDestination?>> Project<TSource, TDestination>(this IProjector projector,
+		public static Expression<Func<TSource, TDestination>> Project<TSource, TDestination>(this IProjector projector,
 			IEnumerable? mappingOptions) {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
 
-			return (Expression<Func<TSource?, TDestination?>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="Project{TSource, TDestination}(IProjector, MappingOptions?)"/>
-		public static Expression<Func<TSource?, TDestination?>> Project<TSource, TDestination>(this IProjector projector,
+		public static Expression<Func<TSource, TDestination>> Project<TSource, TDestination>(this IProjector projector,
 			params object?[]? mappingOptions) {
 
 			if (projector == null)
 				throw new ArgumentNullException(nameof(projector));
 
-			return (Expression<Func<TSource?, TDestination?>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return (Expression<Func<TSource, TDestination>>)projector.Project(typeof(TSource), typeof(TDestination), mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion
