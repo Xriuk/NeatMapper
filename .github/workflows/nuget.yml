@@ -13,6 +13,8 @@ on:
 jobs:
   # Build job
   build:
+    environment:
+      name: nuget
     runs-on: windows-2019
     steps:
       - name: Checkout
@@ -30,13 +32,6 @@ jobs:
         run: dotnet build --configuration Release
       - name: Test all projects
         run: dotnet test --configuration Release --no-build
-
-  deploy:
-    environment:
-      name: nuget
-    runs-on: windows-2019
-    needs: build
-    steps:
       - name: Publish NeatMapper core to Nuget
         run: dotnet nuget push "src\NeatMapper\bin\Release\*.symbols.nupkg" -s "https://api.nuget.org/v3/index.json" -sk ${{ secrets.API_KEY }}
       - name: Publish NeatMapper EF Core to Nuget
