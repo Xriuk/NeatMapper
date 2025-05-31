@@ -17,6 +17,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Install .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version:  | 
+            4.7.x
+            4.8.x
+            3.1.x
+            5.x
+            6.x
+            7.x
+            8.x
       - name: Build all projects
         run: dotnet build --configuration Release
       - name: Test all projects
