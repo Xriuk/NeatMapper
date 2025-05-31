@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Security.AccessControl;
 using System.Threading.Tasks;
 
 namespace NeatMapper {
@@ -176,6 +177,12 @@ namespace NeatMapper {
 
 
 		internal bool TryGetContextMap<TContext>((Type From, Type To) types, out Func<TContext, object?> map) {
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				map = null!;
+				return false;
+			}
+
 			map = (Func<TContext, object?>?)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<TContext, object?>>(types, "context");
 				if (mapDeleg != null) 
@@ -199,6 +206,12 @@ namespace NeatMapper {
 			return map != null;
 		}
 		internal bool TryGetContextMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate, out Func<TContext, object?> mapResult) {
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				mapResult = null!;
+				return false;
+			}
+
 			if (_mapsCache.TryGetValue(types, out var cacheDeleg)) {
 				mapResult = ((Func<TContext, object?>?)cacheDeleg)!;
 				return mapResult != null;
@@ -233,6 +246,12 @@ namespace NeatMapper {
 		}
 
 		internal bool TryGetSingleMap<TContext>((Type From, Type To) types, out Func<object?, TContext, object?> map) {
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				map = null!;
+				return false;
+			}
+
 			map = (Func<object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object?, TContext, object?>>(types, "source", "context");
 				if(mapDeleg != null) 
@@ -256,6 +275,12 @@ namespace NeatMapper {
 			return map != null;
 		}
 		internal bool TryGetSingleMapAsync((Type From, Type To) types, out Func<object?, AsyncMappingContext, Task<object?>> map) {
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				map = null!;
+				return false;
+			}
+
 			map = (Func<object?, AsyncMappingContext, Task<object?>>?)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object?, AsyncMappingContext, Task<object?>>>(types, "source", "context");
 				if (mapDeleg != null)
@@ -280,6 +305,12 @@ namespace NeatMapper {
 		}
 
 		internal bool TryGetDoubleMap<TContext>((Type From, Type To) types, out Func<object?, object?, TContext, object?> map) {
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				map = null!;
+				return false;
+			}
+
 			map = (Func<object?, object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object?, object?, TContext, object?>>(types, "source", "destination", "context");
 				if (mapDeleg != null) 
@@ -303,7 +334,13 @@ namespace NeatMapper {
 			return map != null;
 		}
 		internal bool TryGetDoubleMapCustomMatch<TContext>((Type From, Type To) types, Func<KeyValuePair<(Type From, Type To), CustomMap>, bool> predicate, out Func<object?, object?, TContext, object?> mapResult) {
-			if(_mapsCache.TryGetValue(types, out var cacheDeleg)){
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				mapResult = null!;
+				return false;
+			}
+
+			if (_mapsCache.TryGetValue(types, out var cacheDeleg)){
 				mapResult = ((Func<object?, object?, TContext, object?>?)cacheDeleg)!;
 				return mapResult != null;
 			}
@@ -336,6 +373,12 @@ namespace NeatMapper {
 			}
 		}
 		internal bool TryGetDoubleMapAsync((Type From, Type To) types, out Func<object?, object?, AsyncMappingContext, Task<object?>> map) {
+			// Open generics are not supported
+			if (types.From.IsGenericTypeDefinition || types.To.IsGenericTypeDefinition) {
+				map = null!;
+				return false;
+			}
+
 			map = (Func<object?, object?, AsyncMappingContext, Task<object?>>)_mapsCache.GetOrAdd(types, _ => {
 				var mapDeleg = RetrieveDelegate<Func<object?, object?, AsyncMappingContext, Task<object?>>>(types, "source", "destination", "context");
 				if (mapDeleg != null) 
@@ -418,6 +461,16 @@ namespace NeatMapper {
 			}
 
 			return default;
+		}
+
+		internal bool HasOpenGenericMap((Type From, Type To) types) {
+			return GenericMaps.Any(m => 
+				(types.From.IsGenericTypeDefinition ? 
+					(m.From.IsGenericType && m.From.GetGenericTypeDefinition() == types.From) :
+					m.From == types.From) &&
+				(types.To.IsGenericTypeDefinition ?
+					(m.To.IsGenericType && m.To.GetGenericTypeDefinition() == types.To) :
+					m.To == types.To));
 		}
 
 		internal IEnumerable<(Type From, Type To)> GetMaps() {

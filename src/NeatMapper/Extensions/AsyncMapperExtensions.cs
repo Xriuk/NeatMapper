@@ -30,8 +30,12 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// Type of the object to map, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestination">
+		/// Type of the destination object to create, used to retrieve the available maps.
+		/// </typeparam>
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncNew(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A task which when completed returns <see langword="true"/> if an object of type
@@ -89,8 +93,12 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// Type of the object to be mapped, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestination">
+		/// Type of the destination object, used to retrieve the available maps.
+		/// </typeparam>
 		/// <inheritdoc cref="IAsyncMapper.CanMapAsyncMerge(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// A task which when completed returns <see langword="true"/> if an object of type

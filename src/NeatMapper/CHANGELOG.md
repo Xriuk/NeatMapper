@@ -4,7 +4,15 @@
 
 ### Added
 
+- `NullableProjector` which allows projecting `Nullable<T>` types by projecting underlying types.
 - `StructuralEquatableMatcher` which allows matching types implementing `IStructuralEquatable`.
+- `IMapper`'s `CanMapNew`/`CanMapMerge`, `IAsyncMapper`'s `CanMapAsyncNew`/`CanMapAsyncMerge`, `IMatcher`'s `CanMatch` and `IProjector`'s `CanProject` now accept open generic types. This should be used to check if two generic types can never be mapped, as the map itself will only succeed with compatible closed generic types.
+
+### Fixed
+
+- `NestedProjector`/`ProjectorExtensions`/`QueryableExtensions` generic methods nullability.
+- `MapRequired` extension method with inferred source, added `NotNull` attribute as the returned value is never null.
+- `AsyncEnumerableExtensions`'s `Project` added map check which throws `MapNotFoundException`, if the map does not exist, before returning the `IAsyncEnumerable<T>`.
 
 
 ## [5.3.0] - 2025-05-24

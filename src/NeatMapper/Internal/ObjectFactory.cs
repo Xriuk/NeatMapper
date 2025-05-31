@@ -137,6 +137,7 @@ namespace NeatMapper {
 			return false;
 		}
 
+		// Also supports open generics
 		public static bool CanCreate(Type objectType) {
 			if (objectType == typeof(string))
 				return true;
@@ -164,7 +165,8 @@ namespace NeatMapper {
 			return typeInstancesCache.GetOrAdd(objectType, Create);
 		}
 
-
+		
+		// Also supports open generics
 		public static bool CanCreateCollection(Type objectType) {
 			if(objectType == typeof(string))
 				return true;

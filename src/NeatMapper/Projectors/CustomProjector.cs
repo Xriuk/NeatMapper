@@ -114,6 +114,7 @@ namespace NeatMapper {
 			}
 		}
 
+
 		/// <summary>
 		/// Configuration for class and additional maps for the projector.
 		/// </summary>
@@ -191,7 +192,7 @@ namespace NeatMapper {
 		}
 
 		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if(!CanProjectInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
+			if(!CanProjectInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null)
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			LambdaExpression result;
@@ -237,7 +238,13 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (_projectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out map)) {
+			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
+				map = null!;
+				context = null!;
+
+				return _projectConfiguration.HasOpenGenericMap((sourceType, destinationType));
+			}
+			else if (_projectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out map)) {
 				context = _contextsCache.GetOrCreate(mappingOptions);
 
 				if (_canProjectConfiguration.TryGetContextMap<ProjectionContext>((sourceType, destinationType), out var canProject))

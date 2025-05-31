@@ -41,6 +41,7 @@ namespace NeatMapper {
 		private static readonly ConstructorInfo string_charArray = typeof(string).GetConstructor([ typeof(char[]) ])
 			?? throw new InvalidOperationException("Could not find new string(char[])");
 
+		// Also supports open generics
 		private static bool CanProjectCollection(Type type) {
 			if (type == typeof(string))
 				return true;
@@ -75,7 +76,10 @@ namespace NeatMapper {
 			}
 
 			// Otherwise a collection (even custom) can be projected only if it has a constructor which accepts an IEnumerable<T>
-			return type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, [ typeof(IEnumerable<>).MakeGenericType(type.GetEnumerableElementType()) ], null) != null;
+			if(type.IsGenericTypeDefinition)
+				return type.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).Any(c => c.GetParameters().ElementAtOrDefault(0)?.ParameterType.IsEnumerable() == true);
+			else
+				return type.GetConstructor(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, [ typeof(IEnumerable<>).MakeGenericType(type.GetEnumerableElementType()) ], null) != null;
 		}
 
 
@@ -114,7 +118,7 @@ namespace NeatMapper {
 		public LambdaExpression Project(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanProjectInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var isQueryable, out var elementsProjector))
+			if (!CanProjectInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var isQueryable, out var elementsProjector) || elementsProjector == null)
 				throw new MapNotFoundException(types);
 
 			Expression elementProjection;
@@ -125,14 +129,14 @@ namespace NeatMapper {
 				throw new MapNotFoundException(types);
 			}
 
-			var param = Expression.Parameter(types.From, "source");
+			var source = Expression.Parameter(types.From, "source");
 
 			// source.Select(PROJECTION)
 			// If we have an IQueryable we quote the element projection expression as it needs to stay an Expression<Func<..., ...>>
 			Expression body = Expression.Call(
 				null,
 				(isQueryable ? Queryable_Select : Enumerable_Select).MakeGenericMethod(elementTypes.From, elementTypes.To),
-				param,
+				source,
 				(isQueryable ? Expression.Quote(elementProjection) : elementProjection));
 
 			// Create the final built-in collection for non queryables
@@ -219,10 +223,10 @@ namespace NeatMapper {
 					collection = body;
 
 				// source == null ? null : PROJECTION
-				body = Expression.Condition(Expression.Equal(param, Expression.Constant(null, types.From)), Expression.Constant(null, collection.Type), collection);
+				body = Expression.Condition(Expression.Equal(source, Expression.Constant(null, types.From)), Expression.Constant(null, collection.Type), collection);
 			}
 
-			return Expression.Lambda(typeof(Func<,>).MakeGenericType(types.From, types.To), body, param);
+			return Expression.Lambda(typeof(Func<,>).MakeGenericType(types.From, types.To), body, source);
 
 
 #if !NETCOREAPP3_1_OR_GREATER && !NET5_0_OR_GREATER
@@ -277,13 +281,22 @@ namespace NeatMapper {
 				isQueryable = sourceType.IsGenericType && sourceType.GetGenericTypeDefinition() == typeof(IQueryable<>) &&
 					destinationType.IsGenericType && destinationType.GetGenericTypeDefinition() == typeof(IQueryable<>);
 				if (isQueryable || CanProjectCollection(destinationType)) {
-					elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
+					if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
+						elementTypes = default;
+						elementsProjector = null!;
+						mappingOptions = null!;
 
-					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-					elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector
-						?? _elementsProjector;
+						return true;
+					}
+					else { 
+						elementTypes = (From: sourceType.GetEnumerableElementType(), To: destinationType.GetEnumerableElementType());
 
-					return elementsProjector.CanProject(elementTypes.From, elementTypes.To, mappingOptions);
+						mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+						elementsProjector = mappingOptions.GetOptions<ProjectorOverrideMappingOptions>()?.Projector
+							?? _elementsProjector;
+
+						return elementsProjector.CanProject(elementTypes.From, elementTypes.To, mappingOptions);
+					}
 				}
 				else {
 					elementTypes = default;

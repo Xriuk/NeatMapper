@@ -90,7 +90,7 @@ namespace NeatMapper {
 		}
 
 		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMatchInternal(sourceType, destinationType, mappingOptions, out var map, out var context)) 
+			if (!CanMatchInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null) 
 				throw new MapNotFoundException((sourceType, destinationType));
 			
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -105,7 +105,7 @@ namespace NeatMapper {
 		}
 
 		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if(!CanMatchInternal(sourceType, destinationType, mappingOptions, out var map, out var context))
+			if(!CanMatchInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null)
 				throw new MapNotFoundException((sourceType, destinationType));
 			
 			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => {
@@ -134,6 +134,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			// Does not support open generic types because IsAssignableFrom does not work with them
 			if (_matchConfiguration.TryGetDoubleMapCustomMatch<MatchingContext>((sourceType, destinationType), Predicate, out map)) {
 				context = _contextsCache.GetOrCreate(mappingOptions);
 

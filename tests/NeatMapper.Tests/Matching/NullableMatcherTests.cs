@@ -25,7 +25,7 @@ namespace NeatMapper.Tests.Matching {
 
 
 		[TestMethod]
-		public void ShouldMapValueTypeWithNullable() {
+		public void ShouldMatchValueTypeWithNullable() {
 			{ 
 				Assert.IsTrue(_matcher.CanMatch<int, char?>());
 
@@ -52,7 +52,7 @@ namespace NeatMapper.Tests.Matching {
 		}
 
 		[TestMethod]
-		public void ShouldMapReferenceTypeToNullable() {
+		public void ShouldMatchReferenceTypeToNullable() {
 			{ 
 				Assert.IsTrue(_matcher.CanMatch<int?, string>());
 
@@ -70,7 +70,7 @@ namespace NeatMapper.Tests.Matching {
 
 
 		[TestMethod]
-		public void ShouldMapNullableToNullable() {
+		public void ShouldMatchNullableToNullable() {
 			// int? -> char
 			{
 				var additionalMaps = new CustomMatchAdditionalMapsOptions();
@@ -142,6 +142,28 @@ namespace NeatMapper.Tests.Matching {
 					Assert.IsFalse(factory.Invoke(122, null));
 					Assert.IsFalse(factory.Invoke(null, 'z'));
 				}
+			}
+		}
+
+
+		[TestMethod]
+		public void ShouldCheckButNotMapOpenNullable() {
+			{
+				Assert.IsTrue(_matcher.CanMatch(typeof(int), typeof(Nullable<>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _matcher.Match(1, typeof(int), 2, typeof(Nullable<>)));
+			}
+
+			{
+				Assert.IsTrue(_matcher.CanMatch(typeof(Nullable<>), typeof(int)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _matcher.Match(1, typeof(Nullable<>), 2, typeof(int)));
+			}
+
+			{
+				Assert.IsTrue(_matcher.CanMatch(typeof(Nullable<>), typeof(Nullable<>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _matcher.Match(1, typeof(Nullable<>), 2, typeof(Nullable<>)));
 			}
 		}
 	}

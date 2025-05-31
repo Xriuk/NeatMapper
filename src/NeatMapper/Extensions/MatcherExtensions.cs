@@ -29,8 +29,12 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// Type of the source object, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestination">
+		/// Type of the destination object, used to retrieve the available maps.
+		/// </typeparam>
 		/// <inheritdoc cref="IMatcher.CanMatch(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be matched

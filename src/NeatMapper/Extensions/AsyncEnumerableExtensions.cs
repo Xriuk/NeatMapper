@@ -82,6 +82,9 @@ namespace NeatMapper {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 
+			if(!mapper.CanMapAsyncNew<TSource, TDestination>(mappingOptions))
+				throw new MapNotFoundException((typeof(TSource), typeof(TDestination)));
+
 			return new LazyAsyncEnumerable<TSource, TDestination>(mapper, enumerable, mappingOptions);
 		}
 

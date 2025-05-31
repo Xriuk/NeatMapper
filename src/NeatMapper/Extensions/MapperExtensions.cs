@@ -10,7 +10,7 @@ namespace NeatMapper {
 		#region Runtime
 		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static bool CanMapNew(this IMapper mapper,Type sourceType, Type destinationType, IEnumerable? mappingOptions) {
+		public static bool CanMapNew(this IMapper mapper, Type sourceType, Type destinationType, IEnumerable? mappingOptions) {
 			if (mapper == null)
 				throw new ArgumentNullException(nameof(mapper));
 
@@ -29,8 +29,12 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// Type of the source object, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestination">
+		/// Type of the destination object to create, used to retrieve the available maps.
+		/// </typeparam>
 		/// <inheritdoc cref="IMapper.CanMapNew(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created
@@ -87,8 +91,12 @@ namespace NeatMapper {
 
 		#region Explicit source and destination
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions?)" path="/summary"/>
-		/// <typeparam name="TSource"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions?)" path="/param[@name='sourceType']"/></typeparam>
-		/// <typeparam name="TDestination"><inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions?)" path="/param[@name='destinationType']"/></typeparam>
+		/// <typeparam name="TSource">
+		/// Type of the object to be mapped, used to retrieve the available maps.
+		/// </typeparam>
+		/// <typeparam name="TDestination">
+		/// Type of the destination object, used to retrieve the available maps.
+		/// </typeparam>
 		/// <inheritdoc cref="IMapper.CanMapMerge(Type, Type, MappingOptions?)" path="/param[@name='mappingOptions']"/>
 		/// <returns>
 		/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged into an object
@@ -826,6 +834,7 @@ namespace NeatMapper {
 		/// </returns>
 		/// <inheritdoc cref="MapRequired(IMapper, object?, Type, Type, MappingOptions?)" path="/exception"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[return: NotNull]
 		public static TDestination MapRequired<TDestination>(this IMapper mapper, object source, MappingOptions? mappingOptions = null) {
 			if (source == null)
 				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");
@@ -835,6 +844,7 @@ namespace NeatMapper {
 
 		/// <inheritdoc cref="MapRequired{TDestination}(IMapper, object, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		[return: NotNull]
 		public static TDestination MapRequired<TDestination>(this IMapper mapper, object source, IEnumerable? mappingOptions) {
 			if (source == null)
 				throw new ArgumentNullException(nameof(source), "Type cannot be inferred from null source, use an overload with an explicit source type");

@@ -66,6 +66,9 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
+			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition)
+				throw new MapNotFoundException((sourceType, destinationType));
+
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var matcher = _compositeMatcherOptions.Matchers.FirstOrDefault(m => m.CanMatch(sourceType, destinationType, mappingOptions));
@@ -89,6 +92,9 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
+
+			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition)
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 

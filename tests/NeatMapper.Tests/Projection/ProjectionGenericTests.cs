@@ -554,6 +554,44 @@ namespace NeatMapper.Tests.Projection {
 		}
 
 		[TestMethod]
+		public void ShouldCheckButNotProjectOpenGenericTypes() {
+			// 1 parameter
+			{
+				// No constraints
+				{
+					Assert.IsTrue(_projector.CanProject(typeof(IEnumerable<>), typeof(IList<>)));
+
+					Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(IEnumerable<>), typeof(IList<>)));
+				}
+
+				// Class constraint
+				{
+					var projector = new CustomProjector(new CustomMapsOptions {
+						TypesToScan = new List<Type> { typeof(MapsWithClassType<>) }
+					});
+
+					Assert.IsTrue(projector.CanProject(typeof(IEnumerable<>), typeof(int)));
+
+					Assert.ThrowsException<MapNotFoundException>(() => projector.Project(typeof(IEnumerable<>), typeof(int)));
+				}
+			}
+
+			// 2 parameters
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(Tuple<,>), typeof(ValueTuple<,>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(Tuple<,>), typeof(ValueTuple<,>)));
+			}
+
+			// 3 parameters
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(Tuple<,>), typeof(ValueTuple<,,>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(Tuple<,>), typeof(ValueTuple<,,>)));
+			}
+		}
+
+		[TestMethod]
 		public void ShouldNotProjectNotMatchingGenericTypes() {
 			// Types should be the same
 			Assert.IsFalse(_projector.CanProject<IEnumerable<string>, IList<int>>());
@@ -738,6 +776,23 @@ namespace NeatMapper.Tests.Projection {
 				Assert.IsTrue(_projector.CanProject<int, IList<string>>());
 
 				_projector.Project<int, IList<string>>();
+			}
+		}
+
+		[TestMethod]
+		public void ShouldCheckButNotProjectSingleOpenGenericType() {
+			// Generic source
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(IEnumerable<>), typeof(string)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(IEnumerable<>), typeof(string)));
+			}
+
+			// Generic destination
+			{
+				Assert.IsTrue(_projector.CanProject(typeof(int), typeof(IList<>)));
+
+				Assert.ThrowsException<MapNotFoundException>(() => _projector.Project(typeof(int), typeof(IList<>)));
 			}
 		}
 

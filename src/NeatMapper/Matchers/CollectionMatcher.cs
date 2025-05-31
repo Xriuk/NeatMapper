@@ -60,7 +60,7 @@ namespace NeatMapper {
 		public bool Match(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMatcher))
+			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMatcher) || elementsMatcher == null)
 				throw new MapNotFoundException(types);
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -208,7 +208,7 @@ namespace NeatMapper {
 		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMatcher))
+			if (!CanMatchInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMatcher) || elementsMatcher == null)
 				throw new MapNotFoundException(types);
 
 			// Check if the matching is ordered or not
@@ -421,11 +421,20 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			if (sourceType.IsEnumerable() && destinationType.IsEnumerable()) {
-				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
-				mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-				elementsMatcher = mappingOptions.GetOptions<MatcherOverrideMappingOptions>()?.Matcher ?? _elementsMatcher;
+				if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
+					elementTypes = default;
+					elementsMatcher = null!;
+					mappingOptions = null!;
 
-				return elementsMatcher.CanMatch(elementTypes.From, elementTypes.To, mappingOptions);
+					return true;
+				}
+				else { 
+					elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
+					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+					elementsMatcher = mappingOptions.GetOptions<MatcherOverrideMappingOptions>()?.Matcher ?? _elementsMatcher;
+
+					return elementsMatcher.CanMatch(elementTypes.From, elementTypes.To, mappingOptions);
+				}
 			}
 			else {
 				elementTypes = default;
