@@ -31,8 +31,8 @@ namespace NeatMapper {
 		/// <summary>
 		/// Compiled maps cache, value can be null if no map exists.
 		/// </summary>
-		private readonly ConcurrentDictionary<(Type From, Type To), Func<object?, object?>?> _mapsCache =
-			new ConcurrentDictionary<(Type, Type), Func<object?, object?>?>();
+		private readonly ConcurrentDictionary<(Type From, Type To, MappingOptions MappingOptions), Func<object?, object?>?> _mapsCache =
+			new ConcurrentDictionary<(Type, Type, MappingOptions), Func<object?, object?>?>();
 
 
 		/// <summary>
@@ -51,10 +51,12 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if (_mapsCache.TryGetValue((sourceType, destinationType), out var map))
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
+			if (_mapsCache.TryGetValue((sourceType, destinationType, mappingOptions), out var map))
 				return map != null;
 			else
-				return _projector.CanProject(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+				return _projector.CanProject(sourceType, destinationType, mappingOptions);
 		}
 
 		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -62,7 +64,7 @@ namespace NeatMapper {
 		}
 
 		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			var map = GetMap(sourceType, destinationType, mappingOptions);
+			var map = GetOrCreateMap(sourceType, destinationType, mappingOptions);
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
@@ -90,7 +92,7 @@ namespace NeatMapper {
 
 		#region IMapperFactory methods
 		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			var map = GetMap(sourceType, destinationType, mappingOptions);
+			var map = GetOrCreateMap(sourceType, destinationType, mappingOptions);
 
 			return new DefaultNewMapFactory(sourceType, destinationType, source => {
 				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
@@ -120,7 +122,7 @@ namespace NeatMapper {
 
 		#region IMapperMaps methods
 		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
-			return _projector.GetMaps(mappingOptions);
+			return _projector.GetMaps(MergeOrCreateMappingOptions(mappingOptions));
 		}
 
 		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
@@ -129,7 +131,7 @@ namespace NeatMapper {
 		#endregion
 
 
-		private Func<object?, object?> GetMap(Type sourceType, Type destinationType, MappingOptions? mappingOptions) {
+		private Func<object?, object?> GetOrCreateMap(Type sourceType, Type destinationType, MappingOptions? mappingOptions) {
 			if (sourceType == null)
 				throw new ArgumentNullException(nameof(sourceType));
 			if (destinationType == null)
@@ -138,14 +140,16 @@ namespace NeatMapper {
 			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition)
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			return _mapsCache.GetOrAdd((sourceType, destinationType), types => {
+			mappingOptions = MergeOrCreateMappingOptions(mappingOptions);
+
+			return _mapsCache.GetOrAdd((sourceType, destinationType, mappingOptions), typesAndMappingOptions => {
 				// Retrieve the projection from the projector
 				LambdaExpression projection;
 				try {
-					projection = _projector.Project(sourceType, destinationType, MergeOrCreateMappingOptions(mappingOptions));
+					projection = _projector.Project(typesAndMappingOptions.From, typesAndMappingOptions.To, typesAndMappingOptions.MappingOptions);
 				}
 				catch (ProjectionException e) {
-					throw new MappingException(e.InnerException, (sourceType, destinationType));
+					throw new MappingException(e.InnerException, (typesAndMappingOptions.From, typesAndMappingOptions.To));
 				}
 				catch (MapNotFoundException) {
 					return null;

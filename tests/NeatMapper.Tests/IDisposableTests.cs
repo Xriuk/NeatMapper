@@ -1,9 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace NeatMapper.Tests {
@@ -60,7 +56,7 @@ namespace NeatMapper.Tests {
 
 		[TestMethod]
 		public void DisposablePredicateFactoryIdempotency() {
-			IDisposable factory = new DisposablePredicateFactory(typeof(int), typeof(string), c => false, new[] { new DisposableClass() });
+			IDisposable factory = new DisposablePredicateFactory(2, typeof(int), typeof(string), c => false, new[] { new DisposableClass() });
 
 			factory.Dispose();
 			factory.Dispose();

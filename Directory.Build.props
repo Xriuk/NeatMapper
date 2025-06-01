@@ -1,8 +1,8 @@
 <!-- https://stackoverflow.com/a/73098203 -->
 <Project>
 	<PropertyGroup>
-		<GlobalCurrentVersion>5.4.0</GlobalCurrentVersion>
-		<GlobalNextVersion>6.0.0</GlobalNextVersion>
+		<GlobalCurrentVersion>6.0.0</GlobalCurrentVersion>
+		<GlobalNextVersion>7.0.0</GlobalNextVersion>
 	</PropertyGroup>
 
 	<Target Name="UseExplicitPackageVersions" BeforeTargets="GenerateNuspec">

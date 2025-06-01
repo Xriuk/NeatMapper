@@ -2,7 +2,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Tests;
 using System;
 
 namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
@@ -41,15 +40,51 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 
 			// Not null
 			{
-				Assert.IsTrue(_matcher.Match(new IntKey { Id = 2 }, new IntKey { Id = 2 }));
-				Assert.IsTrue(_matcher.Match(new IntKey { Id = 0 }, new IntKey { Id = 0 }));
-				Assert.IsTrue(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
-				Assert.IsFalse(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = Guid.Empty }));
-				Assert.IsTrue(_matcher.Match(new StringKey { Id = "Test" }, new StringKey { Id = "Test" }));
+				{ 
+					Assert.IsTrue(_matcher.Match(new IntKey { Id = 2 }, new IntKey { Id = 2 }));
+					Assert.IsTrue(_matcher.Match(new IntKey { Id = 0 }, new IntKey { Id = 0 }));
 
-				Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 2 }, new IntFieldKey { Id = 2 }));
-				Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 0 }, new IntFieldKey { Id = 0 }));
-				Assert.IsTrue(_matcher.Match(new StringFieldKey { Id = "Test" }, new StringFieldKey { Id = "Test" }));
+					using(var factory = _matcher.MatchFactory<IntKey, IntKey>()) {
+						Assert.IsTrue(factory.Invoke(new IntKey { Id = 2 }, new IntKey { Id = 2 }));
+						Assert.IsTrue(factory.Invoke(new IntKey { Id = 0 }, new IntKey { Id = 0 }));
+					}
+				}
+
+				{ 
+					Assert.IsTrue(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+					Assert.IsFalse(_matcher.Match(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = Guid.Empty }));
+
+					using (var factory = _matcher.MatchFactory<GuidKey, GuidKey>()) {
+						Assert.IsTrue(factory.Invoke(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+						Assert.IsFalse(factory.Invoke(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new GuidKey { Id = Guid.Empty }));
+					}
+				}
+
+				{ 
+					Assert.IsTrue(_matcher.Match(new StringKey { Id = "Test" }, new StringKey { Id = "Test" }));
+
+					using (var factory = _matcher.MatchFactory<StringKey, StringKey>()) {
+						Assert.IsTrue(factory.Invoke(new StringKey { Id = "Test" }, new StringKey { Id = "Test" }));
+					}
+				}
+
+				{ 
+					Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 2 }, new IntFieldKey { Id = 2 }));
+					Assert.IsTrue(_matcher.Match(new IntFieldKey { Id = 0 }, new IntFieldKey { Id = 0 }));
+
+					using (var factory = _matcher.MatchFactory<IntFieldKey, IntFieldKey>()) {
+						Assert.IsTrue(factory.Invoke(new IntFieldKey { Id = 2 }, new IntFieldKey { Id = 2 }));
+						Assert.IsTrue(factory.Invoke(new IntFieldKey { Id = 0 }, new IntFieldKey { Id = 0 }));
+					}
+				}
+
+				{ 
+					Assert.IsTrue(_matcher.Match(new StringFieldKey { Id = "Test" }, new StringFieldKey { Id = "Test" }));
+
+					using (var factory = _matcher.MatchFactory<StringFieldKey, StringFieldKey>()) {
+						Assert.IsTrue(factory.Invoke(new StringFieldKey { Id = "Test" }, new StringFieldKey { Id = "Test" }));
+					}
+				}
 			}
 
 			// Null
@@ -62,6 +97,11 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 				Assert.IsFalse(_matcher.Match<IntFieldKey, IntFieldKey>(null, new IntFieldKey { Id = 0 }));
 				Assert.IsFalse(_matcher.Match<StringFieldKey, StringFieldKey>(null, null));
 				Assert.IsFalse(_matcher.Match<StringFieldKey, StringFieldKey>(null, new StringFieldKey { Id = null }));
+
+				using (var factory = _matcher.MatchFactory<GuidKey, GuidKey>()) {
+					Assert.IsFalse(factory.Invoke(new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, null));
+					Assert.IsFalse(factory.Invoke(null, new GuidKey { Id = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+				}
 			}
 		}
 
@@ -71,16 +111,31 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 
 			// Not null
 			{
-				Assert.IsTrue(_matcher.Match(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+				Assert.IsTrue(_matcher.Match(
+					new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") },
+					new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
 				Assert.IsTrue(_matcher.Match(new CompositeClassKey { Id1 = 2, Id2 = "Test" }, new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
+
+				using (var factory = _matcher.MatchFactory<CompositePrimitiveKey, CompositePrimitiveKey>()) {
+					Assert.IsTrue(factory.Invoke(
+						new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") },
+						new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }));
+				}
 			}
 
 			// Null
 			{
-				Assert.IsFalse(_matcher.Match<CompositePrimitiveKey, CompositePrimitiveKey>(new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") }, null));
+				Assert.IsFalse(_matcher.Match<CompositePrimitiveKey, CompositePrimitiveKey>(
+					new CompositePrimitiveKey { Id1 = 2, Id2 = new Guid("56033406-E593-4076-B48A-70988C9F9190") },
+					null));
 				Assert.IsFalse(_matcher.Match<CompositePrimitiveKey, CompositePrimitiveKey>(null, null));
 				Assert.IsFalse(_matcher.Match<CompositeClassKey, CompositeClassKey>(null, new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
 				Assert.IsFalse(_matcher.Match<CompositeClassKey, CompositeClassKey>(null, null));
+
+				using (var factory = _matcher.MatchFactory<CompositeClassKey, CompositeClassKey>()) {
+					Assert.IsFalse(factory.Invoke(null, new CompositeClassKey { Id1 = 2, Id2 = "Test" }));
+					Assert.IsFalse(factory.Invoke(null, null));
+				}
 			}
 		}
 
@@ -110,7 +165,7 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Matching {
 
 			var exc = Assert.ThrowsException<MatcherException>(() => _matcher.Match(entity1, entity2, options));
 			Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
-			Assert.IsTrue(exc.InnerException?.Message.StartsWith($"The entity(ies) of type {typeof(ShadowIntKey).FullName} is/are not being tracked by the provided {nameof(DbContext)}"));
+			Assert.IsTrue(exc.InnerException?.Message.StartsWith($"The entity of type {typeof(ShadowIntKey).FullName} is not being tracked by the provided {nameof(DbContext)}"));
 		}
 
 		[TestMethod]

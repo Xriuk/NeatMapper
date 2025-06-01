@@ -8,6 +8,11 @@ namespace NeatMapper {
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IPredicateFactory : IDisposable {
 		/// <summary>
+		/// Object to compare to, of type <see cref="ComparandType"/>, may be null.
+		/// </summary>
+		object? Comparand { get; }
+
+		/// <summary>
 		/// Type of the object to compare to.
 		/// </summary>
 		Type ComparandType { get; }
@@ -35,13 +40,22 @@ namespace NeatMapper {
 	/// <typeparam name="TComparer">Type of the objects to compare.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class PredicateFactory<TComparer> : IPredicateFactory {
+		public abstract object? Comparand { get; }
+
 		public abstract Type ComparandType { get; }
 
-		// DEV: virtual to be backwards compatible, should remove
-		public virtual Type ComparerType => typeof(TComparer);
+		public Type ComparerType => typeof(TComparer);
 
 
-		/// <inheritdoc cref="IPredicateFactory.Invoke(object?)"/>
+		/// <summary>
+		/// Compares the given object with another fixed object.
+		/// </summary>
+		/// <param name="comparer">Object to compare, may be null.</param>
+		/// <returns>
+		/// True if the provided object matches with the fixed object of type <see cref="ComparandType"/>,
+		/// false otherwise.
+		/// </returns>
+		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
 		public abstract bool Invoke(TComparer? comparer);
 
 		protected abstract void Dispose(bool disposing);
@@ -60,21 +74,24 @@ namespace NeatMapper {
 
 
 		public static implicit operator Func<TComparer?, bool>(
-			PredicateFactory<TComparer?> factory) => factory.Invoke;
+			PredicateFactory<TComparer> factory) => factory.Invoke;
 
 		public static implicit operator Predicate<TComparer?>(
-			PredicateFactory<TComparer?> factory) => factory.Invoke;
+			PredicateFactory<TComparer> factory) => factory.Invoke;
 	}
 
-	/*/// <summary>
+	/// <summary>
 	/// Full typed version of <see cref="PredicateFactory{TComparer}"/>.
 	/// </summary>
 	/// <typeparam name="TComparand">Type of the object to compare to.</typeparam>
 	/// <typeparam name="TComparer">Type of the objects to compare.</typeparam>
 	/// <remarks>Implementations of this class must be thread-safe.</remarks>
 	public abstract class PredicateFactory<TComparand, TComparer> : PredicateFactory<TComparer> {
-		public override Type ComparandType => typeof(TComparand);
+		public override sealed Type ComparandType => typeof(TComparand);
 
-
-	}*/
+		/// <summary>
+		/// Object to compare to, may be null.
+		/// </summary>
+		public TComparand? ComparandObject => (TComparand?)Comparand;
+	}
 }

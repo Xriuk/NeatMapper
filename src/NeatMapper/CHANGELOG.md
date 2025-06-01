@@ -1,5 +1,29 @@
 # Changelog
 
+## [6.0.0] - Unreleased
+
+### Removed
+
+- `IMatcher` deprecated `Predicate` extension methods.
+
+### Changed
+
+- `AsyncEmptyMapper` and `AsyncIdentityMapper` are now static classes.
+- `EmptyMapper` does not implement `IMapperFactory` anymore but uses the extension methods which check for `CanMap` and throw `MapNotFoundException`.
+- Typed factory classes' members are not virtual anymore.
+- `IMatcher` and `IMatchMapFactory` `Predicate` and `PredicateDestination` extensions now include the full typed `PredicateFactory<TComparand, TComparer>` type where applicable.
+- `ProjectionMapper` now caches compiled expressions based on the provided `MappingOptions` too.
+
+### Added
+
+- `Comparand` object to `IPredicateFactory`.
+- Full typed `PredicateFactory<TComparand, TComparer>` abstract class.
+
+### Fixed
+
+- Fixed bug in `ProjectionMapper` `GetNewMaps` mapping options forwarding to projector.
+
+
 ## [5.4.0] - 2025-05-31
 
 ### Added

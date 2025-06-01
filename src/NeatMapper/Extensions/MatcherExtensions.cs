@@ -442,7 +442,7 @@ namespace NeatMapper {
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TSource, TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 			TSource? source,
 			MappingOptions? mappingOptions = null) {
 
@@ -451,7 +451,7 @@ namespace NeatMapper {
 
 		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TSource, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TSource, TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 			TSource? source,
 			IEnumerable? mappingOptions) {
 
@@ -460,7 +460,7 @@ namespace NeatMapper {
 
 		/// <inheritdoc cref="Predicate{TSource, TDestination}(IMatcher, TSource, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TSource, TDestination> Predicate<TSource, TDestination>(this IMatcher matcher,
 			TSource? source,
 			params object?[]? mappingOptions) {
 
@@ -482,7 +482,7 @@ namespace NeatMapper {
 		/// </returns>
 		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static PredicateFactory<TSource> PredicateDestination<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination, TSource> PredicateDestination<TSource, TDestination>(this IMatcher matcher,
 			TDestination? destination,
 			MappingOptions? mappingOptions = null) {
 
@@ -491,7 +491,7 @@ namespace NeatMapper {
 
 		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static PredicateFactory<TSource> PredicateDestination<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination, TSource> PredicateDestination<TSource, TDestination>(this IMatcher matcher,
 			TDestination? destination,
 			IEnumerable? mappingOptions) {
 
@@ -500,42 +500,12 @@ namespace NeatMapper {
 
 		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
 		[MethodImpl(MethodImplOptions.AggressiveInlining)]
-		public static PredicateFactory<TSource> PredicateDestination<TSource, TDestination>(this IMatcher matcher,
+		public static PredicateFactory<TDestination, TSource> PredicateDestination<TSource, TDestination>(this IMatcher matcher,
 			TDestination? destination,
 			params object?[]? mappingOptions) {
 
 			return matcher.PredicateDestination<TSource, TDestination>(destination, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
-
-
-		#region Deprecated
-		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
-		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
-		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
-			TDestination? destination,
-			MappingOptions? mappingOptions = null) {
-
-			return matcher.PredicateDestination<TSource, TDestination>(destination, mappingOptions);
-		}
-
-		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
-		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
-		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
-			TDestination? destination,
-			IEnumerable? mappingOptions) {
-
-			return matcher.PredicateDestination<TSource, TDestination>(destination, mappingOptions);
-		}
-
-		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(IMatcher, TDestination, MappingOptions?)"/>
-		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
-		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this IMatcher matcher,
-			TDestination? destination,
-			params object?[]? mappingOptions) {
-
-			return matcher.PredicateDestination<TSource, TDestination>(destination, mappingOptions);
-		}
-		#endregion
 		#endregion
 		#endregion
 		#endregion

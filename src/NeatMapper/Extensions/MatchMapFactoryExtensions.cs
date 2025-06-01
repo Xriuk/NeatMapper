@@ -32,6 +32,7 @@ namespace NeatMapper {
 				TypeUtils.CheckObjectType(source, factory.SourceType, nameof(source));
 
 				return new DisposablePredicateFactory(
+					source,
 					factory.SourceType, factory.DestinationType,
 					destination => factory.Invoke(source, destination),
 					shouldDispose ? factory : null);
@@ -72,7 +73,8 @@ namespace NeatMapper {
 				TypeUtils.CheckObjectType(destination, factory.DestinationType, nameof(destination));
 
 				return new DisposablePredicateFactory(
-					factory.SourceType, factory.DestinationType,
+					destination,
+					factory.DestinationType, factory.SourceType, 
 					source => factory.Invoke(source, destination),
 					shouldDispose ? factory : null);
 			}
@@ -132,6 +134,7 @@ namespace NeatMapper {
 					TypeUtils.CheckObjectType(comparand, factory.DestinationType, nameof(comparand));
 
 					return new DisposablePredicateFactory<TComparer>(
+						comparand,
 						factory.DestinationType,
 						source => factory.Invoke(source, comparand),
 						shouldDispose ? factory : null);
@@ -140,6 +143,7 @@ namespace NeatMapper {
 					TypeUtils.CheckObjectType(comparand, factory.SourceType, nameof(comparand));
 
 					return new DisposablePredicateFactory<TComparer>(
+						comparand,
 						factory.SourceType,
 						destination => factory.Invoke(comparand, destination),
 						shouldDispose ? factory : null);
@@ -165,7 +169,7 @@ namespace NeatMapper {
 		/// A factory which can be used as a predicate to compare objects of type <typeparamref name="TDestination"/>
 		/// with the provided object <paramref name="source"/>.
 		/// </returns>
-		public static PredicateFactory<TDestination> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
+		public static PredicateFactory<TSource, TDestination> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
 			TSource? source,
 			bool shouldDispose = true) {
 			
@@ -173,8 +177,8 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(factory));
 
 			try { 
-				return new DisposablePredicateFactory<TDestination>(
-					factory.SourceType,
+				return new DisposablePredicateFactory<TSource, TDestination>(
+					source,
 					destination => factory.Invoke(source, destination),
 					shouldDispose ? factory : null);
 			}
@@ -193,7 +197,7 @@ namespace NeatMapper {
 		/// A factory which can be used as a predicate to compare objects of type <typeparamref name="TSource"/>
 		/// with the provided object <paramref name="destination"/>.
 		/// </returns>
-		public static PredicateFactory<TSource> PredicateDestination<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
+		public static PredicateFactory<TDestination, TSource> PredicateDestination<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
 			TDestination? destination,
 			bool shouldDispose = true) {
 
@@ -201,8 +205,8 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(factory));
 
 			try { 
-				return new DisposablePredicateFactory<TSource>(
-					factory.DestinationType,
+				return new DisposablePredicateFactory<TDestination, TSource>(
+					destination,
 					source => factory.Invoke(source, destination),
 					shouldDispose ? factory : null);
 			}
@@ -211,16 +215,6 @@ namespace NeatMapper {
 					factory.Dispose();
 				throw;
 			}
-		}
-
-
-		/// <inheritdoc cref="PredicateDestination{TSource, TDestination}(MatchMapFactory{TSource, TDestination}, TDestination, bool)"/>
-		[Obsolete("This method will be removed in future versions, use PredicateDestination() instead.")]
-		public static PredicateFactory<TSource> Predicate<TSource, TDestination>(this MatchMapFactory<TSource, TDestination> factory,
-			TDestination? destination,
-			bool shouldDispose = true) {
-
-			return factory.PredicateDestination(destination, shouldDispose);
 		}
 		#endregion
 	}

@@ -240,8 +240,9 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Projection {
 			}
 		}
 
+		// Owned entities which can be used both as single and collection (and thus have different key configurations)
 		[TestMethod]
-		public void ShouldNotMapOwnedEntities() {
+		public void ShouldNotProjectPromiscuousOwnedEntities() {
 			Assert.IsFalse(_projector.CanProject<OwnedEntity1, int>());
 
 			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, int>());
@@ -255,6 +256,20 @@ namespace NeatMapper.EntityFrameworkCore.Tests.Projection {
 
 			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, (string, int)>());
 			TestUtils.AssertMapNotFound(() => _projector.Project<OwnedEntity1, (int, int)>());
+		}
+
+		// Owned entities which are used only in collections (so they have a composite key which we can compare)
+		[TestMethod]
+		public void ShouldProjectNotPromiscuousOwnedEntities() {
+			Assert.IsTrue(_projector.CanProject<OwnedEntity2, int>());
+
+			var param = Expression.Parameter(typeof(OwnedEntity2));
+			var body = Expression.Condition(
+				Expression.NotEqual(param, Expression.Constant(null, param.Type)),
+				Expression.Property(param, nameof(OwnedEntity2.Id)),
+				Expression.Default(typeof(int)));
+			var expr = Expression.Lambda<Func<OwnedEntity2, int>>(body, param);
+			TestUtils.AssertExpressionsEqual(expr, _projector.Project<OwnedEntity2, int>());
 		}
 
 #if NET5_0_OR_GREATER || NETCOREAPP3_1_OR_GREATER

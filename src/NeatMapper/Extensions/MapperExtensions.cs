@@ -299,7 +299,7 @@ namespace NeatMapper {
 			return (TDestination?)mapper.Map(source, typeof(TSource), destination, typeof(TDestination), mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
-		// DEV: cannot have a "params object[] mappingOptions" overload because causes ambiguity with Runtime overloads
+		// Cannot have a "params object[] mappingOptions" overload because causes ambiguity with Runtime overloads
 		// (both NewMap and MergeMap with "IEnumerable mappingOptions") when types are not specified (which is a farly-widely used case)
 		#endregion
 

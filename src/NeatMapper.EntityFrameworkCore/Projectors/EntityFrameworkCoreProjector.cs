@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 #endif
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -43,7 +44,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// Creates a new instance of <see cref="EntityFrameworkCoreProjector"/>.
 		/// </summary>
-		/// <param name = "model" > Model to use to retrieve keys of entities.</param>
+		/// <param name="model"> Model to use to retrieve keys of entities.</param>
 		/// <param name="dbContextType">
 		/// Type of the database context to use, must derive from <see cref="DbContext"/>.
 		/// </param>
@@ -79,26 +80,25 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (!sourceType.IsClass || (!destinationType.IsKeyType() && !destinationType.IsCompositeKeyType()))
 				return false;
 
-			// Check if the entity is in the model
-			var modelEntity = _model.FindEntityType(sourceType);
-			if (modelEntity == null || modelEntity.IsOwned())
+			// Check that the entity has a key and that it matches the key type
+			var key = EfCoreUtils.RetrieveEntityType(_model, sourceType)?.FindPrimaryKey();
+			if(key == null)
+				return false;
+			var keyProperties = key.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
+			if (!keyProperties.Any())
 				return false;
 
-			// Check that the entity has a key and that it matches the key type
-			var key = modelEntity.FindPrimaryKey();
-			if (key == null || key.Properties.Count < 1)
-				return false;
 			if (destinationType.IsCompositeKeyType()) {
 				var keyTypes = destinationType.UnwrapNullable().GetGenericArguments();
-				if (key.Properties.Count != keyTypes.Length || !keyTypes.Zip(key.Properties, (k1, k2) => (KeyType: k1, PropertyType: k2.ClrType)).All(keys => keys.KeyType == keys.PropertyType))
+				if (keyProperties.Count() != keyTypes.Length || !keyTypes.Zip(keyProperties, (k1, k2) => (KeyType: k1, PropertyType: k2.ClrType)).All(keys => keys.KeyType == keys.PropertyType))
 					return false;
 			}
-			else if (key.Properties.Count != 1 || key.Properties[0].ClrType != destinationType.UnwrapNullable())
+			else if (keyProperties.Count() != 1 || keyProperties.First().ClrType != destinationType.UnwrapNullable())
 				return false;
 
 			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
 			// or we have a db context to retrieve the tracked instances
-			if (key.Properties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
+			if (keyProperties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
 				RetrieveDbContext(mappingOptions) == null) {
 
 				return false;
@@ -118,28 +118,28 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			var entityParam = Expression.Parameter(sourceType, "entity");
 
-			var entity = _model.FindEntityType(sourceType)!;
-			var key = entity.FindPrimaryKey()!;
+			var keyProperties = EfCoreUtils.RetrieveEntityType(_model, sourceType)!
+				.FindPrimaryKey()!
+				.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
 			var isCompiling = mappingOptions?.GetOptions<ProjectionCompilationContext>() != null;
 			var dbContext = isCompiling ? RetrieveDbContext(mappingOptions) : null;
 
-			// DEV: support NestedSemaphoreContext
-
 			Expression body;
-			if (isCompiling && key.Properties.Any(k => k.IsShadowProperty())) {
+			if (isCompiling && keyProperties.Any(k => k.IsShadowProperty())) {
 				if(dbContext == null)
 					throw new MapNotFoundException((sourceType, destinationType));
 
-				var dbContextSemaphore = EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext);
-
+				// Retrieve DbContext and semaphore if dealing with shadow keys (semaphore will be retrieved
+				// and used only if we are not already inside a semaphore lock)
 				var dbContextConstant = Expression.Constant(dbContext, _dbContextType);
-				var dbContextSemaphoreConstant = Expression.Constant(dbContextSemaphore);
+				var dbContextSemaphoreConstant = mappingOptions?.GetOptions<NestedSemaphoreContext>() == null ?
+					Expression.Constant(EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext)) :
+					null;
 				var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
 
-				var properties = key.Properties.Select(k => {
-					// (Type)entityEntry.Property("Prop1").CurrentValue
-					// entity.Prop1
-					if (k.IsShadowProperty()) { 
+				var properties = keyProperties.Select(k => {
+					if (k.IsShadowProperty()) {
+						// (Type)entityEntry.Property("Prop1").CurrentValue
 						return Expression.Convert(
 							Expression.Property(
 								Expression.Call(
@@ -152,10 +152,16 @@ namespace NeatMapper.EntityFrameworkCore {
 							k.ClrType
 						);
 					}
-					else
-						return (Expression)Expression.PropertyOrField(entityParam, k.Name);
+					else if (k.PropertyInfo != null) {
+						// entity.Prop1
+						return (Expression)Expression.Property(entityParam, k.PropertyInfo);
+					}
+					else {
+						// entity.Prop1
+						return (Expression)Expression.Field(entityParam, k.FieldInfo!);
+					}
 				});
-				if (key.Properties.Count == 1) {
+				if (keyProperties.Count() == 1) {
 					// entity.Id
 					body = properties.Single();
 				}
@@ -169,43 +175,50 @@ namespace NeatMapper.EntityFrameworkCore {
 						properties);
 				}
 
-				var catchExceptionParam = Expression.Parameter(typeof(Exception), "e");
+				body = Expression.Block(
+					[ entityEntryVar ],
+					// entityEntry = context.Entry(entity)
+					Expression.Assign(
+						entityEntryVar,
+						Expression.Call(dbContextConstant, EfCoreUtils.DbContext_Entry, entityParam)),
+					// entity.State == EntityState.Detached ? throw ... : ...
+					Expression.Condition(
+						Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
+						Expression.Throw(
+							Expression.New(
+								typeof(InvalidOperationException).GetConstructor([typeof(string)])!,
+								Expression.Constant($"The entity of type {sourceType.FullName ?? sourceType.Name} is not being tracked " +
+									$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
+									$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
+							body.Type),
+						body));
 
-				body = Expression.TryCatch(
-					Expression.Block(
-						[ entityEntryVar ],
+				if (dbContextSemaphoreConstant != null) {
+					body = Expression.Block(
+						[entityEntryVar],
 						// dbContextSemaphore.Wait()
 						Expression.Call(dbContextSemaphoreConstant, EfCoreUtils.SemaphoreSlim_Wait),
 						Expression.TryFinally(
-							Expression.Block([ entityEntryVar ],
-								// entityEntry = context.Entry(entity)
-								Expression.Assign(
-									entityEntryVar,
-									Expression.Call(dbContextConstant, EfCoreUtils.DbContext_Entry, entityParam)),
-								// entity.State == EntityState.Detached ? throw ... : ...
-								Expression.Condition(
-									Expression.Equal(Expression.Property(entityEntryVar, EfCoreUtils.EntityEntry_State), Expression.Constant(EntityState.Detached)),
-									Expression.Throw(
-										Expression.New(
-											typeof(InvalidOperationException).GetConstructor([ typeof(string) ])!,
-											Expression.Constant($"The entity of type {sourceType.FullName ?? sourceType.Name} is not being tracked " +
-												$"by the provided {nameof(DbContext)}, so its shadow key(s) cannot be retrieved locally. " +
-												$"Either provide a valid {nameof(DbContext)} or pass a tracked entity.")),
-										body.Type),
-									body)),
+							body,
 							// dbContextSemaphore.Release()
-							Expression.Call(dbContextSemaphoreConstant, EfCoreUtils.SemaphoreSlim_Release))),
-						Expression.Catch(
-							catchExceptionParam,
-							Expression.Throw(
-								Expression.New(
-									typeof(ProjectionException).GetConstructors().Single(),
-									catchExceptionParam,
-									Expression.Constant((sourceType, destinationType))),
-								body.Type)));
+							Expression.Call(dbContextSemaphoreConstant, EfCoreUtils.SemaphoreSlim_Release)));
+				}
+
+
+				var catchExceptionParam = Expression.Parameter(typeof(Exception), "e");
+				body = Expression.TryCatch(
+					body,
+					Expression.Catch(
+						catchExceptionParam,
+						Expression.Throw(
+							Expression.New(
+								typeof(ProjectionException).GetConstructors().Single(),
+								catchExceptionParam,
+								Expression.Constant((sourceType, destinationType))),
+							body.Type)));
 			}
 			else {
-				var properties = key.Properties.Select(k => {
+				var properties = keyProperties.Select(k => {
 					if (k.IsShadowProperty()) {
 						// EF.Property<Type>(entity, "Id")
 						return Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(k.ClrType), entityParam, Expression.Constant(k.Name));
@@ -219,7 +232,7 @@ namespace NeatMapper.EntityFrameworkCore {
 						return (Expression)Expression.Field(entityParam, k.FieldInfo!);
 					}
 				});
-				if (key.Properties.Count == 1) {
+				if (keyProperties.Count() == 1) {
 					// entity.Id
 					body = properties.Single();
 				}

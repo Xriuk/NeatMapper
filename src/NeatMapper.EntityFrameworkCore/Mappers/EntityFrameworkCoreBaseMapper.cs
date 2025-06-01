@@ -143,7 +143,6 @@ namespace NeatMapper.EntityFrameworkCore {
 					// new []{ key1, key2, ... }.Contains(entity.Key)
 					return Expression.Lambda(
 						Expression.Call(Enumerable_Contains.MakeGenericMethod(prop.ClrType),
-							// DEV: check if Expression.Constant of object array is valid
 							Expression.NewArrayInit(prop.ClrType, keysValues.Select(values => Expression.Constant(values[0], prop.ClrType))),
 							prop.IsShadowProperty() ?
 								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :

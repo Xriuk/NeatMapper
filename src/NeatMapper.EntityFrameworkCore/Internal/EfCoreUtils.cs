@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
+using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -53,6 +54,37 @@ namespace NeatMapper.EntityFrameworkCore {
 			if(type.IsNullableValueTuple())
 				arguments = arguments[0].GetGenericArguments();
 			return arguments.Length > 1 && arguments.All(a => a.IsKeyType());
+		}
+
+		public static IEntityType? RetrieveEntityType(IModel model, Type entityType) {
+			// Retrieve all the matching types
+			var entityTypes = model.GetEntityTypes().Where(e => e.ClrType == entityType);
+			if(!entityTypes.Any())
+				return null;
+
+			// If the type is not owned it must be a single one
+			if(!entityTypes.First().IsOwned())
+				return entityTypes.Single();
+
+			// If a type is mapped to multiple entities (currently owned ones),
+			// all the types should have the same key configuration (excluding the parent foreign keys)
+			if (entityTypes.Select(e => {
+					var keyProperties = e.FindPrimaryKey()
+						?.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
+					if (keyProperties?.Any() != true)
+						return null;
+					else {
+						return string.Join("~", keyProperties
+							.Select(p => $"{(p.IsShadowProperty() ? "s" : "n")}{p.Name}-{p.ClrType.FullName}"));
+					}
+				})
+				.Distinct()
+				.Count() != 1) {
+				
+				return null;
+			}
+
+			return entityTypes.First();
 		}
 
 
