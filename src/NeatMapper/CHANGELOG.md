@@ -19,6 +19,7 @@
 - .NET 9.0 support.
 - `Comparand` object to `IPredicateFactory`.
 - Full typed `PredicateFactory<TComparand, TComparer>` abstract class.
+- `IdentityMatcher` class for consistency.
 
 ### Fixed
 
