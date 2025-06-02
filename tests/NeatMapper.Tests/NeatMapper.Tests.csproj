@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net47;net48;netcoreapp3.1;net5.0;net6.0;net7.0;net8.0</TargetFrameworks>
+		<TargetFrameworks>net47;net48;netcoreapp3.1;net5.0;net6.0;net7.0;net8.0;net9.0</TargetFrameworks>
 		<Nullable Condition="'$(TargetFramework)' != 'net47' and '$(TargetFramework)' != 'net48'">annotations</Nullable>
 
 		<IsPackable>false</IsPackable>
@@ -15,6 +15,7 @@
 		<PackageReference Condition="'$(TargetFramework)' == 'net5.0'" Include="Microsoft.Extensions.DependencyInjection" Version="5.0.0" />
 		<PackageReference Condition="'$(TargetFramework)' == 'netcoreapp3.1'" Include="Microsoft.Extensions.DependencyInjection" Version="3.1.0" />
 		<PackageReference Condition="'$(TargetFramework)' == 'net8.0'" Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
+		<PackageReference Condition="'$(TargetFramework)' == 'net9.0'" Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.7.1" />
 		<PackageReference Include="MSTest.TestAdapter" Version="2.2.10" />
 		<PackageReference Include="MSTest.TestFramework" Version="2.2.10" />

@@ -6,6 +6,10 @@
 
 - Updated NeatMapper dependency version.
 
+### Added
+
+- .NET 9.0 support.
+
 
 ## [5.4.0] - 2025-05-31
 

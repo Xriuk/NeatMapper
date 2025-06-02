@@ -28,6 +28,7 @@ jobs:
             6.x
             7.x
             8.x
+            9.x
       - name: Build all projects
         run: dotnet build --configuration Release
       - name: Test all projects
