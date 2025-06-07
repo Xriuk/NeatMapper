@@ -75,5 +75,8 @@ namespace NeatMapper {
 
 		public static implicit operator Func<TSource?, CancellationToken, Task<TDestination?>>(
 			AsyncNewMapFactory<TSource?, TDestination?> factory) => factory.Invoke;
+
+		public static implicit operator Func<TSource?, Task<TDestination?>>(
+			AsyncNewMapFactory<TSource?, TDestination?> factory) => source => factory.Invoke(source);
 	}
 }

@@ -39,6 +39,7 @@ public class MyMaps :
     IAsyncMergeMap<Category, CategoryDto>,
     IProjectionMap<Book, BookDto>
 {
+	// A map which creates a new object of type ProductDto from an existing object of type Product
     ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
         if(source == null)
             return null;
@@ -50,18 +51,24 @@ public class MyMaps :
         }
     }
 
+	// An asynchronous map which merges two existing objects of type Category and CategoryDto
+	// into a third object of type CategoryDto (which can be the exiting object or a mix of the two)
     async Task<CategoryDto?> IAsyncMergeMap<Category, CategoryDto>.MapAsync(Category? source, CategoryDto? destination, AsyncMappingContext context){
         if(source != null){
             destination ??= new CategoryDto();
             destination.Id = source.Id;
+			// Nested maps allow to reuse existing maps by avoiding repeating code
             destination.Parent = await context.Mapper.MapAsync(source.Parent, destination.Parent, context.CancellationToken);
             ...
         }
         return destination;
     }
 
-    Expression<Func<Book?, BookDto?>> IProjectionMap<Book, BookDto>.Project(ProjectionContext context){
-        return source => source == null ? null : new BookDto{ ... };
+	// A projection Expression to convert an object of type Book into an object of type BookDto,
+	// which can be translated (by other libraries like Entity Framework) or compiled into delegates.
+	// In expressions nullability is respected and not enforced like in maps
+    Expression<Func<Book, BookDto>> IProjectionMap<Book, BookDto>.Project(ProjectionContext context){
+        return source => new BookDto{ ... };
     }
 }
 ```
@@ -74,7 +81,7 @@ The easiest way to create a mapper is to use [Dependency Injection (DI)](https:/
 // Add all available maps
 services.Configure<CustomMapsOptions>(o => o.TypesToScan = Assembly.GetExecutingAssembly().GetTypes().ToList() );
 // Or add specific maps
-//services.Configure<CustomMapsOptions>(o => o.TypesToScan = new List<Type>{ typeof(MyMaps), ... });
+services.Configure<CustomMapsOptions>(o => o.TypesToScan = new List<Type>{ typeof(MyMaps), ... });
 
 services.AddNeatMapper();
 

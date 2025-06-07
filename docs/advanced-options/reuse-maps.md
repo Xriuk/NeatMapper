@@ -25,6 +25,7 @@ public class MyMaps :
         else{
             return new ProductDto{
                 Code = source.Code,
+				// Use the nested map for Category
                 Category = context.Mapper.Map<Category, CategoryDto>(source.Category),
                 ...
             };
@@ -35,6 +36,8 @@ public class MyMaps :
         if(source != null){
             destination ??= new CategoryDto();
             destination.Id = source.Id;
+			// Use the async nested map to map the parent category (remember to pass down
+			// the CancellationToken)
             destination.Parent = await context.Mapper.MapAsync<Category, CategoryDto>(source.Parent, destination.Parent, context.CancellationToken);
             ...
         }
@@ -48,11 +51,12 @@ public class MyMaps :
 You could even map hierarchies by reusing existing maps.
 
 ```csharp
+// LimitedProduct derives from Product
 public class MyMaps :
     IMergeMap<Product, ProductDto>,
     IMergeMap<LimitedProduct, LimitedProductDto>
 {
-    ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto?, MappingContext context){
+    ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto? destination, MappingContext context){
         if(source != null){
             destination ??= new ProductDto();
             destination.Code = source.Code;
@@ -61,7 +65,7 @@ public class MyMaps :
         return destination;
     }
 
-    LimitedProductDto? IMergeMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, LimitedProductDto?, MappingContext context){
+    LimitedProductDto? IMergeMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, LimitedProductDto? destination, MappingContext context){
         // Needed to prevent constructing ProductDto in parent map
         destination ??= new LimitedProductDto();
         
@@ -83,7 +87,7 @@ public class MyMaps :
 
 When creating projection expression you can reuse existing maps by using the `NestedProjector` instance you will find in the projection context.
 
-When the final map will be created the nested projector map will be replaced with the actual nested expression inline.
+When the final map will be created the nested projector map will be replaced with the actual nested expression inline with the arguments replaced.
 
 ```csharp
 public class MyMaps :
@@ -91,24 +95,19 @@ public class MyMaps :
     IProjectionMap<Product, ProductDto>
 {
 
-    Expression<Func<Category?, CategoryDto?>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
-        return source => source == null ?
-            null : 
-            new CategoryDto{
-                Id = source.Id,
-                ...
-            };
+    Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
+        return source => new CategoryDto{
+			Id = source.Id,
+			...
+		};
     }
 
-    Expression<Func<Product?, ProductDto?> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
-        return source => source == null ?
-            null : 
-            new ProductDto{
-                Code = source.Code,
-                Category = context.Projector.Project<Category, CategoryDto>(source.Category),
-                ...
-            };
-        }
+    Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
+        return source => new ProductDto{
+			Code = source.Code,
+			Category = source.Category != null ? context.Projector.Project<Category, CategoryDto>(source.Category) : null,
+			...
+		};
     }
 }
 ```
@@ -116,20 +115,54 @@ public class MyMaps :
 The compiled expression will look like this:
 
 ```csharp
-source => source == null ?
-    null : 
-    new ProductDto{
-        Code = source.Code,
-        Category = source.Category == null ?
-            null : 
-            new CategoryDto{
-                Id = source.Category.Id,
-                ...
-            },
-        ...
-    };
-}
+source => new ProductDto{
+	Code = source.Code,
+	Category = source.Category != null ? new CategoryDto{
+		Id = source.Category.Id,
+		...
+	} : null,
+	...
+};
 ```
 
 {: .highlight }
 Be careful with nesting projections as this can lead to complex evaluations when the expression will be parsed/translated.
+
+# Inline expressions
+
+When creating projection expression you can reuse existing `Expression<Func<..., ...>>` by using the `NestedProjector` instance you will find in the projection context.
+
+When the final map will be created the inline Expression will be replaced with the actual expression with the arguments replaced.
+
+```csharp
+public class MyMaps :
+    IProjectionMap<Product, ProductDto>
+{
+
+    static readonly Expression<Func<Category, CategoryDto>> MyInlineExpression = source => new CategoryDto{
+		Id = source.Id,
+		...
+	};
+
+    Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
+        return source => new ProductDto{
+			Code = source.Code,
+			Category = context.Projector.Inline(MyInlineExpression, source.Category),
+			...
+		};
+    }
+}
+```
+
+The compiled expression will look like this:
+
+```csharp
+source => new ProductDto{
+	Code = source.Code,
+	Category = new CategoryDto{
+		Id = source.Category.Id,
+		...
+	},
+	...
+};
+```

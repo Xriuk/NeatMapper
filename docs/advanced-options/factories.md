@@ -26,8 +26,10 @@ Optionally you can specify other `MappingOptions`, and they are applied to the f
 
 To use the factory you just have to invoke the method `Invoke()` and pass the related object(s) to it. For async factories you can also provide a `CancellationToken`, this allows each run of the map from the factory to be individually cancelable if needed, and lengthens the lifetime and reusability of the factory.
 
+Typed factories also have various implicit cast operators defined, which allow to use them in places of compatible `Func<...>`, `Converter<...>`, `Predicate<...>` delegates.
+
 {: .highlight }
-Factories will need to be disposed at the end by invoking the `Dispose()` method (or wrapping them in an `using` block since they implement `IDisposable`).
+Factories must disposed at the end by invoking the `Dispose()` method (or wrapping them in an `using` block since they implement `IDisposable`).
 
 ```csharp
 // Retrieve a factory and wrap it in an using block to dispose it correctly after use

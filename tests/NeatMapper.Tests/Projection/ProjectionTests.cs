@@ -360,7 +360,7 @@ namespace NeatMapper.Tests.Projection {
 		[TestMethod]
 		public void ShouldCheckCanProjectWithAdditionalMaps() {
 			var options = new CustomProjectionAdditionalMapsOptions();
-			options.AddMap<string, int>(c => s => s != null ? s.Length : 0, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			options.AddMap<string, int>(c => s => s != null ? s.Length : 0, c => !c.MappingOptions.HasOptions<ProjectionCompilationContext>());
 			var projector = new CustomProjector(null, options);
 
 			Assert.IsTrue(projector.CanProject<string, int>());

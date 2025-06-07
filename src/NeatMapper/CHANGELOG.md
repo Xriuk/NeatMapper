@@ -20,6 +20,8 @@
 - `Comparand` object to `IPredicateFactory`.
 - Full typed `PredicateFactory<TComparand, TComparer>` abstract class.
 - `IdentityMatcher` class for consistency.
+- `HasOptions` extension methods for `MappingOptions`, to check for options/contexts existence.
+- Implicit casts from `AsyncNewMapFactory<TSource?, TDestination?>` to `Func<TSource?, Task<TDestination?>>` and from `AsyncMergeMapFactory<TSource, TDestination>` to `Func<TSource?, TDestination?, Task<TDestination?>>`, which just allow to skip the `CancellationToken` parameter if needed.
 
 ### Fixed
 

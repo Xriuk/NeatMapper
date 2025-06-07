@@ -13,7 +13,7 @@ namespace NeatMapper.Tests.Mapping {
 		public void Initialize() {
 			var additionalMaps = new CustomProjectionAdditionalMapsOptions();
 			additionalMaps.AddMap<double, float>(c => {
-				if(c.MappingOptions.GetOptions<ProjectionCompilationContext>() != null)
+				if(c.MappingOptions.HasOptions<ProjectionCompilationContext>())
 					MapNotFoundException.Throw<double, float>();
 
 				throw new Exception();

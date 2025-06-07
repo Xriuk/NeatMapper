@@ -198,7 +198,7 @@ namespace NeatMapper.EntityFrameworkCore {
 												missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
 											}
 
-											filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+											filterExpression = GetEntitiesPredicate(elementTypes.Entity, key, missingKeys);
 										}
 										finally {
 											foreach (var missingKey in missingKeys) {
@@ -302,7 +302,7 @@ namespace NeatMapper.EntityFrameworkCore {
 													missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
 												}
 
-												filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+												filterExpression = GetEntitiesPredicate(elementTypes.Entity, key, missingKeys);
 											}
 											finally {
 												foreach (var missingKey in missingKeys) {
@@ -782,7 +782,7 @@ namespace NeatMapper.EntityFrameworkCore {
 															missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
 														}
 
-														filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+														filterExpression = GetEntitiesPredicate(elementTypes.Entity, key, missingKeys);
 													}
 													finally {
 														foreach (var missingKey in missingKeys) {
@@ -894,7 +894,7 @@ namespace NeatMapper.EntityFrameworkCore {
 															missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
 														}
 
-														filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+														filterExpression = GetEntitiesPredicate(elementTypes.Entity, key, missingKeys);
 													}
 													finally {
 														foreach (var missingKey in missingKeys) {

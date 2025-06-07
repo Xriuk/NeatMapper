@@ -41,6 +41,13 @@ Various options exist for different maps:
 services.Configure<CustomNewAdditionalMapsOptions>(o => o.AddMap<Product, ProductDto>((p, c) => ...));
 ```
 
+You can also add the corresponding Can* function to check if your map can be invoked safely without throwing, if it returns false the map won't be invoked.
+
+```csharp
+// Execute our custom map only if we have MyOptions inside the provided MappingOptions
+services.Configure<CustomNewAdditionalMapsOptions>(o => o.AddMap<Product, ProductDto>((p, c) => ..., (c) => c.MappingOptions.HasOptions<MyOptions>()));
+```
+
 ## MergeCollectionsOptions
 
 Options applied to automatic collections mapping.
@@ -103,7 +110,7 @@ In addition to options which can be used to override [global options](#options),
 Options which allow to override the service provider and mapper/matcher/projector to use for nested maps.
 
 ```csharp
-var mySpecialServiceProvider = new ...;
+IServiceProvider mySpecialServiceProvider = new ...;
 mapper.Map(products, productDtos,
     new object[]{ new MapperOverrideMappingOptions{ ServiceProvider = mySpecialServiceProvider } });
 ```
@@ -126,7 +133,8 @@ public class MyMaps :
     INewMap<Product, ProductDto>
 {
     ProductDto? Map(Product? source, MappingContext context){
-        // Prevent the map from being used by a CollectionMapper (simplified check)
+        // Prevent the map from being used by a CollectionMapper because
+		// it might be inefficient to do so (simplified check)
         if(context.MappingOptions.GetOptions<NestedMappingContext>()?.ParentMapper is CollectionMapper)
             MapNotFoundException.Throw<Product, ProductDto>();
 
@@ -150,26 +158,24 @@ This is not an option, but a context created by mappers which use projectors to 
 public class MyMaps :
     INewMap<Product, ProductDto>
 {
-    Expression<Func<Book?, BookDto?>> Project(ProjectionContext context){
+    Expression<Func<Book, BookDto>> Project(ProjectionContext context){
         // EF.Property below projects the shadow key directly from the DB,
         // so it cannot be compiled into a delegate because the function 
         // cannot be invoked but must be converted into an SQL query,
         // so the method invocation actually throws
 
-        if(context.MappingOptions.GetOptions<ProjectionCompilationContext>() != null)
+        if(context.MappingOptions.HasOptions<ProjectionCompilationContext>())
             MapNotFoundException.Throw<Book, BookDto>();
 
-        return source => source == null ?
-            null :
-            new BookDto{
-                Id = EF.Property<int>(source, "Id")
-            };
+        return source => new BookDto{
+			Id = EF.Property<int>(source, "Id")
+		};
     }
 }
 ```
 
 ## {CustomOptions}
 
-Additional options can be created by the users by using custom classes and checked for in their own maps/mappers via `context.MappingOptions.GetOptions<MyOptions>()`, they can be passed along other options.
+Additional options can be created by the users by using custom classes and checked for in their own maps/mappers via `context.MappingOptions.GetOptions<MyOptions>()` (or `context.MappingOptions.HasOptions<MyOptions>()`), they can be passed along other options.
 
 Custom option classes must be immutable.

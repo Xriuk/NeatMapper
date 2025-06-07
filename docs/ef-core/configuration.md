@@ -34,7 +34,7 @@ mapper.Map<MyEntity>(2, new object[]{
 When merging entities (or collections of them), if a destination is provided and it does not match the entity retrieved from the context (maybe because the provided destination comes from another context or it was detached previously), the entity from the context will be returned by default. If that's not the behaviour you need you might want to throw an exception instead and handle it from there, by setting the options below a `DuplicateEntityException` will be thrown when encountering a duplicate entity.
 
 ```csharp
-services.ConfigureAll<EntityFrameworkCoreOptions>(o => o.ThrowOnDuplicateEntity = true);
+services.Configure<EntityFrameworkCoreOptions>(o => o.ThrowOnDuplicateEntity = true);
 
 ...
 

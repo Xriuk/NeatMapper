@@ -5,7 +5,7 @@ nav_order: 6
 parent: "Advanced options"
 ---
 
-You can also create mappings between generic types, and they will be automatically mapped for any type (which may even not have a map), cool, isn't it?
+You can also create mappings between generic types, and they will be automatically mapped for any type (which may even not have a map so T1 can be any type), cool, isn't it?
 
 ```csharp
 public class MyGenericMaps<T1> :
@@ -36,7 +36,8 @@ public class MyGenericMaps<T1> :
 // If you add all available maps the generic types will be automatically included
 services.Configure<CustomMapsOptions>(o => o.TypesToScan = Assembly.GetExecutingAssembly().GetTypes().ToList() );
 
-// If you add specific maps you can add the generic types by specifying the open generic type of the map (without arguments)
+// If you add specific maps you can add the generic types by specifying
+// the open generic type of the map (without arguments)
 services.Configure<CustomMapsOptions>(o => o.TypesToScan = new List<Type>{ typeof(MyGenericMaps<>), ... });
 
 // Map any type
@@ -65,7 +66,7 @@ public class MyGenericMaps<T1, T2> :
 }
 ```
 
-You can also specify any supported generic constraint to specialize your generic maps.
+You can also specify any [supported generic constraint](https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/generics/constraints-on-type-parameters) (except `default` and `allows ref struct`) to specialize your generic maps.
 
 ```csharp
 public class MyGenericMapsClass<T1> :
@@ -102,7 +103,11 @@ public class MyGenericMapsStruct<T1> :
 
 ...
 
-// Map with struct
+services.Configure<CustomMapsOptions>(o => o.TypesToScan = new List<Type>{ typeof(MyGenericMapsClass<>), typeof(MyGenericMapsStruct<>), ... });
+
+...
+
+// Map with struct (or value type)
 var myGenericClassDto1 = mapper.Map<MyGenericClass<int>, MyGenericClassDto<int>>(myGenericClass1);
 
 // Map with class

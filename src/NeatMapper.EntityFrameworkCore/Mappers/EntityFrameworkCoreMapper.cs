@@ -1,5 +1,4 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using System;
@@ -22,8 +21,8 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// </para>
 	/// <para>
 	/// Also supports mapping keys (even composite keys as <see cref="Tuple"/> or <see cref="ValueTuple"/>,
-	/// and shadow keys, and collections) to the corresponding typed <see cref="Expression{TDelegate}"/>
-	/// (<see cref="Func{T, TResult}"/>) for querying (only new maps).
+	/// and shadow keys, and collections) to the corresponding typed Expression&lt;Func&lt;TEntity, bool&gt;&gt;
+	/// for querying (only new maps).
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -131,7 +130,6 @@ namespace NeatMapper.EntityFrameworkCore {
 								return null;
 
 							return GetEntitiesPredicate(
-								elementTypes.Key,
 								elementTypes.Entity,
 								key,
 								keysValues.Where(sourceElement => sourceElement.All(k => k != null)));
@@ -154,7 +152,7 @@ namespace NeatMapper.EntityFrameworkCore {
 						if(keyValues.Any(k => k == null))
 							return null;
 
-						return GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, [keyValues]);
+						return GetEntitiesPredicate(elementTypes.Entity, key, [keyValues]);
 					}
 					finally {
 						ArrayPool.Return(keyValues);
@@ -242,7 +240,7 @@ namespace NeatMapper.EntityFrameworkCore {
 													missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
 												}
 
-												filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+												filterExpression = GetEntitiesPredicate(elementTypes.Entity, key, missingKeys);
 											}
 											finally {
 												foreach (var missingKey in missingKeys) {
@@ -636,7 +634,7 @@ namespace NeatMapper.EntityFrameworkCore {
 														missingKeys.Add(keyToValuesDelegate.Invoke(missingEntity.Key));
 													}
 
-													filterExpression = GetEntitiesPredicate(elementTypes.Key, elementTypes.Entity, key, missingKeys);
+													filterExpression = GetEntitiesPredicate(elementTypes.Entity, key, missingKeys);
 												}
 												finally {
 													foreach (var missingKey in missingKeys) {

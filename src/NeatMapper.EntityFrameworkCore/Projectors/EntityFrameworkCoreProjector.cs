@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 #endif
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 
@@ -98,7 +97,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			// Shadow keys (or partially shadow composite keys) can be projected only if we are not compiling
 			// or we have a db context to retrieve the tracked instances
-			if (keyProperties.Any(p => p.IsShadowProperty()) && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null &&
+			if (keyProperties.Any(p => p.IsShadowProperty()) && mappingOptions?.HasOptions<ProjectionCompilationContext>() == true &&
 				RetrieveDbContext(mappingOptions) == null) {
 
 				return false;
@@ -121,7 +120,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			var keyProperties = EfCoreUtils.RetrieveEntityType(_model, sourceType)!
 				.FindPrimaryKey()!
 				.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership));
-			var isCompiling = mappingOptions?.GetOptions<ProjectionCompilationContext>() != null;
+			var isCompiling = mappingOptions?.HasOptions<ProjectionCompilationContext>() ?? false;
 			var dbContext = isCompiling ? RetrieveDbContext(mappingOptions) : null;
 
 			Expression body;
@@ -132,7 +131,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				// Retrieve DbContext and semaphore if dealing with shadow keys (semaphore will be retrieved
 				// and used only if we are not already inside a semaphore lock)
 				var dbContextConstant = Expression.Constant(dbContext, _dbContextType);
-				var dbContextSemaphoreConstant = mappingOptions?.GetOptions<NestedSemaphoreContext>() == null ?
+				var dbContextSemaphoreConstant = mappingOptions?.HasOptions<NestedSemaphoreContext>() != true ?
 					Expression.Constant(EfCoreUtils.GetOrCreateSemaphoreForDbContext(dbContext)) :
 					null;
 				var entityEntryVar = Expression.Variable(typeof(EntityEntry), "entityEntry");
@@ -252,6 +251,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				body = Expression.Convert(body, destinationType);
 			}
 
+			// DEV: add option to avoid null checks?
 			// entity != null ? KEY : default(KEY)
 			body = Expression.Condition(
 				Expression.NotEqual(entityParam, Expression.Constant(null, entityParam.Type)),
@@ -267,7 +267,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (dbContext != null && dbContext.GetType() != _dbContextType)
 				dbContext = null;
 
-			if (dbContext == null && mappingOptions?.GetOptions<ProjectionCompilationContext>() != null) {
+			if (dbContext == null && mappingOptions?.HasOptions<ProjectionCompilationContext>() == true) {
 				try {
 					dbContext = (mappingOptions?.GetOptions<MapperOverrideMappingOptions>()?.ServiceProvider ?? _serviceProvider)
 						.GetService(_dbContextType) as DbContext;

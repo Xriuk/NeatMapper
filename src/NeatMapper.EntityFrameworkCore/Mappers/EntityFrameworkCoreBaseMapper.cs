@@ -14,6 +14,7 @@ using System.Collections.Concurrent;
 using System.Threading;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using System.Runtime.CompilerServices;
+using System.Collections.ObjectModel;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>
@@ -96,11 +97,6 @@ namespace NeatMapper.EntityFrameworkCore {
 		private static readonly MethodInfo Enumerable_Contains = NeatMapper.TypeUtils.GetMethod(() => default(IEnumerable<object>)!.Contains(default(object)));
 
 		/// <summary>
-		/// <see cref="DbContext.Set{TEntity}()"/>
-		/// </summary>
-		private static readonly MethodInfo DbContext_Set = NeatMapper.TypeUtils.GetMethod(() => default(DbContext)!.Set<object>());
-
-		/// <summary>
 		/// Delegates which retrieve a new <see cref="DbSet{TEntity}"/>.
 		/// </summary>
 		private static readonly ConcurrentDictionary<Type, Func<DbContext, IQueryable>> _setCache =
@@ -123,52 +119,6 @@ namespace NeatMapper.EntityFrameworkCore {
 			return _localCache.GetOrAdd(dbSet.ElementType, t =>
 				(Func<IQueryable, IEnumerable>)Delegate.CreateDelegate(typeof(Func<IQueryable, IEnumerable>), this_DbSetLocal.MakeGenericMethod(t)))
 					.Invoke(dbSet);
-		}
-
-		protected static LambdaExpression GetEntitiesPredicate(Type keyType, Type entityType, IKey key, IEnumerable<object[]> keysValues) {
-			var param = Expression.Parameter(entityType, "entity");
-			if (key.Properties.Count == 1) {
-				bool hasOne;
-				try {
-					_ = keysValues.Single();
-					hasOne = true;
-				}
-				catch {
-					hasOne = false;
-				}
-
-				if (!hasOne) {
-					var prop = key.Properties[0];
-					// new []{ key1, key2, ... }.Contains(EF.Property<KeyType>(entity, "Key"))
-					// new []{ key1, key2, ... }.Contains(entity.Key)
-					return Expression.Lambda(
-						Expression.Call(Enumerable_Contains.MakeGenericMethod(prop.ClrType),
-							Expression.NewArrayInit(prop.ClrType, keysValues.Select(values => Expression.Constant(values[0], prop.ClrType))),
-							prop.IsShadowProperty() ?
-								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
-								(prop.PropertyInfo != null ?
-									Expression.Property(param, prop.PropertyInfo) :
-									Expression.Field(param, prop.FieldInfo!))),
-						param);
-				}
-			}
-
-			var tupleToValueTuple = EfCoreUtils.GetOrCreateTupleToValueTupleDelegate(keyType);
-
-			// entity.Key1 == key1 && ...
-			// EF.Property<KeyType1>(entity, "Key1") == key1 && ...
-			return Expression.Lambda(
-				keysValues.Select(values => key.Properties
-						.Select((prop, i) => (Expression)Expression.Equal(
-							prop.IsShadowProperty() ?
-								(Expression)Expression.Call(EfCoreUtils.EF_Property.MakeGenericMethod(prop.ClrType), param, Expression.Constant(prop.Name)) :
-								(prop.PropertyInfo != null ?
-									Expression.Property(param, prop.PropertyInfo) :
-									Expression.Field(param, prop.FieldInfo!)),
-							Expression.Constant(values[i], prop.ClrType)))
-						.Aggregate(Expression.AndAlso))
-					.Aggregate(Expression.OrElse),
-				param);
 		}
 
 
@@ -197,6 +147,11 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// to try merging them together.
 		/// </summary>
 		private readonly IMatcher _elementsMatcher;
+
+		/// <summary>
+		/// <see cref="IProjector"/> used to retrieve keys from entities.
+		/// </summary>
+		private readonly EntityFrameworkCoreProjector _entityKeyProjector;
 
 		/// <summary>
 		/// Options to apply when merging elements in the collections.
@@ -233,6 +188,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			_serviceProvider = serviceProvider ?? throw new ArgumentNullException(nameof(serviceProvider));
 			_entityFrameworkCoreOptions = entityFrameworkCoreOptions ?? new EntityFrameworkCoreOptions();
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
+			_entityKeyProjector = new EntityFrameworkCoreProjector(model, dbContextType, serviceProvider);
 			_mergeCollectionOptions = mergeCollectionsOptions ?? new MergeCollectionsOptions();
 
 #if !NET5_0 && !NETCOREAPP3_1
@@ -598,6 +554,78 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else
 				return mappingOptions;
+		}
+
+		protected LambdaExpression GetEntitiesPredicate(Type entityType, IKey key, IEnumerable<object[]> keysValues) {
+			LambdaExpression expr;
+			IList<Expression> keysExprs;
+			if (key.Properties.Count == 1) {
+				bool hasOne;
+				try {
+					_ = keysValues.Single();
+					hasOne = true;
+				}
+				catch {
+					hasOne = false;
+				}
+
+				var keyType = key.Properties[0].ClrType;
+				expr = _entityKeyProjector.Project(entityType, keyType);
+
+				// DEV: remove if parameter to avoid null checks is added
+				// EF.Property<Type>(entity, "Id")
+				// entity.Id
+				Expression keyExpr;
+				if (expr.Body is ConditionalExpression conditional1)
+					keyExpr = conditional1.IfTrue;
+				else
+					keyExpr = expr;
+
+				if (!hasOne) {
+					// new []{ key1, key2, ... }.Contains(EF.Property<KeyType>(entity, "Key"))
+					// new []{ key1, key2, ... }.Contains(entity.Key)
+					return Expression.Lambda(
+						Expression.Call(Enumerable_Contains.MakeGenericMethod(keyType),
+							Expression.NewArrayInit(keyType, keysValues.Select(values => {
+								if(values.Length != 1)
+									throw new InvalidOperationException("Internal error");
+								return Expression.Constant(values[0], keyType);
+							})),
+							keyExpr),
+						expr.Parameters.Single());
+				}
+				else 
+					keysExprs = [ keyExpr ];
+			}
+			else { 
+				var keyType = TupleUtils.GetValueTupleConstructor(key.Properties.Select(p => p.ClrType).ToArray()).DeclaringType!;
+				expr = _entityKeyProjector.Project(entityType, keyType);
+
+				// DEV: remove if parameter to avoid null checks is added
+				// new ValueTuple<...>(entity.Key1, EF.Property<Type>(entity, "Key2"), ...)
+				Expression keyExpr;
+				if (expr.Body is ConditionalExpression conditional2)
+					keyExpr = conditional2.IfTrue;
+				else
+					keyExpr = expr;
+
+				if (keyExpr is not NewExpression newExpr)
+					throw new InvalidOperationException("Internal error");
+				keysExprs = newExpr.Arguments;
+			}
+
+			// entity.Key1 == key1 && EF.Property<KeyType1>(entity, "Key2") == key2 && ...
+			return Expression.Lambda(
+				keysValues.Select(values => {
+					if (values.Length != keysExprs.Count)
+						throw new InvalidOperationException("Internal error");
+					return keysExprs
+						.Select((prop, i) => (Expression)Expression.Equal(
+							prop,
+							Expression.Constant(values[i], prop.Type)))
+						.Aggregate(Expression.AndAlso);
+				}).Aggregate(Expression.OrElse),
+				expr.Parameters.Single());
 		}
 	}
 }

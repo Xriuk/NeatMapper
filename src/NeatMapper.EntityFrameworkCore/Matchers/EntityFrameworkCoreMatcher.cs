@@ -1,10 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
@@ -43,30 +41,12 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// <summary>
 		/// <see cref="IMapper"/> used to retrieve keys from entities.
 		/// </summary>
-		private readonly IMapper _entityKeyMapper;
+		private readonly ProjectionMapper _entityKeyMapper;
 
 		/// <summary>
 		/// <see cref="IMatcher"/> used to compare single keys or tuples.
 		/// </summary>
-		private readonly IMatcher _keyMatcher;
-
-		/// <summary>
-		/// Values indicating if the given type has at least one shadow key or not, keys are entity types.
-		/// </summary>
-		// DEV: maybe not worth it? Delete?
-		private readonly ConcurrentDictionary<Type, bool> _entityShadowKeyCache = new ConcurrentDictionary<Type, bool>();
-
-		/// <summary>
-		/// Delegates which compare an entity with its key, keys are entity types, the order of the parameters is: entity, key.
-		/// </summary>
-		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>> _entityKeyComparerCache =
-			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>>();
-
-		/// <summary>
-		/// Delegates which compare an entity with another entity of the same type, keys are entity types.
-		/// </summary>
-		private readonly ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>> _entityEntityComparerCache =
-			new ConcurrentDictionary<Type, Func<object, object, SemaphoreSlim?, DbContext?, bool>>();
+		private readonly CompositeMatcher _keyMatcher;
 
 
 		/// <summary>

@@ -24,6 +24,8 @@ The custom classes then should be registered in the DI container to allow inject
 
 ```csharp
 services.AddNeatMapper();
+
+// Insert the custom mapper in the first position so that built-in mappers are invoked after it
 services.Configure<CompositeMapperOptions>(o => o.Mappers.Insert(0, new MyCustomMapper()));
 ```
 

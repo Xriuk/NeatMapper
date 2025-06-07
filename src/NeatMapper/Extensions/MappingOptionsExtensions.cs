@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	public static class MappingOptionsExtensions {
@@ -13,6 +14,16 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(options));
 
 			return options.GetOptions(typeof(TOptions)) as TOptions;
+		}
+
+		/// <summary>
+		/// Checks if options of type <typeparamref name="TOptions"/> are present in the current mapping options.
+		/// </summary>
+		/// <typeparam name="TOptions">Type of the options to retrieve.</typeparam>
+		/// <returns>True if the options exist, false otherwise.</returns>
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool HasOptions<TOptions>(this MappingOptions options) where TOptions : class {
+			return options.GetOptions<TOptions>() != null;
 		}
 
 		#region Replace
@@ -395,7 +406,8 @@ namespace NeatMapper {
 
 			if (matchers.Length > 0) {
 				return options.ReplaceOrAdd<MergeCollectionsMappingOptions>(m => {
-					if(m?.Matcher != null || matchers.Length > 1) { 
+					// Avoid wrapping the matcher in CompositeMatcher if it's only one
+					if (m?.Matcher != null || matchers.Length > 1) { 
 						var opts = new CompositeMatcherOptions();
 						if(m?.Matcher != null)
 							opts.Matchers.Add(m.Matcher);

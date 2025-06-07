@@ -760,11 +760,11 @@ namespace NeatMapper.Tests.AsyncMapping {
 				Assert.AreEqual(2, result.Categories.First());
 				Assert.AreEqual(3, result.Categories.Last());
 
-				Assert.IsNull(Maps.productOptions.GetOptions<AsyncNestedMappingContext>());
+				Assert.IsFalse(Maps.productOptions.HasOptions<AsyncNestedMappingContext>());
 				// Should use same context for nested maps
 				Assert.AreEqual(2, Maps.categoryOptions.Count);
 				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
-				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<AsyncNestedMappingContext>() != null));
+				Assert.IsTrue(Maps.categoryOptions.All(o => o.HasOptions<AsyncNestedMappingContext>()));
 
 
 				// Factory
@@ -790,11 +790,11 @@ namespace NeatMapper.Tests.AsyncMapping {
 				Assert.AreEqual(2, result2.Categories.First());
 				Assert.AreEqual(3, result2.Categories.Last());
 
-				Assert.IsNull(Maps.productOptions.GetOptions<AsyncNestedMappingContext>());
+				Assert.IsFalse(Maps.productOptions.HasOptions<AsyncNestedMappingContext>());
 				// Should use same context for nested maps
 				Assert.AreEqual(2, Maps.categoryOptions.Count);
 				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
-				Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<AsyncNestedMappingContext>());
+				Assert.IsTrue(Maps.categoryOptions.First().HasOptions<AsyncNestedMappingContext>());
 			}
 
 			{
@@ -976,7 +976,7 @@ namespace NeatMapper.Tests.AsyncMapping {
 		[TestMethod]
 		public async Task ShouldCheckCanMapWithAdditionalMaps() {
 			var options = new CustomAsyncMergeAdditionalMapsOptions();
-			options.AddMap<string, int>((s, d, _) => Task.FromResult(s?.Length ?? 0), c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			options.AddMap<string, int>((s, d, _) => Task.FromResult(s?.Length ?? 0), c => !c.MappingOptions.HasOptions<ProjectionCompilationContext>());
 			var mapper = new AsyncCustomMapper(null, null, options);
 
 			Assert.IsTrue(mapper.CanMapAsyncMerge<string, int>());

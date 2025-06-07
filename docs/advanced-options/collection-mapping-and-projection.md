@@ -102,10 +102,12 @@ public class MyMaps :
 // Map to an existing collection using the match map
 mapper.Map<IList<Category>, ICollection<CategoryDto>>(myCategories, myCategoryDtos);
 
-// Map to an existing collection using a custom matching method (used for all types matching the provided types, in case of nested collections)
+// Map to an existing collection using a custom matching method (used for all types matching
+// the provided types, in case of nested collections)
 mapper.Map(myCategories, myCategoryDtos, (source, destination, context) => source?.Code == destination?.Code);
 
-// Map to an existing collection using a custom IEqualityComparer<T> (only for matching the same type, used for all types matching the provided types, in case of nested collections)
+// Map to an existing collection using a custom IEqualityComparer<T> (only for matching
+// the same type, used for all types matching the provided types, in case of nested collections)
 mapper.Map<IList<Category>, ICollection<Category>>(myCategories1, myCategories2, myEqualityComparer);
 ```
 

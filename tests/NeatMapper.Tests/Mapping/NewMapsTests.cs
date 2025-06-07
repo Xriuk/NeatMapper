@@ -420,7 +420,7 @@ namespace NeatMapper.Tests.Mapping {
 
 			MappingOptionsUtils.context = null;
 			Assert.AreEqual("4", _mapper.Map<string>(2));
-			Assert.IsNull(MappingOptionsUtils.context.MappingOptions.GetOptions<NestedMappingContext>());
+			Assert.IsFalse(MappingOptionsUtils.context.MappingOptions.HasOptions<NestedMappingContext>());
 			Assert.AreEqual("-6", (string)_mapper.Map(-3, typeof(int), typeof(string)));
 			Assert.AreEqual("0", _mapper.Map<int, string>(0));
 
@@ -530,11 +530,11 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(2, result.Categories.First());
 				Assert.AreEqual(3, result.Categories.Last());
 
-				Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
+				Assert.IsFalse(Maps.productOptions.HasOptions<NestedMappingContext>());
 				// Should use same context for nested maps
 				Assert.AreEqual(2, Maps.categoryOptions.Count);
 				Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
-				Assert.IsTrue(Maps.categoryOptions.All(o => o.GetOptions<NestedMappingContext>() != null));
+				Assert.IsTrue(Maps.categoryOptions.All(o => o.HasOptions<NestedMappingContext>()));
 
 
 				// Factory
@@ -560,11 +560,11 @@ namespace NeatMapper.Tests.Mapping {
 					Assert.AreEqual(2, result2.Categories.First());
 					Assert.AreEqual(3, result2.Categories.Last());
 
-					Assert.IsNull(Maps.productOptions.GetOptions<NestedMappingContext>());
+					Assert.IsFalse(Maps.productOptions.HasOptions<NestedMappingContext>());
 					// Should use same context for nested maps
 					Assert.AreEqual(2, Maps.categoryOptions.Count);
 					Assert.AreEqual(1, Maps.categoryOptions.Distinct().Count());
-					Assert.IsNotNull(Maps.categoryOptions.First().GetOptions<NestedMappingContext>());
+					Assert.IsTrue(Maps.categoryOptions.First().HasOptions<NestedMappingContext>());
 				}
 			}
 
@@ -614,7 +614,7 @@ namespace NeatMapper.Tests.Mapping {
 		[TestMethod]
 		public void ShouldCheckCanMapWithAdditionalMaps() {
 			var options = new CustomNewAdditionalMapsOptions();
-			options.AddMap<string, int>((s, _) => s?.Length ?? 0, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			options.AddMap<string, int>((s, _) => s?.Length ?? 0, c => !c.MappingOptions.HasOptions<ProjectionCompilationContext>());
 			var mapper = new CustomMapper(null, options);
 
 			Assert.IsTrue(mapper.CanMapNew<string, int>());

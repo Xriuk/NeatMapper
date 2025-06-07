@@ -41,7 +41,7 @@ var entity = await asyncMapper.MapAsync<MyEntityWithCompositeKey>((2, "StringKey
 var entities = await asyncMapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 
 
-// Map an entity to its key(s)
+// Map an entity to its key(s) (the order is important!)
 (int MyIntKey, string MyStringKey) = mapper.Map<(int, string)>(myEntity);
 
 
@@ -59,5 +59,6 @@ var expr2 = mapper.Map<Expression<Func<MyEntity, bool>>>(new int[]{ 2, 3, ... })
 // entity => new int[]{ 2, 3, ... }.Contains(entity.Id)
 
 var expr3 = mapper.Map<Expression<Func<MyEntityWithCompositeKey, bool>>>(new []{ (2, "StringKey1"), (3, "StringKey2"), ... });
-// entity => (entity.MyIntKey == 2 && entity.MyStringKey == "StringKey1") || (entity.MyIntKey == 3 && entity.MyStringKey == "StringKey2") || ...
+// entity => (entity.MyIntKey == 2 && entity.MyStringKey == "StringKey1") ||
+//           (entity.MyIntKey == 3 && entity.MyStringKey == "StringKey2") || ...
 ```

@@ -5,6 +5,7 @@
 ### Changed
 
 - Updated NeatMapper dependency version.
+- Refactored internal code to improve reusability.
 
 ### Added
 

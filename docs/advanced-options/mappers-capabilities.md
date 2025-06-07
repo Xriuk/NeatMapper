@@ -26,6 +26,15 @@ You can check if a mapper/matcher/projector supports a map for two given types b
 
 This will check and will return true if the mapper/matcher can map the two given types.
 
+You can also check for open generic types by passing the runtime Types with `typeof()`.
+
+```csharp
+mapper.CanMapNew(typeof(MyGenericClass<>), typeof(MyGenericClassDto<>));
+```
+
+{: .highlight }
+Even if the functions above return true for two given types and MappingOptions, it is not guaranteed that the actual map will succeed. So you should only use them to check if two given types cannot be mapped.
+
 # List types
 
 You can also retrieve a list of all available maps for a given mapper/projector (if supported by it), by using the extension methods.

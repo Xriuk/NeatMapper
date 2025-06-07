@@ -303,7 +303,7 @@ namespace NeatMapper.Tests.Matching {
 		[TestMethod]
 		public void ShouldCheckCanMatchWithAdditionalMaps() {
 			var options = new CustomMatchAdditionalMapsOptions();
-			options.AddMap<string, int>((s, d, _) => s?.Length == d, c => c.MappingOptions.GetOptions<ProjectionCompilationContext>() == null);
+			options.AddMap<string, int>((s, d, _) => s?.Length == d, c => !c.MappingOptions.HasOptions<ProjectionCompilationContext>());
 			var matcher = new CustomMatcher(null, options);
 
 			Assert.IsTrue(matcher.CanMatch<string, int>());
