@@ -1,12 +1,9 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Options applied to automatic collections merge mappings (async and normal).<br/
+	/// Options applied to automatic collections merge mappings (async and normal).<br/>
 	/// These will override any configuration options defined in <see cref="MergeCollectionsOptions"/>.
 	/// </summary>
 	public sealed class MergeCollectionsMappingOptions{
-		/// <inheritdoc cref="MergeCollectionsMappingOptions(bool?, IMatcher?, bool?)" />
-		public MergeCollectionsMappingOptions(bool? removeNotMatchedDestinationElements, IMatcher? matcher) 
-			: this(removeNotMatchedDestinationElements, matcher, null) {}
 		/// <summary>
 		/// Creates a new instance of <see cref="MergeCollectionsMappingOptions"/>.
 		/// </summary>

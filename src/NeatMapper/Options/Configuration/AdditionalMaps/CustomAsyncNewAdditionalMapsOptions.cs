@@ -15,6 +15,7 @@ namespace NeatMapper {
 		/// </summary>
 		public CustomAsyncNewAdditionalMapsOptions() {
 			_maps = [];
+			_canMaps = [];
 		}
 		/// <summary>
 		/// Creates a new instance of <see cref="CustomAsyncNewAdditionalMapsOptions"/>
@@ -26,10 +27,11 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(options));
 
 			_maps = new Dictionary<(Type From, Type To), CustomAdditionalMap>(options._maps);
+			_canMaps = new Dictionary<(Type From, Type To), CustomAdditionalMap>(options._canMaps);
 		}
 
-		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps = [];
-		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _canMaps = [];
+		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _maps;
+		internal readonly Dictionary<(Type From, Type To), CustomAdditionalMap> _canMaps;
 
 
 		/// <summary>

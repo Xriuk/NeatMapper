@@ -26,6 +26,7 @@
 ### Fixed
 
 - Fixed bug in `ProjectionMapper` `GetNewMaps` mapping options forwarding to projector.
+- `Custom*AdditionalMapsOptions` now correctly setup/copy `Can*` maps.
 
 
 ## [5.4.0] - 2025-05-31
