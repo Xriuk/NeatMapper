@@ -14,7 +14,10 @@
 		/// <inheritdoc cref="CollectionMatchingOrder" path="/summary"/>
 		/// <inheritdoc cref="CollectionMatchingOrder" path="/remarks"/>
 		/// </param>
-		public CollectionMatchersMappingOptions(bool? nullEqualsEmpty = null, CollectionMatchingOrder? collectionMatchingOrder = null) {
+		public CollectionMatchersMappingOptions(
+			bool? nullEqualsEmpty = null,
+			CollectionMatchingOrder? collectionMatchingOrder = null) {
+
 			NullEqualsEmpty = nullEqualsEmpty;
 			CollectionMatchingOrder = collectionMatchingOrder;
 		}

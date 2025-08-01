@@ -1,9 +1,10 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,11 +14,18 @@ namespace NeatMapper {
 	/// <see cref="IMapper"/> which maps enums to and from their underlying numeric types, strings
 	/// and other enums. Supports only new maps.
 	/// </summary>
-	public sealed class EnumMapper : IMapper {
+	public sealed class EnumMapper : IMapper, IMapperFactory {
+		/// <summary>
+		/// Cache of fields and names for enums.
+		/// </summary>
+		private static readonly ConcurrentDictionary<Type, IEnumerable<Tuple<FieldInfo, String>>> _enumNamesCache =
+			new ConcurrentDictionary<Type, IEnumerable<Tuple<FieldInfo, String>>>();
+
 		/// <summary>
 		/// Options to apply during mapping.
 		/// </summary>
 		private readonly EnumMapperOptions _enumMapperOptions;
+
 
 		/// <summary>
 		/// Creates a new instance of <see cref="CollectionMapper"/>.
@@ -57,16 +65,19 @@ namespace NeatMapper {
 
 			// If the other type is the underlying type, if we are hashing the names we must not have hash collisions
 			if(otherType == Enum.GetUnderlyingType(enumType)) {
-				return GetEnumToNumberMapping(enumType, mappingOptions) == EnumToNumberMapping.Value ||
-					Enum.GetValues(enumType).Cast<object>().Select(v => GetHashedUnderlyingValue(v, enumType, otherType)).Distinct().Count() == 1;
+				if (GetEnumToNumberMapping(enumType, mappingOptions) == EnumToNumberMapping.Value)
+					return true;
+
+				var values = Enum.GetValues(enumType);
+				return Enum.GetValues(enumType).Cast<object>().Select(v => GetHashedUnderlyingValue(v, enumType, otherType)).Distinct().Count() == values.Length;
 			}
 
 			// If the other type is an enum the two must have all mappings from source to destination
 			if (otherType.IsEnum) {
-				return sourceType.GetFields().All(f => GetEnumMatch(
-					f.GetRawConstantValue()!,
-					sourceType, destinationType,
-					GetEnumToEnumMapping(sourceType, destinationType, mappingOptions)) != null);
+				var enumToEnumMapping = GetEnumToEnumMapping(sourceType, destinationType, mappingOptions);
+				var sourceEnumNames = GetEnumNames(sourceType);
+				var destinationEnumNames = enumToEnumMapping == EnumToEnumMapping.Value ? null! : GetEnumNames(destinationType);
+				return sourceEnumNames.All(f => GetEnumMatch(f.Item1.GetRawConstantValue()!, sourceType, destinationType, enumToEnumMapping, destinationEnumNames) != null);
 			}
 
 			return false;
@@ -89,12 +100,10 @@ namespace NeatMapper {
 				enumType = sourceType;
 				otherType = destinationType;
 			}
-			else if (destinationType.IsEnum) {
+			else{
 				enumType = destinationType;
 				otherType = sourceType;
 			}
-			else
-				return false;
 
 			if (otherType == typeof(string)) {
 				if (sourceType == otherType) {
@@ -102,16 +111,12 @@ namespace NeatMapper {
 						StringComparison.OrdinalIgnoreCase :
 						StringComparison.Ordinal;
 
-					return enumType.GetFields().FirstOrDefault(f => {
-						var enumName = GetFieldName(f);
-						if (string.IsNullOrEmpty(enumName))
-							return false;
-						else
-							return enumName!.Equals((string)source!, stringComparison);
-					})?.GetRawConstantValue();
+					return GetEnumNames(enumType).FirstOrDefault(f => f.Item2.Equals((string)source!, stringComparison))
+						?.Item1.GetRawConstantValue()
+						?? throw new MappingException(new InvalidOperationException($"Enum name {source} cannot be converted to enum value"), (sourceType, destinationType));
 				}
 				else
-					return GetEnumName(source!, sourceType);
+					return GetEnumName(source!, sourceType)!;
 			}
 			else {
 				var underlyingType = Enum.GetUnderlyingType(enumType);
@@ -119,7 +124,10 @@ namespace NeatMapper {
 					if(GetEnumToNumberMapping(enumType, mappingOptions) == EnumToNumberMapping.Value) { 
 						if (sourceType == otherType) {
 							try {
-								return Enum.Parse(enumType, source!.ToString()!);
+								if (Enum.IsDefined(enumType, source!))
+									return Enum.Parse(enumType, source!.ToString()!);
+								else
+									throw new InvalidOperationException($"Enum underlying value {source} cannot be converted to enum type");
 							}
 							catch (Exception e) {
 								throw new MappingException(e, (sourceType, destinationType));
@@ -131,24 +139,128 @@ namespace NeatMapper {
 					else {
 						if (sourceType == otherType) {
 							return Enum.GetValues(enumType).Cast<object>()
-								.FirstOrDefault(v => GetHashedUnderlyingValue(v, enumType, underlyingType) == source)
-								?? throw new MappingException(new InvalidOperationException("Enum name hash cannot be converted to enum value"), (sourceType, destinationType));
+								.FirstOrDefault(v => object.Equals(GetHashedUnderlyingValue(v, enumType, underlyingType), source))
+								?? throw new MappingException(new InvalidOperationException($"Enum name hash {source} cannot be converted to enum value"), (sourceType, destinationType));
 						}
 						else 
 							return GetHashedUnderlyingValue(source!, enumType, underlyingType);
 					}
 				}
 				else {
-					return GetEnumMatch(
-						source!,
-						sourceType, destinationType,
-						GetEnumToEnumMapping(sourceType, destinationType, mappingOptions))
-							?? throw new MappingException(new InvalidOperationException("Enum value cannot be converted to destination enum type"), (sourceType, destinationType));
+					var enumToEnumMapping = GetEnumToEnumMapping(sourceType, destinationType, mappingOptions);
+					return GetEnumMatch(source!, sourceType, destinationType, enumToEnumMapping, enumToEnumMapping == EnumToEnumMapping.Value ? null! : GetEnumNames(destinationType))
+						?? throw new MappingException(new InvalidOperationException($"Enum source value {source} cannot be converted to destination enum type"), (sourceType, destinationType));
 				}
 			}
 		}
 
 		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
+			throw new MapNotFoundException((sourceType, destinationType));
+		}
+		#endregion
+
+		#region IMapperFactory methods
+		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			if (!CanMapNew(sourceType, destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
+
+			// One type must be an enum
+			Type enumType;
+			Type otherType;
+			if (sourceType.IsEnum) {
+				enumType = sourceType;
+				otherType = destinationType;
+			}
+			else {
+				enumType = destinationType;
+				otherType = sourceType;
+			}
+
+			if (otherType == typeof(string)) {
+				if (sourceType == otherType) {
+					var stringComparison = GetStringToEnumCaseInsensitive(enumType, mappingOptions) ?
+						StringComparison.OrdinalIgnoreCase :
+						StringComparison.Ordinal;
+					var enumFields = GetEnumNames(enumType);
+
+					return new DefaultNewMapFactory(sourceType, destinationType, source => {
+						TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+						return enumFields.FirstOrDefault(f => f.Item2.Equals((string)source!, stringComparison))
+							?.Item1.GetRawConstantValue()
+							?? throw new MappingException(new InvalidOperationException($"Enum name {source} cannot be converted to enum value"), (sourceType, destinationType));
+					});
+				}
+				else {
+					return new DefaultNewMapFactory(sourceType, destinationType, source => {
+						TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+						return GetEnumName(source!, sourceType)!;
+					});
+				}
+			}
+			else {
+				var underlyingType = Enum.GetUnderlyingType(enumType);
+				if (otherType == underlyingType) {
+					if (GetEnumToNumberMapping(enumType, mappingOptions) == EnumToNumberMapping.Value) {
+						if (sourceType == otherType) {
+							return new DefaultNewMapFactory(sourceType, destinationType, source => {
+								TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+								try {
+									if (Enum.IsDefined(enumType, source!))
+										return Enum.Parse(enumType, source!.ToString()!);
+									else
+										throw new InvalidOperationException($"Enum underlying value {source} cannot be converted to enum type");
+								}
+								catch (Exception e) {
+									throw new MappingException(e, (sourceType, destinationType));
+								}
+							});
+						}
+						else {
+							return new DefaultNewMapFactory(sourceType, destinationType, source => {
+								TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+								return Convert.ChangeType(source, underlyingType);
+							});
+						}
+					}
+					else {
+						if (sourceType == otherType) {
+							var enumValues = Enum.GetValues(enumType).Cast<object>();
+
+							return new DefaultNewMapFactory(sourceType, destinationType, source => {
+								TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+								return enumValues.FirstOrDefault(v => object.Equals(GetHashedUnderlyingValue(v, enumType, underlyingType), source))
+									?? throw new MappingException(new InvalidOperationException($"Enum name hash {source} cannot be converted to enum value"), (sourceType, destinationType));
+							});
+						}
+						else {
+							return new DefaultNewMapFactory(sourceType, destinationType, source => {
+								TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+								return GetHashedUnderlyingValue(source!, enumType, underlyingType);
+							});
+						}
+					}
+				}
+				else {
+					var enumToEnumMapping = GetEnumToEnumMapping(sourceType, destinationType, mappingOptions);
+					var destinationEnumNames = enumToEnumMapping == EnumToEnumMapping.Value ? null! : GetEnumNames(destinationType);
+
+					return new DefaultNewMapFactory(sourceType, destinationType, source => {
+						TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
+						return GetEnumMatch(source!, sourceType, destinationType, enumToEnumMapping, destinationEnumNames)
+							?? throw new MappingException(new InvalidOperationException($"Enum source value {source} cannot be converted to destination enum type"), (sourceType, destinationType));
+					});
+				}
+			}
+		}
+
+		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			throw new MapNotFoundException((sourceType, destinationType));
 		}
 		#endregion
@@ -180,11 +292,16 @@ namespace NeatMapper {
 					_enumMapperOptions.EnumToEnumMapping);
 		}
 
-		private static object? GetEnumMatch(object source, Type sourceType, Type destinationType, EnumToEnumMapping mapping) {
+
+		private static object? GetEnumMatch(object source, Type sourceType, Type destinationType, EnumToEnumMapping mapping, IEnumerable<Tuple<FieldInfo, String>> destinationEnumNames) {
 			switch (mapping) {
 			case EnumToEnumMapping.Value:
-				try { 
-					return Enum.Parse(destinationType, Convert.ChangeType(source, Enum.GetUnderlyingType(sourceType)).ToString()!);
+				try {
+					source = Convert.ChangeType(source, Enum.GetUnderlyingType(sourceType));
+					if (Enum.IsDefined(destinationType, source))
+						return Enum.Parse(destinationType, source.ToString()!);
+					else
+						return null;
 				}
 				catch {
 					return null;
@@ -199,15 +316,10 @@ namespace NeatMapper {
 					StringComparison.OrdinalIgnoreCase :
 					StringComparison.Ordinal;
 
-				return destinationType.GetFields().FirstOrDefault(f => {
-					var destinationName = GetFieldName(f);
-					if (string.IsNullOrEmpty(destinationName))
-						return false;
-					else
-						return destinationName!.Equals(sourceName, stringComparison);
-				})?.GetRawConstantValue();
+				return destinationEnumNames.FirstOrDefault(f => f.Item2!.Equals(sourceName, stringComparison))
+					?.Item1.GetRawConstantValue();
 			default:
-				return null;
+				throw new InvalidOperationException("Unsupported enum to enum mapping type");
 			}
 		}
 
@@ -238,7 +350,7 @@ namespace NeatMapper {
 			var data = Encoding.UTF8.GetBytes(GetEnumName(value!, enumType)!);
 			byte[] hash;
 #if NET5_0_OR_GREATER
-							hash = SHA256.HashData(data);
+			hash = SHA256.HashData(data);
 #else
 			using (var sha256 = SHA256.Create()) {
 				hash = sha256.ComputeHash(data);
@@ -264,8 +376,17 @@ namespace NeatMapper {
 				return hash[0];
 			else if (underlyingType == typeof(sbyte))
 				return Convert.ToSByte(hash[0]);
+
 			else
 				throw new InvalidOperationException("Unsupported enum underlying type");
+		}
+
+		private static IEnumerable<Tuple<FieldInfo, String>> GetEnumNames(Type enumType) {
+			return _enumNamesCache.GetOrAdd(enumType, e => enumType.GetFields()
+				.Where(f => f.IsStatic)
+				.Select(f => Tuple.Create(f, GetFieldName(f)!))
+				.Where(f => !string.IsNullOrEmpty(f.Item2))
+				.ToList());
 		}
 	}
 }

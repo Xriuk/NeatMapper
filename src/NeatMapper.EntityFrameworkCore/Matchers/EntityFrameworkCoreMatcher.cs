@@ -1,9 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
-using System.Threading;
 
 namespace NeatMapper.EntityFrameworkCore {
 	/// <summary>

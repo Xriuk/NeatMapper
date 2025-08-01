@@ -20,9 +20,9 @@
 		/// <inheritdoc cref="EnumToEnumMapping" path="/remarks"/>
 		/// </param>
 		public EnumMapperMappingOptions(
-			bool? stringToEnumCaseInsensitive,
-			EnumToNumberMapping? enumToNumberMapping,
-			EnumToEnumMapping? enumToEnumMapping) {
+			bool? stringToEnumCaseInsensitive = null,
+			EnumToNumberMapping? enumToNumberMapping = null,
+			EnumToEnumMapping? enumToEnumMapping = null) {
 
 			StringToEnumCaseInsensitive = stringToEnumCaseInsensitive;
 			EnumToNumberMapping = enumToNumberMapping;
@@ -34,7 +34,7 @@
 		/// <inheritdoc cref="EnumMapperOptions.StringToEnumCaseInsensitive" path="/summary" />
 		/// </summary>
 		/// <remarks><see langword="null"/> to use global setting from <see cref="EnumMapperOptions"/>.</remarks>
-		public bool? StringToEnumCaseInsensitive { get; set; }
+		public bool? StringToEnumCaseInsensitive { get; init; }
 
 		/// <summary>
 		/// <inheritdoc cref="EnumMapperOptions.EnumToNumberMapping" path="/summary" />

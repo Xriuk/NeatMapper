@@ -17,6 +17,7 @@
 ### Added
 
 - .NET 9.0 support.
+- `EnumMapper` which allows mapping enums to and from their underlying numeric types, strings and other enums.
 - `Comparand` object to `IPredicateFactory`.
 - Full typed `PredicateFactory<TComparand, TComparer>` abstract class.
 - `IdentityMatcher` class for consistency.
