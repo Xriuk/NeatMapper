@@ -109,11 +109,11 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// the corresponding context is (depending on the GC).
 		/// </summary>
 		private static readonly ConditionalWeakTable<DbContext, Finalizer<SemaphoreSlim>> _dbContextSemaphores =
-#if !NET47_OR_GREATER
+#if !NET48_OR_GREATER
 #pragma warning disable IDE0028
 #endif
 			new ConditionalWeakTable<DbContext, Finalizer<SemaphoreSlim>>();
-#if !NET47_OR_GREATER
+#if !NET48_OR_GREATER
 #pragma warning restore IDE0028
 #endif
 

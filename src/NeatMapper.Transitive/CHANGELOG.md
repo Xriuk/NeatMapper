@@ -2,6 +2,10 @@
 
 ## [6.0.0] - 2025-08-05
 
+### Removed
+
+- .NET Framework 4.7 support.
+
 ### Changed
 
 - Updated NeatMapper dependency version.

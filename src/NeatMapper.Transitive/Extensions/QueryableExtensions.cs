@@ -6,11 +6,11 @@ using System.Runtime.CompilerServices;
 namespace NeatMapper.Transitive {
 	public static class QueryableExtensions {
 		private static readonly ConditionalWeakTable<IProjector, GraphCreator> _graphsCache =
-#if !NET47_OR_GREATER
+#if !NET48_OR_GREATER
 #pragma warning disable IDE0028
 #endif
 			new ConditionalWeakTable<IProjector, GraphCreator>();
-#if !NET47_OR_GREATER
+#if !NET48_OR_GREATER
 #pragma warning restore IDE0028
 #endif
 

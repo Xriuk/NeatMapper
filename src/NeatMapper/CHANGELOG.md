@@ -5,6 +5,7 @@
 ### Removed
 
 - `IMatcher` deprecated `Predicate` extension methods.
+- .NET Framework 4.7 support.
 
 ### Changed
 

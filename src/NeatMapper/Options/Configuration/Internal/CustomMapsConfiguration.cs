@@ -543,7 +543,7 @@ namespace NeatMapper {
 		}
 
 		#region Types methods
-#if NET47 || NET48
+#if NET48
 		static readonly IDictionary<Type, bool> isUnmanagedCache = new ConcurrentDictionary<Type, bool>();
 #else
 		/// <summary>
@@ -552,7 +552,7 @@ namespace NeatMapper {
         static readonly MethodInfo RuntimeHelpers_IsReferenceOrContainsReference = TypeUtils.GetMethod(() => RuntimeHelpers.IsReferenceOrContainsReferences<object>());
 #endif
 		static bool IsUnmanaged(Type type) {
-#if NET47 || NET48
+#if NET48
 			// https://stackoverflow.com/a/53969223/2672235
 
 			// check if we already know the answer

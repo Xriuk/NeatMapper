@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
 		<Version>$(GlobalVersion)</Version>
@@ -8,11 +7,10 @@
 	<ItemGroup>
 		<Compile Remove="tools\**" />
 		<EmbeddedResource Remove="tools\**" />
-	<None Remove="tools\**" />
+		<None Remove="tools\**" />
 	</ItemGroup>
 
-  <ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="3.3.1" PrivateAssets="All" />
-  </ItemGroup>
-
+	</ItemGroup>
 </Project>
