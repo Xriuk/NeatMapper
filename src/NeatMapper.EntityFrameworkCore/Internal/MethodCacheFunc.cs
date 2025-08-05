@@ -27,7 +27,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public TReturn Invoke() {
 			return _cache.GetOrAdd(_keySelector.Invoke(), k =>
-				NeatMapper.TypeUtils.MethodToDelegate<Func<TReturn>>(_methodSelector.Invoke(k), _parameterNames))
+				NeatMapper.TypeUtils.MethodToDelegate<Func<TReturn>>(_methodSelector.Invoke(k), null, _parameterNames))
 					.Invoke();
 		}
 	}
@@ -53,7 +53,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public TReturn Invoke(TArg0 arg0) {
 			return _cache.GetOrAdd(_keySelector.Invoke(arg0), k =>
-				NeatMapper.TypeUtils.MethodToDelegate<Func<TArg0, TReturn>>(_methodSelector.Invoke(k), _parameterNames))
+				NeatMapper.TypeUtils.MethodToDelegate<Func<TArg0, TReturn>>(_methodSelector.Invoke(k), null, _parameterNames))
 					.Invoke(arg0);
 		}
 	}
@@ -79,7 +79,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public TReturn Invoke(TArg0 arg0, TArg1 arg1) {
 			return _cache.GetOrAdd(_keySelector.Invoke(arg0, arg1), k =>
-				NeatMapper.TypeUtils.MethodToDelegate<Func<TArg0, TArg1, TReturn>>(_methodSelector.Invoke(k), _parameterNames))
+				NeatMapper.TypeUtils.MethodToDelegate<Func<TArg0, TArg1, TReturn>>(_methodSelector.Invoke(k), null, _parameterNames))
 					.Invoke(arg0, arg1);
 		}
 	}

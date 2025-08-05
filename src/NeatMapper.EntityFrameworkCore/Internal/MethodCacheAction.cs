@@ -27,7 +27,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public void Invoke() {
 			_cache.GetOrAdd(_keySelector.Invoke(), k =>
-				NeatMapper.TypeUtils.MethodToDelegate<Action>(_methodSelector.Invoke(k), _parameterNames))
+				NeatMapper.TypeUtils.MethodToDelegate<Action>(_methodSelector.Invoke(k), null, _parameterNames))
 					.Invoke();
 		}
 	}
@@ -53,7 +53,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 		public void Invoke(TArg0 arg0) {
 			_cache.GetOrAdd(_keySelector.Invoke(arg0), k =>
-				NeatMapper.TypeUtils.MethodToDelegate<Action<TArg0>>(_methodSelector.Invoke(k), _parameterNames))
+				NeatMapper.TypeUtils.MethodToDelegate<Action<TArg0>>(_methodSelector.Invoke(k), null, _parameterNames))
 					.Invoke(arg0);
 		}
 	}

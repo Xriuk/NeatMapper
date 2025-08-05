@@ -129,7 +129,8 @@ namespace NeatMapper {
 		#region IMapper methods
 		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			return CanMapNewInternal(sourceType, destinationType, mappingOptions, out _, out _) ||
-				(ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType, mappingOptions));
+				(!sourceType.IsGenericTypeDefinition && !destinationType.IsGenericTypeDefinition &&
+					ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType, mappingOptions));
 		}
 
 		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {

@@ -77,34 +77,26 @@ namespace NeatMapper {
 
 			if (_maps.ContainsKey((typeof(TSource), typeof(TDestination))) || (canMapDelegate != null && _canMaps.ContainsKey((typeof(TSource), typeof(TDestination)))))
 				throw new ArgumentException($"Duplicate map for types {typeof(TSource).FullName ?? typeof(TSource).Name} -> {typeof(TDestination).FullName ?? typeof(TDestination).Name}");
-
+				
+			MergeMapDelegate<TSource, TDestination> method = mapDelegate.Invoke;
 			var map = new CustomAdditionalMap {
 				From = typeof(TSource),
 				To = typeof(TDestination),
+				Method = method.Method,
+				Instance = mapDelegate,
 				ThrowOnDuplicate = throwOnDuplicate
 			};
-			if ((mapDelegate.Method.GetType().FullName?.StartsWith("System.Reflection.Emit.DynamicMethod") == true)) {
-				MergeMapDelegate<TSource, TDestination> method = mapDelegate.Invoke;
-				map.Method = method.Method;
-				map.Instance = mapDelegate;
-			}
-			else
-				map.Method = mapDelegate.Method;
 			_maps.Add((typeof(TSource), typeof(TDestination)), map);
 
 			if(canMapDelegate != null){
+				CanMapMergeDelegate<TSource, TDestination> method2 = canMapDelegate.Invoke;
 				map = new CustomAdditionalMap {
 					From = typeof(TSource),
 					To = typeof(TDestination),
+					Method = method2.Method,
+					Instance = canMapDelegate,
 					ThrowOnDuplicate = throwOnDuplicate
 				};
-				if ((canMapDelegate.Method.GetType().FullName?.StartsWith("System.Reflection.Emit.DynamicMethod") == true)) {
-					CanMapMergeDelegate<TSource, TDestination> method = canMapDelegate.Invoke;
-					map.Method = method.Method;
-					map.Instance = canMapDelegate;
-				}
-				else
-					map.Method = canMapDelegate.Method;
 				_canMaps.Add((typeof(TSource), typeof(TDestination)), map);
 			}
 		}

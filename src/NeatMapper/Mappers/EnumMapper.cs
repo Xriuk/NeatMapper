@@ -18,17 +18,17 @@ namespace NeatMapper {
 		/// <summary>
 		/// Cache of fields and names for enums.
 		/// </summary>
-		private static readonly ConcurrentDictionary<Type, IEnumerable<Tuple<FieldInfo, String>>> _enumNamesCache =
-			new ConcurrentDictionary<Type, IEnumerable<Tuple<FieldInfo, String>>>();
+		private static readonly ConcurrentDictionary<Type, IEnumerable<Tuple<FieldInfo, string>>> _enumNamesCache =
+			new ConcurrentDictionary<Type, IEnumerable<Tuple<FieldInfo, string>>>();
+
 
 		/// <summary>
 		/// Options to apply during mapping.
 		/// </summary>
 		private readonly EnumMapperOptions _enumMapperOptions;
 
-
 		/// <summary>
-		/// Creates a new instance of <see cref="CollectionMapper"/>.
+		/// Creates a new instance of <see cref="EnumMapper"/>.
 		/// </summary>
 		/// <param name="enumMapperOptions">
 		/// Options to apply during mapping, null to use default.<br/>
@@ -161,7 +161,7 @@ namespace NeatMapper {
 
 		#region IMapperFactory methods
 		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (!CanMapNew(sourceType, destinationType))
+			if (!CanMapNew(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
 			// One type must be an enum
@@ -293,7 +293,7 @@ namespace NeatMapper {
 		}
 
 
-		private static object? GetEnumMatch(object source, Type sourceType, Type destinationType, EnumToEnumMapping mapping, IEnumerable<Tuple<FieldInfo, String>> destinationEnumNames) {
+		private static object? GetEnumMatch(object source, Type sourceType, Type destinationType, EnumToEnumMapping mapping, IEnumerable<Tuple<FieldInfo, string>> destinationEnumNames) {
 			switch (mapping) {
 			case EnumToEnumMapping.Value:
 				try {
@@ -381,7 +381,7 @@ namespace NeatMapper {
 				throw new InvalidOperationException("Unsupported enum underlying type");
 		}
 
-		private static IEnumerable<Tuple<FieldInfo, String>> GetEnumNames(Type enumType) {
+		private static IEnumerable<Tuple<FieldInfo, string>> GetEnumNames(Type enumType) {
 			return _enumNamesCache.GetOrAdd(enumType, e => enumType.GetFields()
 				.Where(f => f.IsStatic)
 				.Select(f => Tuple.Create(f, GetFieldName(f)!))

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 namespace NeatMapper {
 	/// <summary>
 	/// Singleton <see cref="IMapper"/> which returns the provided source element (for both new and merge maps).
-	/// Supports only the same source/destination types. Can be used to merge collections of elements of the same type.
+	/// Supports only the same source/destination types.
 	/// </summary>
 	public sealed class IdentityMapper : IMapper, IMapperFactory {
 		/// <summary>

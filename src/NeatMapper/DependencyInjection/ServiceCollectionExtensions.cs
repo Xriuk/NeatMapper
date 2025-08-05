@@ -28,9 +28,9 @@ namespace NeatMapper {
 		/// <list type="bullet">
 		/// <item><see cref="IMapper"/> and <see cref="IMapperFactory"/></item>
 		/// <item>
-		/// <see cref="CustomMapper"/>, <see cref="ProjectionMapper"/>, <see cref="NullableMapper"/>,
-		/// <see cref="CollectionMapper"/> and <see cref="CompositeMapper"/> which also contains,
-		/// in addition to all the previous:
+		/// <see cref="CustomMapper"/>, <see cref="ProjectionMapper"/>, <see cref="EnumMapper"/>,
+		/// <see cref="CopyMapper"/>, <see cref="NullableMapper"/>, <see cref="CollectionMapper"/>
+		/// and <see cref="CompositeMapper"/> which also contains, in addition to all the previous:
 		/// <list type="bullet">
 		/// <item><see cref="TypeConverterMapper"/></item>
 		/// <item><see cref="ConvertibleMapper"/></item>
@@ -102,7 +102,8 @@ namespace NeatMapper {
 					o.Matchers.Add(EqualityOperatorsMatcher.Instance);
 #endif
 
-					// Creating nullable and collection matchers with EmptyMatcher to avoid recursion, the element matcher will be overridden by composite matcher
+					// Creating nullable and collection matchers with EmptyMatcher to avoid recursion,
+					// the element matcher will be overridden by composite matcher
 					o.Matchers.Add(new NullableMatcher(EmptyMatcher.Instance));
 					o.Matchers.Add(new CollectionMatcher(
 						EmptyMatcher.Instance,
@@ -156,15 +157,18 @@ namespace NeatMapper {
 			#region IMapper
 			// Add mappers to composite mapper
 			services.AddOptions<CompositeMapperOptions>()
-				.Configure<CustomMapper, ProjectionMapper, IServiceProvider>((o, c, p, s) => {
+				.Configure<CustomMapper, ProjectionMapper, EnumMapper, IServiceProvider>((o, c, p, e, s) => {
 					o.Mappers.Add(c);
 					o.Mappers.Add(p);
+					o.Mappers.Add(e);
 				})
 				.PostConfigure<IServiceProvider>((o, s) => {
 					o.Mappers.Add(TypeConverterMapper.Instance);
 					o.Mappers.Add(ConvertibleMapper.Instance);
 
-					// Creating nullable and collection mappers with EmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
+					// Creating copy, nullable and collection mappers with EmptyMapper to avoid recursion,
+					// the element mapper will be overridden by composite mapper
+					o.Mappers.Add(new CopyMapper(EmptyMapper.Instance, s.GetService<IOptionsMonitor<CopyMapperOptions>>()?.CurrentValue));
 					o.Mappers.Add(new NullableMapper(EmptyMapper.Instance));
 					o.Mappers.Add(new CollectionMapper(
 						EmptyMapper.Instance,
@@ -189,6 +193,18 @@ namespace NeatMapper {
 			services.Add(new ServiceDescriptor(
 				typeof(ProjectionMapper),
 				s => new ProjectionMapper(s.GetRequiredService<IProjector>()),
+				mappersLifetime));
+
+			// Enum mapper
+			services.Add(new ServiceDescriptor(
+				typeof(EnumMapper),
+				s => new EnumMapper(s.GetService<IOptionsMonitor<EnumMapperOptions>>()?.CurrentValue),
+				mappersLifetime));
+
+			// Copy mapper
+			services.Add(new ServiceDescriptor(
+				typeof(CopyMapper),
+				s => new CopyMapper(s.GetRequiredService<IMapper>(), s.GetService<IOptionsMonitor<CopyMapperOptions>>()?.CurrentValue),
 				mappersLifetime));
 
 			// Nullable mapper
@@ -224,7 +240,8 @@ namespace NeatMapper {
 					o.Mappers.Add(c);
 				})
 				.PostConfigure<IServiceProvider>((o, s) => {
-					// Creating nullable and collection mappers with AsyncEmptyMapper to avoid recursion, the element mapper will be overridden by composite mapper
+					// Creating nullable and collection mappers with AsyncEmptyMapper to avoid recursion,
+					// the element mapper will be overridden by composite mapper
 #pragma warning disable CS0618
 					o.Mappers.Add(new AsyncNullableMapper(AsyncEmptyMapper.Instance));
 					o.Mappers.Add(new AsyncCollectionMapper(
@@ -276,7 +293,8 @@ namespace NeatMapper {
 					o.Projectors.Add(p);
 				})
 				.PostConfigure(o => {
-					// Creating nullable and collection mappers with EmptyProjector to avoid recursion, the element projector will be overridden by composite projector
+					// Creating nullable and collection mappers with EmptyProjector to avoid recursion,
+					// the element projector will be overridden by composite projector
 					o.Projectors.Add(new NullableProjector(EmptyProjector.Instance));
 					o.Projectors.Add(new CollectionProjector(EmptyProjector.Instance));
 				});

@@ -17,7 +17,6 @@ namespace NeatMapper {
 		/// </summary>
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
-
 		/// <summary>
 		/// Creates a new instance of <see cref="NestedMapper"/>.
 		/// </summary>

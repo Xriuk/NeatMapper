@@ -17,6 +17,7 @@
 ### Added
 
 - .NET 9.0 support.
+- `CopyMapper` which allows copying objects of the same type or base/derived, supports deep or shallow copies.
 - `EnumMapper` which allows mapping enums to and from their underlying numeric types, strings and other enums.
 - `Comparand` object to `IPredicateFactory`.
 - Full typed `PredicateFactory<TComparand, TComparer>` abstract class.
@@ -27,7 +28,10 @@
 ### Fixed
 
 - Fixed bug in `ProjectionMapper` `GetNewMaps` mapping options forwarding to projector.
+- `Custom*AdditionalMapsOptions` now correctly work with closures.
 - `Custom*AdditionalMapsOptions` now correctly setup/copy `Can*` maps.
+- Removed obsolete references in website.
+- `MappingOptionsFactoryCache` is now correctly marked as `internal` instead of `public`.
 
 
 ## [5.4.0] - 2025-05-31

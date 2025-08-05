@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 
 namespace NeatMapper {
-	public sealed class MappingOptionsFactoryCache<TOutput> {
+	internal sealed class MappingOptionsFactoryCache<TOutput> {
 		/// <summary>
 		/// Factory used to process mapping options, will not receive null values
 		/// (only <see cref="MappingOptions.Empty"/>).

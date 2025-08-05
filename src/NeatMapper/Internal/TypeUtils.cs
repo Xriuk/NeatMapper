@@ -140,7 +140,7 @@ namespace NeatMapper {
 			var result = await task;
 			return result;
 		}
-		public static TDelegate MethodToDelegate<TDelegate>(MethodInfo method, params string[] parameterNames) where TDelegate : Delegate {
+		public static TDelegate MethodToDelegate<TDelegate>(MethodInfo method, object? instance, params string[] parameterNames) where TDelegate : Delegate {
 			var delegateArguments = typeof(TDelegate).GetGenericArguments();
 
 			// Create arguments matching provided delegate type and cast them to types of the method
@@ -162,7 +162,7 @@ namespace NeatMapper {
 			if (method.IsStatic)
 				body = Expression.Call(method, parametersList);
 			else {
-				body = Expression.Call(Expression.Constant(ObjectFactory.GetOrCreateCached(method.DeclaringType!)),
+				body = Expression.Call(Expression.Constant(instance ?? ObjectFactory.GetOrCreateCached(method.DeclaringType!)),
 					method, parametersList);
 			}
 

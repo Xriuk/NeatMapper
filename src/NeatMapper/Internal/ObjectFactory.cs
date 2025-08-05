@@ -76,6 +76,9 @@ namespace NeatMapper {
 			return CreateFactory(objectType, out _);
 		}
 		public static Func<object> CreateFactory(Type objectType, out Type actualType) {
+			if(objectType.IsClass && objectType.IsAbstract)
+				throw new ObjectCreationException(objectType, new Exception("Cannot create abstract type"));
+
 			if (objectType == typeof(string)) {
 				actualType = typeof(string);
 				return CreateStringFactory;
@@ -139,6 +142,9 @@ namespace NeatMapper {
 
 		// Also supports open generics
 		public static bool CanCreate(Type objectType) {
+			if (objectType.IsClass && objectType.IsAbstract)
+				return false;
+
 			if (objectType == typeof(string))
 				return true;
 			else if (objectType.IsInterface && objectType.IsGenericType) {

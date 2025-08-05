@@ -22,7 +22,7 @@ namespace NeatMapper {
 	/// For merge maps merges a <see cref="IEnumerable{T}"/> (even nested) with an existing
 	/// <see cref="ICollection{T}"/> (not readonly), will create a new <see cref="ICollection{T}"/>
 	/// if destination is null.<br/>
-	/// If <see cref="MergeCollectionsOptions.RecreateReadonlyDestination"/> (or overrides) is
+	/// If <see cref="MergeCollectionsOptions.RecreateReadonlyDestination"/> (or override) is
 	/// <see langword="true"/>, destination collections can also be <see cref="IEnumerable{T}"/>
 	/// (also readonly), just like new maps.<br/>
 	/// Will try to match elements of the source collection with the destination by using an

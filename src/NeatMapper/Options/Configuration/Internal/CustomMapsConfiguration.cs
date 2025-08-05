@@ -225,7 +225,7 @@ namespace NeatMapper {
 				return mapResult != null;
 			}
 
-			var mapDeleg = TypeUtils.MethodToDelegate<Func<TContext, object?>>(map.Value.Method, "context");
+			var mapDeleg = TypeUtils.MethodToDelegate<Func<TContext, object?>>(map.Value.Method, map.Value.Instance, "context");
 
 			mapResult = ((Func<TContext, object?>?)_mapsCache.GetOrAdd(types, _ => WrapDelegate))!;
 			return mapResult != null;
@@ -353,7 +353,7 @@ namespace NeatMapper {
 				return mapResult != null;
 			}
 
-			var mapDeleg = TypeUtils.MethodToDelegate<Func<object?, object?, TContext, object?>>(map.Value.Method, "source", "destination", "context");
+			var mapDeleg = TypeUtils.MethodToDelegate<Func<object?, object?, TContext, object?>>(map.Value.Method, map.Value.Instance, "source", "destination", "context");
 
 			mapResult = ((Func<object?, object?, TContext, object?>?)_mapsCache.GetOrAdd(types, _ => WrapDelegate))!;
 			return mapResult != null;
@@ -405,7 +405,7 @@ namespace NeatMapper {
 			// Try retrieving a regular map
 			{
 				if (Maps.TryGetValue(types, out var map))
-					return TypeUtils.MethodToDelegate<TDelegate>(map.Method, parameterNames);
+					return TypeUtils.MethodToDelegate<TDelegate>(map.Method, map.Instance, parameterNames);
 			}
 
 			// Try matching to a generic map
@@ -456,7 +456,7 @@ namespace NeatMapper {
 				if (mapMethod == null)
 					continue;
 
-				return TypeUtils.MethodToDelegate<TDelegate>(mapMethod, parameterNames);
+				return TypeUtils.MethodToDelegate<TDelegate>(mapMethod, null, parameterNames);
 			}
 
 			return default;
