@@ -22,6 +22,6 @@ services.Configure<TransitiveOptions>(o => o.MaxChainLength = 5);
 Product product = ...;
 
 mapper.Map<ProductDto2>(product, new object[]{
-    new TransitiveMappingOptions { MaxChainLength = 5 }
+	new TransitiveMappingOptions { MaxChainLength = 5 }
 });
 ```

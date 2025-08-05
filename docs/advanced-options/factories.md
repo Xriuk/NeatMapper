@@ -34,13 +34,13 @@ Factories must disposed at the end by invoking the `Dispose()` method (or wrappi
 ```csharp
 // Retrieve a factory and wrap it in an using block to dispose it correctly after use
 using(var factory = mapper.MapNewFactory<Product, ProductDto>()){
-    // Perform single maps
-    var myProductDto = factory.Invoke(myProduct); // Or just factory(myProduct)
+	// Perform single maps
+	var myProductDto = factory.Invoke(myProduct); // Or just factory(myProduct)
 
-    // Map collections
-    var myProductsDto = myProducts.Select(factory).ToArray(); // Implicit cast to Func<Product, ProductDto>
+	// Map collections
+	var myProductsDto = myProducts.Select(factory).ToArray(); // Implicit cast to Func<Product, ProductDto>
 
-    ...
+	...
 }
 ```
 

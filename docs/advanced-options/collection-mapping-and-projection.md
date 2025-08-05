@@ -28,32 +28,32 @@ If you specify an explicit map for two collections this map will be used instead
 
 ```csharp
 public class MyMaps :
-    INewMap<Product, ProductDto>,
-    INewMap<IEnumerable<Product>, List<ProductDto>>
+	INewMap<Product, ProductDto>,
+	INewMap<IEnumerable<Product>, List<ProductDto>>
 {
-    ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new ProductDto{
-                Code = source.Code,
-                ...
-            };
-        }
-    }
+	ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new ProductDto{
+				Code = source.Code,
+				...
+			};
+		}
+	}
 
-    List<ProductDto>? INewMap<IEnumerable<Product>, List<ProductDto>>.Map(IEnumerable<Product>? source, MappingContext context){
-        return source?.
-          .Select(s => new ProductDto{
-            ...
-          })
-          .ToList();
-    }
+	List<ProductDto>? INewMap<IEnumerable<Product>, List<ProductDto>>.Map(IEnumerable<Product>? source, MappingContext context){
+		return source?.
+			.Select(s => new ProductDto{
+			...
+			})
+			.ToList();
+	}
 
-    ...
+	...
 
-    // Create a new list using your explicit map instead of automatic collection mapping
-    var myProductDtoList = mapper.Map<IEnumerable<Product>, List<ProductDto>>(myProducts);
+	// Create a new list using your explicit map instead of automatic collection mapping
+	var myProductDtoList = mapper.Map<IEnumerable<Product>, List<ProductDto>>(myProducts);
 }
 ```
 
@@ -70,31 +70,31 @@ This way each element is matched with a corresponding element of the destination
 
 ```csharp
 public class MyMaps :
-    IMergeMap<Category, CategoryDto>,
-    IMatchMap<Category, CategoryDto>,
-    IMergeMap<Product, ProductDto>
+	IMergeMap<Category, CategoryDto>,
+	IMatchMap<Category, CategoryDto>,
+	IMergeMap<Product, ProductDto>
 {
-    CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto? destination, MappingContext context){
-        if(source != null){
-            destination ??= new CategoryDto();
-            destination.Id = source.Id;
-            ...
-        }
-        return destination;
-    }
+	CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto? destination, MappingContext context){
+		if(source != null){
+			destination ??= new CategoryDto();
+			destination.Id = source.Id;
+			...
+		}
+		return destination;
+	}
 
-    bool IMatchMap<Category, CategoryDto>.Match(Category? source, CategoryDto? destination, MatchingContext context){
-        return source?.Id == destination?.Id;
-    }
+	bool IMatchMap<Category, CategoryDto>.Match(Category? source, CategoryDto? destination, MatchingContext context){
+		return source?.Id == destination?.Id;
+	}
 
-    ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto? destination, MappingContext context){
-        if(source != null){
-            destination ??= new ProductDto();
-            destination.Code = source.Code;
-            ...
-        }
-        return destination;
-    }
+	ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto? destination, MappingContext context){
+		if(source != null){
+			destination ??= new ProductDto();
+			destination.Code = source.Code;
+			...
+		}
+		return destination;
+	}
 }
 
 ...
@@ -147,7 +147,7 @@ var myProductDtoArray = myProductDtoEnumerable.Take(3).ToArray();
 // Loop through the projected elements by mapping them as needed
 // (the first 3 elements get mapped again, because they are not cached)
 foreach(var myProductDto in myProductDtoEnumerable){
-    // Here you may exit based on conditions, thus not mapping the whole collection
+	// Here you may exit based on conditions, thus not mapping the whole collection
 }
 ```
 
@@ -167,8 +167,8 @@ services.Configure<AsyncCollectionMappersOptions>(o => MaxParallelMappings = 10)
 
 // Single mapping override
 await asyncMapper.MapAsync<IList<Entity>, List<EntityDto>>(myEntities, new object[]{
-    new AsyncCollectionMappersMappingOptions{
-        MaxParallelMappings = 10
-    }
+	new AsyncCollectionMappersMappingOptions{
+		MaxParallelMappings = 10
+	}
 });
 ```

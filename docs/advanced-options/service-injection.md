@@ -9,33 +9,33 @@ You will be able to retrieve services from your maps, this could allow you to qu
 
 ```csharp
 public class MyMaps :
-    INewMap<Product, ProductDto>,
-    IMergeMap<Category, CategoryDto>
+	INewMap<Product, ProductDto>,
+	IMergeMap<Category, CategoryDto>
 {
-    ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            var product = context.ServiceProvider.GetRequiredService<MyDatabase>().Find<Product>(source.Code);
+	ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			var product = context.ServiceProvider.GetRequiredService<MyDatabase>().Find<Product>(source.Code);
 
-            return new ProductDto{
-                Code = source.Code,
-                Name = product.Name,
-                ...
-            };
-        }
-    }
+			return new ProductDto{
+				Code = source.Code,
+				Name = product.Name,
+				...
+			};
+		}
+	}
 
-    CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto? destination, MappingContext context){
-        if(source != null){
-            var category = context.ServiceProvider.GetRequiredService<MyAPI>().GetCategoryParent(source.Id);
+	CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto? destination, MappingContext context){
+		if(source != null){
+			var category = context.ServiceProvider.GetRequiredService<MyAPI>().GetCategoryParent(source.Id);
 
-            destination ??= new CategoryDto();
-            destination.Id = source.Id;
-            destination.Parent = category?.Id;
-            ...
-        }
-        return destination;
-    }
+			destination ??= new CategoryDto();
+			destination.Id = source.Id;
+			destination.Parent = category?.Id;
+			...
+		}
+		return destination;
+	}
 }
 ```

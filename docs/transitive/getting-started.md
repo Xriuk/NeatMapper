@@ -15,30 +15,30 @@ Create maps for your entities like shown in the [NeatMapper core package](/getti
 
 ```csharp
 public class MyMaps :
-    INewMap<Product, ProductDto1>,
-    INewMap<ProductDto1, ProductDto2>
+	INewMap<Product, ProductDto1>,
+	INewMap<ProductDto1, ProductDto2>
 {
-    ProductDto1? INewMap<Product, ProductDto1>.Map(Product? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new ProductDto1{
-                Code = source.Code,
-                ...
-            };
-        }
-    }
+	ProductDto1? INewMap<Product, ProductDto1>.Map(Product? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new ProductDto1{
+				Code = source.Code,
+				...
+			};
+		}
+	}
 
-    ProductDto2? INewMap<ProductDto1, ProductDto2>.Map(ProductDto1? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new ProductDto2{
-                Code = source.Code,
-                ...
-            };
-        }
-    }
+	ProductDto2? INewMap<ProductDto1, ProductDto2>.Map(ProductDto1? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new ProductDto2{
+				Code = source.Code,
+				...
+			};
+		}
+	}
 }
 ```
 

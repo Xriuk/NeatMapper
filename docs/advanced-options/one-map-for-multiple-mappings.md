@@ -14,12 +14,12 @@ In this case a destination object will be created automatically and provided to 
 
 ```csharp
 CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto? destination, MappingContext context){
-    if(source != null){
-        destination ??= new CategoryDto();
-        destination.Id = source.Id;
-        ...
-    }
-    return destination;
+	if(source != null){
+		destination ??= new CategoryDto();
+		destination.Id = source.Id;
+		...
+	}
+	return destination;
 }
 
 
@@ -42,7 +42,7 @@ C# has some [limitations regarding expression trees](https://learn.microsoft.com
 
 ```csharp
 Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
-    return source => new CategoryDto { ... };
+	return source => new CategoryDto { ... };
 }
 
 
@@ -54,7 +54,7 @@ var myCategoryDto = mapper.Map<Category, CategoryDto>(myCategory);
 ```
 
 {: .highlight }
-All projection maps can be compiled by default, if your maps is not suitable for compilation (for example it uses methods which can only be converted to other languages by LINQ providers) you can check if your expression is about to be compiled by checking `ProjectionCompilationContext` inside `MappingOptions` of the `ProjectionContext`.
+All projection maps can be compiled by default, if your maps are not suitable for compilation (for example it uses methods which can only be converted to other languages by LINQ providers) you can check if your expression is about to be compiled by checking `ProjectionCompilationContext` inside `MappingOptions` of the `ProjectionContext`.
 
 ```csharp
 Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
@@ -62,6 +62,6 @@ Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Pr
 	if(context.MappingOptions.GetOption<ProjectionCompilationContext>() != null)
 		MapNotFoundException.Throw<Category, CategoryDto>();
 
-    return source => new CategoryDto { ... };
+	return source => new CategoryDto { ... };
 }
 ```

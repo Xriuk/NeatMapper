@@ -98,7 +98,7 @@ services.Configure<CompositeMapperOptions>(o => o.Mappers.Add(new MyMapper(...))
 
 // Or by injecting additional services via Dependency Injection (DI)
 services.AddOptions<CompositeMapperOptions>()
-    .Configure<MyService>((options, myService) => options.Mappers.Add(new MyMapper(myService, ...)));
+	.Configure<MyService>((options, myService) => options.Mappers.Add(new MyMapper(myService, ...)));
 ```
 
 # Mapping options
@@ -112,7 +112,7 @@ Options which allow to override the service provider and mapper/matcher/projecto
 ```csharp
 IServiceProvider mySpecialServiceProvider = new ...;
 mapper.Map(products, productDtos,
-    new object[]{ new MapperOverrideMappingOptions{ ServiceProvider = mySpecialServiceProvider } });
+	new object[]{ new MapperOverrideMappingOptions{ ServiceProvider = mySpecialServiceProvider } });
 ```
 
 ## MergeCollectionsMappingOptions
@@ -121,7 +121,7 @@ In addition to overriding global options for [MergeCollectionsOptions](#mergecol
 
 ```csharp
 mapper.Map(products, productDtos,
-    new object[]{ new MergeCollectionsMappingOptions{ Matcher = DelegateMatcher.Create<Product, ProductDto>((p1, p2, c) => p1?.Code == p2?.Code) } });
+	new object[]{ new MergeCollectionsMappingOptions{ Matcher = DelegateMatcher.Create<Product, ProductDto>((p1, p2, c) => p1?.Code == p2?.Code) } });
 ```
 
 ## Nested{MapperType}Context
@@ -130,23 +130,23 @@ These are not options, but contexts created by mappers/matchers/projectors which
 
 ```csharp
 public class MyMaps :
-    INewMap<Product, ProductDto>
+	INewMap<Product, ProductDto>
 {
-    ProductDto? Map(Product? source, MappingContext context){
-        // Prevent the map from being used by a CollectionMapper because
+	ProductDto? Map(Product? source, MappingContext context){
+		// Prevent the map from being used by a CollectionMapper because
 		// it might be inefficient to do so (simplified check)
-        if(context.MappingOptions.GetOptions<NestedMappingContext>()?.ParentMapper is CollectionMapper)
-            MapNotFoundException.Throw<Product, ProductDto>();
+		if(context.MappingOptions.GetOptions<NestedMappingContext>()?.ParentMapper is CollectionMapper)
+			MapNotFoundException.Throw<Product, ProductDto>();
 
-        if(source == null)
-            return null;
-        else{
-            return new ProductDto{
-                Code = source.Code,
-                ...
-            };
-        }
-    }
+		if(source == null)
+			return null;
+		else{
+			return new ProductDto{
+				Code = source.Code,
+				...
+			};
+		}
+	}
 }
 ```
 
@@ -156,21 +156,21 @@ This is not an option, but a context created by mappers which use projectors to 
 
 ```csharp
 public class MyMaps :
-    INewMap<Product, ProductDto>
+	INewMap<Product, ProductDto>
 {
-    Expression<Func<Book, BookDto>> Project(ProjectionContext context){
-        // EF.Property below projects the shadow key directly from the DB,
-        // so it cannot be compiled into a delegate because the function 
-        // cannot be invoked but must be converted into an SQL query,
-        // so the method invocation actually throws
+	Expression<Func<Book, BookDto>> Project(ProjectionContext context){
+		// EF.Property below projects the shadow key directly from the DB,
+		// so it cannot be compiled into a delegate because the function 
+		// cannot be invoked but must be converted into an SQL query,
+		// so the method invocation actually throws
 
-        if(context.MappingOptions.HasOptions<ProjectionCompilationContext>())
-            MapNotFoundException.Throw<Book, BookDto>();
+		if(context.MappingOptions.HasOptions<ProjectionCompilationContext>())
+			MapNotFoundException.Throw<Book, BookDto>();
 
-        return source => new BookDto{
+		return source => new BookDto{
 			Id = EF.Property<int>(source, "Id")
 		};
-    }
+	}
 }
 ```
 

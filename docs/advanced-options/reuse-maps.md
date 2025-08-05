@@ -16,33 +16,33 @@ In case of async maps you should also pass down the provided `CancellationToken`
 
 ```csharp
 public class MyMaps :
-    INewMap<Product, ProductDto>,
-    IAsyncMergeMap<Category, CategoryDto>
+	INewMap<Product, ProductDto>,
+	IAsyncMergeMap<Category, CategoryDto>
 {
-    ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new ProductDto{
-                Code = source.Code,
+	ProductDto? INewMap<Product, ProductDto>.Map(Product? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new ProductDto{
+				Code = source.Code,
 				// Use the nested map for Category
-                Category = context.Mapper.Map<Category, CategoryDto>(source.Category),
-                ...
-            };
-        }
-    }
+				Category = context.Mapper.Map<Category, CategoryDto>(source.Category),
+				...
+			};
+		}
+	}
 
-    async Task<CategoryDto?> IMergeMap<Category, CategoryDto>.MapAsync(Category? source, CategoryDto? destination, AsyncMappingContext context){
-        if(source != null){
-            destination ??= new CategoryDto();
-            destination.Id = source.Id;
+	async Task<CategoryDto?> IMergeMap<Category, CategoryDto>.MapAsync(Category? source, CategoryDto? destination, AsyncMappingContext context){
+		if(source != null){
+			destination ??= new CategoryDto();
+			destination.Id = source.Id;
 			// Use the async nested map to map the parent category (remember to pass down
 			// the CancellationToken)
-            destination.Parent = await context.Mapper.MapAsync<Category, CategoryDto>(source.Parent, destination.Parent, context.CancellationToken);
-            ...
-        }
-        return destination;
-    }
+			destination.Parent = await context.Mapper.MapAsync<Category, CategoryDto>(source.Parent, destination.Parent, context.CancellationToken);
+			...
+		}
+		return destination;
+	}
 }
 ```
 
@@ -53,33 +53,33 @@ You could even map hierarchies by reusing existing maps.
 ```csharp
 // LimitedProduct derives from Product
 public class MyMaps :
-    IMergeMap<Product, ProductDto>,
-    IMergeMap<LimitedProduct, LimitedProductDto>
+	IMergeMap<Product, ProductDto>,
+	IMergeMap<LimitedProduct, LimitedProductDto>
 {
-    ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto? destination, MappingContext context){
-        if(source != null){
-            destination ??= new ProductDto();
-            destination.Code = source.Code;
-            ...
-        }
-        return destination;
-    }
+	ProductDto? IMergeMap<Product, ProductDto>.Map(Product? source, ProductDto? destination, MappingContext context){
+		if(source != null){
+			destination ??= new ProductDto();
+			destination.Code = source.Code;
+			...
+		}
+		return destination;
+	}
 
-    LimitedProductDto? IMergeMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, LimitedProductDto? destination, MappingContext context){
-        // Needed to prevent constructing ProductDto in parent map
-        destination ??= new LimitedProductDto();
-        
-        // Map parents (returned destination may be null, depending on the mapping)
-        destination = context.Mapper.Map<Product, ProductDto>(source, destination) as LimitedProductDto;
-        
-        // Map child properties
-        if(source != null){
-            destination ??= new LimitedProductDto();
-            destination.LimitedProp = source.LimitedProp;
-            ...
-        }
-        return destination;
-    }
+	LimitedProductDto? IMergeMap<LimitedProduct, LimitedProductDto>.Map(LimitedProduct? source, LimitedProductDto? destination, MappingContext context){
+		// Needed to prevent constructing ProductDto in parent map
+		destination ??= new LimitedProductDto();
+		
+		// Map parents (returned destination may be null, depending on the mapping)
+		destination = context.Mapper.Map<Product, ProductDto>(source, destination) as LimitedProductDto;
+		
+		// Map child properties
+		if(source != null){
+			destination ??= new LimitedProductDto();
+			destination.LimitedProp = source.LimitedProp;
+			...
+		}
+		return destination;
+	}
 }
 ```
 
@@ -91,24 +91,24 @@ When the final map will be created the nested projector map will be replaced wit
 
 ```csharp
 public class MyMaps :
-    IProjectionMap<Category, CategoryDto>,
-    IProjectionMap<Product, ProductDto>
+	IProjectionMap<Category, CategoryDto>,
+	IProjectionMap<Product, ProductDto>
 {
 
-    Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
-        return source => new CategoryDto{
+	Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
+		return source => new CategoryDto{
 			Id = source.Id,
 			...
 		};
-    }
+	}
 
-    Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
-        return source => new ProductDto{
+	Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
+		return source => new ProductDto{
 			Code = source.Code,
 			Category = source.Category != null ? context.Projector.Project<Category, CategoryDto>(source.Category) : null,
 			...
 		};
-    }
+	}
 }
 ```
 
@@ -136,21 +136,21 @@ When the final map will be created the inline Expression will be replaced with t
 
 ```csharp
 public class MyMaps :
-    IProjectionMap<Product, ProductDto>
+	IProjectionMap<Product, ProductDto>
 {
 
-    static readonly Expression<Func<Category, CategoryDto>> MyInlineExpression = source => new CategoryDto{
+	static readonly Expression<Func<Category, CategoryDto>> MyInlineExpression = source => new CategoryDto{
 		Id = source.Id,
 		...
 	};
 
-    Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
-        return source => new ProductDto{
+	Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
+		return source => new ProductDto{
 			Code = source.Code,
 			Category = context.Projector.Inline(MyInlineExpression, source.Category),
 			...
 		};
-    }
+	}
 }
 ```
 

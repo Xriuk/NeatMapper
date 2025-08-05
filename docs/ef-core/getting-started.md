@@ -47,8 +47,8 @@ var entities = await asyncMapper.MapAsync<MyEntity[]>(new int[]{ 2, 3, ... });
 
 // Project an entity into its key
 var myEntitiesKeys = db.Set<MyEntity>()
-    .Project<int>(projector)
-    .ToArray();
+	.Project<int>(projector)
+	.ToArray();
 
 
 // Create a filtering expression from key(s)

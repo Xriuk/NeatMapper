@@ -25,7 +25,7 @@ services.Configure<EntityFrameworkCoreOptions>(o => o.EntitiesRetrievalMode = En
 ...
 
 mapper.Map<MyEntity>(2, new object[]{
-    new EntityFrameworkCoreMappingOptions { EntitiesRetrievalMode = EntitiesRetrievalMode.LocalOrAttach }
+	new EntityFrameworkCoreMappingOptions { EntitiesRetrievalMode = EntitiesRetrievalMode.LocalOrAttach }
 });
 ```
 
@@ -39,6 +39,6 @@ services.Configure<EntityFrameworkCoreOptions>(o => o.ThrowOnDuplicateEntity = t
 ...
 
 mapper.Map<IEnumerable<int>, MyEntity[]>(new []{ 2, 3 }, myEntities, new object[]{
-    new EntityFrameworkCoreMappingOptions { ThrowOnDuplicateEntity = true }
+	new EntityFrameworkCoreMappingOptions { ThrowOnDuplicateEntity = true }
 });
 ```

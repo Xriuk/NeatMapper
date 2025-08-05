@@ -13,7 +13,7 @@ Custom mappers, async mappers, matchers and projectors can be created by impleme
 
 ```csharp
 public class MyCustomMapper : IMapper{
-    ...
+	...
 }
 ```
 

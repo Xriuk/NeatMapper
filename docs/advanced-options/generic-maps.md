@@ -9,26 +9,26 @@ You can also create mappings between generic types, and they will be automatical
 
 ```csharp
 public class MyGenericMaps<T1> :
-    INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>,
-    IMergeMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
+	INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>,
+	IMergeMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
 {
-    MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new MyGenericClassDto<T1>{
-                ...
-            };
-        }
-    }
+	MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new MyGenericClassDto<T1>{
+				...
+			};
+		}
+	}
 
-    MyGenericClassDto<T1>? IMergeMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MyGenericClassDto<T1>? destination, MappingContext context){
-        if(source != null){
-            destination ??= new MyGenericClassDto<T1>();
-            ...
-        }
-        return destination;
-    }
+	MyGenericClassDto<T1>? IMergeMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MyGenericClassDto<T1>? destination, MappingContext context){
+		if(source != null){
+			destination ??= new MyGenericClassDto<T1>();
+			...
+		}
+		return destination;
+	}
 }
 
 ...
@@ -51,18 +51,18 @@ You can create types with as many generic parameters as you want, with the only 
 
 ```csharp
 public class MyGenericMaps<T1, T2> :
-    INewMap<MyGenericClass<T1>, MyGenericClassDto<T2>>
-    //, IMergeMap<MyGenericClass<T1>, MyGenericClassDto<T1>> // not valid since it uses only T1
+	INewMap<MyGenericClass<T1>, MyGenericClassDto<T2>>
+	//, IMergeMap<MyGenericClass<T1>, MyGenericClassDto<T1>> // not valid since it uses only T1
 {
-    MyGenericClassDto<T2>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T2>>.Map(MyGenericClass<T1>? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new MyGenericClassDto<T2>{
-                ...
-            };
-        }
-    }
+	MyGenericClassDto<T2>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T2>>.Map(MyGenericClass<T1>? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new MyGenericClassDto<T2>{
+				...
+			};
+		}
+	}
 }
 ```
 
@@ -70,35 +70,35 @@ You can also specify any [supported generic constraint](https://learn.microsoft.
 
 ```csharp
 public class MyGenericMapsClass<T1> :
-    INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
-    where T1 : class
+	INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
+	where T1 : class
 {
-    MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new MyGenericClassDto<T1>{
-                // Different mapping for classes
-                ...
-            };
-        }
-    }
+	MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new MyGenericClassDto<T1>{
+				// Different mapping for classes
+				...
+			};
+		}
+	}
 }
 
 public class MyGenericMapsStruct<T1> :
-    INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
-    where T1 : struct
+	INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
+	where T1 : struct
 {
-    MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new MyGenericClassDto<T1>{
-                // Different mapping for structs
-                ...
-            };
-        }
-    }
+	MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new MyGenericClassDto<T1>{
+				// Different mapping for structs
+				...
+			};
+		}
+	}
 }
 
 ...
@@ -120,32 +120,32 @@ If you specify an explicit map for two generic types this map will be used inste
 
 ```csharp
 public class MyGenericMaps<T1> :
-    INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
+	INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>
 {
-    MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new MyGenericClassDto<T1>{
-                ...
-            };
-        }
-    }
+	MyGenericClassDto<T1>? INewMap<MyGenericClass<T1>, MyGenericClassDto<T1>>.Map(MyGenericClass<T1>? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new MyGenericClassDto<T1>{
+				...
+			};
+		}
+	}
 }
 
 public class MyMaps :
-    INewMap<MyGenericClass<int>, MyGenericClassDto<int>>
+	INewMap<MyGenericClass<int>, MyGenericClassDto<int>>
 {
-    MyGenericClassDto<int>? INewMap<MyGenericClass<int>, MyGenericClassDto<int>>.Map(MyGenericClass<int>? source, MappingContext context){
-        if(source == null)
-            return null;
-        else{
-            return new MyGenericClassDto<int>{
-                // Specific int mapping
-                ...
-            };
-        }
-    }
+	MyGenericClassDto<int>? INewMap<MyGenericClass<int>, MyGenericClassDto<int>>.Map(MyGenericClass<int>? source, MappingContext context){
+		if(source == null)
+			return null;
+		else{
+			return new MyGenericClassDto<int>{
+				// Specific int mapping
+				...
+			};
+		}
+	}
 }
 
 ...
