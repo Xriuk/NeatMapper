@@ -1,6 +1,6 @@
 # Changelog
 
-## [6.0.0] - Unreleased
+## [6.0.0] - 2025-08-05
 
 ### Removed
 

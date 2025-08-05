@@ -11,7 +11,7 @@
 		<Description>Creates automatic maps and projections between entities and their keys (even composite and shadow keys), supports normal maps and asynchronous ones, also supports collections (not nested).</Description>
 		<PackageProjectUrl>https://www.neatmapper.org/ef-core/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.EntityFrameworkCore</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/ef-core/changelog#540---2025-05-31</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/ef-core/changelog#600---2025-08-05</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
