@@ -11,5 +11,5 @@
 	/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created
 	/// from an object of type <typeparamref name="TSource"/>.
 	/// </returns>
-	public delegate bool CanMapNewDelegate<in TSource, out TDestination>(MappingContext context);
+	public delegate bool CanMapNewDelegate<in TSource, in TDestination>(MappingContext context);
 }

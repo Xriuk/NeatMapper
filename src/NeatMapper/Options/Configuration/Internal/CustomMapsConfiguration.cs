@@ -151,7 +151,6 @@ namespace NeatMapper {
 								$"a map with matching parameters is already defined" +
 								(maps[types].Method != null ? $" in class {maps[types].Method.DeclaringType!.FullName ?? maps[types].Method.DeclaringType!.Name}" : "") +
 								".");
-					
 						}
 					}
 					else

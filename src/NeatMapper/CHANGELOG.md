@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.0.1] - Unreleased
+
+### Removed
+
+- Exceptions info removed from docs for maps interfaces (`INewMap`, `IMergeMap`, ...) because user maps can throw any exceptions and they will be wrapped by the mapper/matcher/projector into `MappingException`/`MatcherException`/`ProjectionException`.
+
+### Fixed
+
+- Delegates type parameters covariance.
+- `MappingOptions` Replace and ReplaceOrAdd added type check to options returned from factories.
+
+
 ## [6.0.0] - 2025-08-05
 
 ### Removed

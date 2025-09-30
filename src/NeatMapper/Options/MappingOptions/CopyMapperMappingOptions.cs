@@ -29,6 +29,7 @@
 			DeepCopy = deepCopy;
 		}
 
+
 		/// <summary>
 		/// <inheritdoc cref="CopyMapperOptions.PropertiesToMap" path="/summary" />
 		/// </summary>

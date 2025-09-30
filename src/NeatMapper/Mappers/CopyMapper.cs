@@ -9,7 +9,7 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by copying all supported properties/fields between
 	/// source and destination (can also copy private ones). Supports derived and base types (non-abstract),
-	/// and deep copies. Same references are mapped to the same objects, so to avoid duplicates and
+	/// and deep copies. Same references are mapped to the same objects, to avoid duplicates and
 	/// handle recursion.
 	/// </summary>
 	public sealed class CopyMapper : IMapper, IMapperFactory {

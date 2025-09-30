@@ -151,20 +151,13 @@ namespace NeatMapper {
 			if (matcher is IMatcherFactory matcherFactory)
 				return matcherFactory.MatchFactory(sourceType, destinationType, mappingOptions);
 
-			// Check if the matcher can match the types (we don't do it via the extension method above because
-			// it may require actually mapping the two types if the interface is not implemented,
-			// and as the returned factory may still throw MapNotFoundException we are still compliant)
-			try {
-				if (!matcher.CanMatch(sourceType, destinationType))
-					throw new MapNotFoundException((sourceType, destinationType));
-			}
-			catch (MapNotFoundException) {
-				throw;
-			}
-			catch { }
+			if (!matcher.CanMatch(sourceType, destinationType))
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			// Return the match wrapped
-			return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => matcher.Match(source, sourceType, destination, destinationType, mappingOptions));
+			return new DefaultMatchMapFactory(
+				sourceType, destinationType,
+				(source, destination) => matcher.Match(source, sourceType, destination, destinationType, mappingOptions));
 		}
 
 		/// <inheritdoc cref="MatchFactory(IMatcher, Type, Type, MappingOptions?)"/>

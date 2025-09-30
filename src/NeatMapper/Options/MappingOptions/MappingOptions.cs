@@ -38,7 +38,7 @@ namespace NeatMapper {
 		/// <exception cref="ArgumentException">
 		/// <paramref name="options"/> have more than one instance for the same type.
 		/// </exception>
-		public MappingOptions(IEnumerable? options,bool cached = false) {
+		public MappingOptions(IEnumerable? options, bool cached = false) {
 			if(options != null) {
 				options = options.Cast<object>().Where(o => o != null);
 
@@ -58,7 +58,7 @@ namespace NeatMapper {
 		/// <inheritdoc cref="MappingOptions(IEnumerable, bool)"/>
 		public MappingOptions(params object?[]? options) : this(options?.Length > 0 ? (IEnumerable)options : null) { }
 
-		// Internal faster constructor
+		// Internal faster constructor, types not checked
 		internal MappingOptions(IEnumerable<KeyValuePair<Type, object>> options,
 			bool cached = false) {
 
@@ -79,7 +79,6 @@ namespace NeatMapper {
 		/// <returns>The retrieved option if found or <see langword="null"/>.</returns>
 		/// <exception cref="ArgumentNullException"><paramref name="optionsType"/> was null.</exception>
 		public object? GetOptions(Type optionsType){
-
 			if(optionsType == null)
 				throw new ArgumentNullException(nameof(optionsType));
 
@@ -90,11 +89,11 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Creates a new instance of <see cref="MappingOptions"/> by copying options from the current instance and
-		/// replacing the specified options (only if found) with new options from the provided factories.
+		/// Creates a new instance of <see cref="MappingOptions"/> by copying options from the current instance
+		/// and replacing the specified options (only if found) with new options from the provided factories.
 		/// </summary>
 		/// <param name="factories">
-		/// Factories to invoke, at most one for each option type, if the option type is found
+		/// Factories to invoke, at most once for each option type, if the option type is found
 		/// the corresponding factory will be invoked with the retrieved option and the result will be added
 		/// to the new options (if non-<see langword="null"/>) or removed (if <see langword="null"/>).<br/>
 		/// If no factories are provided the current instance will be returned unaltered.
@@ -105,7 +104,7 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
-		/// replaced with the provided factories.
+		/// replaced with the provided factories. Or the same instances if no options were changed.
 		/// </returns>
 		/// <exception cref="ArgumentNullException"><paramref name="factories"/> was null.</exception>
 		public MappingOptions Replace(IDictionary<Type, Func<object, object?>> factories, bool cached = false) {
@@ -123,8 +122,10 @@ namespace NeatMapper {
 						return new KeyValuePair<Type, object>(f.Key, opt!);
 
 					var ret = f.Value.Invoke(opt);
-					if(!changed && !object.Equals(ret, opt))
+					if (!changed && !object.Equals(ret, opt)) {
+						TypeUtils.CheckObjectType(ret, f.Key);
 						changed = true;
+					}
 					return new KeyValuePair<Type, object>(f.Key, ret!);
 				})
 				.Where(o => o.Value != null)
@@ -137,11 +138,11 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Creates a new instance of <see cref="MappingOptions"/> by copying options from the current instance and
-		/// replacing (or adding) the specified options (even if not found) with new options from the provided factories.
+		/// Creates a new instance of <see cref="MappingOptions"/> by copying options from the current instance
+		/// and replacing (or adding) the specified options (even if not found) with new options from the provided factories.
 		/// </summary>
 		/// <param name="factories">
-		/// Factories to invoke, at most one for each option type, the corresponding factory will be invoked
+		/// Factories to invoke, once for each option type, the corresponding factory will be invoked
 		/// with the retrieved option of the given type (if found, or <see langword="null"/> will be passed otherwise)
 		/// and the result will be added to the new options (if non-<see langword="null"/>) or removed
 		/// (if <see langword="null"/>).<br/>
@@ -167,9 +168,12 @@ namespace NeatMapper {
 			var newValues = factories
 				.Select(f => {
 					var opt = GetOptions(f.Key);
+
 					var ret = f.Value.Invoke(opt);
-					if (!object.Equals(ret, opt))
+					if (!changed && !object.Equals(ret, opt)) {
+						TypeUtils.CheckObjectType(ret, f.Key);
 						changed = true;
+					}
 					return new KeyValuePair<Type, object>(f.Key, ret!);
 				})
 				.Where(o => o.Value != null)

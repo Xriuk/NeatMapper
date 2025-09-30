@@ -24,7 +24,9 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="source">Object to map, of type <see cref="SourceType"/>, may be null.</param>
 		/// <returns>The newly created object, of type <see cref="DestinationType"/>, may be null.</returns>
-		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
+		/// <exception cref="MappingException">
+		/// An exception was thrown inside the map, check the inner exception for details.
+		/// </exception>
 		object? Invoke(object? source);
 	}
 

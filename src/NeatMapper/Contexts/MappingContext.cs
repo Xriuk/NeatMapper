@@ -21,7 +21,9 @@ namespace NeatMapper {
 			ServiceProvider = serviceProvider
 				?? throw new ArgumentNullException(nameof(serviceProvider));
 
-			if(parentMapper == null)
+			if (nestedMapper == null)
+				throw new ArgumentNullException(nameof(nestedMapper));
+			if (parentMapper == null)
 				throw new ArgumentNullException(nameof(parentMapper));
 
 			_mapper = new Lazy<IMapper>(() => {

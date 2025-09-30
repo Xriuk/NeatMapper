@@ -78,6 +78,20 @@ services.Configure<AsyncCollectionMappersOptions>(o => o.MaxParallelMappings = 1
 asyncMapper.MapAsync<ProductDto[]>(products, new object[]{ new AsyncCollectionMappersMappingOptions{ MaxParallelMappings = 3 } });
 ```
 
+## CopyMapperOptions
+
+Options applied to `CopyMapper`.
+
+{: .important }
+Can be overridden during mapping with `CopyMapperMappingOptions`.
+
+## EnumMapperOptions
+
+Options applied to `EnumMapper`.
+
+{: .important }
+Can be overridden during mapping with `EnumMapperMappingOptions`.
+
 # Dependency Injection (DI) Configuration
 
 When using Dependency Injection (DI), additional options can be configured to change how some mappers are created.
@@ -130,14 +144,16 @@ These are not options, but contexts created by mappers/matchers/projectors which
 
 ```csharp
 public class MyMaps :
+	ICanMapNew<Product, ProductDto>,
 	INewMap<Product, ProductDto>
 {
-	ProductDto? Map(Product? source, MappingContext context){
+	public bool CanMapNew(MappingContext context){
 		// Prevent the map from being used by a CollectionMapper because
 		// it might be inefficient to do so (simplified check)
-		if(context.MappingOptions.GetOptions<NestedMappingContext>()?.ParentMapper is CollectionMapper)
-			MapNotFoundException.Throw<Product, ProductDto>();
+		return context.MappingOptions.GetOptions<NestedMappingContext>()?.ParentMapper is not CollectionMapper;
+	}
 
+	public ProductDto? Map(Product? source, MappingContext context){
 		if(source == null)
 			return null;
 		else{
@@ -156,17 +172,18 @@ This is not an option, but a context created by mappers which use projectors to 
 
 ```csharp
 public class MyMaps :
-	INewMap<Product, ProductDto>
+	ICanProject<Product, ProductDto>,
+	IProjectionMap<Product, ProductDto>
 {
-	Expression<Func<Book, BookDto>> Project(ProjectionContext context){
-		// EF.Property below projects the shadow key directly from the DB,
-		// so it cannot be compiled into a delegate because the function 
-		// cannot be invoked but must be converted into an SQL query,
-		// so the method invocation actually throws
+	// EF.Property below projects the shadow key directly from the DB,
+	// so it cannot be compiled into a delegate because the function 
+	// cannot be invoked but must be converted into an SQL query,
+	// so the method invocation actually throws
+	public bool CanProject(ProjectionContext context){
+		return !context.MappingOptions.HasOptions<ProjectionCompilationContext>();
+	}
 
-		if(context.MappingOptions.HasOptions<ProjectionCompilationContext>())
-			MapNotFoundException.Throw<Book, BookDto>();
-
+	public Expression<Func<Book, BookDto>> Project(ProjectionContext context){
 		return source => new BookDto{
 			Id = EF.Property<int>(source, "Id")
 		};

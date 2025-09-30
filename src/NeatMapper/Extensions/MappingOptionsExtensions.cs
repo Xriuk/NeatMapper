@@ -28,8 +28,9 @@ namespace NeatMapper {
 
 		#region Replace
 		/// <summary>
-		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) options of type <typeparamref name="TOptions"/> (only if found) with a new option from the specified factory.
+		/// Creates a new instance of <see cref="MappingOptions"/> by copying options from the current instance
+		/// and replaces (or removes) options of type <typeparamref name="TOptions"/> (only if found)
+		/// with a new option from the specified factory.
 		/// </summary>
 		/// <typeparam name="TOptions">Type of the options to replace.</typeparam>
 		/// <param name="factory">
@@ -41,7 +42,10 @@ namespace NeatMapper {
 		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
 		/// to avoid recomputing them.
 		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <returns>
+		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
+		/// replaced with the provided factory. Or the same instance if no options were changed.
+		/// </returns>
 		public static MappingOptions Replace<TOptions>(this MappingOptions options,
 			Func<TOptions, TOptions?> factory,
 			bool cached = false) where TOptions : class {
@@ -135,8 +139,9 @@ namespace NeatMapper {
 		}
 
 		/// <summary>
-		/// Creates a new <see cref="MappingOptions"/> object with all the options copied from the current instance
-		/// and replaces (or removes) the specified option types (only if found) with new options from the specified factories.
+		/// Creates a new instance of <see cref="MappingOptions"/> by copying options from the current instance
+		/// and replaces (or removes) the specified option types (only if found)
+		/// with new options from the specified factories.
 		/// </summary>
 		/// <typeparam name="TOptions1">Type of the first options to replace.</typeparam>
 		/// <typeparam name="TOptions2">Type of the second options to replace.</typeparam>
@@ -172,7 +177,10 @@ namespace NeatMapper {
 		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
 		/// to avoid recomputing them.
 		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <returns>
+		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
+		/// replaced with the provided factories. Or the same instances if no options were changed.
+		/// </returns>
 		public static MappingOptions Replace<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
 			Func<TOptions1, TOptions1?> factory1,
 			Func<TOptions2, TOptions2?> factory2,
@@ -217,7 +225,8 @@ namespace NeatMapper {
 		/// <typeparam name="TOptions">Type of the first options to replace or add.</typeparam>
 		/// <param name="factory">
 		/// Factory used to create the new options, will receive as a parameter the options of type
-		/// <typeparamref name="TOptions"/> if they exists in the current mapping options.<br/>
+		/// <typeparamref name="TOptions"/> if they exist in the current mapping options,
+		/// will receive null otherwise.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
 		/// <param name="cached">
@@ -328,27 +337,32 @@ namespace NeatMapper {
 		/// <typeparam name="TOptions5">Type of the fifth options to replace or add.</typeparam>
 		/// <param name="factory1">
 		/// Factory used to create the new options, will receive as a parameter the options of type
-		/// <typeparamref name="TOptions1"/> if they exists in the current mapping options.<br/>
+		/// <typeparamref name="TOptions1"/> if they exist in the current mapping options,
+		/// will receive null otherwise.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
 		/// <param name="factory2">
 		/// Factory used to create the new options, will receive as a parameter the options of type
-		/// <typeparamref name="TOptions2"/> if they exists in the current mapping options.<br/>
+		/// <typeparamref name="TOptions2"/> if they exist in the current mapping options,
+		/// will receive null otherwise.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
 		/// <param name="factory3">
 		/// Factory used to create the new options, will receive as a parameter the options of type
-		/// <typeparamref name="TOptions3"/> if they exists in the current mapping options.<br/>
+		/// <typeparamref name="TOptions3"/> if they exist in the current mapping options,
+		/// will receive null otherwise.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
 		/// <param name="factory4">
 		/// Factory used to create the new options, will receive as a parameter the options of type
-		/// <typeparamref name="TOptions4"/> if they exists in the current mapping options.<br/>
+		/// <typeparamref name="TOptions4"/> if they exist in the current mapping options,
+		/// will receive null otherwise.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
 		/// <param name="factory5">
 		/// Factory used to create the new options, will receive as a parameter the options of type
-		/// <typeparamref name="TOptions5"/> if they exists in the current mapping options.<br/>
+		/// <typeparamref name="TOptions5"/> if they exist in the current mapping options,
+		/// will receive null otherwise.<br/>
 		/// If it returns <see langword="null"/> no options of that type will be copied/added into the new instance.
 		/// </param>
 		/// <param name="cached">

@@ -57,11 +57,12 @@ var myCategoryDto = mapper.Map<Category, CategoryDto>(myCategory);
 All projection maps can be compiled by default, if your maps are not suitable for compilation (for example it uses methods which can only be converted to other languages by LINQ providers) you can check if your expression is about to be compiled by checking `ProjectionCompilationContext` inside `MappingOptions` of the `ProjectionContext`.
 
 ```csharp
-Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
+bool ICanProject<Category, CategoryDto>.CanProject(ProjectionContext context){
 	// Refuse compilation
-	if(context.MappingOptions.GetOption<ProjectionCompilationContext>() != null)
-		MapNotFoundException.Throw<Category, CategoryDto>();
+	return !context.MappingOptions.HasOptions<ProjectionCompilationContext>();
+}
 
+Expression<Func<Category, CategoryDto>> IProjectionMap<Category, CategoryDto>.Project(ProjectionContext context){
 	return source => new CategoryDto { ... };
 }
 ```

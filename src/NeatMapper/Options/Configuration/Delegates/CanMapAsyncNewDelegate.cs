@@ -11,5 +11,5 @@
 	/// <see langword="true"/> if an object of type <typeparamref name="TDestination"/> can be created
 	/// from an object of type <typeparamref name="TSource"/> asynchronously.
 	/// </returns>
-	public delegate bool CanMapAsyncNewDelegate<in TSource, TDestination>(AsyncMappingContextOptions context);
+	public delegate bool CanMapAsyncNewDelegate<in TSource, in TDestination>(AsyncMappingContextOptions context);
 }

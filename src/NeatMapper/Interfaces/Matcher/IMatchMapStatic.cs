@@ -20,10 +20,6 @@ namespace NeatMapper {
 		/// Matching context, which allows nested matches, services retrieval via DI, ....
 		/// </param>
 		/// <returns><see langword="true"/> if the two objects are equivalent.</returns>
-		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		/// <exception cref="MatcherException">
-		/// An exception was thrown while matching the types, check the inner exception for details.
-		/// </exception>
 		public static abstract bool Match(TSource? source, TDestination? destination, MatchingContext context);
 	}
 }

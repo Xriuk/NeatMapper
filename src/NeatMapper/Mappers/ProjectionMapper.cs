@@ -165,7 +165,7 @@ namespace NeatMapper {
 					param);
 
 				// Compile the expression and wrap it to catch exceptions
-				return (Func<object?, object?>)projection.Compile();
+				return projection.Compile() as Func<object?, object?>;
 			}) ?? throw new MapNotFoundException((sourceType, destinationType));
 		}
 	}

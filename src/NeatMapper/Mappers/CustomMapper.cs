@@ -10,8 +10,8 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CustomMapper : IMapper, IMapperFactory, IMapperMaps {
 		/// <summary>
-		/// Configuration for <see cref="ICanMapNew{TSource, TDestination}"/> (and the static version) classes
-		/// for the mapper.
+		/// Configuration for <see cref="ICanMapNew{TSource, TDestination}"/> (and the static version) classes and
+		/// <see cref="CustomNewAdditionalMapsOptions"/> additional maps for the mapper.
 		/// </summary>
 		internal readonly CustomMapsConfiguration _canMapNewConfiguration;
 
@@ -22,8 +22,8 @@ namespace NeatMapper {
 		internal readonly CustomMapsConfiguration _newMapsConfiguration;
 
 		/// <summary>
-		/// Configuration for <see cref="ICanMapMerge{TSource, TDestination}"/> (and the static version) classes
-		/// for the mapper.
+		/// Configuration for <see cref="ICanMapMerge{TSource, TDestination}"/> (and the static version) classes and
+		/// <see cref="CustomMergeAdditionalMapsOptions"/> additional maps for the mapper.
 		/// </summary>
 		internal readonly CustomMapsConfiguration _canMapMergeConfiguration;
 
@@ -174,6 +174,7 @@ namespace NeatMapper {
 
 		#region IMapperFactory methods
 		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			// Forward new map to merge by creating a destination
 			if (!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null)
 				return MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
 

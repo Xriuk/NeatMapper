@@ -12,9 +12,9 @@ namespace NeatMapper {
 	/// The constructed expression could be compiled into a <see cref="Func{T, TResult}"/> delegate,
 	/// if the expression is not suitable for compilation (for example it uses fake methods
 	/// which must be translated by an <see cref="System.Linq.IQueryProvider"/> or does not handle
-	/// null values) it should check the <see cref="ProjectionContext"/> for
-	/// <see cref="ProjectionCompilationContext"/> options and throw a <see cref="MapNotFoundException"/>
-	/// exception to signal it.
+	/// null values) you should implement the <see cref="ICanProject{TSource, TDestination}"/> interface
+	/// with the same type arguments and check the <see cref="ProjectionContext"/> for
+	/// <see cref="ProjectionCompilationContext"/> options and return <see langword="false"/> to signal it.
 	/// </para>
 	/// <para>
 	/// Implementations of this interface must be thread-safe.

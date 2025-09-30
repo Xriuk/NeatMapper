@@ -11,5 +11,5 @@
 	/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged
 	/// into an object of type <typeparamref name="TDestination"/>.
 	/// </returns>
-	public delegate bool CanMapMergeDelegate<in TSource, TDestination>(MappingContext context);
+	public delegate bool CanMapMergeDelegate<in TSource, in TDestination>(MappingContext context);
 }

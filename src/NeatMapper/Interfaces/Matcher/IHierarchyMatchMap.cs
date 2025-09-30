@@ -15,10 +15,6 @@
 		/// Matching context, which allows nested matches, services retrieval via DI, ....
 		/// </param>
 		/// <returns><see langword="true"/> if the two objects match.</returns>
-		/// <exception cref="MapNotFoundException">The provided types could not be matched.</exception>
-		/// <exception cref="MatcherException">
-		/// An exception was thrown while matching the types, check the inner exception for details.
-		/// </exception>
 		bool Match(TSource? source, TDestination? destination, MatchingContext context);
 	}
 }

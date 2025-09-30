@@ -11,5 +11,5 @@
 	/// <see langword="true"/> if an object of type <typeparamref name="TSource"/> can be merged
 	/// into an object of type <typeparamref name="TDestination"/> asynchronously.
 	/// </returns>
-	public delegate bool CanMapAsyncMergeDelegate<in TSource, TDestination>(AsyncMappingContextOptions context);
+	public delegate bool CanMapAsyncMergeDelegate<in TSource, in TDestination>(AsyncMappingContextOptions context);
 }

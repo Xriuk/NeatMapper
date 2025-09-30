@@ -487,9 +487,6 @@ namespace NeatMapper.EntityFrameworkCore {
 								addDelegate.Invoke(destinationEnumerable, element);
 						}
 					}
-					catch (MapNotFoundException) {
-						throw;
-					}
 					catch (OperationCanceledException) {
 						throw;
 					}

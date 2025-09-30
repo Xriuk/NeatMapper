@@ -46,7 +46,7 @@ namespace NeatMapper.Tests.Extensions {
 			ICollection<int> intColl = null;
 #endif
 
-			// NewMap
+			// Map (new)
 			{
 				// Explicit source and destination
 				{
@@ -118,7 +118,7 @@ namespace NeatMapper.Tests.Extensions {
 				}
 			}
 
-			// MergeMap
+			// Map (merge)
 			{
 				// Collection
 				{

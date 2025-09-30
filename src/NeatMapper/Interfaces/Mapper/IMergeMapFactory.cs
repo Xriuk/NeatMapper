@@ -28,7 +28,9 @@ namespace NeatMapper {
 		/// The resulting object of the mapping of type <see cref="DestinationType"/>, can be the same as
 		/// <paramref name="destination"/> or a new one, may be null.
 		/// </returns>
-		/// <exception cref="MappingException">An exception was thrown inside the map.</exception>
+		/// <exception cref="MappingException">
+		/// An exception was thrown inside the map, check the inner exception for details.
+		/// </exception>
 		object? Invoke(object? source, object? destination);
 	}
 

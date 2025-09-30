@@ -45,7 +45,7 @@ public class MyMaps :
 	List<ProductDto>? INewMap<IEnumerable<Product>, List<ProductDto>>.Map(IEnumerable<Product>? source, MappingContext context){
 		return source?.
 			.Select(s => new ProductDto{
-			...
+				...
 			})
 			.ToList();
 	}

@@ -4,12 +4,12 @@ namespace NeatMapper {
 	public static class MergeMapFactoryExtensions {
 		#region MapNewFactory
 		/// <summary>
-		/// Creates a <see cref="INewMapFactory"/> from a <see cref="IMergeMapFactory"/> by creating empty destination
-		/// objects and passing them to the provided factory.
+		/// Creates a <see cref="INewMapFactory"/> from a <see cref="IMergeMapFactory"/> by creating
+		/// empty destination objects and passing them to the provided factory.
 		/// </summary>
 		/// <param name="shouldDispose">
-		/// True if the method should dispose the provided factory on creation exceptions or inside the returned factory,
-		/// false if the provided factory will be disposed elsewhere.
+		/// True if the method should dispose the provided factory on creation exceptions
+		/// or inside the returned factory, false if the provided factory will be disposed elsewhere.
 		/// </param>
 		/// <returns>
 		/// A factory which can be used to map objects of the same types of the provided factory.

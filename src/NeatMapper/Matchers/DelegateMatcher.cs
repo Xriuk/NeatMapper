@@ -70,10 +70,7 @@ namespace NeatMapper {
 		/// <summary>
 		/// Creates the matcher by using the provided delegate.
 		/// </summary>
-		/// <param name="matchDelegate">
-		/// Delegate to use for matching, should throw <see cref="MapNotFoundException"/>
-		/// if the passed objects are not of expected types.
-		/// </param>
+		/// <param name="matchDelegate">Delegate to use for matching.</param>
 		/// <param name="nestedMatcher">
 		/// Optional matcher passed to the matching context, will be combined with the delegate matcher itself.
 		/// </param>

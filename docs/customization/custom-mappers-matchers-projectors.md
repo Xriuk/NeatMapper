@@ -1,7 +1,7 @@
 ---
 layout: default
 title: "Custom mappers, matchers and projectors"
-nav_order: 1
+nav_order: 2
 parent: "Customization"
 ---
 

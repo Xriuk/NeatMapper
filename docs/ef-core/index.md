@@ -1,7 +1,7 @@
 ---
 layout: default
 title: "Entity Framework Core"
-nav_order: 5
+nav_order: 6
 has_children: true
 ---
 

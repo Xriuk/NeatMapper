@@ -8,6 +8,6 @@ namespace NeatMapper {
 		public MappingException(Exception? exception, (Type From, Type To) types) :
 			base($"An exception was thrown while mapping the types: {types.From.Name} -> {types.To.Name}\n" +
 			$"{types.From.FullName} -> {types.To.FullName}\n" +
-			$"Check the inner exception for details", exception) { }
+			$"Check the inner exception for details.", exception) { }
 	}
 }

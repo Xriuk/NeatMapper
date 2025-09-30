@@ -2,8 +2,8 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which wraps another <see cref="IMatcher"/>
-	/// and returns false in case it throws <see cref="MapNotFoundException"/>.
+	/// <see cref="IMatcher"/> which wraps another <see cref="IMatcher"/> and returns <see langword="false">
+	/// in case it throws <see cref="MapNotFoundException"/>.
 	/// </summary>
 	public sealed class SafeMatcher : IMatcher, IMatcherFactory {
 		/// <summary>
@@ -49,13 +49,13 @@ namespace NeatMapper {
 			mappingOptions = GetOptions(mappingOptions);
 
 			if (!_matcher.CanMatch(sourceType, destinationType, mappingOptions))
-				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
+				return new DefaultMatchMapFactory(sourceType, destinationType, DefaultFactory);
 
 			try { 
 				return _matcher.MatchFactory(sourceType, destinationType, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				return new DefaultMatchMapFactory(sourceType, destinationType, (source, destination) => false);
+				return new DefaultMatchMapFactory(sourceType, destinationType, DefaultFactory);
 			}
 		}
 
@@ -63,6 +63,10 @@ namespace NeatMapper {
 		private MappingOptions GetOptions(MappingOptions? mappingOptions) {
 			return (mappingOptions ?? MappingOptions.Empty)
 				.ReplaceOrAdd<NestedMatchingContext>(n => n != null ? new NestedMatchingContext(this, n) : _nestedMatchingContext);
+		}
+
+		private static bool DefaultFactory(object? source, object? destination) {
+			return false;
 		}
 	}
 }
