@@ -248,11 +248,17 @@ namespace NeatMapper {
 				throw new InvalidOperationException("Invalid collection"); // Should not happen
 			});
 		}
+		/// <summary>
+		/// <see cref="ICollection{T}.Add(T)"/>
+		/// </summary>
 		public static Action<object, object?> GetCollectionAddDelegate(Type elementType) {
 			return collectionsAddMethodsCache.GetOrAdd(elementType, element => 
 				(Action<object, object?>)Delegate.CreateDelegate(typeof(Action<object, object?>), this_CollectionAdd.MakeGenericMethod(elementType)));
 		}
 
+		/// <summary>
+		/// <see cref="ICollection{T}.Remove(T)"/>
+		/// </summary>
 		public static Func<object, object?, bool> GetCollectionRemoveDelegate(Type elementType) {
 			return collectionsRemoveMethodsCache.GetOrAdd(elementType, element =>
 				(Func<object, object?, bool>)Delegate.CreateDelegate(typeof(Func<object, object?, bool>), this_CollectionRemove.MakeGenericMethod(elementType)));

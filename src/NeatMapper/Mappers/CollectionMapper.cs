@@ -151,11 +151,14 @@ namespace NeatMapper {
 					catch (InvalidOperationException) {
 						throw new MapNotFoundException(types);
 					}
-
+					
+					object result;
 					try {
 						foreach (var sourceElement in sourceEnumerable) {
 							addDelegate.Invoke(destination, elementsFactory.Invoke(sourceElement));
 						}
+
+						result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 					}
 					catch (OperationCanceledException) {
 						throw;
@@ -163,8 +166,6 @@ namespace NeatMapper {
 					catch (Exception e) {
 						throw new MappingException(e, types);
 					}
-
-					var result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 
 					// Should not happen
 					TypeUtils.CheckObjectType(result, types.To);
@@ -233,126 +234,38 @@ namespace NeatMapper {
 						if (source is IEnumerable sourceEnumerable) {
 							object result;
 							try {
-								// If we have to create the destination collection we know that we can always map to it,
-								// otherwise we check that it's not readonly
-								Type? actualCollectionType;
-								object? newDestination;
-								if (destination == null) {
-									try {
-										destination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
-									}
-									catch (ObjectCreationException) {
-										throw new MapNotFoundException(types);
-									}
-									newDestination = null;
+								// Create the collection factories (in case we will map null destination collections)
+								Func<object> collectionFactory;
+								Type actualCollectionType;
+								try {
+									collectionFactory = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType);
 								}
-								else if (TypeUtils.IsCollectionReadonly(destination)) {
-									if (mergeMappingOptions?.RecreateReadonlyDestination ?? _mergeCollectionOptions.RecreateReadonlyDestination) {
-										try {
-											newDestination = ObjectFactory.CreateCollectionFactory(types.To, out actualCollectionType).Invoke();
-										}
-										catch (ObjectCreationException) {
-											throw new MapNotFoundException(types);
-										}
-									}
-									else {
-										throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
-											(destination.GetType().FullName ?? destination.GetType().Name));
-									}
-								}
-								else { 
-									newDestination = null;
-									actualCollectionType = null;
+								catch (ObjectCreationException) {
+									throw new MapNotFoundException(types);
 								}
 
-								if (destination is IEnumerable destinationEnumerable) {
-									var elementsToAdd = ObjectPool.Lists.Get();
-									var elementsToRemove = ObjectPool.Lists.Get();
-
-									// Deleted elements
-									var matchedDestinations = removeNotMatchedDestinationElements ?
-										ObjectPool.Lists.Get() :
-										null;
-
-									try { 
-										// Added/updated elements
-										foreach (var sourceElement in sourceEnumerable) {
-											bool found = false;
-											object? matchingDestinationElement = null;
-											foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
-												if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-													!elementsToRemove.Contains(destinationElement)) {
-
-													matchingDestinationElement = destinationElement;
-													matchedDestinations?.Add(destinationElement);
-													found = true;
-													break;
-												}
-											}
-
-											if (found) {
-												// MergeMap or NewMap
-												if (mergeElementsFactory != null) {
-													var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
-													if (mergeResult != matchingDestinationElement) {
-														elementsToRemove.Add(matchingDestinationElement);
-														elementsToAdd.Add(mergeResult);
-													}
-												}
-												else {
-													elementsToRemove.Add(matchingDestinationElement);
-													elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-												}
-											}
-											else
-												elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-										}
-
-										// Deleted elements
-										if (removeNotMatchedDestinationElements)
-											elementsToRemove.AddRange(destinationEnumerable.Cast<object?>().Except(matchedDestinations!));
-
-										if (newDestination != null) {
-											var addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
-
-											// Fill new destination collection
-											foreach (var element in destinationEnumerable.Cast<object?>().Except(elementsToRemove)) {
-												addDelegate.Invoke(newDestination, element);
-											}
-											foreach (var element in elementsToAdd) {
-												addDelegate.Invoke(newDestination, element);
-											}
-											destination = newDestination;
-										}
-										else {
-											// Do not throw since we are dealing with ICollection<T>
-											var addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
-											var removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
-
-											// Update destination collection
-											foreach (var element in elementsToAdd) {
-												addDelegate.Invoke(destination, element);
-											}
-											foreach (var element in elementsToRemove) {
-												if (!removeDelegate.Invoke(destination, element))
-													throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
-											}
-										}
-									}
-									finally {
-										ObjectPool.Lists.Return(elementsToAdd);
-										ObjectPool.Lists.Return(elementsToRemove);
-										if(matchedDestinations != null)
-											ObjectPool.Lists.Return(matchedDestinations);
-									}
-
-									if (actualCollectionType != null)
-										result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
-									else
-										result = destination;
+								// Do not throw since we are dealing with ICollection<T>
+								Action<object, object?> addDelegate;
+								Func<object, object?, bool> removeDelegate;
+								if (!TypeUtils.IsCollectionReadonly(types.To)) {
+									addDelegate = ObjectFactory.GetCollectionAddDelegate(elementTypes.To);
+									removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
 								}
+								else {
+									addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
+									removeDelegate = null!;
+								}
+
+								destination = MapMergeInternal(destination, collectionFactory,
+									mergeMappingOptions, removeNotMatchedDestinationElements,
+									sourceEnumerable,
+									elementsMatcherFactory, mergeElementsFactory, newElementsFactory,
+									addDelegate, removeDelegate);
+
+								if (actualCollectionType != null)
+									result = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType, types.To).Invoke(destination);
 								else
-									throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+									result = destination;
 							}
 							catch (OperationCanceledException) {
 								throw;
@@ -383,11 +296,6 @@ namespace NeatMapper {
 
 		#region IMapperFactory methods
 		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
 			(Type From, Type To) types = (sourceType, destinationType);
 
 			if (!CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMapper) || elementsMapper == null)
@@ -543,12 +451,10 @@ namespace NeatMapper {
 							removeDelegate = ObjectFactory.GetCollectionRemoveDelegate(elementTypes.To);
 						}
 						else {
-							addDelegate = null!;
+							addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
 							removeDelegate = null!;
 						}
 
-						// Used in case we create a new collection
-						var customAddDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
 						var collectionConversionDelegate = ObjectFactory.CreateCollectionConversionFactory(actualCollectionType ?? types.To, types.To);
 
 						return new DisposableMergeMapFactory(
@@ -559,107 +465,12 @@ namespace NeatMapper {
 
 								if (source is IEnumerable sourceEnumerable) {
 									object result;
-									bool recreate;
 									try {
-										// If we have to create the destination collection we know that we can always map to it,
-										// otherwise we check that it's not readonly
-										if (destination == null) { 
-											destination = collectionFactory.Invoke();
-											recreate = false;
-										}
-										else if (TypeUtils.IsCollectionReadonly(destination)) {
-											if (mergeMappingOptions?.RecreateReadonlyDestination ?? _mergeCollectionOptions.RecreateReadonlyDestination)
-												recreate = true;
-											else { 
-												throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
-													(destination.GetType().FullName ?? destination.GetType().Name));
-											}
-										}
-										else
-											recreate = false;
-
-										if (destination is IEnumerable destinationEnumerable) {
-											var elementsToAdd = ObjectPool.Lists.Get();
-											var elementsToRemove = ObjectPool.Lists.Get();
-
-											// Deleted elements
-											var matchedDestinations = removeNotMatchedDestinationElements ?
-												ObjectPool.Lists.Get() :
-												null;
-
-											try { 
-												// Added/updated elements
-												foreach (var sourceElement in sourceEnumerable) {
-													bool found = false;
-													object? matchingDestinationElement = null;
-													foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
-														if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
-															!elementsToRemove.Contains(destinationElement)) {
-
-															matchingDestinationElement = destinationElement;
-															matchedDestinations?.Add(matchingDestinationElement);
-															found = true;
-															break;
-														}
-													}
-
-													if (found) {
-														// MergeMap or NewMap
-														if (mergeElementsFactory != null) {
-															var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
-															if (mergeResult != matchingDestinationElement) {
-																elementsToRemove.Add(matchingDestinationElement);
-																elementsToAdd.Add(mergeResult);
-															}
-														}
-														else {
-															elementsToRemove.Add(matchingDestinationElement);
-															elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-														}
-													}
-													else
-														elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
-												}
-
-												// Deleted elements
-												if (removeNotMatchedDestinationElements)
-													elementsToRemove.AddRange(destinationEnumerable.Cast<object?>().Except(matchedDestinations!));
-
-												if (recreate) {
-													// Create new collection
-													var newDestination = collectionFactory.Invoke();
-
-													// Fill destination collection
-													foreach (var element in destinationEnumerable.Cast<object?>().Except(elementsToRemove)) {
-														addDelegate.Invoke(newDestination, element);
-													}
-													foreach (var element in elementsToAdd) {
-														addDelegate.Invoke(newDestination, element);
-													}
-													destination = newDestination;
-												}
-												else { 
-													// Update destination collection
-													foreach (var element in elementsToAdd) {
-														addDelegate.Invoke(destination, element);
-													}
-													foreach (var element in elementsToRemove) {
-														if (!removeDelegate.Invoke(destination, element))
-															throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
-													}
-												}
-											}
-											finally {
-												ObjectPool.Lists.Return(elementsToAdd);
-												ObjectPool.Lists.Return(elementsToRemove);
-												if (matchedDestinations != null)
-													ObjectPool.Lists.Return(matchedDestinations);
-											}
-
-											result = collectionConversionDelegate.Invoke(destination);
-										}
-										else
-											throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+										result = collectionConversionDelegate.Invoke(MapMergeInternal(destination, collectionFactory,
+											mergeMappingOptions, removeNotMatchedDestinationElements,
+											sourceEnumerable,
+											elementsMatcherFactory, mergeElementsFactory, newElementsFactory,
+											addDelegate, removeDelegate));
 									}
 									catch (OperationCanceledException) {
 										throw;
@@ -681,7 +492,7 @@ namespace NeatMapper {
 							newElementsFactory, mergeElementsFactory, elementsMatcherFactory);
 					}
 					catch {
-						elementsMatcherFactory?.Dispose();
+						elementsMatcherFactory.Dispose();
 						throw;
 					}
 				}
@@ -755,18 +566,12 @@ namespace NeatMapper {
 			var recreate = mappingOptions?.GetOptions<MergeCollectionsMappingOptions>()?.RecreateReadonlyDestination
 				?? _mergeCollectionOptions.RecreateReadonlyDestination;
 
+			// If we are not recreating, check if the destination type is not readonly
 			if (sourceType.IsEnumerable() &&
 				((destinationType.IsCollection() && !destinationType.IsArray) ||
 					(recreate && destinationType.IsEnumerable())) &&
-				ObjectFactory.CanCreateCollection(destinationType)) {
-
-				// If we are not recreating, check if the destination type is not readonly
-				if (!recreate && TypeUtils.IsCollectionReadonly(destinationType)) {
-					elementTypes = default;
-					elementsMapper = null!;
-
-					return false;
-				}
+				ObjectFactory.CanCreateCollection(destinationType) &&
+				(recreate || !TypeUtils.IsCollectionReadonly(destinationType))) {
 
 				if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
 					elementTypes = default;
@@ -786,12 +591,11 @@ namespace NeatMapper {
 						(ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions));
 				}
 			}
-			else {
-				elementTypes = default;
-				elementsMapper = null!;
 
-				return false;
-			}
+			elementTypes = default;
+			elementsMapper = null!;
+
+			return false;
 		}
 
 		private IMatcher GetMatcher(MergeCollectionsMappingOptions? mergeMappingOptions) {
@@ -805,6 +609,116 @@ namespace NeatMapper {
 			}
 			else
 				return _elementsMatcher;
+		}
+
+		private object MapMergeInternal(
+			object? destination, Func<object> collectionFactory,
+			MergeCollectionsMappingOptions? mergeMappingOptions, bool removeNotMatchedDestinationElements,
+			IEnumerable sourceEnumerable,
+			IMatchMapFactory elementsMatcherFactory, IMergeMapFactory? mergeElementsFactory, INewMapFactory newElementsFactory,
+			Action<object, object?> addDelegate, Func<object, object?, bool> removeDelegate) {
+
+			// If we have to create the destination collection we know that we can always map to it,
+			// otherwise we check that it's not readonly
+			bool recreate;
+			if (destination == null) {
+				destination = collectionFactory.Invoke();
+				recreate = false;
+			}
+			else if (TypeUtils.IsCollectionReadonly(destination)) {
+				if (mergeMappingOptions?.RecreateReadonlyDestination ?? _mergeCollectionOptions.RecreateReadonlyDestination)
+					recreate = true;
+				else {
+					throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
+						(destination.GetType().FullName ?? destination.GetType().Name));
+				}
+			}
+			else
+				recreate = false;
+
+			if (destination is IEnumerable destinationEnumerable) {
+				var elementsToAdd = ObjectPool.Lists.Get();
+				var elementsToRemove = ObjectPool.Lists.Get();
+
+				// Deleted elements
+				var matchedDestinations = removeNotMatchedDestinationElements ?
+					ObjectPool.Lists.Get() :
+					null;
+
+				try {
+					// Added/updated elements
+					foreach (var sourceElement in sourceEnumerable) {
+						bool found = false;
+						object? matchingDestinationElement = null;
+						foreach (var destinationElement in destinationEnumerable.Cast<object>().Concat(elementsToAdd)) {
+							if (elementsMatcherFactory.Invoke(sourceElement, destinationElement) &&
+								!elementsToRemove.Contains(destinationElement)) {
+
+								matchingDestinationElement = destinationElement;
+								matchedDestinations?.Add(destinationElement);
+								found = true;
+								break;
+							}
+						}
+
+						if (found) {
+							// MergeMap or NewMap
+							if (mergeElementsFactory != null) {
+								var mergeResult = mergeElementsFactory.Invoke(sourceElement, matchingDestinationElement);
+								if (mergeResult != matchingDestinationElement) {
+									elementsToRemove.Add(matchingDestinationElement);
+									elementsToAdd.Add(mergeResult);
+								}
+							}
+							else {
+								elementsToRemove.Add(matchingDestinationElement);
+								elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+							}
+						}
+						else
+							elementsToAdd.Add(newElementsFactory.Invoke(sourceElement));
+					}
+
+					// Deleted elements
+					if (removeNotMatchedDestinationElements)
+						elementsToRemove.AddRange(destinationEnumerable.Cast<object?>().Except(matchedDestinations!));
+
+					if (recreate) {
+						// Create new collection
+						var newDestination = collectionFactory.Invoke();
+
+						// Fill new destination collection
+						foreach (var element in destinationEnumerable.Cast<object?>().Except(elementsToRemove)) {
+							addDelegate.Invoke(newDestination, element);
+						}
+						foreach (var element in elementsToAdd) {
+							addDelegate.Invoke(newDestination, element);
+						}
+						destination = newDestination;
+					}
+					else {
+						// Update destination collection (we remove first
+						// so that we have less items to go through)
+						foreach (var element in elementsToRemove) {
+							if (!removeDelegate.Invoke(destination, element))
+								throw new InvalidOperationException($"Could not remove element {element} from the destination collection {destination}");
+						}
+						foreach (var element in elementsToAdd) {
+							addDelegate.Invoke(destination, element);
+						}
+					}
+				}
+				finally {
+					ObjectPool.Lists.Return(elementsToAdd);
+					ObjectPool.Lists.Return(elementsToRemove);
+					if (matchedDestinations != null)
+						ObjectPool.Lists.Return(matchedDestinations);
+				}
+			}
+			else
+				throw new InvalidOperationException("Destination is not an enumerable"); // Should not happen
+
+			return destination;
 		}
 	}
 }

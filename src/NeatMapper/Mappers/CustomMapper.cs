@@ -5,8 +5,8 @@ namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMapper"/> which maps objects by using <see cref="INewMap{TSource, TDestination}"/>,
 	/// <see cref="IMergeMap{TSource, TDestination}"/> (and their static counterparts) and any additional map.
-	/// Caches <see cref="MappingContext"/> for each provided <see cref="MappingOptions"/>, so that same options
-	/// will reuse the same context.
+	/// Caches <see cref="MappingContext"/> for each provided <see cref="MappingOptions"/> (only if
+	/// they are cached as well), so that same options will reuse the same context.
 	/// </summary>
 	public sealed class CustomMapper : IMapper, IMapperFactory, IMapperMaps {
 		/// <summary>
@@ -140,8 +140,11 @@ namespace NeatMapper {
 		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if(!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null) {
 				// Forward new map to merge by creating a destination
-				if (!sourceType.IsGenericTypeDefinition && !destinationType.IsGenericTypeDefinition && ObjectFactory.CanCreate(destinationType))
+				if (!sourceType.IsGenericTypeDefinition && !destinationType.IsGenericTypeDefinition &&
+					ObjectFactory.CanCreate(destinationType)) { 
+
 					return Map(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions);
+				}
 				else
 					throw new MapNotFoundException((sourceType, destinationType));
 			}

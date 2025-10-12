@@ -2,28 +2,30 @@
 
 namespace NeatMapper {
 	/// <summary>
-	/// A factory which can be used to map objects of a given type into new objects of another type.<br/>
-	/// Even if the factory was created successfully it may fail at mapping the given objects (or even types),
+	/// A factory which can be used to match objects of a given type with new objects of another type.<br/>
+	/// Even if the factory was created successfully it may fail at matching the given objects (or even types),
 	/// so you should catch exceptions thrown by the methods and act accordingly.<br/>
-	/// Created by <see cref="IMapperFactory"/>.
+	/// Created by <see cref="IMatcherFactory"/>.
 	/// </summary>
 	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
 	public interface IMatchMapFactory : IDisposable {
 		/// <summary>
-		/// Type of the object to map.
+		/// Type of the source object to compare.
 		/// </summary>
 		Type SourceType { get; }
 
 		/// <summary>
-		/// Type of the destination object to create.
+		/// Type of the destination object to be compared to.
 		/// </summary>
 		Type DestinationType { get; }
 
 		/// <summary>
 		/// Checks if two objects are equivalent (usually by comparing the keys of the two).
 		/// </summary>
-		/// <param name="source">Source object, may be null.</param>
-		/// <param name="destination">Destination object, may be null.</param>
+		/// <param name="source">Source object, of type <see cref="SourceType"/>, may be null.</param>
+		/// <param name="destination">
+		/// Destination object, of type <see cref="DestinationType"/>, may be null.
+		/// </param>
 		/// <returns><see langword="true"/> if the two objects match.</returns>
 		/// <exception cref="MatcherException">An exception was thrown inside the map.</exception>
 		bool Invoke(object? source, object? destination);

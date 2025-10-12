@@ -163,7 +163,6 @@ namespace NeatMapper.Tests.Mapping {
 				INewMap<Category, int?>
 #endif
 			.Map(Category source, MappingContext context) {
-
 				categoryOptions.Add(context.MappingOptions);
 				return source?.Id;
 			}
