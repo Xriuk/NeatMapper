@@ -402,7 +402,7 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			return mapper.MapAsync<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(source, destination,
+			return mapper.MapAsync(source, destination,
 				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(DelegateMatcher.Create(matcher)),
 				cancellationToken);
 		}
@@ -415,7 +415,7 @@ namespace NeatMapper {
 			MatchMapDelegate<TSourceElement, TDestinationElement> matcher,
 			CancellationToken cancellationToken) {
 
-			return mapper.MapAsync<TSourceElement, TDestinationElement>(source, destination, matcher, (MappingOptions?)null, cancellationToken);
+			return mapper.MapAsync(source, destination, matcher, (MappingOptions?)null, cancellationToken);
 		}
 
 		/// <inheritdoc cref="MapAsync{TSourceElement, TDestinationElement}(IAsyncMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions?, CancellationToken)"/>
@@ -427,7 +427,7 @@ namespace NeatMapper {
 			IEnumerable? mappingOptions,
 			CancellationToken cancellationToken = default) {
 
-			return mapper.MapAsync<TSourceElement, TDestinationElement>(source, destination, matcher, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
+			return mapper.MapAsync(source, destination, matcher, mappingOptions != null ? new MappingOptions(mappingOptions) : null, cancellationToken);
 		}
 		#endregion
 
@@ -459,7 +459,7 @@ namespace NeatMapper {
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.MapAsync<IEnumerable<TElement>, ICollection<TElement>>(source, destination,
+			return mapper.MapAsync(source, destination,
 				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(EqualityComparerMatcher.Create(comparer)),
 				cancellationToken);
 		}
@@ -472,7 +472,7 @@ namespace NeatMapper {
 			IEqualityComparer<TElement?> comparer,
 			CancellationToken cancellationToken) {
 
-			return mapper.MapAsync<TElement>(source, destination, comparer, (MappingOptions?)null, cancellationToken);
+			return mapper.MapAsync(source, destination, comparer, (MappingOptions?)null, cancellationToken);
 		}
 
 		/// <inheritdoc cref="MapAsync{TElement}(IAsyncMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions?, CancellationToken)"/>
@@ -484,7 +484,7 @@ namespace NeatMapper {
 			IEnumerable? mappingOptions,
 			CancellationToken cancellationToken = default) {
 
-			return mapper.MapAsync<TElement>(source, destination, comparer, mappingOptions, cancellationToken);
+			return mapper.MapAsync(source, destination, comparer, mappingOptions, cancellationToken);
 		}
 		#endregion
 		#endregion

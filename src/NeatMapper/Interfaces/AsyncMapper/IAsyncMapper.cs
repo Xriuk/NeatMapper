@@ -8,9 +8,11 @@ namespace NeatMapper {
 	/// </summary>
 	/// <remarks>
 	/// Note to implementers: if a mapper does not support one of the methods
-	/// (<see cref="MapAsync(object?, Type, Type, MappingOptions, CancellationToken)"/> or
-	/// <see cref="MapAsync(object?, Type, object?, Type, MappingOptions, CancellationToken)"/>) it should throw
-	/// <see cref="MapNotFoundException"/> inside.<br/>
+	/// (<see cref="MapAsync(object?, Type, Type, MappingOptions?, CancellationToken)"/> or
+	/// <see cref="MapAsync(object?, Type, object?, Type, MappingOptions?, CancellationToken)"/>)
+	/// it should throw <see cref="MapNotFoundException"/> inside (and return false in the corresponding
+	/// <see cref="CanMapAsyncNew(Type, Type, MappingOptions?)"/> or
+	/// <see cref="CanMapAsyncMerge(Type, Type, MappingOptions?)"/> method).<br/>
 	/// Implementations of this interface must be thread-safe.
 	/// </remarks>
 	public interface IAsyncMapper {

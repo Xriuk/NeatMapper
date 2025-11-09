@@ -7,7 +7,7 @@ using System.Linq;
 namespace NeatMapper {
 	/// <summary>
 	/// <see cref="IMatcher"/> which matches collections by using another <see cref="IMatcher"/> to match elements.
-	/// Different matching options are available, defined
+	/// Different matching options are available, defined in <see cref="CollectionMatchersOptions"/>.
 	/// </summary>
 	public sealed class CollectionMatcher : IMatcher, IMatcherFactory {
 		/// <summary>

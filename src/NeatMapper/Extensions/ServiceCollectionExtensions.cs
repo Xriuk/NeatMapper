@@ -157,7 +157,7 @@ namespace NeatMapper {
 			#region IMapper
 			// Add mappers to composite mapper
 			services.AddOptions<CompositeMapperOptions>()
-				.Configure<CustomMapper, ProjectionMapper, EnumMapper, IServiceProvider>((o, c, p, e, s) => {
+				.Configure<CustomMapper, ProjectionMapper, EnumMapper>((o, c, p, e) => {
 					o.Mappers.Add(c);
 					o.Mappers.Add(p);
 					o.Mappers.Add(e);
@@ -239,17 +239,16 @@ namespace NeatMapper {
 				.Configure<AsyncCustomMapper, IServiceProvider>((o, c, s) => {
 					o.Mappers.Add(c);
 				})
-				.PostConfigure<IServiceProvider>((o, s) => {
+				.PostConfigure<IMapper, IServiceProvider>((o, m, s) => {
 					// Creating nullable and collection mappers with AsyncEmptyMapper to avoid recursion,
 					// the element mapper will be overridden by composite mapper
-#pragma warning disable CS0618
 					o.Mappers.Add(new AsyncNullableMapper(AsyncEmptyMapper.Instance));
 					o.Mappers.Add(new AsyncCollectionMapper(
 						AsyncEmptyMapper.Instance,
 						s.GetService<IOptionsMonitor<AsyncCollectionMappersOptions>>()?.CurrentValue,
 						s.GetService<IMatcher>(),
 						s.GetService<IOptionsMonitor<MergeCollectionsOptions>>()?.CurrentValue));
-#pragma warning restore CS0618
+					o.Mappers.Add(new AsyncIMapperWrapperMapper(m));
 				});
 
 

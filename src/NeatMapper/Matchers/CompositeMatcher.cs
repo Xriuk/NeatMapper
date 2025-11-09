@@ -3,7 +3,7 @@ using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMatcher"/> which delegates mapping to other <see cref="IMatcher"/>s,
+	/// <see cref="IMatcher"/> which delegates matching to other <see cref="IMatcher"/>s,
 	/// this allows to combine different matching capabilities.<br/>
 	/// Types can be matched in any order, the exact one is tried first, then the types are reverted. This
 	/// behaviour can be configured with <see cref="CompositeMatcherOptions"/> (and

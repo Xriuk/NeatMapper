@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 
@@ -14,8 +15,16 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CopyMapper : IMapper, IMapperFactory {
 		private class CopyMapperInternalOptions {
+			// Normal maps and factories
 			public readonly ConcurrentDictionary<(object Source, Type SourceType, object? Destination, Type DestinationType), object?> ResultsCache =
 				new ConcurrentDictionary<(object, Type, object?, Type), object?>();
+
+
+			// Only factories
+			// Owner which will dispose of the factories
+			public CopyMapper Owner = null!;
+
+			public readonly ConcurrentDictionary<Type, Lazy<IDisposable>> TypeFactories = new ConcurrentDictionary<Type, Lazy<IDisposable>>();
 		}
 
 		private class MemberInfoEqualityComparer<TMember> : IEqualityComparer<TMember> where TMember : MemberInfo {
@@ -27,12 +36,18 @@ namespace NeatMapper {
 			}
 
 			public int GetHashCode(TMember obj) {
-				int hash = 17;
-				hash = hash * 31 + obj.Module.GetHashCode();
-				hash = hash * 31 + obj.MetadataToken.GetHashCode();
-				return hash;
+				return HashUtils.Combine(obj.Module, obj.MetadataToken);
 			}
 		}
+		
+		private static readonly PropertyInfo IDictionary_MemberInfo_IDisposable_indexer =
+			typeof(IDictionary<MemberInfo, Lazy<IDisposable>>)
+				.GetProperties()
+				.Single(p => p.GetIndexParameters().Length > 0);
+		private static readonly MethodInfo INewMapFactory_Invoke = TypeUtils.GetMethod(() => default(INewMapFactory)!.Invoke(default));
+		private static readonly MethodInfo IMergeMapFactory_Invoke = TypeUtils.GetMethod(() => default(IMergeMapFactory)!.Invoke(default, default));
+		private static readonly MethodInfo IMapper_MapNew = TypeUtils.GetMethod(() => default(IMapper)!.Map(default, default!, default!, default));
+		private static readonly MethodInfo IMapper_MapMerge = TypeUtils.GetMethod(() => default(IMapper)!.Map(default, default!, default, default!, default));
 
 
 		/// <summary>
@@ -55,6 +70,13 @@ namespace NeatMapper {
 		/// </summary>
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
 
+		private readonly ConcurrentDictionary<(Type From, Type To, int OptionsHash), IEnumerable<MemberInfo>> _membersCache =
+			new ConcurrentDictionary<(Type, Type, int), IEnumerable<MemberInfo>>();
+		private readonly ConcurrentDictionary<(Type From, Type To, int OptionsHash), Action<object, object, IDictionary<MemberInfo, Lazy<IDisposable>>>> _factoriesDelegatesCache =
+			new ConcurrentDictionary<(Type, Type, int), Action<object, object, IDictionary<MemberInfo, Lazy<IDisposable>>>>();
+		private readonly ConcurrentDictionary<(Type From, Type To, int OptionsHash), Action<object, object, IMapper, MappingOptions>> _mapperDelegatesCache =
+			new ConcurrentDictionary<(Type, Type, int), Action<object, object, IMapper, MappingOptions>>();
+
 		/// <summary>
 		/// Creates a new instance of <see cref="CopyMapper"/>.
 		/// </summary>
@@ -74,19 +96,21 @@ namespace NeatMapper {
 			mappers.Add(IdentityMapper.Instance);
 			_deepMapper = new CompositeMapper(mappers);
 			_copyMapperOptions = copyMapperOptions != null ? new CopyMapperOptions(copyMapperOptions) : new CopyMapperOptions();
-			_mappersCache = new MappingOptionsFactoryCache<IMapper>(o => {
-				var copyMapperOptions = o.GetOptions<CopyMapperMappingOptions>();
+			_mappersCache = new MappingOptionsFactoryCache<IMapper>(options => {
+				var copyMapperOptions = options.GetOptions<CopyMapperMappingOptions>();
 				if ((copyMapperOptions?.DeepCopy ?? _copyMapperOptions.DeepCopy) == DeepCopyFlags.None)
 					return IdentityMapper.Instance;
 				else {
-					var mapper = o.GetOptions<MapperOverrideMappingOptions>()?.Mapper;
+					var mapper = options.GetOptions<MapperOverrideMappingOptions>()?.Mapper;
 					if (mapper != null)
 						return new CompositeMapper(mapper, this, IdentityMapper.Instance);
 					else
 						return _deepMapper;
 				}
 			});
-			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(o => o.ReplaceOrAdd<CopyMapperInternalOptions>(o => o ?? new CopyMapperInternalOptions()));
+			var nestedMappingContext = new NestedMappingContext(this);
+			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<NestedMappingContext>(
+				n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, options.Cached));
 		}
 
 
@@ -126,7 +150,10 @@ namespace NeatMapper {
 			if (source == null)
 				return null;
 
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+			if (source == destination)
+				return destination;
+
+			mappingOptions = GetOrCreateOptions(mappingOptions);
 			var resultsCache = mappingOptions.GetOptions<CopyMapperInternalOptions>()!.ResultsCache;
 
 			if (resultsCache.TryGetValue((source, sourceType, destination, destinationType), out var result))
@@ -143,91 +170,59 @@ namespace NeatMapper {
 
 			var deepMapper = _mappersCache.GetOrCreate(mappingOptions);
 
+			// Create the delegate
 			var copyMapperOptions = mappingOptions.GetOptions<CopyMapperMappingOptions>();
-			var useMerge = !(copyMapperOptions?.DeepCopy ?? _copyMapperOptions.DeepCopy).HasFlag(DeepCopyFlags.OverrideInstance);
+			var hash = HashUtils.Combine(
+				copyMapperOptions?.PropertiesToMap ?? _copyMapperOptions.PropertiesToMap,
+				copyMapperOptions?.FieldsToMap ?? _copyMapperOptions.FieldsToMap,
+				copyMapperOptions?.DeepCopy ?? _copyMapperOptions.DeepCopy);
+			var deleg = _mapperDelegatesCache.GetOrAdd((sourceType, destinationType, hash), _ => {
+				var members = GetMembers(sourceType, destinationType,
+					copyMapperOptions?.PropertiesToMap ?? _copyMapperOptions.PropertiesToMap,
+					copyMapperOptions?.FieldsToMap ?? _copyMapperOptions.FieldsToMap);
 
-			try { 
-				// Retrieve the shared set of properties to copy, we do this before fields so that we can run code
-				// in get/set functions if needed
-				var propertyFlags = GetBindingFlags(copyMapperOptions?.PropertiesToMap ?? _copyMapperOptions.PropertiesToMap);
-				var isNonPublic = propertyFlags.HasFlag(BindingFlags.NonPublic);
-				var properties = sourceType.GetProperties(propertyFlags)
-					.Intersect(destinationType.GetProperties(propertyFlags), MemberInfoEqualityComparer<PropertyInfo>.Instance)
-					.Where(p => p.CanRead && p.CanWrite && p.GetAccessors(true).All(m => !m.IsStatic && (isNonPublic || m.IsPublic)))
-					.ToList();
-				foreach(var property in properties) {
-					object? sourceValue;
-					try {
-						sourceValue = property.GetValue(source);
-					}
-					catch(Exception e) {
-						throw new InvalidOperationException($"Could not retrieve value from property {property.Name} in the source object", e);
-					}
+				var useMerge = (copyMapperOptions?.DeepCopy ?? _copyMapperOptions.DeepCopy) == DeepCopyFlags.DeepMap;
 
-					object? destinationValue;
+				var sourceParam = Expression.Parameter(typeof(object), "source");
+				var destinationParam = Expression.Parameter(typeof(object), "destination");
+				var mapperParam = Expression.Parameter(typeof(IMapper), "mapper");
+				var mappingOptionsParam = Expression.Parameter(typeof(MappingOptions), "mappingOptions");
+				var propertyAssignments = members.Select(m => {
+					// (Type)
+					var memberType = m is PropertyInfo p ? p.PropertyType : ((FieldInfo)m).FieldType;
+					var memberTypeConst = Expression.Constant(memberType);
+
+					// ((TDestination)destination).Prop
+					var destinationProp = Expression.MakeMemberAccess(Expression.Convert(destinationParam, destinationType), m);
+
+					// (object)((TSource)source).Prop
+					Expression body = Expression.Convert(Expression.MakeMemberAccess(Expression.Convert(sourceParam, sourceType), m), typeof(object));
+
 					if (useMerge) {
-						try {
-							destinationValue = property.GetValue(destination);
-						}
-						catch (Exception e) {
-							throw new InvalidOperationException($"Could not retrieve value from property {property.Name} in the destination object", e);
-						}
+						// mapper.Map(..., (Type), (object)((TDestination)destination).Prop, (Type), mappingOptions)
+						body = Expression.Call(
+							mapperParam,
+							IMapper_MapMerge,
+							body, memberTypeConst, Expression.Convert(destinationProp, typeof(object)), memberTypeConst, mappingOptionsParam);
 					}
-					else
-						destinationValue = null;
-
-					if (useMerge)
-						sourceValue = deepMapper.Map(sourceValue, property.PropertyType, destinationValue, property.PropertyType, mappingOptions);
-					else
-						sourceValue = deepMapper.Map(sourceValue, property.PropertyType, property.PropertyType, mappingOptions);
-
-					try {
-						property.SetValue(destination, sourceValue);
-					}
-					catch (Exception e) {
-						throw new InvalidOperationException($"Could not set value for property {property.Name} in the destination object", e);
-					}
-				}
-
-				// Retrieve the shared set of fields to copy
-				var fieldFlags = GetBindingFlags(copyMapperOptions?.FieldsToMap ?? _copyMapperOptions.FieldsToMap);
-				var fields = sourceType.GetFields(fieldFlags)
-					.Intersect(destinationType.GetFields(fieldFlags), MemberInfoEqualityComparer<FieldInfo>.Instance)
-					.Where(f => !f.IsStatic)
-					.ToList();
-				foreach (var field in fields) {
-					object? sourceValue;
-					try {
-						sourceValue = field.GetValue(source);
-					}
-					catch (Exception e) {
-						throw new InvalidOperationException($"Could not retrieve value from field {field.Name} in the source object", e);
+					else {
+						// mapper.Map(..., (Type), (Type), mappingOptions)
+						body = Expression.Call(
+							mapperParam,
+							IMapper_MapNew,
+							body, memberTypeConst, memberTypeConst, mappingOptionsParam);
 					}
 
-					object? destinationValue;
-					if (useMerge) {
-						try {
-							destinationValue = field.GetValue(destination);
-						}
-						catch (Exception e) {
-							throw new InvalidOperationException($"Could not retrieve value from field {field.Name} in the destination object", e);
-						}
-					}
-					else
-						destinationValue = null;
+					// ((TDestination)destination).Prop = (Type)...
+					return Expression.Assign(destinationProp, Expression.Convert(body, memberType));
+				});
+				return Expression.Lambda<Action<object, object, IMapper, MappingOptions>>(
+					members.Any() ? Expression.Block(propertyAssignments) : Expression.Empty(),
+					sourceParam, destinationParam, mapperParam, mappingOptionsParam).Compile();
+			});
 
-					if (useMerge)
-						sourceValue = deepMapper.Map(sourceValue, field.FieldType, destinationValue, field.FieldType, mappingOptions);
-					else
-						sourceValue = deepMapper.Map(sourceValue, field.FieldType, field.FieldType, mappingOptions);
-
-					try {
-						field.SetValue(destination, sourceValue);
-					}
-					catch (Exception e) {
-						throw new InvalidOperationException($"Could not set value for field {field.Name} in the destination object", e);
-					}
-				}
+			try {
+				deleg.Invoke(source, destination, deepMapper, mappingOptions);
 			}
 			catch (Exception e) {
 				throw new MappingException(e, (sourceType, destinationType));
@@ -258,128 +253,132 @@ namespace NeatMapper {
 			if (!CanMapMerge(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-			var resultsCache = mappingOptions.GetOptions<CopyMapperInternalOptions>()!.ResultsCache;
-
-			var deepMapper = _mappersCache.GetOrCreate(mappingOptions);
+			mappingOptions = GetOrCreateOptions(mappingOptions);
+			var copyMapperInternalOptions = mappingOptions.GetOptions<CopyMapperInternalOptions>()!;
+			var resultsCache = copyMapperInternalOptions.ResultsCache;
 
 			var copyMapperOptions = mappingOptions.GetOptions<CopyMapperMappingOptions>();
-			var useMerge = !(copyMapperOptions?.DeepCopy ?? _copyMapperOptions.DeepCopy).HasFlag(DeepCopyFlags.OverrideInstance);
+			var deepCopy = copyMapperOptions?.DeepCopy ?? _copyMapperOptions.DeepCopy;
+			var useMerge = deepCopy == DeepCopyFlags.DeepMap;
 
 			var destinationFactory = ObjectFactory.CreateFactory(destinationType);
 
-			// Retrieve the shared set of properties to copy, we do this before fields so that we can run code
-			// in get/set functions if needed
-			var propertyFlags = GetBindingFlags(copyMapperOptions?.PropertiesToMap ?? _copyMapperOptions.PropertiesToMap);
-			var isNonPublic = propertyFlags.HasFlag(BindingFlags.NonPublic);
-			var properties = sourceType.GetProperties(propertyFlags)
-				.Intersect(destinationType.GetProperties(propertyFlags), MemberInfoEqualityComparer<PropertyInfo>.Instance)
-				.Where(p => p.CanRead && p.CanWrite && p.GetAccessors(true).All(m => !m.IsStatic && (isNonPublic || m.IsPublic)))
-				.ToList();
+			// Retrieve the shared set of properties and fields
+			var members = GetMembers(sourceType, destinationType,
+				copyMapperOptions?.PropertiesToMap ?? _copyMapperOptions.PropertiesToMap,
+				copyMapperOptions?.FieldsToMap ?? _copyMapperOptions.FieldsToMap);
 
-			// Retrieve the shared set of fields to copy
-			var fieldFlags = GetBindingFlags(copyMapperOptions?.FieldsToMap ?? _copyMapperOptions.FieldsToMap);
-			var fields = sourceType.GetFields(fieldFlags)
-				.Intersect(destinationType.GetFields(fieldFlags), MemberInfoEqualityComparer<FieldInfo>.Instance)
-				.Where(f => !f.IsStatic)
-				.ToList();
+			var deepMapper = _mappersCache.GetOrCreate(mappingOptions);
 
-			return new DefaultMergeMapFactory(sourceType, destinationType,
-				(source, destination) => {
-					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-					TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+			// Create the factories for all property/field types, factories are lazy because of recursive types initialization
+			// Property/field type -> NewMapFactory/MergeMapFactory (lazy)
+			// DEV: does it make sense to cache type factories across all the maps when mapping options could be different for nested maps?
+			var factories = members.ToDictionary(m => m, m => {
+				var type = m is PropertyInfo p ? p.PropertyType : ((FieldInfo)m).FieldType;
+				return copyMapperInternalOptions.TypeFactories.GetOrAdd(type, _ => new Lazy<IDisposable>(() => {
+					if (useMerge)
+						return deepMapper.MapMergeFactory(type, type, mappingOptions);
+					else
+						return deepMapper.MapNewFactory(type, type, mappingOptions);
+				}, true));
+			}, MemberInfoEqualityComparer<MemberInfo>.Instance);
+			var disposed = false; // Needed to avoid looping forever
+			try { 
+				// Create the delegate
+				var hash = HashUtils.Combine(
+					copyMapperOptions?.PropertiesToMap ?? _copyMapperOptions.PropertiesToMap,
+					copyMapperOptions?.FieldsToMap ?? _copyMapperOptions.FieldsToMap,
+					deepCopy);
+				var deleg = _factoriesDelegatesCache.GetOrAdd((sourceType, destinationType, hash), _ => {
+					var sourceParam = Expression.Parameter(typeof(object), "source");
+					var destinationParam = Expression.Parameter(typeof(object), "destination");
+					var factoriesParam = Expression.Parameter(typeof(IDictionary<MemberInfo, Lazy<IDisposable>>), "factories");
+					var propertyAssignments = members.Select(m => {
+						// (Type)
+						var memberType = m is PropertyInfo p ? p.PropertyType : ((FieldInfo)m).FieldType;
 
-					if (source == null)
-						return null;
+						// ((TDestination)destination).Prop
+						var destinationProp = Expression.MakeMemberAccess(Expression.Convert(destinationParam, destinationType), m);
 
-					if (resultsCache.TryGetValue((source, sourceType, destination, destinationType), out var result))
-						return result;
+						// (object)((TSource)source).Prop
+						Expression body = Expression.Convert(Expression.MakeMemberAccess(Expression.Convert(sourceParam, sourceType), m), typeof(object));
 
-					// The bool var is needed because of race conditions on creation
-					var created = false;
-					destination = resultsCache.GetOrAdd((source, sourceType, destination, destinationType), r => {
-						created = true;
-						return r.Destination ?? destinationFactory.Invoke();
-					})!;
-					if (!created)
-						return destination;
+						// factories[m].Value
+						var factory = Expression.Property(Expression.MakeIndex(factoriesParam, IDictionary_MemberInfo_IDisposable_indexer, [Expression.Constant(m)]), nameof(Lazy<object>.Value));
 
-					try {
-						// DEV: convert below to delegate/compiled expression to improve performance
-						foreach (var property in properties) {
-							object? sourceValue;
-							try {
-								sourceValue = property.GetValue(source);
-							}
-							catch (Exception e) {
-								throw new InvalidOperationException($"Could not retrieve value from property {property.Name} in the source object", e);
-							}
-
-							object? destinationValue;
-							if (useMerge) {
-								try {
-									destinationValue = property.GetValue(destination);
-								}
-								catch (Exception e) {
-									throw new InvalidOperationException($"Could not retrieve value from property {property.Name} in the destination object", e);
-								}
-							}
-							else
-								destinationValue = null;
-
-							if (useMerge)
-								sourceValue = deepMapper.Map(sourceValue, property.PropertyType, destinationValue, property.PropertyType, mappingOptions);
-							else
-								sourceValue = deepMapper.Map(sourceValue, property.PropertyType, property.PropertyType, mappingOptions);
-
-							try {
-								property.SetValue(destination, sourceValue);
-							}
-							catch (Exception e) {
-								throw new InvalidOperationException($"Could not set value for property {property.Name} in the destination object", e);
-							}
+						if (useMerge) {
+							// ((IMergeMapFactory)factories[m].Value).Invoke(..., (object)((TDestination)destination).Prop)
+							body = Expression.Call(
+								Expression.Convert(factory, typeof(IMergeMapFactory)),
+								IMergeMapFactory_Invoke,
+								body, Expression.Convert(destinationProp, typeof(object)));
+						}
+						else {
+							// ((INewMapFactory)factories[m].Value).Invoke(...)
+							body = Expression.Call(
+								Expression.Convert(factory, typeof(INewMapFactory)),
+								INewMapFactory_Invoke,
+								body);
 						}
 
-						foreach (var field in fields) {
-							object? sourceValue;
-							try {
-								sourceValue = field.GetValue(source);
-							}
-							catch (Exception e) {
-								throw new InvalidOperationException($"Could not retrieve value from field {field.Name} in the source object", e);
-							}
-
-							object? destinationValue;
-							if (useMerge) {
-								try {
-									destinationValue = field.GetValue(destination);
-								}
-								catch (Exception e) {
-									throw new InvalidOperationException($"Could not retrieve value from field {field.Name} in the destination object", e);
-								}
-							}
-							else
-								destinationValue = null;
-
-							if (useMerge)
-								sourceValue = deepMapper.Map(sourceValue, field.FieldType, destinationValue, field.FieldType, mappingOptions);
-							else
-								sourceValue = deepMapper.Map(sourceValue, field.FieldType, field.FieldType, mappingOptions);
-
-							try {
-								field.SetValue(destination, sourceValue);
-							}
-							catch (Exception e) {
-								throw new InvalidOperationException($"Could not set value for field {field.Name} in the destination object", e);
-							}
-						}
-					}
-					catch (Exception e) {
-						throw new MappingException(e, (sourceType, destinationType));
-					}
-
-					return destination;
+						// destination.Prop = (Type)...
+						return Expression.Assign(destinationProp, Expression.Convert(body, memberType));
+					});
+					return Expression.Lambda<Action<object, object, IDictionary<MemberInfo, Lazy<IDisposable>>>>(
+						members.Any() ? Expression.Block(propertyAssignments) : Expression.Empty(),
+						sourceParam, destinationParam, factoriesParam).Compile();
 				});
+
+				return new DisposableMergeMapFactory(sourceType, destinationType,
+					(source, destination) => {
+						TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+						TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+						if (source == null)
+							return null;
+
+						if (resultsCache.TryGetValue((source, sourceType, destination, destinationType), out var result))
+							return result;
+
+						// The bool var is needed because of race conditions on creation
+						var created = false;
+						destination = resultsCache.GetOrAdd((source, sourceType, destination, destinationType), r => {
+							created = true;
+							return r.Destination ?? destinationFactory.Invoke();
+						})!;
+						if (!created)
+							return destination;
+
+						try {
+							deleg.Invoke(source, destination, factories);
+						}
+						catch (Exception e) {
+							throw new MappingException(e, (sourceType, destinationType));
+						}
+
+						return destination;
+					}, copyMapperInternalOptions.Owner == this ? [ new LazyDisposable(DisposeFactories) ] : []);
+			}
+			catch {
+				DisposeFactories();
+
+				throw;
+			}
+
+
+			void DisposeFactories() {
+				lock (copyMapperInternalOptions.TypeFactories) {
+					if(disposed)
+						return;
+
+					disposed = true;
+
+					foreach (var factory in copyMapperInternalOptions.TypeFactories.Values) {
+						if (factory.IsValueCreated)
+							factory.Value.Dispose();
+					}
+				}
+			}
 		}
 		#endregion
 
@@ -389,6 +388,40 @@ namespace NeatMapper {
 			return BindingFlags.Instance |
 				(flags.HasFlag(MemberVisibilityFlags.Public) ? BindingFlags.Public : BindingFlags.Default) |
 				(flags.HasFlag(MemberVisibilityFlags.NonPublic) ? BindingFlags.NonPublic : BindingFlags.Default);
+		}
+
+		private IEnumerable<MemberInfo> GetMembers(Type sourceType, Type destinationType,
+			MemberVisibilityFlags propertiesToMap, MemberVisibilityFlags fieldsToMap) {
+			
+			var hash = HashUtils.Combine(propertiesToMap, fieldsToMap);
+			return _membersCache.GetOrAdd((sourceType, destinationType, hash), _ => {
+				// Retrieve the shared set of properties to copy and create factories for them
+				var propertyBindingFlags = GetBindingFlags(propertiesToMap);
+				var isNonPublic = propertyBindingFlags.HasFlag(BindingFlags.NonPublic);
+				var properties = sourceType.GetProperties(propertyBindingFlags)
+					.Intersect(destinationType.GetProperties(propertyBindingFlags), MemberInfoEqualityComparer<PropertyInfo>.Instance)
+					.Where(p => p.CanRead && p.CanWrite && p.GetAccessors(true).All(m => !m.IsStatic && (isNonPublic || m.IsPublic)));
+
+				// Retrieve the shared set of fields to copy
+				var fieldBindingFlags = GetBindingFlags(fieldsToMap);
+				var fields = sourceType.GetFields(fieldBindingFlags)
+					.Intersect(destinationType.GetFields(fieldBindingFlags), MemberInfoEqualityComparer<FieldInfo>.Instance)
+					.Where(f => !f.IsStatic);
+
+				return properties
+					.Cast<MemberInfo>()
+					.Concat(fields)
+					.ToList();
+			});
+		}
+
+		// Internal options contain cached results lookup and we don't want to save it, so we recreate it for each different map
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		private MappingOptions GetOrCreateOptions(MappingOptions? mappingOptions) {
+			return _optionsCache.GetOrCreate(mappingOptions)
+				.ReplaceOrAdd<CopyMapperInternalOptions>(o => o ?? new CopyMapperInternalOptions {
+					Owner = this
+				});
 		}
 	}
 }

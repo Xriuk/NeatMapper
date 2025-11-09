@@ -188,6 +188,10 @@ namespace NeatMapper {
 
 		#region IMapperMaps methods
 		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
+			// If we are in a nested map retrieval we ignore ourselves
+			if (mappingOptions?.GetOptions<NestedMappingContext>()?.CheckRecursive(c => c.ParentMapper == this) == true)
+				return [];
+
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var concreteMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
@@ -213,7 +217,7 @@ namespace NeatMapper {
 		}
 
 		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
-			return Enumerable.Empty<(Type, Type)>();
+			return [];
 		}
 		#endregion
 

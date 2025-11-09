@@ -1,15 +1,22 @@
 # Changelog
 
-## [6.0.1] - Unreleased
+## [6.1.0] - Unreleased
 
 ### Removed
 
 - Exceptions info removed from docs for maps interfaces (`INewMap`, `IMergeMap`, ...) because user maps can throw any exceptions and they will be wrapped by the mapper/matcher/projector into `MappingException`/`MatcherException`/`ProjectionException`.
 
+### Changed
+
+- `AsyncIMapperWrapperMapper` added to `AsyncCompositeMapperOptions` as last mapper with the default `IMapper` provided to it.
+
 ### Fixed
 
+- `CopyMapper` cache which was incorrectly caching results for different mappings when provided `MappingOptions` were the same (and cached or null/empty).
 - Delegates type parameters covariance.
 - `MappingOptions` Replace and ReplaceOrAdd added type check to options returned from factories.
+- `CopyMapper` now correctly creates a `NestedMappingContext` during mapping.
+- `(Async)NullableMapper` fixed `Get(Async)NewMaps` recursion.
 
 
 ## [6.0.0] - 2025-08-05

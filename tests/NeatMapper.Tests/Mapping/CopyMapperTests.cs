@@ -165,7 +165,7 @@ namespace NeatMapper.Tests.Mapping {
 				Id = 4,
 				Parent = category
 			};
-			var result = _mapper.Map(source, destination, new MappingOptions(new CopyMapperMappingOptions(deepCopy: DeepCopyFlags.DeepMap | DeepCopyFlags.OverrideInstance)));
+			var result = _mapper.Map(source, destination, new MappingOptions(new CopyMapperMappingOptions(deepCopy: DeepCopyFlags.OverrideInstance)));
 			Assert.AreNotSame(source, result);
 			Assert.AreSame(destination, result);
 			Assert.AreEqual(source.Id, result.Id);
@@ -277,6 +277,17 @@ namespace NeatMapper.Tests.Mapping {
 
 			Assert.AreNotSame(source, result);
 			Assert.AreEqual(source.Test, result.Test);
+		}
+
+		[TestMethod]
+		public void ShouldNotCacheResultsForDifferentMaps() {
+			var category = new Category {
+				Id = 1
+			};
+
+			var result1 = _mapper.Map<Category>(category);
+			var result2 = _mapper.Map<Category>(category);
+			Assert.AreNotSame(result1, result2);
 		}
 	}
 }

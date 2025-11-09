@@ -339,7 +339,7 @@ namespace NeatMapper {
 			if (matcher == null)
 				throw new ArgumentNullException(nameof(matcher));
 
-			return mapper.Map<IEnumerable<TSourceElement>, ICollection<TDestinationElement>>(source, destination,
+			return mapper.Map(source, destination,
 				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(DelegateMatcher.Create(matcher)));
 		}
 
@@ -351,7 +351,7 @@ namespace NeatMapper {
 			MatchMapDelegate<TSourceElement, TDestinationElement> matcher,
 			IEnumerable? mappingOptions) {
 
-			return mapper.Map<TSourceElement, TDestinationElement>(source, destination, matcher, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return mapper.Map(source, destination, matcher, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="Map{TSourceElement, TDestinationElement}(IMapper, IEnumerable{TSourceElement}, ICollection{TDestinationElement}, MatchMapDelegate{TSourceElement, TDestinationElement}, MappingOptions?)"/>
@@ -362,7 +362,7 @@ namespace NeatMapper {
 			MatchMapDelegate<TSourceElement, TDestinationElement> matcher,
 			params object?[]? mappingOptions) {
 
-			return mapper.Map<TSourceElement, TDestinationElement>(source, destination, matcher, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return mapper.Map(source, destination, matcher, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 
@@ -392,7 +392,7 @@ namespace NeatMapper {
 			if (comparer == null)
 				throw new ArgumentNullException(nameof(comparer));
 
-			return mapper.Map<IEnumerable<TElement>, ICollection<TElement>>(source, destination,
+			return mapper.Map(source, destination,
 				(mappingOptions ?? MappingOptions.Empty).AddMergeCollectionMatchers(EqualityComparerMatcher.Create(comparer)));
 		}
 
@@ -404,7 +404,7 @@ namespace NeatMapper {
 			IEqualityComparer<TElement?> comparer,
 			IEnumerable? mappingOptions) {
 
-			return mapper.Map<TElement>(source, destination, comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
+			return mapper.Map(source, destination, comparer, mappingOptions != null ? new MappingOptions(mappingOptions) : null);
 		}
 
 		/// <inheritdoc cref="Map{TElement}(IMapper, IEnumerable{TElement}, ICollection{TElement}, IEqualityComparer{TElement}, MappingOptions?)"/>
@@ -415,7 +415,7 @@ namespace NeatMapper {
 			IEqualityComparer<TElement?> comparer,
 			params object?[]? mappingOptions) {
 
-			return mapper.Map<TElement>(source, destination, comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
+			return mapper.Map(source, destination, comparer, mappingOptions?.Length > 0 ? new MappingOptions(mappingOptions) : null);
 		}
 		#endregion
 		#endregion

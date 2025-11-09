@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.1.0] - Unreleased
+
+### Changed
+
+- Updated NeatMapper dependency version.
+- Reworked EF Core `IModel` retrieval in dependency injection, which allows greater flexibility in case the DbContext has other DI dependencies.
+
+
 ## [6.0.0] - 2025-08-05
 
 ### Removed

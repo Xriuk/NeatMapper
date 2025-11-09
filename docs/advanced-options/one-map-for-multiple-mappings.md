@@ -54,7 +54,7 @@ var myCategoryDto = mapper.Map<Category, CategoryDto>(myCategory);
 ```
 
 {: .highlight }
-All projection maps can be compiled by default, if your maps are not suitable for compilation (for example it uses methods which can only be converted to other languages by LINQ providers) you can check if your expression is about to be compiled by checking `ProjectionCompilationContext` inside `MappingOptions` of the `ProjectionContext`.
+All projection maps can be compiled by default, if your maps are not suitable for compilation (for example they use methods which can only be converted to other languages by LINQ providers) you can check if your expression is about to be compiled by checking `ProjectionCompilationContext` inside `MappingOptions` of the `ProjectionContext`.
 
 ```csharp
 bool ICanProject<Category, CategoryDto>.CanProject(ProjectionContext context){

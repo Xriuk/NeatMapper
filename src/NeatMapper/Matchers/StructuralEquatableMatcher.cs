@@ -5,8 +5,8 @@ using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Singleton <see cref="IMatcher"/> which matches class implementing <see cref="IStructuralEquatable"/>.
-	///  Objects need to be of the same type (or derived).
+	/// Singleton <see cref="IMatcher"/> which matches classes implementing <see cref="IStructuralEquatable"/>.
+	/// Objects need to be of the same type (or derived).
 	/// </summary>
 	public sealed class StructuralEquatableMatcher : IMatcher, IMatcherFactory {
 		/// <summary>

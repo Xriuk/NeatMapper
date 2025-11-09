@@ -233,7 +233,10 @@ namespace NeatMapper {
 		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
 		/// to avoid recomputing them.
 		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <returns>
+		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
+		/// replaced/added with the provided factory. Or the provided instance if no options were changed.
+		/// </returns>
 		public static MappingOptions ReplaceOrAdd<TOptions>(this MappingOptions options,
 			Func<TOptions?, TOptions?> factory,
 			bool cached = false) where TOptions : class {
@@ -369,7 +372,10 @@ namespace NeatMapper {
 		/// True if the new options created will be reused, and thus can be cached in the mapping chain,
 		/// to avoid recomputing them.
 		/// </param>
-		/// <returns>The new generated options.</returns>
+		/// <returns>
+		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
+		/// replaced/added with the provided factories. Or the provided instance if no options were changed.
+		/// </returns>
 		public static MappingOptions ReplaceOrAdd<TOptions1, TOptions2, TOptions3, TOptions4, TOptions5>(this MappingOptions options,
 			Func<TOptions1?, TOptions1?> factory1,
 			Func<TOptions2?, TOptions2?> factory2,

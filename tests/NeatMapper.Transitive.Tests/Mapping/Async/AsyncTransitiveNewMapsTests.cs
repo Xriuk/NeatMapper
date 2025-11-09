@@ -50,13 +50,11 @@ namespace NeatMapper.Transitive.Tests.Mapping.Async {
 
 		[TestInitialize]
 		public void Initialize() {
-#pragma warning disable CS0618
 			_mapper = new AsyncCompositeMapper(
 				new AsyncCustomMapper(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(Maps) }
 				}),
 				new AsyncTransitiveMapper(AsyncEmptyMapper.Instance));
-#pragma warning restore CS0618
 		}
 
 		private void VerifyMappingContext() {

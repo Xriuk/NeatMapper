@@ -8,7 +8,7 @@ using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Singleton <see cref="IMatcher"/> which matches class implementing
+	/// Singleton <see cref="IMatcher"/> which matches classes implementing
 	/// <see cref="IEqualityOperators{TSelf, TOther, TResult}"/> (with TResult being <see cref="bool"/>).
 	/// The types are matched in the provided order: source type is checked for matching implementations of
 	/// <see cref="IEqualityOperators{TSelf, TOther, TResult}"/> (so multiple types can be matched too).

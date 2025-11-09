@@ -92,6 +92,13 @@ Options applied to `EnumMapper`.
 {: .important }
 Can be overridden during mapping with `EnumMapperMappingOptions`.
 
+## CollectionMatchersOptions
+
+Options applied to `CollectionMatcher`.
+
+{: .important }
+Can be overridden during mapping with `CollectionMatchersMappingOptions`.
+
 # Dependency Injection (DI) Configuration
 
 When using Dependency Injection (DI), additional options can be configured to change how some mappers are created.

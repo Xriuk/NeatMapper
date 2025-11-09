@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using NeatMapper.Transitive;
 
 namespace NeatMapper.Transitive.Tests.DependencyInjection {
 	[TestClass]

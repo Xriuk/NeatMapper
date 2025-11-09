@@ -7,7 +7,7 @@ parent: "Customization"
 
 # Interfaces
 
-Maps can map types based on certain conditions of the context, to achieve this you can implement the corresponding optional interfaces for your maps:
+Maps can map/match/project types based on certain conditions of the context, to achieve this you can implement the corresponding optional interfaces for your maps:
 - `ICanMapNew<TSource, TDestination>` for `INewMap<TSource, TDestination>`
 - `ICanMapMerge<TSource, TDestination>` for `IMergeMap<TSource, TDestination>`
 - `ICanMatch<TSource, TDestination>` for `IMatchMap<TSource, TDestination>`

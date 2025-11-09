@@ -154,7 +154,7 @@ namespace NeatMapper {
 		/// </param>
 		/// <returns>
 		/// The new instance of <see cref="MappingOptions"/> with the options copied from the current instance and
-		/// replaced/added with the provided factories.
+		/// replaced/added with the provided factories. Or the provided instance if no options were changed.
 		/// </returns>
 		/// <exception cref="ArgumentNullException"><paramref name="factories"/> was null.</exception>
 		public MappingOptions ReplaceOrAdd(IDictionary<Type, Func<object?, object?>> factories, bool cached = false) {

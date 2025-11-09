@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.1.0] - Unreleased
+
+### Changed
+
+- Updated NeatMapper dependency version.
+
+
 ## [6.0.0] - 2025-08-05
 
 ### Removed

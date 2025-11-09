@@ -203,6 +203,10 @@ namespace NeatMapper {
 
 		#region IAsyncMapperMaps methods
 		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(MappingOptions? mappingOptions = null) {
+			// If we are in a nested map retrieval we ignore ourselves
+			if (mappingOptions?.GetOptions<AsyncNestedMappingContext>()?.CheckRecursive(c => c.ParentMapper == this) == true)
+				return [];
+
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
 			var concreteMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper
@@ -228,7 +232,7 @@ namespace NeatMapper {
 		}
 
 		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(MappingOptions? mappingOptions = null) {
-			return Enumerable.Empty<(Type, Type)>();
+			return [];
 		}
 		#endregion
 

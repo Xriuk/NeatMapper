@@ -1,19 +1,19 @@
 ﻿namespace NeatMapper {
 	/// <summary>
-	/// Specifies how to handle deep object.
+	/// Specifies how to handle deep objects.
 	/// </summary>
 	public enum DeepCopyFlags {
 		/// <summary>
 		/// Will just copy values as they are. Effectively the same as <see cref="IdentityMapper"/>.
 		/// </summary>
-		None = 0,
+		None,
 		/// <summary>
-		/// Will map values deeply by also mapping nested objects.
+		/// Will map values deeply by also mapping nested objects with a merge map.
 		/// </summary>
-		DeepMap = 1,
+		DeepMap,
 		/// <summary>
-		/// Will always override the destination value by using new maps, if not set will try to merge the values.
+		/// Will map values deeply by also mapping nested objects with a new map.
 		/// </summary>
-		OverrideInstance = 2
+		OverrideInstance // DEV: maybe rename? Together with the whole enum
 	}
 }

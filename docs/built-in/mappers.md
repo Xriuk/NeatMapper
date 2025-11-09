@@ -56,7 +56,7 @@ var myProductDtos = mapper.Map<IEnumerable<Product>, IList<ProductDto>>(myProduc
 
 # CompositeMapper
 
-Delegates mapping to other `IMapper`s. All the mappers are tried in the provided order, for new maps, if no mapper can map the types a destination object is created and merge maps are tried.
+Delegates mapping to other `IMapper`s. All the mappers are tried in the provided order. For new maps, if no mapper can map the types a destination object is created and merge maps are tried.
 
 ```csharp
 // Create the mapper
@@ -76,6 +76,7 @@ var myProductDtos = mapper.Map<IEnumerable<Product>, IList<ProductDto>>(myProduc
 # CopyMapper
 
 Maps objects by copying all supported properties/fields between source and destination (can also copy private ones). Supports derived and base types (non-abstract), and deep copies. Same references are mapped to the same objects, to avoid duplicates and handle recursion.
+See also [CopyMapperOptions](/advanced-options/configuration#copymapperoptions).
 
 ```csharp
 // Create the mapper
@@ -96,10 +97,11 @@ var myBaseProduct = mapper.Map<Product, BaseProduct>(myProduct);
 # EnumMapper
 
 Maps enums to and from their underlying numeric types, strings and other enums. Supports only new maps.
+See also [EnumMapperOptions](/advanced-options/configuration#enummapperoptions).
 
 ```csharp
 // Declare the enums
-public enum Enum1 {
+public enum Enum1 { // int is the default underlying type
 	A,
 	B,
 	C
@@ -185,4 +187,24 @@ var mapper = new ProjectionMapper(new CustomProjector(new CustomMapsOptions{ Typ
 
 // Create a new object (source type is auto-inferred)
 var myProductDto = mapper.Map<ProductDto>(myProduct);
+```
+
+# TypeConverterMapper
+
+Maps objects by using the corresponding `TypeConverter` (via `TypeDescriptor.GetConverter(Type)`).
+Singleton mapper.
+[Built-in TypeConverters](https://learn.microsoft.com/en-us/dotnet/api/system.componentmodel.typeconverter).
+
+```csharp
+// Use built-in DateTimeConverter
+var myDate = TypeConverterMapper.Instance.Map<DateTime>("2025-11-09"); // 2025-11-09T00:00:00Z
+```
+
+# ConvertibleMapper
+
+Maps objects implementing `IConvertible` (via `Convert.ChangeType(object, Type)`). 
+Singleton mapper.
+
+```csharp
+var myDate = ConvertibleMapper.Instance.Map<DateTime>("2025-11-09"); // 2025-11-09T00:00:00Z
 ```

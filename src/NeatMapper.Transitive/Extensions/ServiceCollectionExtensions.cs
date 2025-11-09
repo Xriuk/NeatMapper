@@ -23,11 +23,11 @@ namespace NeatMapper.Transitive {
 				throw new ArgumentNullException(nameof(services));
 
 			var mapper = services.FirstOrDefault(s => s.ServiceType == typeof(IMapper))
-				?? throw new InvalidOperationException("Transitive mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.Transitive package must be added after the core NeatMapper package.");
 			var asyncMapper = services.FirstOrDefault(s => s.ServiceType == typeof(IAsyncMapper))
-				?? throw new InvalidOperationException("Transitive mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.Transitive package must be added after the core NeatMapper package.");
 			var projector = services.FirstOrDefault(s => s.ServiceType == typeof(IProjector))
-				?? throw new InvalidOperationException("Transitive mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.Transitive package must be added after the core NeatMapper package.");
 
 			#region IMapper
 			// Add mapper to composite mapper
@@ -50,9 +50,7 @@ namespace NeatMapper.Transitive {
 			// Creating mapper with AsyncEmptyMapper to avoid recursion, the nested mapper will be overridden by composite mapper
 			services.AddOptions<AsyncCompositeMapperOptions>()
 				.Configure(o => {
-#pragma warning disable CS0618
 					o.Mappers.Add(new AsyncTransitiveMapper(AsyncEmptyMapper.Instance));
-#pragma warning restore CS0618
 				});
 
 			services.Add(new ServiceDescriptor(

@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace NeatMapper {
 	/// <summary>
-	/// Singleton <see cref="IMatcher"/> which matches class implementing <see cref="IEquatable{T}"/>.
+	/// Singleton <see cref="IMatcher"/> which matches classes implementing <see cref="IEquatable{T}"/>.
 	/// The types are matched in the provided order: source type is checked for matching implementations of
 	/// <see cref="IEquatable{T}"/> (so multiple types can be matched too).
 	/// </summary>

@@ -4,9 +4,36 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace NeatMapper.EntityFrameworkCore {
 	public static class ServiceCollectionExtensions {
+		private class IModelRetriever<TContext> where TContext : DbContext {
+			private readonly IServiceProvider _serviceProvider;
+
+
+			private IModel? _model;
+			public IModel Model {
+				get {
+					if(_model == null) {
+						using (var scope = _serviceProvider.CreateScope()) {
+							_model = scope.ServiceProvider.GetRequiredService<TContext>().Model;
+						}
+					}
+					return _model;
+				}
+			}
+
+			public IModelRetriever(IServiceProvider serviceProvider) {
+				_serviceProvider = serviceProvider;
+			}
+			public IModelRetriever(IModel model) {
+				_serviceProvider = null!;
+				_model = model;
+			}
+		}
+
+
 		/// <inheritdoc cref="AddNeatMapperEntityFrameworkCore{TContext}(IServiceCollection, IModel)"/>
 		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services) where TContext : DbContext {
 			if (services == null)
@@ -14,24 +41,19 @@ namespace NeatMapper.EntityFrameworkCore {
 			if(typeof(TContext) == typeof(DbContext))
 				throw new ArgumentException("The provided type must derive from DbContext.");
 
-			
 			TContext instance;
 			try {
 				instance = ObjectFactory.Create(typeof(TContext)) as TContext
 					?? throw new Exception();
-			}
-			catch {
-				if(!services.Any(s => s.ServiceType == typeof(TContext)))
-					throw new InvalidOperationException("Entity Framework Core mappers must be added after the EF Core package.");
-
-				using (var serviceProvider = services.BuildServiceProvider())
-				using (var scope = serviceProvider.CreateScope()) {
-					return services.AddNeatMapperEntityFrameworkCore<TContext>(scope.ServiceProvider.GetRequiredService<TContext>().Model);
+				using (instance) { 
+					services.AddSingleton(new IModelRetriever<TContext>(instance.Model));
 				}
 			}
-			using (instance) {
-				return services.AddNeatMapperEntityFrameworkCore<TContext>(instance.Model);
+			catch {
+				services.AddSingleton(s => new IModelRetriever<TContext>(s));
 			}
+
+			return AddNeatMapperEntityFrameworkCoreInternal<TContext>(services);
 		}
 
 		/// <summary>
@@ -46,7 +68,7 @@ namespace NeatMapper.EntityFrameworkCore {
 		/// </remarks>
 		/// <typeparam name="TContext">Type of the DbContext to use with the mapper.</typeparam>
 		/// <returns>The same services collection so multiple calls could be chained.</returns>
-		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(this IServiceCollection services, IModel model) where TContext : DbContext {
+		public static IServiceCollection AddNeatMapperEntityFrameworkCore<TContext>(IServiceCollection services, IModel model) where TContext : DbContext {
 			if (services == null)
 				throw new ArgumentNullException(nameof(services));
 			if (model == null)
@@ -54,14 +76,21 @@ namespace NeatMapper.EntityFrameworkCore {
 			if (typeof(TContext) == typeof(DbContext))
 				throw new ArgumentException("The provided type must derive from DbContext.");
 
+			services.AddSingleton(new IModelRetriever<TContext>(model));
+
+			return AddNeatMapperEntityFrameworkCoreInternal<TContext>(services);
+		}
+
+
+		private static IServiceCollection AddNeatMapperEntityFrameworkCoreInternal<TContext>(this IServiceCollection services) where TContext : DbContext {
 			var mapper = services.FirstOrDefault(s => s.ServiceType == typeof(IMapper))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.EntityFrameworkCore package must be added after the core NeatMapper package.");
 			var asyncMapper = services.FirstOrDefault(s => s.ServiceType == typeof(IAsyncMapper))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.EntityFrameworkCore package must be added after the core NeatMapper package.");
 			var matcher = services.FirstOrDefault(s => s.ServiceType == typeof(IMatcher))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.EntityFrameworkCore package must be added after the core NeatMapper package.");
 			var projector = services.FirstOrDefault(s => s.ServiceType == typeof(IProjector))
-				?? throw new InvalidOperationException("Entity Framework Core mappers must be added after the core package.");
+				?? throw new InvalidOperationException("NeatMapper.EntityFrameworkCore package must be added after the core NeatMapper package.");
 
 			#region IMatcher
 			// Add matcher to composite matcher
@@ -72,7 +101,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreMatcher),
-				s => new EntityFrameworkCoreMatcher(model, typeof(TContext), s),
+				s => new EntityFrameworkCoreMatcher(s.GetRequiredService<IModelRetriever<TContext>>().Model, typeof(TContext), s),
 				matcher.Lifetime));
 			#endregion
 
@@ -86,7 +115,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreMapper),
 				s => new EntityFrameworkCoreMapper(
-					model,
+					s.GetRequiredService<IModelRetriever<TContext>>().Model,
 					typeof(TContext),
 					s,
 					s.GetService<IOptionsMonitor<EntityFrameworkCoreOptions>>()?.CurrentValue,
@@ -105,7 +134,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncEntityFrameworkCoreMapper),
 				s => new AsyncEntityFrameworkCoreMapper(
-					model,
+					s.GetRequiredService<IModelRetriever<TContext>>().Model,
 					typeof(TContext),
 					s,
 					s.GetService<IOptionsMonitor<EntityFrameworkCoreOptions>>()?.CurrentValue,
@@ -123,7 +152,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreProjector),
-				s => new EntityFrameworkCoreProjector(model, typeof(TContext)),
+				s => new EntityFrameworkCoreProjector(s.GetRequiredService<IModelRetriever<TContext>>().Model, typeof(TContext)),
 				projector.Lifetime));
 			#endregion
 
