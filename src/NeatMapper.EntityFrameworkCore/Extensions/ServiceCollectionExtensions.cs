@@ -4,32 +4,21 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 namespace NeatMapper.EntityFrameworkCore {
 	public static class ServiceCollectionExtensions {
 		private class IModelRetriever<TContext> where TContext : DbContext {
-			private readonly IServiceProvider _serviceProvider;
-
-
-			private IModel? _model;
-			public IModel Model {
-				get {
-					if(_model == null) {
-						using (var scope = _serviceProvider.CreateScope()) {
-							_model = scope.ServiceProvider.GetRequiredService<TContext>().Model;
-						}
-					}
-					return _model;
-				}
-			}
+			public Lazy<IModel> Model { get; }
 
 			public IModelRetriever(IServiceProvider serviceProvider) {
-				_serviceProvider = serviceProvider;
+				Model = new Lazy<IModel>(() => {
+					using (var scope = serviceProvider.CreateScope()) {
+						return scope.ServiceProvider.GetRequiredService<TContext>().Model;
+					}
+				}, true);
 			}
 			public IModelRetriever(IModel model) {
-				_serviceProvider = null!;
-				_model = model;
+				Model = new Lazy<IModel>(() => model, true);
 			}
 		}
 
@@ -101,7 +90,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreMatcher),
-				s => new EntityFrameworkCoreMatcher(s.GetRequiredService<IModelRetriever<TContext>>().Model, typeof(TContext), s),
+				s => new EntityFrameworkCoreMatcher(s.GetRequiredService<IModelRetriever<TContext>>().Model.Value, typeof(TContext), s),
 				matcher.Lifetime));
 			#endregion
 
@@ -115,7 +104,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreMapper),
 				s => new EntityFrameworkCoreMapper(
-					s.GetRequiredService<IModelRetriever<TContext>>().Model,
+					s.GetRequiredService<IModelRetriever<TContext>>().Model.Value,
 					typeof(TContext),
 					s,
 					s.GetService<IOptionsMonitor<EntityFrameworkCoreOptions>>()?.CurrentValue,
@@ -134,7 +123,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncEntityFrameworkCoreMapper),
 				s => new AsyncEntityFrameworkCoreMapper(
-					s.GetRequiredService<IModelRetriever<TContext>>().Model,
+					s.GetRequiredService<IModelRetriever<TContext>>().Model.Value,
 					typeof(TContext),
 					s,
 					s.GetService<IOptionsMonitor<EntityFrameworkCoreOptions>>()?.CurrentValue,
@@ -152,7 +141,7 @@ namespace NeatMapper.EntityFrameworkCore {
 
 			services.Add(new ServiceDescriptor(
 				typeof(EntityFrameworkCoreProjector),
-				s => new EntityFrameworkCoreProjector(s.GetRequiredService<IModelRetriever<TContext>>().Model, typeof(TContext)),
+				s => new EntityFrameworkCoreProjector(s.GetRequiredService<IModelRetriever<TContext>>().Model.Value, typeof(TContext)),
 				projector.Lifetime));
 			#endregion
 

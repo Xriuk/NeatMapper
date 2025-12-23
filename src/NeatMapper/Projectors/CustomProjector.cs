@@ -12,7 +12,7 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CustomProjector : IProjector, IProjectorMaps {
 		/// <summary>
-		/// Replaces a nested map invocation with the map itself.
+		/// Replaces a nested map invocation with the map itself, also inlines custom Expressions.
 		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
 			private static object? RetrieveValueRecursively(Expression expr) {
@@ -102,12 +102,13 @@ namespace NeatMapper {
 					return new LambdaParameterReplacer(node.Arguments[0]).SetupAndVisitBody(nestedExpression);
 				}
 
-				// Expand projector.Inline into the corresponding expressions
+				// Expand projector.Inline into the corresponding expressions,
+				// supports all arguments
 				if (node.Method.DeclaringType == typeof(NestedProjector) &&
 					node.Method.Name == nameof(NestedProjector.Inline) &&
 					CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2) {
 
-					return new LambdaParameterReplacer(node.Arguments[1]).SetupAndVisitBody(nestedExpression2);
+					return new LambdaParameterReplacer(node.Arguments.Skip(1).ToArray()).SetupAndVisitBody(nestedExpression2);
 				}
 
 				return base.VisitMethodCall(node);

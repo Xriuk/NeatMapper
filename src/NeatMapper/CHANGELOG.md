@@ -1,6 +1,6 @@
 # Changelog
 
-## [6.1.0] - Unreleased
+## [6.1.0] - 2025-12-23
 
 ### Removed
 
@@ -9,6 +9,10 @@
 ### Changed
 
 - `AsyncIMapperWrapperMapper` added to `AsyncCompositeMapperOptions` as last mapper with the default `IMapper` provided to it.
+
+### Added
+
+- `NestedProjector.Inline` method overloads to support multiple arguments for `Expression`s replacement (even zero), this aligns it with the existing `System.Func` delegates.
 
 ### Fixed
 

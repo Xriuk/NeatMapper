@@ -10,7 +10,7 @@
 		<Description>Allows mapping types by automatically chaining maps together, eg: If you have maps for types A -&gt; B and B -&gt; C you can also map A -&gt; C by chaining A -&gt; B -&gt; C, supports normal maps and asynchronous ones, also supports collections.</Description>
 		<PackageProjectUrl>https://www.neatmapper.org/transitive/</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.Transitive</RepositoryUrl>
-		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#600---2025-08-05</PackageReleaseNotes>
+		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#610---2025-12-23</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
