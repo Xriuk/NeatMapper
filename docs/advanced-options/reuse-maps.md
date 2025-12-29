@@ -130,9 +130,11 @@ Be careful with nesting projections as this can lead to complex evaluations when
 
 # Inline expressions
 
-When creating projection expression you can reuse existing `Expression<Func<..., ...>>` by using the `NestedProjector` instance you will find in the projection context.
+When creating projection expression you can reuse existing `Expression<Func<...>>` by using the `NestedProjector` instance you will find in the projection context.
 
 When the final map will be created the inline Expression will be replaced with the actual expression with the arguments replaced.
+
+Up to 16 arguments are supported, just like the `System.Func<...>` delegate.
 
 ```csharp
 public class MyMaps :
