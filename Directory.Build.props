@@ -1,7 +1,7 @@
 <!-- https://stackoverflow.com/a/73098203 -->
 <Project>
 	<PropertyGroup>
-		<GlobalCurrentVersion>6.1.0</GlobalCurrentVersion>
+		<GlobalCurrentVersion>6.1.1</GlobalCurrentVersion>
 		<GlobalNextVersion>7.0.0</GlobalNextVersion>
 	</PropertyGroup>
 

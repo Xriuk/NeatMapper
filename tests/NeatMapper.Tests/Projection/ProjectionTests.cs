@@ -96,7 +96,9 @@ namespace NeatMapper.Tests.Projection {
 					};
 			}
 
-			static Expression<Func<ICollection<Category>, ICollection<int>>> CategoriesExpression =
+			static Expression<Func<ICollection<Category>, IEnumerable<Category>>> CategoriesIdentityExpression =
+				categories => categories;
+			static Expression<Func<IEnumerable<Category>, ICollection<int>>> CategoriesExpression =
 				categories => categories != null ?
 					categories.Select(c => c.Id).ToList() :
 					new List<int>();
@@ -116,7 +118,7 @@ namespace NeatMapper.Tests.Projection {
 					null :
 					new LimitedProductDto {
 						Code = source.Code,
-						Categories = context.Projector.Inline(CategoriesExpression, source.Categories),
+						Categories = context.Projector.Inline(CategoriesExpression, context.Projector.Inline(CategoriesIdentityExpression, source.Categories)),
 						Copies = source.Copies
 					};
 			}
@@ -135,6 +137,9 @@ namespace NeatMapper.Tests.Projection {
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				return source => source != null ? (int?)source.Id : null;
 			}
+			
+			static Expression<Func<Category, Category>> CategoryIdentityExpression =
+				category => category;
 
 			// Nested map
 #if NET7_0_OR_GREATER
@@ -153,7 +158,7 @@ namespace NeatMapper.Tests.Projection {
 					null :
 					new CategoryDto {
 						Id = source.Id,
-						Parent = context.Projector.Project<Category, int?>(source.Parent, MappingOptionsUtils.options)
+						Parent = context.Projector.Project<Category, int?>(context.Projector.Inline(CategoryIdentityExpression, source.Parent), MappingOptionsUtils.options)
 					};
 			}
 
@@ -331,8 +336,8 @@ namespace NeatMapper.Tests.Projection {
 				null :
 				new LimitedProductDto {
 					Code = source.Code,
-					Categories = source.Categories != null ?
-						source.Categories.Select(c => c.Id).ToList() :
+					Categories = ((IEnumerable<Category>)source.Categories) != null ?
+						((IEnumerable<Category>)source.Categories).Select(c => c.Id).ToList() :
 						new List<int>(),
 					Copies = source.Copies
 				};
