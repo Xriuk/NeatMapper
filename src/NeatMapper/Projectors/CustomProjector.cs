@@ -99,7 +99,7 @@ namespace NeatMapper {
 							$"and retrieved map for types {nestedExpression.Parameters[0].Type.FullName ?? nestedExpression.Parameters[0].Type.Name} -> " +
 							$"{nestedExpression.Parameters[1].Type.FullName ?? nestedExpression.Parameters[1].Type.Name}");
 					}
-					return new LambdaParameterReplacer(node.Arguments[0]).SetupAndVisitBody(nestedExpression);
+					return new LambdaParameterReplacer(Visit(node.Arguments[0])).SetupAndVisitBody(nestedExpression);
 				}
 
 				// Expand projector.Inline into the corresponding expressions,
@@ -108,7 +108,7 @@ namespace NeatMapper {
 					node.Method.Name == nameof(NestedProjector.Inline) &&
 					CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2) {
 
-					return new LambdaParameterReplacer(node.Arguments.Skip(1).ToArray()).SetupAndVisitBody(nestedExpression2);
+					return new LambdaParameterReplacer(node.Arguments.Skip(1).Select(Visit).ToArray()!).SetupAndVisitBody(nestedExpression2);
 				}
 
 				return base.VisitMethodCall(node);

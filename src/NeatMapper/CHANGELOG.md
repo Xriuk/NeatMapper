@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.1.1] - 2025-12-29
+
+### Fixed
+
+- Nested projections and inlined expressions now correctly support other nested projections and inlined expressions as their arguments.
+
+
 ## [6.1.0] - 2025-12-23
 
 ### Removed
