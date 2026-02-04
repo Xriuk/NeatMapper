@@ -8,8 +8,8 @@
 		<Authors>Xriuk</Authors>
 		<Title>.NEaT Mapper - Transitive</Title>
 		<Description>Allows mapping types by automatically chaining maps together, eg: If you have maps for types A -&gt; B and B -&gt; C you can also map A -&gt; C by chaining A -&gt; B -&gt; C, supports normal maps and asynchronous ones, also supports collections.</Description>
-		<PackageProjectUrl>https://www.neatmapper.org/transitive/</PackageProjectUrl>
-		<RepositoryUrl>https://github.com/Xriuk/NeatMapper/tree/main/src/NeatMapper.Transitive</RepositoryUrl>
+		<PackageProjectUrl>https://www.neatmapper.org</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/Xriuk/NeatMapper</RepositoryUrl>
 		<PackageReleaseNotes>See full changelog at https://www.neatmapper.org/transitive/changelog#611---2025-12-29</PackageReleaseNotes>
 		<Copyright>Xriuk</Copyright>
 		<PackageIcon>icon.png</PackageIcon>
