@@ -120,17 +120,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 			}
 			else {
-				// Retrieve the key type
-				var keyTypes = EfCoreUtils.RetrieveEntityType(_model, entityType)!
-					.FindPrimaryKey()!
-					.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership))
-						.Select(p => p.ClrType);
-
-				// Composite key types are converted to ValueTuples
-				if (keyTypes.Count() == 1)
-					keyType = keyTypes.Single()!;
-				else
-					keyType = TupleUtils.GetValueTupleConstructor(keyTypes.ToArray()).DeclaringType!;
+				keyType = GetKeyType(sourceType);
 
 				// Retrieve the key from the source and destination entities
 				INewMapFactory entityToKeyFactory;
@@ -176,26 +166,8 @@ namespace NeatMapper.EntityFrameworkCore {
 			if(!CanMatchInternal(sourceType, destinationType, mappingOptions, out var keyType, out var entityType))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			// Check if we are matching an entity with its key,
-			// or two entities
-			bool isEntityKey;
-			if(keyType == null) {
-				// Retrieve the key type
-				var keyTypes = EfCoreUtils.RetrieveEntityType(_model, entityType)!
-					.FindPrimaryKey()!
-					.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership))
-						.Select(p => p.ClrType);
-
-				// Composite key types are converted to ValueTuples
-				if (keyTypes.Count() == 1)
-					keyType = keyTypes.Single()!;
-				else 
-					keyType = TupleUtils.GetValueTupleConstructor(keyTypes.ToArray()).DeclaringType!;
-
-				isEntityKey = false;
-			}
-			else
-				isEntityKey = true;
+			var isEntityKey = keyType != null;
+			keyType ??= GetKeyType(sourceType);
 
 			INewMapFactory entityToKeyFactory;
 			try {
@@ -215,6 +187,8 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 
 				try {
+					// Check if we are matching an entity with its key,
+					// or two entities
 					if (isEntityKey) {
 						return new DisposableMatchMapFactory(
 							sourceType, destinationType,
@@ -395,6 +369,20 @@ namespace NeatMapper.EntityFrameworkCore {
 				.GetService(_dbContextType) as DbContext;
 
 			return dbContext;
+		}
+
+		private Type GetKeyType(Type entityType) {
+			// Retrieve the key type
+			var keyTypes = EfCoreUtils.RetrieveEntityType(_model, entityType)!
+				.FindPrimaryKey()!
+				.Properties.Where(p => !p.GetContainingForeignKeys().Any(k => k.IsOwnership))
+					.Select(p => p.ClrType);
+
+			// Composite key types are converted to ValueTuples
+			if (keyTypes.Count() == 1)
+				return keyTypes.Single()!;
+			else
+				return TupleUtils.GetValueTupleConstructor(keyTypes.ToArray()).DeclaringType!;
 		}
 	}
 }

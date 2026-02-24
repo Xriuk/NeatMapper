@@ -6,8 +6,8 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class MatcherException : TypesException {
 		public MatcherException(Exception exception, (Type From, Type To) types) :
-			base($"An exception was thrown while comparing the types: {types.From.Name} -> {types.To.Name}\n" +
-			$"{types.From.FullName} -> {types.To.FullName}\n" +
+			base($"An exception was thrown while comparing the types: {types.From.Name} -> {types.To.Name}{Environment.NewLine}" +
+			$"{types.From.FullName} -> {types.To.FullName}{Environment.NewLine}" +
 			$"Check the inner exception for details", exception) { }
 	}
 }

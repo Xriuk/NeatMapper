@@ -90,6 +90,11 @@ namespace NeatMapper {
 		private readonly IProjector _elementsProjector;
 
 		/// <summary>
+		/// Options to apply to projections.
+		/// </summary>
+		private readonly ProjectorsOptions _projectorsOptions;
+
+		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
@@ -102,13 +107,20 @@ namespace NeatMapper {
 		/// <see cref="IProjector"/> to use to project collection elements.<br/>
 		/// Can be overridden during projection with <see cref="ProjectorOverrideMappingOptions"/>.
 		/// </param>
-		public CollectionProjector(IProjector elementsProjector) {
+		/// <param name="projectorsOptions">
+		/// Options applied to projections.<br/>
+		/// Can be overridden during projection with <see cref="ProjectorsMappingOptions"/>.
+		/// </param>
+		public CollectionProjector(IProjector elementsProjector, ProjectorsOptions? projectorsOptions = null) {
 			_elementsProjector = new CompositeProjector(elementsProjector ?? throw new ArgumentNullException(nameof(elementsProjector)), this);
+			_projectorsOptions = projectorsOptions != null ? new ProjectorsOptions(projectorsOptions) : new ProjectorsOptions();
 			var nestedProjectionContext = new NestedProjectionContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
 				p => p?.Projector != null ? p : new ProjectorOverrideMappingOptions(_elementsProjector, p?.ServiceProvider),
 				n => n != null ? new NestedProjectionContext(this, n) : nestedProjectionContext, options.Cached));
 		}
+		[Obsolete("This constructor is deprecated, and will be removed in future versions, use the constructor with projectorsOptions")]
+		public CollectionProjector(IProjector elementsProjector) : this(elementsProjector, null) {}
 
 
 		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -222,8 +234,14 @@ namespace NeatMapper {
 				else
 					collection = body;
 
-				// source == null ? null : PROJECTION
-				body = Expression.Condition(Expression.Equal(source, Expression.Constant(null, types.From)), Expression.Constant(null, collection.Type), collection);
+				if (mappingOptions?.GetOptions<ProjectorsMappingOptions>()?.NullChecks
+					?? _projectorsOptions.NullChecks) {
+
+					// source == null ? null : PROJECTION
+					body = Expression.Condition(Expression.Equal(source, Expression.Constant(null, types.From)), Expression.Constant(null, collection.Type), collection);
+				}
+				else
+					body = collection;
 			}
 
 			return Expression.Lambda(typeof(Func<,>).MakeGenericType(types.From, types.To), body, source);

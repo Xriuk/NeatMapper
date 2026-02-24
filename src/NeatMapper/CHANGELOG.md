@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.1.2] - 2026-02-24
+
+### Added
+
+- `ProjectorsOptions` (and `ProjectorsMappingOptions`) which allow configuring null checks for projections (currently implemented by `CollectionProjector` and `NullableProjector`) to simplify generated expressions for libraries like EF Core which already handle nulls.
+
+### Fixed
+
+- `NestedProjector.Inline` now correctly replaces expressions recursively inside of the function arguments.
+- `NestedProjector.Project` will now replace any projector found inside the expressions and not just its own.
+
+
 ## [6.1.1] - 2025-12-29
 
 ### Fixed

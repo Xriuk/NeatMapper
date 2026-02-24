@@ -33,7 +33,7 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-			return Object.Equals(source, destination);
+			return object.Equals(source, destination);
 		}
 
 		public IMatchMapFactory MatchFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -45,7 +45,7 @@ namespace NeatMapper {
 					TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 					TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
 
-					return Object.Equals(source, destination);
+					return object.Equals(source, destination);
 				});
 		}
 	}

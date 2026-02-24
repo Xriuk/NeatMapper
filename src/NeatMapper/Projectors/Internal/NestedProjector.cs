@@ -152,8 +152,9 @@ namespace NeatMapper {
 		/// <typeparam name="TSource">The type of the first parameter.</typeparam>
 		/// <typeparam name="TDestination">The type of the second parameter.</typeparam>
 		/// <param name="expression">
-		/// Expression to inline in the projection, its arguments will be replaced with
-		/// the provided parameters.
+		/// Expression to inline in the projection, its argument will be replaced with
+		/// the provided parameter, it can also be a value returned from a method,
+		/// since this argument will be evaluated when inlining it.
 		/// </param>
 		/// <param name="source">First parameter used to replace the corresponding argument in the expression.</param>
 		/// <returns>The projected object.</returns>
@@ -257,7 +258,8 @@ namespace NeatMapper {
 		/// <typeparam name="TResult">The type of the return value.</typeparam>
 		/// <param name="expression">
 		/// Expression to inline in the projection, its arguments will be replaced with
-		/// the provided parameters.
+		/// the provided parameters, it can also be a value returned from a method,
+		/// since this argument will be evaluated when inlining it.
 		/// </param>
 		/// <param name="arg1">
 		/// First parameter used to replace the corresponding argument in the expression.

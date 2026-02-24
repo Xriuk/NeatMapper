@@ -212,7 +212,6 @@ namespace NeatMapper {
 				else
 					sourceNullableUnderlying = null;
 
-
 				// Type1 == Type2
 				if (sourceNullableUnderlying != null && destinationNullableUnderlying != null &&
 					concreteMatcher.CanMatch(sourceNullableUnderlying, destinationNullableUnderlying, mappingOptions)) {

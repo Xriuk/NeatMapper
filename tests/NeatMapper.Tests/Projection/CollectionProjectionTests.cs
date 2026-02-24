@@ -14,7 +14,7 @@ namespace NeatMapper.Tests.Projection {
 		public void Initialize() {
 			_projector = new CollectionProjector(new CustomProjector(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(ProjectionTests.Maps) }
-			}));
+			}), null);
 		}
 
 
@@ -252,7 +252,7 @@ namespace NeatMapper.Tests.Projection {
 
 		[TestMethod]
 		public void ShouldUseMappingOptions() {
-			var projector = new CollectionProjector(new CustomProjector());
+			var projector = new CollectionProjector(new CustomProjector(), null);
 
 			Assert.IsFalse(projector.CanProject<IEnumerable<string>, IEnumerable<int>>());
 
@@ -261,6 +261,12 @@ namespace NeatMapper.Tests.Projection {
 			var projector2 = new CustomProjector(null, options);
 
 			Assert.IsTrue(projector.CanProject<IEnumerable<string>, IEnumerable<int>>(new[] { new ProjectorOverrideMappingOptions(projector2) }));
+		}
+
+		[TestMethod]
+		public void ShouldNotAddNullChecks() {
+			Expression<Func<int[], string[]>> expr = source => source.Select(s => (s * 2).ToString()).ToArray();
+			TestUtils.AssertExpressionsEqual(expr, _projector.Project<int[], string[]>(new ProjectorsMappingOptions(false)));
 		}
 	}
 }

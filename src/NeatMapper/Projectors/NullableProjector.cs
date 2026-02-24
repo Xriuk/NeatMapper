@@ -50,6 +50,11 @@ namespace NeatMapper {
 		private readonly IProjector _concreteProjector;
 
 		/// <summary>
+		/// Options to apply to projections.
+		/// </summary>
+		private readonly ProjectorsOptions _projectorsOptions;
+
+		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
 		/// </summary>
 		private readonly MappingOptionsFactoryCache<MappingOptions> _optionsCache;
@@ -61,14 +66,21 @@ namespace NeatMapper {
 		/// <see cref="IProjector"/> to use to project underlying types.<br/>
 		/// Can be overridden during mapping with <see cref="ProjectorOverrideMappingOptions"/>.
 		/// </param>
-		public NullableProjector(IProjector concreteProjector) {
+		/// <param name="projectorsOptions">
+		/// Options applied to projections.<br/>
+		/// Can be overridden during projection with <see cref="ProjectorsMappingOptions"/>.
+		/// </param>
+		public NullableProjector(IProjector concreteProjector, ProjectorsOptions? projectorsOptions = null) {
 			_concreteProjector = concreteProjector
 				?? throw new ArgumentNullException(nameof(concreteProjector));
+			_projectorsOptions = projectorsOptions != null ? new ProjectorsOptions(projectorsOptions) : new ProjectorsOptions();
 			var nestedProjectionContext = new NestedProjectionContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<ProjectorOverrideMappingOptions, NestedProjectionContext>(
 				m => m?.Projector != null ? m : new ProjectorOverrideMappingOptions(_concreteProjector, m?.ServiceProvider),
 				n => n != null ? new NestedProjectionContext(nestedProjectionContext.ParentProjector, n) : nestedProjectionContext, options.Cached));
 		}
+		[Obsolete("This constructor is deprecated, and will be removed in future versions, use the constructor with projectorsOptions")]
+		public NullableProjector(IProjector concreteProjector) : this(concreteProjector, null) { }
 
 
 		public bool CanProject(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -95,21 +107,26 @@ namespace NeatMapper {
 				throw new ProjectionException(e, types);
 			}
 
-			var source = Expression.Parameter(sourceType, "source");
-
 			// source.Value
 			// source
-			Expression sourceExpr;
-			if (sourceType != underlyingTypes.From)
-				sourceExpr = Expression.Property(source, nameof(Nullable<int>.Value));
-			else
-				sourceExpr = source;
+			ParameterExpression source;
+			Expression body;
+			if (sourceType != underlyingTypes.From) {
+				source = Expression.Parameter(sourceType, "source");
+				body = new LambdaParameterReplacer(Expression.Property(source, nameof(Nullable<int>.Value))).SetupAndVisitBody(concreteProjection);
+			}
+			else {
+				source = concreteProjection.Parameters.Single();
+				body = concreteProjection.Body;
+			}
 
-			var body = new LambdaParameterReplacer(sourceExpr).SetupAndVisitBody(concreteProjection);
 			if (underlyingTypes.To != destinationType)
 				body = Expression.Convert(body, destinationType);
 
-			if (sourceType != underlyingTypes.From) {
+			if (sourceType != underlyingTypes.From &&
+				(mappingOptions?.GetOptions<ProjectorsMappingOptions>()?.NullChecks
+					?? _projectorsOptions.NullChecks)) {
+
 				// source == null ? null : ...
 				// source == null ? throw new ... : ...
 				body = Expression.Condition(
@@ -127,6 +144,7 @@ namespace NeatMapper {
 					body);
 			}
 
+			// We always have to create a new lambda because at least one of source and/or destination type is different
 			return Expression.Lambda(typeof(Func<,>).MakeGenericType(sourceType, destinationType), body, source);
 		}
 

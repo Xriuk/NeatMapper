@@ -23,9 +23,9 @@ namespace NeatMapper.Tests {
 			var expectedString = ExpressionStringBuilder.ExpressionToString(expected);
 			var actualString = ExpressionStringBuilder.ExpressionToString(actual);
 			if(expectedString != actualString) { 
-				Assert.Fail($"{message}\n" +
-					$"Expected:\n{expectedString}\n\n" +
-					$"Actual:\n{actualString}");
+				Assert.Fail($"{message}{Environment.NewLine}" +
+					$"Expected:{Environment.NewLine}{expectedString}{Environment.NewLine}{Environment.NewLine}" +
+					$"Actual:{Environment.NewLine}{actualString}");
 			}
 		}
 	}

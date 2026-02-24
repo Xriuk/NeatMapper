@@ -1355,12 +1355,12 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			// We could also map collections of keys/entities
-			if ((sourceType.IsEnumerable() ? sourceType != typeof(string) : sourceType.IsAsyncEnumerable()) &&
-				(destinationType.IsEnumerable() ? destinationType != typeof(string) : destinationType.IsAsyncEnumerable())) {
+			if ((sourceType.IsEnumerableNotString() || sourceType.IsAsyncEnumerable()) &&
+				(destinationType.IsEnumerableNotString() || destinationType.IsAsyncEnumerable())) {
 
 				isCollection = true;
-				elementTypes = (sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
-					destinationType.IsEnumerable() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType());
+				elementTypes = (sourceType.IsEnumerableNotString() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
+					destinationType.IsEnumerableNotString() ? destinationType.GetEnumerableElementType() : destinationType.GetAsyncEnumerableElementType());
 
 				if (!ObjectFactory.CanCreateCollection(destinationType))
 					return false;
@@ -1394,11 +1394,11 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			// We could also map collections of keys/entities
-			if ((sourceType.IsEnumerable() ? sourceType != typeof(string) : sourceType.IsAsyncEnumerable()) &&
+			if ((sourceType.IsEnumerableNotString() || sourceType.IsAsyncEnumerable()) &&
 				destinationType.IsCollection()) {
 
 				isCollection = true;
-				elementTypes = (sourceType.IsEnumerable() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
+				elementTypes = (sourceType.IsEnumerableNotString() ? sourceType.GetEnumerableElementType() : sourceType.GetAsyncEnumerableElementType(),
 					destinationType.GetEnumerableElementType());
 
 				if (destinationType.IsArray || !ObjectFactory.CanCreateCollection(destinationType))

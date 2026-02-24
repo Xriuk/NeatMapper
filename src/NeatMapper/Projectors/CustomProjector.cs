@@ -15,61 +15,28 @@ namespace NeatMapper {
 		/// Replaces a nested map invocation with the map itself, also inlines custom Expressions.
 		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
-			private static object? RetrieveValueRecursively(Expression expr) {
-				// Navigate up recursively until ConstantExpression and retrieve the projector from it down again
-				if (expr != null) { 
-					object? value;
-					if (expr is ConstantExpression cons)
-						return cons.Value;
-					else if (expr is MemberExpression memb) {
-						value = memb.Expression != null ? RetrieveValueRecursively(memb.Expression) : null;
-						if(memb.Member is PropertyInfo prop) {
-							if(value != null || prop.GetGetMethod()?.IsStatic == true)
-								return prop.GetValue(value);
-						}
-						else if(memb.Member is FieldInfo field && (value != null || field.IsStatic))
-							return field.GetValue(value);
-					}
-				}
-				
-				throw new InvalidOperationException("The provided expression is not a member access or constant expression");
-			}
-
-			// DEV: find a better way to unwrap expressions
-			private static object? CompileAndRunExpression(Expression body) {
-				try { 
-					return Expression.Lambda(body).Compile().DynamicInvoke();
-				}
-				catch(Exception e){
-					throw new InvalidOperationException(
-						"Error during expression evaluation, check the inner exception for details. " +
-						"Parameters of the projection expression cannot be referenced in nested projections.", e);
-				}
-			}
-
-
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
 				// Expand projector.Project into the corresponding expressions
 				if (node.Method.DeclaringType == typeof(NestedProjector) &&
 					node.Method.Name == nameof(NestedProjector.Project) &&
-					RetrieveValueRecursively(node.Object!) is NestedProjector nestedProjector) {
+					CompileAndRunExpression(node.Object!) is NestedProjector nestedProjector) {
 
 					// Validate mapping options if not null
 					MappingOptions? mappingOptions;
-					if(node.Arguments.Count == 2) {
+					if (node.Arguments.Count == 2) {
 						var mappingOptionsType = node.Arguments[1].Type;
-						if(mappingOptionsType == typeof(MappingOptions))
+						if (mappingOptionsType == typeof(MappingOptions))
 							mappingOptions = CompileAndRunExpression(node.Arguments[1]) as MappingOptions;
-						else if(mappingOptionsType == typeof(IEnumerable)) {
+						else if (mappingOptionsType == typeof(IEnumerable)) {
 							var ienumerable = CompileAndRunExpression(node.Arguments[1]) as IEnumerable;
-							if(ienumerable?.Cast<object>().Any(o => o != null) == true)
+							if (ienumerable?.Cast<object>().Any(o => o != null) == true)
 								mappingOptions = new MappingOptions(ienumerable);
 							else
 								mappingOptions = null;
 						}
-						else if(mappingOptionsType == typeof(object[])) {
+						else if (mappingOptionsType == typeof(object[])) {
 							var objects = CompileAndRunExpression(node.Arguments[1]) as object[];
-							if(objects?.Any(o => o != null) == true)
+							if (objects?.Any(o => o != null) == true)
 								mappingOptions = new MappingOptions(objects);
 							else
 								mappingOptions = null;
@@ -85,16 +52,16 @@ namespace NeatMapper {
 					// Retrieve the map types, the source may be inferred or explicit
 					(Type From, Type To) types;
 					var genericArguments = node.Method.GetGenericArguments();
-					if (genericArguments.Length == 1) 
+					if (genericArguments.Length == 1)
 						types = (argumentType, genericArguments[0]);
-					else 
+					else
 						types = (genericArguments[0], genericArguments[1]);
 
 					// Retrieve the nested expression from the projector
 					var nestedExpression = nestedProjector.Projector.Project(types.From, types.To, mappingOptions);
 
 					// Replace the parameter with the argument
-					if (!nestedExpression.Parameters[0].Type.IsAssignableFrom(argumentType)) { 
+					if (!nestedExpression.Parameters[0].Type.IsAssignableFrom(argumentType)) {
 						throw new InvalidOperationException($"Incompatible types between passed argument {argumentType.FullName ?? argumentType.Name} " +
 							$"and retrieved map for types {nestedExpression.Parameters[0].Type.FullName ?? nestedExpression.Parameters[0].Type.Name} -> " +
 							$"{nestedExpression.Parameters[1].Type.FullName ?? nestedExpression.Parameters[1].Type.Name}");
@@ -106,12 +73,27 @@ namespace NeatMapper {
 				// supports all arguments
 				if (node.Method.DeclaringType == typeof(NestedProjector) &&
 					node.Method.Name == nameof(NestedProjector.Inline) &&
-					CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2) {
+					CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2 &&
+					Visit(nestedExpression2) is LambdaExpression nestedExpression3) {
 
-					return new LambdaParameterReplacer(node.Arguments.Skip(1).Select(Visit).ToArray()!).SetupAndVisitBody(nestedExpression2);
+					return new LambdaParameterReplacer(node.Arguments.Skip(1).Select(Visit).ToArray()!).SetupAndVisitBody(nestedExpression3);
 				}
 
 				return base.VisitMethodCall(node);
+
+
+				// DEV: find a better way to unwrap expressions.
+				// Maybe there isn't? Because expressions might also be methods returned values
+				static object? CompileAndRunExpression(Expression body) {
+					try {
+						return Expression.Lambda(body).Compile().DynamicInvoke();
+					}
+					catch (Exception e) {
+						throw new InvalidOperationException(
+							"Error during expression evaluation, check the inner exception for details. " +
+							"Parameters of the projection expression cannot be referenced in nested projections.", e);
+					}
+				}
 			}
 		}
 

@@ -13,7 +13,7 @@ namespace NeatMapper.Tests.Projection {
 		public void Initialize() {
 			_projector = new NullableProjector(new CustomProjector(new CustomMapsOptions {
 				TypesToScan = new List<Type> { typeof(ProjectionTests.Maps) }
-			}));
+			}), null);
 		}
 
 
@@ -82,7 +82,7 @@ namespace NeatMapper.Tests.Projection {
 				additionalMaps.AddMap<int?, char>(c => n => n != null ? (char)(n.Value + 2) : '\0');
 				var projector = new NullableProjector(new CustomProjector(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ProjectionTests.Maps) }
-				}, additionalMaps));
+				}, additionalMaps), null);
 
 
 				Assert.IsTrue(projector.CanProject<int?, char?>());
@@ -97,7 +97,7 @@ namespace NeatMapper.Tests.Projection {
 				additionalMaps.AddMap<int, char?>(c => n => n == 0 ? null : (char?)(n - 2));
 				var projector = new NullableProjector(new CustomProjector(new CustomMapsOptions {
 					TypesToScan = new List<Type> { typeof(ProjectionTests.Maps) }
-				}, additionalMaps));
+				}, additionalMaps), null);
 
 
 				Assert.IsTrue(projector.CanProject<int?, char?>());
@@ -149,6 +149,22 @@ namespace NeatMapper.Tests.Projection {
 
 			Assert.IsTrue(maps.Contains((typeof(string), typeof(int))));
 			Assert.IsTrue(maps.Contains((typeof(string), typeof(int?))));
+		}
+
+
+		[TestMethod]
+		public void ShouldNotAddNullChecks() {
+			// Value type
+			{
+				Expression<Func<int?, char>> expr = source => (char)source.Value;
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<int?, char>(new ProjectorsMappingOptions(false)));
+			}
+
+			// Reference type
+			{
+				Expression<Func<int?, string>> expr = source => (source.Value * 2).ToString();
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<int?, string>(new ProjectorsMappingOptions(false)));
+			}
 		}
 	}
 }

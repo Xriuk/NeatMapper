@@ -9,7 +9,12 @@ namespace NeatMapper{
 	/// <see cref="IMatcher.Match(object, Type, object, Type, MappingOptions)"/> multiple times,
 	/// and thus can be used for collections.
 	/// </summary>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
+	/// <remarks>
+	/// Note to implementers: you should check type arguments only in a given way and not reverse/swap them,
+	/// as this is already handled by <see cref="CompositeMatcherOptions"/>
+	/// (and <see cref="CompositeMatcherMappingOptions"/>).<br/>
+	/// Implementations of this interface must be thread-safe.
+	/// </remarks>
 	public interface IMatcherFactory : IMatcher {
 		/// <summary>
 		/// Creates a factory to check if two objects are equivalent.

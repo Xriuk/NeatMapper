@@ -7,7 +7,7 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class MapNotFoundException : Exception {
 		public MapNotFoundException((Type From, Type To) types) :
-			base($"No map could be found for the given types: {types.From.Name} -> {types.To.Name}\n" +
+			base($"No map could be found for the given types: {types.From.Name} -> {types.To.Name}{Environment.NewLine}" +
 				$"{types.From.FullName} -> {types.To.FullName}") {
 
 			From = types.From;

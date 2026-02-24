@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 
 namespace NeatMapper.EntityFrameworkCore {
 	internal static class TypeUtils {
@@ -15,8 +16,9 @@ namespace NeatMapper.EntityFrameworkCore {
 			new ConcurrentDictionary<Type, Func<object, bool>>();
 
 
-		public static bool IsNullable(this Type type) {
-			return type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Nullable<>);
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static bool IsEnumerableNotString(this Type type) {
+			return type.IsEnumerable() && type != typeof(string);
 		}
 
 		public static bool IsNullable(this Type type, Type unwrappedType) {

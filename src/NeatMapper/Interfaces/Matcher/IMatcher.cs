@@ -4,7 +4,12 @@ namespace NeatMapper {
 	/// <summary>
 	/// Interface which allows matching two objects.
 	/// </summary>
-	/// <remarks>Implementations of this interface must be thread-safe.</remarks>
+	/// <remarks>
+	/// Note to implementers: you should check type arguments only in a given way and not reverse/swap them,
+	/// as this is already handled by <see cref="CompositeMatcherOptions"/>
+	/// (and <see cref="CompositeMatcherMappingOptions"/>).<br/>
+	/// Implementations of this interface must be thread-safe.
+	/// </remarks>
 	public interface IMatcher {
 		/// <summary>
 		/// Checks if the matcher could match an object with another one.

@@ -291,11 +291,16 @@ namespace NeatMapper {
 				.Configure<CustomProjector>((o, p) => {
 					o.Projectors.Add(p);
 				})
-				.PostConfigure(o => {
+				.PostConfigure<IServiceProvider>((o, s) => {
 					// Creating nullable and collection mappers with EmptyProjector to avoid recursion,
 					// the element projector will be overridden by composite projector
-					o.Projectors.Add(new NullableProjector(EmptyProjector.Instance));
-					o.Projectors.Add(new CollectionProjector(EmptyProjector.Instance));
+					var projectorsOptions = s.GetService<IOptionsMonitor<ProjectorsOptions>>()?.CurrentValue;
+					o.Projectors.Add(new NullableProjector(
+						EmptyProjector.Instance,
+						projectorsOptions));
+					o.Projectors.Add(new CollectionProjector(
+						EmptyProjector.Instance,
+						projectorsOptions));
 				});
 
 
@@ -313,13 +318,17 @@ namespace NeatMapper {
 			// Nullable projector
 			services.Add(new ServiceDescriptor(
 				typeof(NullableProjector),
-				s => new NullableProjector(s.GetRequiredService<IProjector>()),
+				s => new NullableProjector(
+					s.GetRequiredService<IProjector>(),
+					s.GetService<IOptionsMonitor<ProjectorsOptions>>()?.CurrentValue),
 				projectorsLifetime));
 
 			// Collection projector
 			services.Add(new ServiceDescriptor(
 				typeof(CollectionProjector),
-				s => new CollectionProjector(s.GetRequiredService<IProjector>()),
+				s => new CollectionProjector(
+					s.GetRequiredService<IProjector>(),
+					s.GetService<IOptionsMonitor<ProjectorsOptions>>()?.CurrentValue),
 				projectorsLifetime));
 
 			// Composite projector

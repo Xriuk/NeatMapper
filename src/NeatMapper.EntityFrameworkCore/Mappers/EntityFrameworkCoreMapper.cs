@@ -21,8 +21,10 @@ namespace NeatMapper.EntityFrameworkCore {
 	/// </para>
 	/// <para>
 	/// Also supports mapping keys (even composite keys as <see cref="Tuple"/> or <see cref="ValueTuple"/>,
-	/// and shadow keys, and collections) to the corresponding typed Expression&lt;Func&lt;TEntity, bool&gt;&gt;
-	/// for querying (only new maps).
+	/// and shadow keys, and collections - and collections of nullable keys, while single nullable keys
+	/// would have to go through <see cref="NullableMapper"/>) to the corresponding typed
+	/// <see cref="Expression{TDelegate}"/> (Expression&lt;Func&lt;TEntity, bool&gt;&gt;) for querying
+	/// (only new maps, factories are not supported yet).
 	/// </para>
 	/// </summary>
 	/// <remarks>
@@ -1003,7 +1005,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				}
 
 				// We could also map collections of keys
-				if (sourceType.IsEnumerable() && sourceType != typeof(string)) {
+				if (sourceType.IsEnumerableNotString()) {
 					isCollection = true;
 					elementTypes = (sourceType.GetEnumerableElementType(), delegateArguments[0]);
 				}
@@ -1014,9 +1016,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 			else { 
 				// We could also map collections of keys/entities
-				if (sourceType.IsEnumerable() && sourceType != typeof(string) &&
-					destinationType.IsEnumerable() && destinationType != typeof(string)) {
-
+				if (sourceType.IsEnumerableNotString() && destinationType.IsEnumerableNotString()) {
 					isCollection = true;
 					elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
 
@@ -1053,9 +1053,7 @@ namespace NeatMapper.EntityFrameworkCore {
 			}
 
 			// We could also map collections of keys/entities
-			if (sourceType.IsEnumerable() && sourceType != typeof(string) &&
-				destinationType.IsCollection()) {
-
+			if (sourceType.IsEnumerableNotString() && destinationType.IsCollection()) {
 				isCollection = true;
 				elementTypes = (sourceType.GetEnumerableElementType(), destinationType.GetEnumerableElementType());
 

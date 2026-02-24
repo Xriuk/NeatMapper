@@ -552,6 +552,7 @@ namespace NeatMapper.EntityFrameworkCore {
 				return mappingOptions;
 		}
 
+		// DEV: find a way to cache and parameterize expression
 		protected LambdaExpression GetEntitiesPredicate(Type entityType, IKey key, IEnumerable<object[]> keysValues) {
 			LambdaExpression expr;
 			IList<Expression> keysExprs;
