@@ -77,7 +77,7 @@ public class MyMaps :
     }
 
     Expression<Func<Book, BookDto>> IProjectionMap<Book, BookDto>.Project(ProjectionContext context){
-        return source => source == null ? null : new BookDto{ ... };
+        return source => new BookDto{ ... };
     }
 }
 ```
