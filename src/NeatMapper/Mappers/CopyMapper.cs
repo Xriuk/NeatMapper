@@ -94,7 +94,7 @@ namespace NeatMapper {
 				mappers.Add(deepMapper);
 			mappers.Add(this);
 			mappers.Add(IdentityMapper.Instance);
-			_deepMapper = new CompositeMapper(mappers);
+			_deepMapper = new CompositeMapper(mappers); // DEV: check if and how to provide CompositeMapperOptions
 			_copyMapperOptions = copyMapperOptions != null ? new CopyMapperOptions(copyMapperOptions) : new CopyMapperOptions();
 			_mappersCache = new MappingOptionsFactoryCache<IMapper>(options => {
 				var copyMapperOptions = options.GetOptions<CopyMapperMappingOptions>();
@@ -102,8 +102,8 @@ namespace NeatMapper {
 					return IdentityMapper.Instance;
 				else {
 					var mapper = options.GetOptions<MapperOverrideMappingOptions>()?.Mapper;
-					if (mapper != null)
-						return new CompositeMapper(mapper, this, IdentityMapper.Instance);
+					if (mapper != null) 
+						return new CompositeMapper(mapper, this, IdentityMapper.Instance); // DEV: check if and how to provide CompositeMapperOptions
 					else
 						return _deepMapper;
 				}

@@ -87,7 +87,7 @@ namespace NeatMapper {
 			IMatcher? elementsMatcher = null,
 			MergeCollectionsOptions? mergeCollectionsOptions = null) {
 
-			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
+			_elementsMapper = new CompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this); // DEV: check if and how to provide CompositeMapperOptions
 			_elementsMatcher = elementsMatcher != null ? new SafeMatcher(elementsMatcher) : EmptyMatcher.Instance;
 			_mergeCollectionOptions = mergeCollectionsOptions != null ? new MergeCollectionsOptions(mergeCollectionsOptions) : new MergeCollectionsOptions();
 			var nestedMappingContext = new NestedMappingContext(this);
@@ -115,18 +115,12 @@ namespace NeatMapper {
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
 			if (source is IEnumerable sourceEnumerable) {
-				// At least one of New or Merge mapper is required to map elements
 				INewMapFactory elementsFactory;
 				try {
 					elementsFactory = elementsMapper.MapNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 				}
 				catch (MapNotFoundException) {
-					try {
-						elementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions).MapNewFactory();
-					}
-					catch (MapNotFoundException) {
-						throw new MapNotFoundException(types);
-					}
+					throw new MapNotFoundException(types);
 				}
 
 				using (elementsFactory) {
@@ -185,9 +179,6 @@ namespace NeatMapper {
 			if (!CanMapMergeInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMapper) || elementsMapper == null)
 				throw new MapNotFoundException(types);
 
-			TypeUtils.CheckObjectType(source, types.From, nameof(source));
-			TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
-
 			// New mapper is required, Merge mapper is optional for mapping the elements:
 			// - elements to update will use MergeMap (on the existing element),
 			//   or NewMap (by removing the existing element and adding the new one)
@@ -197,33 +188,22 @@ namespace NeatMapper {
 				newElementsFactory = elementsMapper.MapNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				newElementsFactory = null!;
+				throw new MapNotFoundException(types);
 			}
 
-			// Need to use try/finally with newElementsFactory because it may be assigned after mergeElementsFactory
-			try {
+			using (newElementsFactory) {
 				IMergeMapFactory? mergeElementsFactory;
 				try {
 					mergeElementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
-
-					// newElementsFactory cannot be null, so if we have a merge factory we also create a new one from it (without disposing it)
-					try {
-						newElementsFactory ??= mergeElementsFactory.MapNewFactory(false);
-					}
-					catch {
-						mergeElementsFactory.Dispose();
-						throw;
-					}
 				}
 				catch (MapNotFoundException) {
-					// At least one map is required
-					if (newElementsFactory == null)
-						throw new MapNotFoundException(types);
-
 					mergeElementsFactory = null;
 				}
 
 				using (mergeElementsFactory) {
+					TypeUtils.CheckObjectType(source, types.From, nameof(source));
+					TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
+
 					var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 
 					// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
@@ -286,9 +266,6 @@ namespace NeatMapper {
 					}
 				}
 			}
-			finally {
-				newElementsFactory?.Dispose();
-			}
 
 			throw new MapNotFoundException(types);
 		}
@@ -301,18 +278,12 @@ namespace NeatMapper {
 			if (!CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMapper) || elementsMapper == null)
 				throw new MapNotFoundException(types);
 
-			// At least one of New or Merge mapper is required to map elements
 			INewMapFactory elementsFactory;
 			try {
 				elementsFactory = elementsMapper.MapNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				try {
-					elementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions).MapNewFactory();
-				}
-				catch (MapNotFoundException) {
-					throw new MapNotFoundException(types);
-				}
+				throw new MapNotFoundException(types);
 			}
 
 			try {
@@ -398,28 +369,15 @@ namespace NeatMapper {
 				newElementsFactory = elementsMapper.MapNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				newElementsFactory = null!;
+				throw new MapNotFoundException(types);
 			}
 
 			try {
 				IMergeMapFactory? mergeElementsFactory;
 				try {
 					mergeElementsFactory = elementsMapper.MapMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
-
-					// newElementsFactory cannot be null, so if we have a merge factory we also create a new one from it (without disposing it)
-					try {
-						newElementsFactory ??= mergeElementsFactory.MapNewFactory(false);
-					}
-					catch {
-						mergeElementsFactory.Dispose();
-						throw;
-					}
 				}
 				catch (MapNotFoundException) {
-					// At least one map is required
-					if (newElementsFactory == null)
-						throw new MapNotFoundException(types);
-
 					mergeElementsFactory = null;
 				}
 
@@ -539,8 +497,7 @@ namespace NeatMapper {
 					elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
 						?? _elementsMapper;
 
-					return elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions) ||
-						(ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions));
+					return elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions);
 				}
 			}
 			else {
@@ -587,8 +544,7 @@ namespace NeatMapper {
 					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 					elementsMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-					return elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions) ||
-						(ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapMerge(elementTypes.From, elementTypes.To, mappingOptions));
+					return elementsMapper.CanMapNew(elementTypes.From, elementTypes.To, mappingOptions);
 				}
 			}
 

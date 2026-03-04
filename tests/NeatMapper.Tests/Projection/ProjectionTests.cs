@@ -20,7 +20,8 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMapStatic<int, char>,
 			IProjectionMapStatic<char, float>,
 			IProjectionMapStatic<float, double>,
-			IProjectionMapStatic<string, int>
+			IProjectionMapStatic<string, int>,
+			IProjectionMapStatic<MyLongClass, MyLongClassDto>
 #else
 			IProjectionMap<int, string>,
 			IProjectionMap<Price, decimal>,
@@ -33,7 +34,8 @@ namespace NeatMapper.Tests.Projection {
 			IProjectionMap<int, char>,
 			IProjectionMap<char, float>,
 			IProjectionMap<float, double>,
-			IProjectionMap<string, int>
+			IProjectionMap<string, int>,
+			IProjectionMap<MyLongClass, MyLongClassDto>
 #endif
 			{
 
@@ -98,10 +100,11 @@ namespace NeatMapper.Tests.Projection {
 
 			static Expression<Func<ICollection<Category>, IEnumerable<Category>>> CategoriesIdentityExpression =
 				categories => categories;
-			static Expression<Func<IEnumerable<Category>, ICollection<int>>> CategoriesExpression =
-				categories => categories != null ?
+			static Expression<Func<IEnumerable<Category>, ICollection<int>>> CategoriesExpression() {
+				return categories => categories != null ?
 					categories.Select(c => c.Id).ToList() :
 					new List<int>();
+			}
 
 #if NET7_0_OR_GREATER
 			static
@@ -118,7 +121,7 @@ namespace NeatMapper.Tests.Projection {
 					null :
 					new LimitedProductDto {
 						Code = source.Code,
-						Categories = context.Projector.Inline(CategoriesExpression, context.Projector.Inline(CategoriesIdentityExpression, source.Categories)),
+						Categories = context.Projector.Inline(CategoriesExpression(), context.Projector.Inline(CategoriesIdentityExpression, source.Categories)),
 						Copies = source.Copies
 					};
 			}
@@ -247,6 +250,27 @@ namespace NeatMapper.Tests.Projection {
 
 				return source => source != null ? source.Length : -1;
 			}
+
+#if NET7_0_OR_GREATER
+			static
+#endif
+			Expression<Func<MyLongClass, MyLongClassDto>>
+#if NET7_0_OR_GREATER
+				IProjectionMapStatic<MyLongClass, MyLongClassDto>
+#else
+				IProjectionMap<MyLongClass, MyLongClassDto>
+#endif
+				.Project(ProjectionContext context) {
+
+				return source => context.Projector.Merge<MyDerivedLongClassDto, MyLongClassDto>(new MyDerivedLongClassDto {
+					EntityId = source.Id,
+					EntityName = "Test1"
+				}, new MyLongClassDto {
+					EntityName = "Test2",
+					EntityCreation = source.Creation,
+					EntityActive = source.Active
+				});
+			}
 		}
 
 		IProjector _projector = null;
@@ -290,7 +314,6 @@ namespace NeatMapper.Tests.Projection {
 				// Should forward options to nested map
 				MappingOptionsUtils.options = null;
 
-				var value = new Maps();
 				Expression<Func<Product, ProductDto>> expr = source => source == null ?
 					null :
 					new ProductDto {
@@ -331,7 +354,6 @@ namespace NeatMapper.Tests.Projection {
 		public void ShouldInlineExpressionIntoProjection() {
 			Assert.IsTrue(_projector.CanProject<LimitedProduct, LimitedProductDto>());
 
-			var value = new Maps();
 			Expression<Func<LimitedProduct, LimitedProductDto>> expr = source => source == null ?
 				null :
 				new LimitedProductDto {
@@ -342,6 +364,134 @@ namespace NeatMapper.Tests.Projection {
 					Copies = source.Copies
 				};
 			TestUtils.AssertExpressionsEqual(expr, _projector.Project<LimitedProduct, LimitedProductDto>());
+		}
+
+		[TestMethod]
+		public void ShouldMergeExpressions() {
+			{
+				Assert.IsTrue(_projector.CanProject<MyLongClass, MyLongClassDto>());
+
+				// Order matters
+				Expression<Func<MyLongClass, MyLongClassDto>> expr = source => new MyDerivedLongClassDto {
+					EntityId = source.Id,
+					EntityName = "Test2", // Last property is selected
+					EntityCreation = source.Creation,
+					EntityActive = source.Active
+				};
+				TestUtils.AssertExpressionsEqual(expr, _projector.Project<MyLongClass, MyLongClassDto>());
+			}
+
+			{
+				var options = new CustomProjectionAdditionalMapsOptions();
+				options.AddMap<MyLongClass, MyLongClassDto>(c => s => c.Projector.ConstructAndMerge<MyLongClassDto>(new MyLongClassDto(2), new MyLongClassDto {
+					EntityId = s.Id,
+					EntityName = s.Name
+				}, new MyLongClassDto {
+					EntityCreation = s.Creation,
+					EntityActive = s.Active
+				}));
+				var projector = new CustomProjector(null, options);
+
+				// Order matters
+				Expression<Func<MyLongClass, MyLongClassDto>> expr = s => new MyLongClassDto(2) {
+					EntityId = s.Id,
+					EntityName = s.Name,
+					EntityCreation = s.Creation,
+					EntityActive = s.Active
+				};
+				TestUtils.AssertExpressionsEqual(expr, projector.Project<MyLongClass, MyLongClassDto>());
+			}
+
+			{
+				var options = new CustomProjectionAdditionalMapsOptions();
+				options.AddMap<MyLongClass, MyLongClassDto>(c => s => c.Projector.ConstructAndMerge(new MyDerivedLongClassDto(2), new MyDerivedLongClassDto {
+					EntityId = s.Id,
+					EntityName = s.Name
+				}, new MyLongClassDto {
+					EntityCreation = s.Creation,
+					EntityActive = s.Active
+				}));
+				var projector = new CustomProjector(null, options);
+
+				// Order matters
+				Expression<Func<MyLongClass, MyLongClassDto>> expr = source => new MyDerivedLongClassDto(2) {
+					EntityId = source.Id,
+					EntityName = source.Name,
+					EntityCreation = source.Creation,
+					EntityActive = source.Active
+				};
+				TestUtils.AssertExpressionsEqual(expr, projector.Project<MyLongClass, MyLongClassDto>());
+			}
+		}
+
+		[TestMethod]
+		public void ShouldNotMergeDerivedTypes() {
+			var options = new CustomProjectionAdditionalMapsOptions();
+			options.AddMap<MyLongClass, MyLongClassDto>(c => s => c.Projector.Merge(new MyDerivedLongClassDto {
+				EntityId = s.Id,
+				EntityName = s.Name
+			}, new MyLongClassDto {
+				EntityCreation = s.Creation,
+				EntityActive = s.Active
+			}));
+			var projector = new CustomProjector(null, options);
+
+			var exc = Assert.ThrowsException<ProjectionException>(() => projector.Project<MyLongClass, MyLongClassDto>());
+			Assert.IsInstanceOfType(exc.InnerException, typeof(InvalidOperationException));
+			Assert.AreEqual("Initializations must not have types derived from the constructor type, only base types. Also interfaces should be restricted to their members only by casting them explicitly", exc.InnerException.Message);
+		}
+
+		[TestMethod]
+		public void ShouldExcludeForeignMembersFromInterfacesInMerge() {
+			{
+				var options = new CustomProjectionAdditionalMapsOptions();
+				options.AddMap<MyLongClass, IMyInterface>(c => s => new MyInterfaceClassDto {
+					EntityActive = true,
+					EntityName = "NotConsidered"
+				});
+				options.AddMap<MyLongClass, MyLongClassDto>(c => s => c.Projector.Merge<MyLongClassDto, IMyInterface>(
+					new MyLongClassDto {
+						EntityId = s.Id,
+						EntityName = s.Name
+					},
+					new MyLongClassDto {
+						EntityCreation = s.Creation,
+						EntityActive = s.Active
+					},
+					(IMyInterface)c.Projector.Project<MyLongClass, IMyInterface>(s)));
+				var projector = new CustomProjector(null, options);
+
+				// Order matters
+				Expression<Func<MyLongClass, MyLongClassDto>> expr = s => new MyLongClassDto {
+					EntityId = s.Id,
+					EntityName = s.Name,
+					EntityCreation = s.Creation,
+					EntityActive = true
+				};
+				TestUtils.AssertExpressionsEqual(expr, projector.Project<MyLongClass, MyLongClassDto>());
+			}
+
+			// Throws
+			{
+				var options = new CustomProjectionAdditionalMapsOptions();
+				options.AddMap<MyLongClass, IMyInterface>(c => s => new MyInterfaceClassDto {
+					EntityActive = s.Active,
+					EntityName = s.Name
+				});
+				options.AddMap<MyLongClass, MyLongClassDto>(c => s => c.Projector.Merge<MyLongClassDto, IMyInterface>(
+					new MyLongClassDto {
+						EntityId = s.Id,
+						EntityName = s.Name
+					},
+					new MyLongClassDto {
+						EntityCreation = s.Creation
+					},
+					c.Projector.Project<MyLongClass, IMyInterface>(s)));
+				var projector = new CustomProjector(null, options);
+
+				var exc = Assert.ThrowsException<ProjectionException>(() => projector.Project<MyLongClass, MyLongClassDto>());
+				Assert.AreEqual("Initializations must not have types derived from the constructor type, only base types. Also interfaces should be restricted to their members only by casting them explicitly", exc.InnerException.Message);
+			}
 		}
 
 		[TestMethod]

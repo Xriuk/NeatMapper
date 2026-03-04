@@ -112,7 +112,7 @@ public class MyMaps :
 }
 ```
 
-The compiled expression will look like this:
+The resulting expression will look like this:
 
 ```csharp
 source => new ProductDto{
@@ -156,7 +156,7 @@ public class MyMaps :
 }
 ```
 
-The compiled expression will look like this:
+The resulting expression will look like this:
 
 ```csharp
 source => new ProductDto{
@@ -167,4 +167,88 @@ source => new ProductDto{
 	},
 	...
 };
+```
+
+# Extend projections
+
+In addition to using nested projections you can also extend existing projections by using the `NestedProjector` instance you will find in the projection context. For example derived classes could reuse parents' projections to avoid redeclaring members.
+
+```csharp
+public class Product : BaseProduct { ... }
+
+public class ProductDto : BaseProductDto { ... }
+
+public class MyMaps :
+	IProjectionMap<BaseProduct, BaseProductDto>,
+	IProjectionMap<Product, ProductDto>
+{
+
+	Expression<Func<BaseProduct, BaseProductDto>> IProjectionMap<BaseProduct, BaseProductDto>.Project(ProjectionContext context){
+		return source => new BaseProductDto{
+			Id = source.Id,
+			...
+		};
+	}
+
+	Expression<Func<Product, ProductDto> IProjectionMap<Product, ProductDto>.Project(ProjectionContext context){
+		// The first type argument is the resulting type, the second is the base type for assignability
+		return source => context.Projector.Merge<ProductDto, BaseProductDto>(
+			context.Projector.Project<BaseProduct, BaseProductDto>(source), // source is a Product, so it is also a BaseProduct
+			// Declare the other members
+			new ProductDto{
+				Code = source.Code,
+				...
+			});
+	}
+}
+```
+
+The resulting expression will look like this:
+
+```csharp
+source => new ProductDto{
+	// Members from BaseProduct, BaseProductDto
+	Id = source.Id,
+	...
+	// Members from Product, ProductDto
+	Code = source.Code,
+	...
+};
+```
+
+You can also use reuse existing maps as interfaces for maximum extendability, 
+
+```csharp
+public class Product { ... }
+
+public class RegularProductDto : IMyInterface { ... }
+
+public class LimitedProductDto : IMyInterface { ... }
+
+public class MyMaps :
+	IProjectionMap<Product, RegularProductDto>,
+	IProjectionMap<Product, ProductDto>
+{
+
+	Expression<Func<Product, RegularProductDto>> IProjectionMap<Product, RegularProductDto>.Project(ProjectionContext context){
+		return source => new RegularProductDto{
+			Id = source.Id,
+			...
+		};
+	}
+
+	Expression<Func<Product, LimitedProductDto> IProjectionMap<Product, LimitedProductDto>.Project(ProjectionContext context){
+		// The first type argument is the resulting type, the second is the base type for assignability
+		return source => context.Projector.Merge<LimitedProductDto, IMyInterface>(
+			// The cast is necessary to only consider members of the interface (otherwise unrelated members from RegularProductDto
+			// could be included triggering errors, since RegularProductDto and LimitedProductDto are unrelated, they just share an interface)
+			(IMyInterface)context.Projector.Project<Product, RegularProductDto>(source),
+
+			// Declare the other members, no cast needed here since we are not considering the interface but the whole class
+			new LimitedProductDto{
+				Code = source.Code,
+				...
+			});
+	}
+}
 ```

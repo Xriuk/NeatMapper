@@ -10,9 +10,9 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class CompositeMapper : IMapper, IMapperFactory, IMapperMaps {
 		/// <summary>
-		/// List of <see cref="IMapper"/>s to be tried in order when mapping types.
+		/// Composite mapper options.
 		/// </summary>
-		private readonly IReadOnlyList<IMapper> _mappers;
+		private readonly CompositeMapperOptions _compositeMapperOptions;
 
 		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
@@ -25,13 +25,20 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public CompositeMapper(params IMapper[] mappers) :
-			this((IList<IMapper>)mappers ?? throw new ArgumentNullException(nameof(mappers))) { }
+			this(new CompositeMapperOptions { Mappers = new List<IMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers))) }) { }
 		/// <summary>
 		/// Creates a new instance of <see cref="CompositeMapper"/>.
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
-		public CompositeMapper(IList<IMapper> mappers) {
-			_mappers = new List<IMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers)));
+		public CompositeMapper(IList<IMapper> mappers) :
+			this(new CompositeMapperOptions { Mappers = new List<IMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers))) }) { }
+		/// <summary>
+		/// Creates a new instance of <see cref="CompositeMapper"/>.
+		/// </summary>
+		/// <param name="options">Options to create the mapper with.<br/>
+		/// Can be overridden during mapping with <see cref="CompositeMapper"/>.</param>
+		public CompositeMapper(CompositeMapperOptions options) {
+			_compositeMapperOptions = new CompositeMapperOptions(options ?? throw new ArgumentNullException(nameof(options)));
 			var nestedMappingContext = new NestedMappingContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<MapperOverrideMappingOptions, NestedMappingContext>(
 				m => m?.Mapper != null ? m : new MapperOverrideMappingOptions(this, m?.ServiceProvider),
@@ -48,8 +55,15 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			return _mappers.Any(m => m.CanMapNew(sourceType, destinationType, mappingOptions)) ||
-				(ObjectFactory.CanCreate(destinationType) && _mappers.Any(m => m.CanMapMerge(sourceType, destinationType, mappingOptions)));
+			if (_compositeMapperOptions.Mappers.Any(m => m.CanMapNew(sourceType, destinationType, mappingOptions)))
+				return true;
+
+			var mergeMapsHandling = mappingOptions.GetOptions<CompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
+
+			return mergeMapsHandling != MergeMapsHandling.DoNotMap &&
+				(mergeMapsHandling != MergeMapsHandling.CreateDestination || ObjectFactory.CanCreate(destinationType)) &&
+				_compositeMapperOptions.Mappers.Any(m => m.CanMapMerge(sourceType, destinationType, mappingOptions));
 		}
 
 		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -60,7 +74,7 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			return _mappers.Any(m => m.CanMapMerge(sourceType, destinationType, mappingOptions));
+			return _compositeMapperOptions.Mappers.Any(m => m.CanMapMerge(sourceType, destinationType, mappingOptions));
 		}
 
 		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -74,14 +88,27 @@ namespace NeatMapper {
 
 			var newMappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			var mapper = _mappers.FirstOrDefault(m => m.CanMapNew(sourceType, destinationType, newMappingOptions));
+			var mapper = _compositeMapperOptions.Mappers.FirstOrDefault(m => m.CanMapNew(sourceType, destinationType, newMappingOptions));
 			if (mapper != null)
 				return mapper.Map(source, sourceType, destinationType, newMappingOptions);
 
-			if (!ObjectFactory.CanCreate(destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
+			var mergeMapsHandling = newMappingOptions.GetOptions<CompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
 
-			return Map(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions);
+			if (mergeMapsHandling != MergeMapsHandling.DoNotMap &&
+				(mergeMapsHandling != MergeMapsHandling.CreateDestination || ObjectFactory.CanCreate(destinationType))) {
+
+				return Map(
+					source,
+					sourceType,
+					(mergeMapsHandling == MergeMapsHandling.CreateDestination ?
+						ObjectFactory.Create(destinationType) :
+						destinationType.GetDefault()),
+					destinationType,
+					mappingOptions);
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -95,7 +122,7 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			var mapper = _mappers.FirstOrDefault(m => m.CanMapMerge(sourceType, destinationType, mappingOptions));
+			var mapper = _compositeMapperOptions.Mappers.FirstOrDefault(m => m.CanMapMerge(sourceType, destinationType, mappingOptions));
 			if (mapper != null)
 				return mapper.Map(source, sourceType, destination, destinationType, mappingOptions);
 			else
@@ -117,7 +144,7 @@ namespace NeatMapper {
 
 			// Try retrieving a new factory
 			IMapper? validMapper = null;
-			foreach(var mapper in _mappers) {
+			foreach(var mapper in _compositeMapperOptions.Mappers) {
 				if(mapper.CanMapNew(sourceType, destinationType, mappingOptions)) {
 					if(mapper is IMapperFactory factory)
 						return factory.MapNewFactory(sourceType, destinationType, mappingOptions);
@@ -133,13 +160,20 @@ namespace NeatMapper {
 					source => validMapper.Map(source, sourceType, destinationType, mappingOptions));
 			}
 
-			// Check if we can forward to merge map by creating a destination object
-			if (ObjectFactory.CanCreate(destinationType)) { 
+			// Check if we can forward to merge map
+			var mergeMapsHandling = mappingOptions.GetOptions<CompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
+
+			if (mergeMapsHandling != MergeMapsHandling.DoNotMap &&
+				(mergeMapsHandling != MergeMapsHandling.CreateDestination || ObjectFactory.CanCreate(destinationType))) {
+
 				// Try retrieving a merge factory
-				foreach (var mapper in _mappers) {
+				foreach (var mapper in _compositeMapperOptions.Mappers) {
 					if (mapper.CanMapMerge(sourceType, destinationType, mappingOptions)) {
-						if (mapper is IMapperFactory factory)
-							return factory.MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
+						if (mapper is IMapperFactory factory) {
+							return factory.MapMergeFactory(sourceType, destinationType, mappingOptions)
+								.MapNewFactory(mergeMapsHandling == MergeMapsHandling.CreateDestination, true);
+						}
 						else
 							validMapper ??= mapper;
 					}
@@ -147,7 +181,9 @@ namespace NeatMapper {
 
 				// If we can map the types we return Map wrapped in a delegate
 				if (validMapper != null) { 
-					var destinationFactory = ObjectFactory.CreateFactory(destinationType);
+					var destinationFactory = (mergeMapsHandling == MergeMapsHandling.CreateDestination ?
+						(Func<object?>)ObjectFactory.CreateFactory(destinationType) :
+						destinationType.GetDefault);
 
 					return new DefaultNewMapFactory(
 						sourceType, destinationType,
@@ -171,7 +207,7 @@ namespace NeatMapper {
 
 			// Try retrieving a merge factory
 			IMapper? validMapper = null;
-			foreach (var mapper in _mappers) {
+			foreach (var mapper in _compositeMapperOptions.Mappers) {
 				if (mapper.CanMapMerge(sourceType, destinationType, mappingOptions)) {
 					if (mapper is IMapperFactory factory)
 						return factory.MapMergeFactory(sourceType, destinationType, mappingOptions);
@@ -193,13 +229,29 @@ namespace NeatMapper {
 
 		#region IMapperMaps methods
 		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
-			// Supports both new and merge maps (where destination objects can be created)
-			return _mappers.SelectMany(m => m.GetNewMaps(mappingOptions))
-				.Concat(GetMergeMaps(mappingOptions).Where(m => ObjectFactory.CanCreate(m.To)));
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			var mergeMapsHandling = mappingOptions.GetOptions<CompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
+
+			// Supports both new and merge maps
+			IEnumerable<(Type From, Type To)> mergeMaps;
+			if (mergeMapsHandling == MergeMapsHandling.DoNotMap)
+				mergeMaps = [];
+			else {
+				mergeMaps = _compositeMapperOptions.Mappers.SelectMany(m => m.GetMergeMaps(mappingOptions));
+				if (mergeMapsHandling == MergeMapsHandling.CreateDestination)
+					mergeMaps = mergeMaps.Where(m => ObjectFactory.CanCreate(m.To));
+			}
+
+			return _compositeMapperOptions.Mappers.SelectMany(m => m.GetNewMaps(mappingOptions))
+				.Concat(mergeMaps);
 		}
 
 		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
-			return _mappers.SelectMany(m => m.GetMergeMaps(mappingOptions));
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			return _compositeMapperOptions.Mappers.SelectMany(m => m.GetMergeMaps(mappingOptions));
 		}
 		#endregion
 	}

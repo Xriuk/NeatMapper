@@ -122,7 +122,7 @@ namespace NeatMapper.Tests.AsyncMapping {
 				return Task.FromResult(destination);
 			}
 
-			// Nested NewMap (fallbacks to MergeMap)
+			// Nested MergeMap
 			public static MappingOptions productOptions;
 #if NET7_0_OR_GREATER
 			static
@@ -140,7 +140,7 @@ namespace NeatMapper.Tests.AsyncMapping {
 					if (destination == null)
 						destination = new ProductDto();
 					destination.Code = source.Code;
-					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<int?>(s)).ToArray();
+					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<Category, int?>(s, (int?)null)).ToArray();
 					if(tasks != null)
 						await Task.WhenAll(tasks);
 					destination.Categories = tasks?.Select(t => t.Result).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
@@ -162,7 +162,7 @@ namespace NeatMapper.Tests.AsyncMapping {
 					if (destination == null)
 						destination = new LimitedProductDto();
 					destination.Code = source.Code;
-					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<int?>(s)).ToArray();
+					var tasks = source.Categories?.Select(s => context.Mapper.MapAsync<Category, int?>(s, (int?)null)).ToArray();
 					if(tasks != null)
 						await Task.WhenAll(tasks);
 					destination.Categories = tasks?.Select(t => t.Result).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
@@ -846,56 +846,6 @@ namespace NeatMapper.Tests.AsyncMapping {
 				Assert.AreEqual(2, result.Id);
 				Assert.AreEqual(3, result.Parent);
 			}
-		}
-
-		[TestMethod]
-		public async Task ShouldFallbackFromNewMapToMergeMapAndForwardOptions() {
-			Assert.IsTrue(_mapper.CanMapAsyncNew<float, string>());
-
-			// No Options
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				Assert.AreEqual("6", await _mapper.MapAsync<string>(2f));
-
-				Assert.IsNull(MappingOptionsUtils.options);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions);
-			}
-
-			// Options (without matcher)
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var opts = new TestOptions();
-				await _mapper.MapAsync<string>(2f, new[]{ opts });
-
-				Assert.AreSame(opts, MappingOptionsUtils.options);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions);
-			}
-
-			// Options (with matcher, forwards everything)
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
-				await _mapper.MapAsync<string>(2f, new object[]{ opts, merge });
-
-				Assert.AreSame(opts, MappingOptionsUtils.options);
-				Assert.AreSame(merge, MappingOptionsUtils.mergeOptions);
-				Assert.IsNotNull(MappingOptionsUtils.mergeOptions.Matcher);
-				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
-			}
-		}
-
-		[TestMethod]
-		public async Task ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
-			Assert.IsFalse(_mapper.CanMapAsyncNew<string, ClassWithoutParameterlessConstructor>());
-
-			await TestUtils.AssertMapNotFound(() => _mapper.MapAsync<ClassWithoutParameterlessConstructor>(""));
 		}
 
 		[TestMethod]

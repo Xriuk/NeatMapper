@@ -6,38 +6,43 @@ using System.Linq;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which maps <see cref="Nullable{T}"/> and its underlying types by using another
-	/// <see cref="IMapper"/>. Supports only new maps.
+	/// <see cref="IMapper"/> which maps <see cref="Nullable{T}"/> and its underlying types
+	/// by using another <see cref="IMapper"/> with the following rules:
 	/// <list type="bullet">
 	/// <item>
-	/// <b>Type -&gt; <see cref="Nullable{T}"/></b><br/>
-	/// Maps the value to the underlying type and casts the result to <see cref="Nullable{T}"/>.
+	///		<b>Type -&gt; <see cref="Nullable{T}"/></b>:<br/>
+	///		Maps the source type to the underlying type and casts the result to
+	///		<see cref="Nullable{T}"/>. For merge maps, if destination <see cref="Nullable{T}.Value"/>
+	///		is <see langword="null"/> a new instance is created and passed to the map.
 	/// </item>
 	/// <item>
-	/// <b><see cref="Nullable{T}"/> -&gt; Type</b>:
-	/// <list type="bullet">
-	/// <item>
-	/// If <see cref="Nullable{T}.Value"/> is <see langword="null"/> and the Type is a reference type (nullable)
-	/// <see langword="null"/> is returned.
+	///		<b><see cref="Nullable{T}"/> -&gt; Type</b>:
+	///		<list type="bullet">
+	///		<item>
+	///			If source <see cref="Nullable{T}.Value"/> is <see langword="null"/>:
+	///			<list type="bullet">
+	///			<item>
+	///				For new maps, if the destination Type is a reference type (nullable)
+	///				returns <see langword="null"/>.
+	///			</item>
+	///			<item>
+	///				For new maps, if the destination Type is not a reference type 
+	///				throws <see cref="MappingException"/>.
+	///			</item>
+	///			<item>For merge maps, returns the destination value.</item>
+	///			</list>
+	///		</item>
+	///		<item>
+	///			If source <see cref="Nullable{T}.Value"/> is not <see langword="null"/>
+	///			maps the underlying type with the destination Type.
+	///		</item>
+	///		</list>
 	/// </item>
 	/// <item>
-	/// If <see cref="Nullable{T}.Value"/> is <see langword="null"/> and the Type is not a reference type
-	/// <see cref="MappingException"/> is thrown.
-	/// </item>
-	/// <item>
-	/// If <see cref="Nullable{T}.Value"/> is not <see langword="null"/> the underlying type is mapped.
-	/// </item>
-	/// </list>
-	/// </item>
-	/// <item>
-	/// <b><see cref="Nullable{T}"/> -&gt; <see cref="Nullable{T}"/></b><br/>
-	/// Tries to map the underlying types in this order:
-	/// <list type="number">
-	/// <item><see cref="Nullable{T}"/> -&gt; Type and casts the result to <see cref="Nullable{T}"/>.</item>
-	/// <item>If <see cref="Nullable{T}.Value"/> is <see langword="null"/> returns <see langword="null"/>.</item>
-	/// <item>Type -&gt; <see cref="Nullable{T}"/>.</item>
-	/// <item>Type1 -&gt; Type2 and casts the result to <see cref="Nullable{T}"/>.</item>
-	/// </list>
+	///		<b><see cref="Nullable{T}"/> -&gt; <see cref="Nullable{T}"/></b>:<br/>
+	///		Maps the types as <see cref="Nullable{T}"/> -&gt; Type above and casts the result to
+	///		<see cref="Nullable{T}"/>. For merge maps, if destination <see cref="Nullable{T}.Value"/>
+	///		is <see langword="null"/> a new instance is created and passed to the map. 
 	/// </item>
 	/// </list>
 	/// </summary>
@@ -73,18 +78,21 @@ namespace NeatMapper {
 
 		#region IMapper methods
 		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			return CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out _, out _);
+			return CanMapInternal(sourceType, destinationType, ref mappingOptions, m => m.CanMapNew, out _, out _);
 		}
 
 		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			return false; // DEV: check
+			return CanMapInternal(sourceType, destinationType, ref mappingOptions, m => m.CanMapMerge, out _, out _);
 		}
 
 		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out var concreteMapper, out var underlyingTypes) || concreteMapper == null)
+			if (!CanMapInternal(sourceType, destinationType, ref mappingOptions, m => m.CanMapNew, out var concreteMapper, out var underlyingTypes) ||
+				concreteMapper == null) { 
+
 				throw new MapNotFoundException(types);
+			}
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
@@ -120,7 +128,49 @@ namespace NeatMapper {
 		}
 
 		public object? Map(object? source, Type sourceType, object? destination, Type destinationType, MappingOptions? mappingOptions) {
-			throw new MapNotFoundException((sourceType, destinationType)); // DEV: check
+			(Type From, Type To) types = (sourceType, destinationType);
+
+			if (!CanMapInternal(sourceType, destinationType, ref mappingOptions, m => m.CanMapNew, out var concreteMapper, out var underlyingTypes) ||
+				concreteMapper == null) {
+
+				throw new MapNotFoundException(types);
+			}
+
+			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+			TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+			if (sourceType != underlyingTypes.From) {
+				if (source == null) 
+					return destination;
+				else
+					source = Convert.ChangeType(source, underlyingTypes.From);
+			}
+
+			if (destinationType != underlyingTypes.To) {
+				if (destination == null)
+					destination = ObjectFactory.Create(underlyingTypes.To);
+				else
+					destination = Convert.ChangeType(destination, underlyingTypes.To);
+			}
+
+			object? result;
+			try {
+				result = concreteMapper.Map(source, underlyingTypes.From, destination, underlyingTypes.To, mappingOptions);
+			}
+			catch (OperationCanceledException) {
+				throw;
+			}
+			catch (MapNotFoundException) {
+				throw new MapNotFoundException(types);
+			}
+			catch (Exception e) {
+				throw new MappingException(e, types);
+			}
+
+			if (underlyingTypes.To != destinationType)
+				result = TypeDescriptor.GetConverter(destinationType).ConvertFrom(result!);
+
+			return result;
 		}
 		#endregion
 		
@@ -128,8 +178,11 @@ namespace NeatMapper {
 		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			(Type From, Type To) types = (sourceType, destinationType);
 
-			if (!CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out var concreteMapper, out var underlyingTypes) || concreteMapper == null)
+			if (!CanMapInternal(sourceType, destinationType, ref mappingOptions, m => m.CanMapNew, out var concreteMapper, out var underlyingTypes) ||
+				concreteMapper == null) {
+
 				throw new MapNotFoundException(types);
+			}
 
 			INewMapFactory concreteFactory;
 			try {
@@ -182,51 +235,86 @@ namespace NeatMapper {
 		}
 
 		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			throw new MapNotFoundException((sourceType, destinationType)); // DEV: check
+			(Type From, Type To) types = (sourceType, destinationType);
+
+			if (!CanMapInternal(sourceType, destinationType, ref mappingOptions, m => m.CanMapMerge, out var concreteMapper, out var underlyingTypes) ||
+				concreteMapper == null) {
+
+				throw new MapNotFoundException(types);
+			}
+
+			IMergeMapFactory concreteFactory;
+			try {
+				concreteFactory = concreteMapper.MapMergeFactory(underlyingTypes.From, underlyingTypes.To, mappingOptions);
+			}
+			catch (MapNotFoundException) {
+				throw new MapNotFoundException(types);
+			}
+
+			try {
+				var converter = underlyingTypes.To != destinationType ? TypeDescriptor.GetConverter(destinationType) : null;
+
+				return new DisposableMergeMapFactory(
+					sourceType, destinationType,
+					(source, destination) => {
+						TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+						TypeUtils.CheckObjectType(destination, destinationType, nameof(destination));
+
+						if (sourceType != underlyingTypes.From) {
+							if (source == null)
+								return destination;
+							else
+								source = Convert.ChangeType(source, underlyingTypes.From);
+						}
+
+						if (destinationType != underlyingTypes.To) {
+							if (destination == null)
+								destination = ObjectFactory.Create(underlyingTypes.To);
+							else
+								destination = Convert.ChangeType(destination, underlyingTypes.To);
+						}
+
+						object? result;
+						try {
+							result = concreteFactory.Invoke(source, destination);
+						}
+						catch (OperationCanceledException) {
+							throw;
+						}
+						catch (Exception e) {
+							throw new MappingException(e, types);
+						}
+
+						if (converter != null)
+							result = converter.ConvertFrom(result!);
+
+						return result;
+					}, concreteFactory);
+			}
+			catch {
+				concreteFactory.Dispose();
+				throw;
+			}
 		}
 		#endregion
 
 		#region IMapperMaps methods
 		public IEnumerable<(Type From, Type To)> GetNewMaps(MappingOptions? mappingOptions = null) {
-			// If we are in a nested map retrieval we ignore ourselves
-			if (mappingOptions?.GetOptions<NestedMappingContext>()?.CheckRecursive(c => c.ParentMapper == this) == true)
-				return [];
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			var concreteMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
-				?? _concreteMapper;
-
-			return concreteMapper.GetNewMaps(mappingOptions).SelectMany(NullifyType);
-
-
-			static IEnumerable<(Type From, Type To)> NullifyType((Type From, Type To) type) {
-				yield return type;
-
-				var isFromNullable = type.From.IsValueType && !type.From.IsNullable();
-				if (isFromNullable)
-					yield return (typeof(Nullable<>).MakeGenericType(type.From), type.To);
-
-				var isToNullable = type.To.IsValueType && !type.To.IsNullable();
-				if (isToNullable)
-					yield return (type.From, typeof(Nullable<>).MakeGenericType(type.To));
-
-				if (isFromNullable && isToNullable)
-					yield return (typeof(Nullable<>).MakeGenericType(type.From), typeof(Nullable<>).MakeGenericType(type.To));
-			}
+			return GetMapsInternal(mappingOptions, m => m.GetNewMaps);
 		}
 
 		public IEnumerable<(Type From, Type To)> GetMergeMaps(MappingOptions? mappingOptions = null) {
-			return [];
+			return GetMapsInternal(mappingOptions, m => m.GetMergeMaps);
 		}
 		#endregion
 
 
-		private bool CanMapNewInternal(
+		private bool CanMapInternal(
 			Type sourceType,
 			Type destinationType,
 			[NotNullWhen(true)] ref MappingOptions? mappingOptions,
-			out IMapper concreteMapper,
+			Func<IMapper, Func<Type, Type, MappingOptions, bool>> canMapSelector,
+			out IMapper? concreteMapper,
 			out (Type From, Type To) underlyingTypes) {
 
 			if (sourceType == null)
@@ -248,11 +336,13 @@ namespace NeatMapper {
 				concreteMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
 					?? _concreteMapper;
 
+				var canMap = canMapSelector.Invoke(concreteMapper);
+
 				Type? destinationNullableUnderlying;
 				if (destinationType.IsNullable()) {
 					destinationNullableUnderlying = Nullable.GetUnderlyingType(destinationType)!;
 					// Type1? -> Type2
-					if(concreteMapper.CanMapNew(sourceType, destinationNullableUnderlying, mappingOptions)) {
+					if(canMap.Invoke(sourceType, destinationNullableUnderlying, mappingOptions)) {
 						underlyingTypes = (sourceType, destinationNullableUnderlying);
 						return true;
 					}
@@ -264,7 +354,7 @@ namespace NeatMapper {
 				if (sourceType.IsNullable()) {
 					sourceNullableUnderlying = Nullable.GetUnderlyingType(sourceType)!;
 					// Type1 -> Type2?
-					if (concreteMapper.CanMapNew(sourceNullableUnderlying, destinationType, mappingOptions)) {
+					if (canMap.Invoke(sourceNullableUnderlying, destinationType, mappingOptions)) {
 						underlyingTypes = (sourceNullableUnderlying, destinationType);
 						return true;
 					}
@@ -275,7 +365,7 @@ namespace NeatMapper {
 
 				// Type1 -> Type2
 				if (sourceNullableUnderlying != null && destinationNullableUnderlying != null &&
-					concreteMapper.CanMapNew(sourceNullableUnderlying, destinationNullableUnderlying, mappingOptions)) {
+					canMap.Invoke(sourceNullableUnderlying, destinationNullableUnderlying, mappingOptions)) {
 
 					underlyingTypes = (sourceNullableUnderlying, destinationNullableUnderlying);
 					return true;
@@ -284,6 +374,41 @@ namespace NeatMapper {
 					underlyingTypes = default;
 					return false;
 				}
+			}
+		}
+
+		private IEnumerable<(Type From, Type To)> GetMapsInternal(
+			MappingOptions? mappingOptions,
+			Func<IMapper, Func<MappingOptions, IEnumerable<(Type From, Type To)>>> getMapsSelector) {
+
+			// If we are in a nested map retrieval we ignore ourselves
+			if (mappingOptions?.GetOptions<NestedMappingContext>()?.CheckRecursive(c => c.ParentMapper == this) == true)
+				return [];
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			var concreteMapper = mappingOptions.GetOptions<MapperOverrideMappingOptions>()?.Mapper
+				?? _concreteMapper;
+
+			return getMapsSelector
+				.Invoke(concreteMapper)
+				.Invoke(mappingOptions)
+				.SelectMany(NullifyType);
+
+
+			static IEnumerable<(Type From, Type To)> NullifyType((Type From, Type To) type) {
+				yield return type;
+
+				var isFromNullable = type.From.IsValueType && !type.From.IsNullable();
+				if (isFromNullable)
+					yield return (typeof(Nullable<>).MakeGenericType(type.From), type.To);
+
+				var isToNullable = type.To.IsValueType && !type.To.IsNullable();
+				if (isToNullable)
+					yield return (type.From, typeof(Nullable<>).MakeGenericType(type.To));
+
+				if (isFromNullable && isToNullable)
+					yield return (typeof(Nullable<>).MakeGenericType(type.From), typeof(Nullable<>).MakeGenericType(type.To));
 			}
 		}
 	}

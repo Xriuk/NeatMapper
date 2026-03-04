@@ -111,7 +111,7 @@ namespace NeatMapper.Tests.Mapping {
 				return destination;
 			}
 
-			// Nested NewMap (fallbacks to MergeMap)
+			// Nested MergeMap
 			public static MappingOptions productOptions;
 #if NET7_0_OR_GREATER
 			static
@@ -129,7 +129,7 @@ namespace NeatMapper.Tests.Mapping {
 					if (destination == null)
 						destination = new ProductDto();
 					destination.Code = source.Code;
-					destination.Categories = source.Categories?.Select(s => context.Mapper.Map<int?>(s)).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
+					destination.Categories = source.Categories?.Select(s => context.Mapper.Map<Category, int?>(s, (int?)null)).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
 				}
 				return destination;
 			}
@@ -149,7 +149,7 @@ namespace NeatMapper.Tests.Mapping {
 					if (destination == null)
 						destination = new LimitedProductDto();
 					destination.Code = source.Code;
-					destination.Categories = source.Categories?.Select(s => context.Mapper.Map<int?>(s)).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
+					destination.Categories = source.Categories?.Select(s => context.Mapper.Map<Category, int?>(s, (int?)null)).Where(i => i != null).Cast<int>().ToList() ?? new List<int>();
 					destination.Copies = source.Copies;
 				}
 				return destination;
@@ -765,57 +765,6 @@ namespace NeatMapper.Tests.Mapping {
 				Assert.AreEqual(2, result.Id);
 				Assert.AreEqual(3, result.Parent);
 			}
-		}
-
-		[TestMethod]
-		public void ShouldFallbackFromNewMapToMergeMapAndForwardOptions() {
-			Assert.IsTrue(_mapper.CanMapNew<float, string>());
-
-			// No Options
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				Assert.AreEqual("6", _mapper.Map<string>(2f));
-
-				Assert.IsNull(MappingOptionsUtils.options);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions);
-			}
-
-			// Options (without matcher)
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var opts = new TestOptions();
-				_mapper.Map<string>(2f, new object[] { opts });
-
-				Assert.AreSame(opts, MappingOptionsUtils.options);
-				Assert.IsNull(MappingOptionsUtils.mergeOptions);
-			}
-
-			// Options (with matcher, forwards everything)
-			{
-				MappingOptionsUtils.options = null;
-				MappingOptionsUtils.mergeOptions = null;
-
-				var opts = new TestOptions();
-				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
-				_mapper.Map<string>(2f, new object[] { opts, merge });
-
-				Assert.AreSame(opts, MappingOptionsUtils.options);
-				Assert.AreSame(merge, MappingOptionsUtils.mergeOptions);
-				Assert.IsNotNull(MappingOptionsUtils.mergeOptions.Matcher);
-				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
-			}
-		}
-
-		[TestMethod]
-		public void ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
-			Assert.IsTrue(_mapper.CanMapMerge<string, ClassWithoutParameterlessConstructor>());
-			Assert.IsFalse(_mapper.CanMapNew<string, ClassWithoutParameterlessConstructor>());
-
-			TestUtils.AssertMapNotFound(() => _mapper.Map<ClassWithoutParameterlessConstructor>(""));
 		}
 
 		[TestMethod]

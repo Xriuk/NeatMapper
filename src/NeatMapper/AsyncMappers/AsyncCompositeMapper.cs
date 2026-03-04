@@ -12,9 +12,9 @@ namespace NeatMapper {
 	/// </summary>
 	public sealed class AsyncCompositeMapper : IAsyncMapper, IAsyncMapperFactory, IAsyncMapperMaps {
 		/// <summary>
-		/// List of <see cref="IMapper"/>s to be tried in order when mapping types.
+		/// Composite mapper options.
 		/// </summary>
-		private readonly IList<IAsyncMapper> _mappers;
+		private readonly AsyncCompositeMapperOptions _compositeMapperOptions;
 
 		/// <summary>
 		/// Cached input and output <see cref="MappingOptions"/>.
@@ -27,13 +27,20 @@ namespace NeatMapper {
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
 		public AsyncCompositeMapper(params IAsyncMapper[] mappers) :
-			this((IList<IAsyncMapper>)mappers ?? throw new ArgumentNullException(nameof(mappers))) { }
+			this(new AsyncCompositeMapperOptions { Mappers = mappers ?? throw new ArgumentNullException(nameof(mappers)) }) { }
 		/// <summary>
 		/// Creates the mapper by using the provided mappers list.
 		/// </summary>
 		/// <param name="mappers">Mappers to delegate the mapping to.</param>
-		public AsyncCompositeMapper(IList<IAsyncMapper> mappers) {
-			_mappers = new List<IAsyncMapper>(mappers ?? throw new ArgumentNullException(nameof(mappers)));
+		public AsyncCompositeMapper(IList<IAsyncMapper> mappers) :
+			this(new AsyncCompositeMapperOptions { Mappers = mappers ?? throw new ArgumentNullException(nameof(mappers)) }) { }
+		/// <summary>
+		/// Creates a new instance of <see cref="CompositeMapper"/>.
+		/// </summary>
+		/// <param name="options">Options to create the mapper with.<br/>
+		/// Can be overridden during mapping with <see cref="CompositeMapper"/>.</param>
+		public AsyncCompositeMapper(AsyncCompositeMapperOptions options) {
+			_compositeMapperOptions = new AsyncCompositeMapperOptions(options ?? throw new ArgumentNullException(nameof(options)));
 			var nestedMappingContext = new AsyncNestedMappingContext(this);
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(options => options.ReplaceOrAdd<AsyncMapperOverrideMappingOptions, AsyncNestedMappingContext>(
 				m => m?.Mapper != null ? m : new AsyncMapperOverrideMappingOptions(this, m?.ServiceProvider),
@@ -50,8 +57,15 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			return _mappers.Any(m => m.CanMapAsyncNew(sourceType, destinationType, mappingOptions)) ||
-				(ObjectFactory.CanCreate(destinationType) && _mappers.Any(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions)));
+			if (_compositeMapperOptions.Mappers.Any(m => m.CanMapAsyncNew(sourceType, destinationType, mappingOptions)))
+				return true;
+
+			var mergeMapsHandling = mappingOptions.GetOptions<AsyncCompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
+
+			return mergeMapsHandling != MergeMapsHandling.DoNotMap &&
+				(mergeMapsHandling != MergeMapsHandling.CreateDestination || ObjectFactory.CanCreate(destinationType)) &&
+				_compositeMapperOptions.Mappers.Any(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
 		}
 
 		public bool CanMapAsyncMerge(Type sourceType, Type destinationType,MappingOptions? mappingOptions = null) {
@@ -62,7 +76,7 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			return _mappers.Any(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
+			return _compositeMapperOptions.Mappers.Any(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
 		}
 
 		public Task<object?> MapAsync(
@@ -82,14 +96,28 @@ namespace NeatMapper {
 
 			var newMappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			var mapper = _mappers.FirstOrDefault(m => m.CanMapAsyncNew(sourceType, destinationType, newMappingOptions));
+			var mapper = _compositeMapperOptions.Mappers.FirstOrDefault(m => m.CanMapAsyncNew(sourceType, destinationType, newMappingOptions));
 			if (mapper != null)
 				return mapper.MapAsync(source, sourceType, destinationType, newMappingOptions, cancellationToken);
 
-			if (!ObjectFactory.CanCreate(destinationType))
-				throw new MapNotFoundException((sourceType, destinationType));
+			var mergeMapsHandling = newMappingOptions.GetOptions<AsyncCompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
 
-			return MapAsync(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions, cancellationToken);
+			if (mergeMapsHandling != MergeMapsHandling.DoNotMap &&
+				(mergeMapsHandling != MergeMapsHandling.CreateDestination || ObjectFactory.CanCreate(destinationType))) {
+
+				return MapAsync(
+					source,
+					sourceType,
+					(mergeMapsHandling == MergeMapsHandling.CreateDestination ?
+						ObjectFactory.Create(destinationType) :
+						destinationType.GetDefault()),
+					destinationType,
+					mappingOptions,
+					cancellationToken);
+			}
+
+			throw new MapNotFoundException((sourceType, destinationType));
 		}
 
 		public Task<object?> MapAsync(
@@ -110,7 +138,7 @@ namespace NeatMapper {
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			var mapper = _mappers.FirstOrDefault(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
+			var mapper = _compositeMapperOptions.Mappers.FirstOrDefault(m => m.CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
 			if (mapper != null)
 				return mapper.MapAsync(source, sourceType, destination, destinationType, mappingOptions, cancellationToken);
 			else
@@ -132,7 +160,7 @@ namespace NeatMapper {
 
 			// Try retrieving a new factory
 			IAsyncMapper? validMapper = null;
-			foreach (var mapper in _mappers) {
+			foreach (var mapper in _compositeMapperOptions.Mappers) {
 				if (mapper.CanMapAsyncNew(sourceType, destinationType, mappingOptions)) {
 					if (mapper is IAsyncMapperFactory factory)
 						return factory.MapAsyncNewFactory(sourceType, destinationType, mappingOptions);
@@ -148,13 +176,20 @@ namespace NeatMapper {
 					(source, cancellationToken) => validMapper.MapAsync(source, sourceType, destinationType, mappingOptions, cancellationToken));
 			}
 
+			// Check if we can forward to merge map
+			var mergeMapsHandling = mappingOptions.GetOptions<AsyncCompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
+
 			// Check if we can forward to merge map by creating a destination object
-			if (ObjectFactory.CanCreate(destinationType)) {
+			if (mergeMapsHandling != MergeMapsHandling.DoNotMap &&
+				(mergeMapsHandling != MergeMapsHandling.CreateDestination || ObjectFactory.CanCreate(destinationType))) {
+
 				// Try retrieving a merge factory
-				foreach (var mapper in _mappers) {
+				foreach (var mapper in _compositeMapperOptions.Mappers) {
 					if (mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions)) {
 						if (mapper is IAsyncMapperFactory factory)
-							return factory.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
+							return factory.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions)
+								.MapAsyncNewFactory(mergeMapsHandling == MergeMapsHandling.CreateDestination, true);
 						else
 							validMapper ??= mapper;
 					}
@@ -162,7 +197,9 @@ namespace NeatMapper {
 
 				// If we can map the types we return MapAsync wrapped in a delegate
 				if (validMapper != null) {
-					var destinationFactory = ObjectFactory.CreateFactory(destinationType);
+					var destinationFactory = (mergeMapsHandling == MergeMapsHandling.CreateDestination ?
+						(Func<object?>)ObjectFactory.CreateFactory(destinationType) :
+						destinationType.GetDefault);
 
 					return new DefaultAsyncNewMapFactory(
 						sourceType, destinationType,
@@ -186,7 +223,7 @@ namespace NeatMapper {
 
 			// Try retrieving a merge factory
 			IAsyncMapper? validMapper = null;
-			foreach (var mapper in _mappers) {
+			foreach (var mapper in _compositeMapperOptions.Mappers) {
 				if (mapper.CanMapAsyncMerge(sourceType, destinationType, mappingOptions)) {
 					if (mapper is IAsyncMapperFactory factory)
 						return factory.MapAsyncMergeFactory(sourceType, destinationType, mappingOptions);
@@ -208,13 +245,29 @@ namespace NeatMapper {
 
 		#region IAsyncMapperMaps methods
 		public IEnumerable<(Type From, Type To)> GetAsyncNewMaps(MappingOptions? mappingOptions = null) {
-			// Supports both new and merge maps (where destination objects can be created)
-			return _mappers.SelectMany(m => m.GetAsyncNewMaps(mappingOptions))
-				.Concat(GetAsyncMergeMaps(mappingOptions).Where(m => ObjectFactory.CanCreate(m.To)));
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			var mergeMapsHandling = mappingOptions.GetOptions<AsyncCompositeMapperMappingOptions>()?.MergeMapsHandling
+				?? _compositeMapperOptions.MergeMapsHandling;
+
+			// Supports both new and merge maps
+			IEnumerable<(Type From, Type To)> mergeMaps;
+			if (mergeMapsHandling == MergeMapsHandling.DoNotMap)
+				mergeMaps = [];
+			else {
+				mergeMaps = _compositeMapperOptions.Mappers.SelectMany(m => m.GetAsyncMergeMaps(mappingOptions));
+				if (mergeMapsHandling == MergeMapsHandling.CreateDestination)
+					mergeMaps = mergeMaps.Where(m => ObjectFactory.CanCreate(m.To));
+			}
+
+			return _compositeMapperOptions.Mappers.SelectMany(m => m.GetAsyncNewMaps(mappingOptions))
+				.Concat(mergeMaps);
 		}
 
 		public IEnumerable<(Type From, Type To)> GetAsyncMergeMaps(MappingOptions? mappingOptions = null) {
-			return _mappers.SelectMany(m => m.GetAsyncMergeMaps(mappingOptions));
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			return _compositeMapperOptions.Mappers.SelectMany(m => m.GetAsyncMergeMaps(mappingOptions));
 		}
 		#endregion
 	}

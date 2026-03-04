@@ -1,5 +1,26 @@
 # Changelog
 
+## [6.3.0] - 2026-03-04
+
+### Changed
+
+- `NullableMapper`/`AsyncNullableMapper` now supports merge maps too.
+- `CustomMapper`/`AsyncCustomMapper` now does not forward new maps to merge maps anymore, this is delegated to `CompositeMapper`/`AsyncCompositeMapper`.
+- `CollectionMapper`/`AsyncCollectionMapper` now does not try converting merge maps to new maps for elements, this is delegated to the element mapper.
+- `CompositeMapper`/`AsyncCompositeMapper` now respects `CompositeMapperOptions`/`AsyncCompositeMapperOptions` (and `CompositeMapperMappingOptions`/`AsyncCompositeMapperMappingOptions` overrides) to forward new maps to merge maps.
+
+### Added
+
+- `NestedProjector.Merge` which allows merging type member initializations in projection maps.
+- `CompositeMapperOptions`/`AsyncCompositeMapperOptions.MergeMapsHandling` to customize how new maps are forwarded to merge maps.
+- `CompositeMapperMappingOptions`/`AsyncCompositeMapperMappingOptions` to override `CompositeMapperOptions`/`AsyncCompositeMapperOptions.MergeMapsHandling` during mapping.
+- `MapNewFactory`/`MapAsyncNewFactory` overloads for `IMergeMapFactory`/`IAsyncMergeMapFactory` to handle destination creation or default values.
+
+### Fixed
+
+- `CompositeMapper.GetNewMaps`/`GetMergeMaps` now correctly forwards `MappingOptions` to nested mappers;
+
+
 ## [6.2.0] - 2026-02-24
 
 ### Added

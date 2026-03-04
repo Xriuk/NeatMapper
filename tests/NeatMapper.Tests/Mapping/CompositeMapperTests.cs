@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections.Generic;
 
 namespace NeatMapper.Tests.Mapping {
 	[TestClass]
@@ -33,6 +34,65 @@ namespace NeatMapper.Tests.Mapping {
 			}
 		}
 
+
+		[TestMethod]
+		public void ShouldFallbackFromNewMapToMergeMapAndForwardOptions() {
+			var mapper = new CompositeMapper(new CustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(MergeMapsTests.Maps) }
+			}));
+
+			Assert.IsTrue(mapper.CanMapNew<float, string>());
+
+			// No Options
+			{
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+
+				Assert.AreEqual("6", mapper.Map<string>(2f));
+
+				Assert.IsNull(MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
+			}
+
+			// Options (without matcher)
+			{
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+
+				var opts = new TestOptions();
+				mapper.Map<string>(2f, new object[] { opts });
+
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.IsNull(MappingOptionsUtils.mergeOptions);
+			}
+
+			// Options (with matcher, forwards everything)
+			{
+				MappingOptionsUtils.options = null;
+				MappingOptionsUtils.mergeOptions = null;
+
+				var opts = new TestOptions();
+				var merge = new MergeCollectionsMappingOptions(false, EmptyMatcher.Instance);
+				mapper.Map<string>(2f, new object[] { opts, merge });
+
+				Assert.AreSame(opts, MappingOptionsUtils.options);
+				Assert.AreSame(merge, MappingOptionsUtils.mergeOptions);
+				Assert.IsNotNull(MappingOptionsUtils.mergeOptions.Matcher);
+				Assert.IsFalse(MappingOptionsUtils.mergeOptions.RemoveNotMatchedDestinationElements);
+			}
+		}
+
+		[TestMethod]
+		public void ShouldNotFallbackFromNewMapToMergeMapIfCannotCreateDestination() {
+			var mapper = new CompositeMapper(new CustomMapper(new CustomMapsOptions {
+				TypesToScan = new List<Type> { typeof(MergeMapsTests.Maps) }
+			}));
+
+			Assert.IsTrue(mapper.CanMapMerge<string, ClassWithoutParameterlessConstructor>());
+			Assert.IsFalse(mapper.CanMapNew<string, ClassWithoutParameterlessConstructor>());
+
+			TestUtils.AssertMapNotFound(() => mapper.Map<ClassWithoutParameterlessConstructor>(""));
+		}
 
 		[TestMethod]
 		public void MapNewFactoryShouldReturnMergeToo() {
