@@ -128,9 +128,7 @@ namespace NeatMapper {
 
 		#region IMapper methods
 		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			return CanMapNewInternal(sourceType, destinationType, mappingOptions, out _, out _) ||
-				(!sourceType.IsGenericTypeDefinition && !destinationType.IsGenericTypeDefinition &&
-					ObjectFactory.CanCreate(destinationType) && CanMapMerge(sourceType, destinationType, mappingOptions));
+			return CanMapNewInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
 		public bool CanMapMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -138,16 +136,8 @@ namespace NeatMapper {
 		}
 
 		public object? Map(object? source, Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if(!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null) {
-				// Forward new map to merge by creating a destination
-				if (!sourceType.IsGenericTypeDefinition && !destinationType.IsGenericTypeDefinition &&
-					ObjectFactory.CanCreate(destinationType)) { 
-
-					return Map(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions);
-				}
-				else
-					throw new MapNotFoundException((sourceType, destinationType));
-			}
+			if(!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null)
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
@@ -179,7 +169,7 @@ namespace NeatMapper {
 		public INewMapFactory MapNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			// Forward new map to merge by creating a destination
 			if (!CanMapNewInternal(sourceType, destinationType, mappingOptions, out var map, out var context) || map == null)
-				return MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory();
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			return new DefaultNewMapFactory(
 				sourceType, destinationType,
@@ -230,7 +220,7 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 			MappingOptions? mappingOptions,
-			out Func<object?, MappingContext, object?> map,
+			out Func<object?, MappingContext, object?>? map,
 			out MappingContext context) {
 
 			if (sourceType == null)
@@ -239,7 +229,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) { 
-				map = null!;
+				map = null;
 				context = null!;
 
 				return _newMapsConfiguration.HasOpenGenericMap((sourceType, destinationType));
@@ -262,7 +252,7 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 			MappingOptions? mappingOptions,
-			out Func<object?, object?, MappingContext, object?> map,
+			out Func<object?, object?, MappingContext, object?>? map,
 			out MappingContext context) {
 
 			if (sourceType == null)
@@ -271,7 +261,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
-				map = null!;
+				map = null;
 				context = null!;
 
 				return _mergeMapsConfiguration.HasOpenGenericMap((sourceType, destinationType));

@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.3.0] - 2026-03-04
+
+### Changed
+
+- Updated NeatMapper dependency version.
+
+
 ## [6.2.0] - 2026-02-24
 
 ### Changed

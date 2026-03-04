@@ -16,67 +16,152 @@ namespace NeatMapper {
 		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
-				// Expand projector.Project into the corresponding expressions
-				if (node.Method.DeclaringType == typeof(NestedProjector) &&
-					node.Method.Name == nameof(NestedProjector.Project) &&
-					CompileAndRunExpression(node.Object!) is NestedProjector nestedProjector) {
+				if (node.Method.DeclaringType == typeof(NestedProjector)) {
+					// Expand projector.Project into the corresponding expressions
+					if (node.Method.Name == nameof(NestedProjector.Project) &&
+						CompileAndRunExpression(node.Object!) is NestedProjector nestedProjector) {
 
-					// Validate mapping options if not null
-					MappingOptions? mappingOptions;
-					if (node.Arguments.Count == 2) {
-						var mappingOptionsType = node.Arguments[1].Type;
-						if (mappingOptionsType == typeof(MappingOptions))
-							mappingOptions = CompileAndRunExpression(node.Arguments[1]) as MappingOptions;
-						else if (mappingOptionsType == typeof(IEnumerable)) {
-							var ienumerable = CompileAndRunExpression(node.Arguments[1]) as IEnumerable;
-							if (ienumerable?.Cast<object>().Any(o => o != null) == true)
-								mappingOptions = new MappingOptions(ienumerable);
+						// Validate mapping options if not null
+						MappingOptions? mappingOptions;
+						if (node.Arguments.Count == 2) {
+							var mappingOptionsType = node.Arguments[1].Type;
+							if (mappingOptionsType == typeof(MappingOptions))
+								mappingOptions = CompileAndRunExpression(node.Arguments[1]) as MappingOptions;
+							else if (mappingOptionsType == typeof(IEnumerable)) {
+								var ienumerable = CompileAndRunExpression(node.Arguments[1]) as IEnumerable;
+								if (ienumerable?.Cast<object>().Any(o => o != null) == true)
+									mappingOptions = new MappingOptions(ienumerable);
+								else
+									mappingOptions = null;
+							}
+							else if (mappingOptionsType == typeof(object[])) {
+								var objects = CompileAndRunExpression(node.Arguments[1]) as object[];
+								if (objects?.Any(o => o != null) == true)
+									mappingOptions = new MappingOptions(objects);
+								else
+									mappingOptions = null;
+							}
 							else
-								mappingOptions = null;
-						}
-						else if (mappingOptionsType == typeof(object[])) {
-							var objects = CompileAndRunExpression(node.Arguments[1]) as object[];
-							if (objects?.Any(o => o != null) == true)
-								mappingOptions = new MappingOptions(objects);
-							else
-								mappingOptions = null;
+								throw new InvalidOperationException($"Invalid mapping options type {mappingOptionsType.FullName ?? mappingOptionsType.Name} in nested map");
 						}
 						else
-							throw new InvalidOperationException($"Invalid mapping options type {mappingOptionsType.FullName ?? mappingOptionsType.Name} in nested map");
+							mappingOptions = null;
+
+						var argumentType = node.Arguments[0].Type;
+
+						// Retrieve the map types, the source may be inferred or explicit
+						(Type From, Type To) types;
+						var genericArguments = node.Method.GetGenericArguments();
+						if (genericArguments.Length == 1)
+							types = (argumentType, genericArguments[0]);
+						else
+							types = (genericArguments[0], genericArguments[1]);
+
+						// Retrieve the nested expression from the projector
+						var nestedExpression = nestedProjector.Projector.Project(types.From, types.To, mappingOptions);
+
+						// Replace the parameter with the argument
+						if (!nestedExpression.Parameters[0].Type.IsAssignableFrom(argumentType)) {
+							throw new InvalidOperationException($"Incompatible types between passed argument {argumentType.FullName ?? argumentType.Name} " +
+								$"and retrieved map for types {nestedExpression.Parameters[0].Type.FullName ?? nestedExpression.Parameters[0].Type.Name} -> " +
+								$"{nestedExpression.Parameters[1].Type.FullName ?? nestedExpression.Parameters[1].Type.Name}");
+						}
+						return new LambdaParameterReplacer(Visit(node.Arguments[0])).SetupAndVisitBody(nestedExpression);
 					}
-					else
-						mappingOptions = null;
 
-					var argumentType = node.Arguments[0].Type;
+					// Expand projector.Inline into the corresponding expressions,
+					// supports all arguments
+					if (node.Method.Name == nameof(NestedProjector.Inline) &&
+						CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2 &&
+							Visit(nestedExpression2) is LambdaExpression nestedExpression3) {
 
-					// Retrieve the map types, the source may be inferred or explicit
-					(Type From, Type To) types;
-					var genericArguments = node.Method.GetGenericArguments();
-					if (genericArguments.Length == 1)
-						types = (argumentType, genericArguments[0]);
-					else
-						types = (genericArguments[0], genericArguments[1]);
-
-					// Retrieve the nested expression from the projector
-					var nestedExpression = nestedProjector.Projector.Project(types.From, types.To, mappingOptions);
-
-					// Replace the parameter with the argument
-					if (!nestedExpression.Parameters[0].Type.IsAssignableFrom(argumentType)) {
-						throw new InvalidOperationException($"Incompatible types between passed argument {argumentType.FullName ?? argumentType.Name} " +
-							$"and retrieved map for types {nestedExpression.Parameters[0].Type.FullName ?? nestedExpression.Parameters[0].Type.Name} -> " +
-							$"{nestedExpression.Parameters[1].Type.FullName ?? nestedExpression.Parameters[1].Type.Name}");
+						return new LambdaParameterReplacer(node.Arguments.Skip(1).Select(Visit).ToArray()!).SetupAndVisitBody(nestedExpression3);
 					}
-					return new LambdaParameterReplacer(Visit(node.Arguments[0])).SetupAndVisitBody(nestedExpression);
-				}
 
-				// Expand projector.Inline into the corresponding expressions,
-				// supports all arguments
-				if (node.Method.DeclaringType == typeof(NestedProjector) &&
-					node.Method.Name == nameof(NestedProjector.Inline) &&
-					CompileAndRunExpression(node.Arguments[0]) is LambdaExpression nestedExpression2 &&
-					Visit(nestedExpression2) is LambdaExpression nestedExpression3) {
+					// Expand projector.Merge and projector.ConstructAndMerge into the corresponding expressions
+					if (node.Method.Name == nameof(NestedProjector.Merge) || node.Method.Name == nameof(NestedProjector.ConstructAndMerge)) {
+						var genericArguments = node.Method.GetGenericArguments();
 
-					return new LambdaParameterReplacer(node.Arguments.Skip(1).Select(Visit).ToArray()!).SetupAndVisitBody(nestedExpression3);
+						// Retrieve the provided constructor and its arguments (if any),
+						// or find a matching constructor
+						NewExpression constructor;
+						if (node.Method.Name == nameof(NestedProjector.ConstructAndMerge)) {
+							if (node.Arguments[0] is not NewExpression expr ||
+								Visit(expr) is not NewExpression expr2) {
+
+								throw new InvalidOperationException(
+									"Constructor must be a new instance of a class (new TType(...))");
+							}
+							constructor = expr2;
+						}
+						else {
+							if (genericArguments[0].IsInterface || genericArguments[0].IsAbstract) {
+								throw new InvalidOperationException(
+									$"TType must be a concrete type, or you can use the method " +
+									$"{nameof(NestedProjector.ConstructAndMerge)} to provide " +
+									$"a constructor instead");
+							}
+							constructor = Expression.New(genericArguments[0]);
+						}
+
+						// Retrieve all the members from the initializations
+						var expressions = ((NewArrayExpression)node.Arguments[node.Method.Name == nameof(NestedProjector.Merge) ? 0 : 1]).Expressions;
+						var initializations = expressions
+							.Select(Visit)
+							.Where(e => e is MemberInitExpression ||
+								(e is UnaryExpression u && u.NodeType == ExpressionType.Convert && u.Type.IsInterface && u.Operand is MemberInitExpression))
+							.ToList();
+						if (initializations.Count != expressions.Count) {
+							throw new InvalidOperationException(
+								"Initializations must all be class members initializations " +
+								"(new TType{ ... } or new TType(...){ ... }) or type-casts " +
+								"to interfaces of class members initializations " +
+								"((IInterface)new TType{ ... } or (IInterface)new TType(...){ ... })");
+						}
+						if (initializations.Any(i => !i!.Type.IsAssignableFrom(constructor.Type))) {
+							throw new InvalidOperationException(
+								"Initializations must not have types derived from the constructor type, " +
+								"only base types. Also interfaces should be restricted to their members only " +
+								"by casting them explicitly");
+						}
+
+						// Initialize members, for interfaces (type casts) we select only the defined properties,
+						// and we reassign them because we could have the following scenario:
+						// Class A declares property X from interface Y, if we have another class B
+						// implementing the same property X from interface Y we cannot use
+						// the same member from class A as they are effectively different members
+						Expression body = Expression.MemberInit(
+							constructor,
+							initializations
+								.SelectMany(i => {
+									if (i is MemberInitExpression m)
+										return m.Bindings;
+									else if (i is UnaryExpression u && u.Operand is MemberInitExpression m2) {
+										var interfaceMap = m2.Type.GetInterfaceMap(u.Type).TargetMethods;
+										return m2.Bindings.Where(b => b.Member is not PropertyInfo p || p.GetAccessors(true).Any(a => interfaceMap.Contains(a)))
+											.Select<MemberBinding, MemberBinding>(b => {
+												var member = constructor.Type.GetMember(b.Member.Name, MemberTypes.Field | MemberTypes.Property, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
+													.First();
+												return b.BindingType switch {
+													MemberBindingType.Assignment => Expression.Bind(member, ((MemberAssignment)b).Expression),
+													MemberBindingType.MemberBinding => Expression.MemberBind(member, ((MemberMemberBinding)b).Bindings),
+													MemberBindingType.ListBinding => Expression.ListBind(member, ((MemberListBinding)b).Initializers),
+													_ => throw new InvalidOperationException(),
+												};
+											});
+									}
+									else
+										throw new InvalidOperationException();
+								})
+								.GroupBy(i => (i.Member.MetadataToken, i.Member.Module))
+								.Select(i => i.Last()));
+
+						// Cast result if needed
+						if (body.Type != genericArguments[0])
+							body = Expression.Convert(body, genericArguments[0]);
+
+						return body;
+					}
 				}
 
 				return base.VisitMethodCall(node);

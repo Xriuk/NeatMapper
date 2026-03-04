@@ -130,8 +130,7 @@ namespace NeatMapper {
 
 		#region IAsyncMapper methods
 		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			return CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out _, out _) ||
-				(ObjectFactory.CanCreate(destinationType) && CanMapAsyncMerge(sourceType, destinationType, mappingOptions));
+			return CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out _, out _);
 		}
 
 		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -145,13 +144,8 @@ namespace NeatMapper {
 			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			if (!CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions) || map == null) {
-				// Forward new map to merge by creating a destination
-				if (!sourceType.IsGenericTypeDefinition && !destinationType.IsGenericTypeDefinition && ObjectFactory.CanCreate(destinationType))
-					return MapAsync(source, sourceType, ObjectFactory.Create(destinationType), destinationType, mappingOptions, cancellationToken);
-				else
-					throw new MapNotFoundException((sourceType, destinationType));
-			}
+			if (!CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions) || map == null)
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
 
@@ -181,7 +175,7 @@ namespace NeatMapper {
 		#region IAsyncMapperFactory methods
 		public IAsyncNewMapFactory MapAsyncNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
 			if (!CanMapAsyncNewInternal(sourceType, destinationType, mappingOptions, out var map, out var contextOptions) || map == null)
-				return MapAsyncMergeFactory(sourceType, destinationType, mappingOptions).MapAsyncNewFactory();
+				throw new MapNotFoundException((sourceType, destinationType));
 
 			// Not checking the returned type, so that we save an async/await state machine
 			return new DefaultAsyncNewMapFactory(sourceType, destinationType, (source, cancellationToken) => {
@@ -220,7 +214,7 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 			MappingOptions? mappingOptions,
-			out Func<object?, AsyncMappingContext, Task<object?>> map,
+			out Func<object?, AsyncMappingContext, Task<object?>>? map,
 			out AsyncMappingContextOptions contextOptions) {
 
 			if (sourceType == null)
@@ -229,7 +223,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
-				map = null!;
+				map = null;
 				contextOptions = null!;
 
 				return _newMapsConfiguration.HasOpenGenericMap((sourceType, destinationType));
@@ -252,7 +246,7 @@ namespace NeatMapper {
 			Type sourceType,
 			Type destinationType,
 			MappingOptions? mappingOptions,
-			out Func<object?, object?, AsyncMappingContext, Task<object?>> map,
+			out Func<object?, object?, AsyncMappingContext, Task<object?>>? map,
 			out AsyncMappingContextOptions contextOptions) {
 
 			if (sourceType == null)
@@ -261,7 +255,7 @@ namespace NeatMapper {
 				throw new ArgumentNullException(nameof(destinationType));
 
 			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
-				map = null!;
+				map = null;
 				contextOptions = null!;
 
 				return _mergeMapsConfiguration.HasOpenGenericMap((sourceType, destinationType));

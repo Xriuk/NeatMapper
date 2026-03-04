@@ -105,7 +105,7 @@ namespace NeatMapper {
 			IMatcher? elementsMatcher = null,
 			MergeCollectionsOptions? mergeCollectionsOptions = null) {
 
-			_elementsMapper = new AsyncCompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this);
+			_elementsMapper = new AsyncCompositeMapper(elementsMapper ?? throw new ArgumentNullException(nameof(elementsMapper)), this); // DEV: check if and how to provide AsyncCompositeMapperOptions
 			_asyncCollectionMappersOptions = asyncCollectionMappersOptions ?? new AsyncCollectionMappersOptions();
 			_elementsMatcher = elementsMatcher != null ?
 				new SafeMatcher(elementsMatcher) :
@@ -141,23 +141,17 @@ namespace NeatMapper {
 			if (!CanMapAsyncNewInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMapper) || elementsMapper == null)
 				throw new MapNotFoundException(types);
 
-			TypeUtils.CheckObjectType(source, sourceType, nameof(source));
-
-			// At least one of New or Merge mapper is required to map elements
 			IAsyncNewMapFactory elementsFactory;
 			try {
 				elementsFactory = elementsMapper.MapAsyncNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				try {
-					elementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions).MapAsyncNewFactory();
-				}
-				catch (MapNotFoundException) {
-					throw new MapNotFoundException(types);
-				}
+				throw new MapNotFoundException(types);
 			}
 
 			using (elementsFactory) {
+				TypeUtils.CheckObjectType(source, sourceType, nameof(source));
+
 				if (source == null)
 					return null;
 
@@ -358,42 +352,28 @@ namespace NeatMapper {
 				newElementsFactory = elementsMapper.MapAsyncNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				newElementsFactory = null!;
+				throw new MapNotFoundException(types);
 			}
 
-			// Need to use try/finally with newElementsFactory because it may be assigned after mergeElementsFactory
-			try {
+			using (newElementsFactory) {
 				IAsyncMergeMapFactory? mergeElementsFactory;
 				try {
 					mergeElementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
-
-					// newElementsFactory cannot be null, so if we have a merge factory we also create a new one from it (without disposing it)
-					try {
-						newElementsFactory ??= mergeElementsFactory.MapAsyncNewFactory(false);
-					}
-					catch {
-						mergeElementsFactory.Dispose();
-						throw;
-					}
 				}
 				catch (MapNotFoundException) {
-					// At least one map is required
-					if (newElementsFactory == null)
-						throw new MapNotFoundException(types);
-
 					mergeElementsFactory = null;
 				}
 
 				using (mergeElementsFactory) {
+					TypeUtils.CheckObjectType(source, types.From, nameof(source));
+					TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
+
 					var mergeMappingOptions = mappingOptions.GetOptions<MergeCollectionsMappingOptions>();
 
 					// Create the matcher (it will never throw because of SafeMatcher/EmptyMatcher)
 					using (var elementsMatcherFactory = GetMatcher(mergeMappingOptions).MatchFactory(elementTypes.From, elementTypes.To, mappingOptions)) {
 						var removeNotMatchedDestinationElements = mergeMappingOptions?.RemoveNotMatchedDestinationElements
 							?? _mergeCollectionOptions.RemoveNotMatchedDestinationElements;
-
-						TypeUtils.CheckObjectType(source, types.From, nameof(source));
-						TypeUtils.CheckObjectType(destination, types.To, nameof(destination));
 
 						if (types.From.IsAsyncEnumerable()) {
 							var getAsyncEnumeratorDelegate = ObjectFactory.GetAsyncEnumerableGetAsyncEnumerator(elementTypes.From);
@@ -446,7 +426,7 @@ namespace NeatMapper {
 											ObjectPool.Lists.Get() :
 											null;
 
-										try { 
+										try {
 											// Added/updated elements
 											var asyncEnumerator = getAsyncEnumeratorDelegate.Invoke(source, cancellationToken);
 											try {
@@ -573,12 +553,12 @@ namespace NeatMapper {
 												throw new MapNotFoundException(types);
 											}
 										}
-										else { 
+										else {
 											throw new InvalidOperationException("Cannot merge map to a readonly destination collection, destination type is: " +
 												(destination.GetType().FullName ?? destination.GetType().Name));
 										}
 									}
-									else { 
+									else {
 										newDestination = null;
 										actualCollectionType = null;
 									}
@@ -592,7 +572,7 @@ namespace NeatMapper {
 											ObjectPool.Lists.Get() :
 											null;
 
-										try { 
+										try {
 											// Added/updated elements
 											foreach (var sourceElement in sourceEnumerable) {
 												bool found = false;
@@ -630,7 +610,7 @@ namespace NeatMapper {
 											if (removeNotMatchedDestinationElements)
 												elementsToRemove.AddRange(destinationEnumerable.Cast<object>().Except(matchedDestinations!));
 
-											if(newDestination != null) {
+											if (newDestination != null) {
 												var addDelegate = ObjectFactory.GetCollectionCustomAddDelegate(actualCollectionType ?? types.To);
 
 												// Fill new destination collection
@@ -692,9 +672,6 @@ namespace NeatMapper {
 					}
 				}
 			}
-			finally {
-				newElementsFactory?.Dispose();
-			}
 
 			throw new MapNotFoundException(types);
 
@@ -720,18 +697,12 @@ namespace NeatMapper {
 			if (!CanMapAsyncNewInternal(sourceType, destinationType, ref mappingOptions, out var elementTypes, out var elementsMapper) || elementsMapper == null)
 				throw new MapNotFoundException(types);
 
-			// At least one of New or Merge mapper is required to map elements
 			IAsyncNewMapFactory elementsFactory;
 			try {
 				elementsFactory = elementsMapper.MapAsyncNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				try {
-					elementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions).MapAsyncNewFactory();
-				}
-				catch (MapNotFoundException) {
-					throw new MapNotFoundException(types);
-				}
+				throw new MapNotFoundException(types);
 			}
 
 			try {
@@ -1035,7 +1006,7 @@ namespace NeatMapper {
 				newElementsFactory = elementsMapper.MapAsyncNewFactory(elementTypes.From, elementTypes.To, mappingOptions);
 			}
 			catch (MapNotFoundException) {
-				newElementsFactory = null!;
+				throw new MapNotFoundException(types);
 			}
 
 			try {
@@ -1043,20 +1014,8 @@ namespace NeatMapper {
 				try {
 					mergeElementsFactory = elementsMapper.MapAsyncMergeFactory(elementTypes.From, elementTypes.To, mappingOptions);
 
-					// newElementsFactory cannot be null, so if we have a merge factory we also create a new one from it (without disposing it)
-					try {
-						newElementsFactory ??= mergeElementsFactory.MapAsyncNewFactory(false);
-					}
-					catch {
-						mergeElementsFactory.Dispose();
-						throw;
-					}
 				}
 				catch (MapNotFoundException) {
-					// At least one map is required
-					if (newElementsFactory == null)
-						throw new MapNotFoundException(types);
-
 					mergeElementsFactory = null;
 				}
 
@@ -1364,8 +1323,7 @@ namespace NeatMapper {
 					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 					elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-					return elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions) ||
-						(ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions));
+					return elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions);
 				}
 			}
 			else {
@@ -1418,8 +1376,7 @@ namespace NeatMapper {
 					mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 					elementsMapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper ?? _elementsMapper;
 
-					return elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions) ||
-						(ObjectFactory.CanCreate(elementTypes.To) && elementsMapper.CanMapAsyncMerge(elementTypes.From, elementTypes.To, mappingOptions));
+					return elementsMapper.CanMapAsyncNew(elementTypes.From, elementTypes.To, mappingOptions);
 				}
 			}
 			else {

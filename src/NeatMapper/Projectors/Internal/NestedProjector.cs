@@ -23,7 +23,7 @@ namespace NeatMapper {
 		/// Actual underlying projector to use to retrieve the maps.
 		/// </summary>
 		[EditorBrowsable(EditorBrowsableState.Never)]
-		public IProjector Projector { get; }
+		public IProjector Projector { get; } // DEV: why not internal?
 
 
 		/// <summary>
@@ -52,15 +52,21 @@ namespace NeatMapper {
 		}
 		#endregion
 
+
 		#region Project
 		#region Explicit destination, inferred source
 		/// <summary>
 		/// Projects an object by injecting it into a projection map.
 		/// </summary>
-		/// <typeparam name="TDestination">Destination type of the projection, used to retrieve the available maps.</typeparam>
+		/// <typeparam name="TDestination">
+		/// Destination type of the projection, used to retrieve the available maps.
+		/// </typeparam>
 		/// <param name="source">
 		/// <para>
-		/// Source object, the source type will be retrieved from it and will be used to retrieve the available maps.
+		/// Source object, the source type will be retrieved from it and will be used to retrieve
+		/// the available maps.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before projecting.
 		/// </para>
 		/// <para>
 		/// NOTE: Contrary to how <see cref="MapperExtensions.Map{TDestination}(IMapper, object, MappingOptions?)"/>
@@ -156,7 +162,11 @@ namespace NeatMapper {
 		/// the provided parameter, it can also be a value returned from a method,
 		/// since this argument will be evaluated when inlining it.
 		/// </param>
-		/// <param name="source">First parameter used to replace the corresponding argument in the expression.</param>
+		/// <param name="source">
+		/// First parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
+		/// </param>
 		/// <returns>The projected object.</returns>
 		public TDestination Inline<TSource, TDestination>(Expression<Func<TSource, TDestination>> expression, TSource source) { // DEV: refactor to Func<T, TResult>
 			throw new InvalidOperationException($"{nameof(NestedProjector)}.{nameof(Inline)} cannot be used outside of expressions");
@@ -262,52 +272,84 @@ namespace NeatMapper {
 		/// since this argument will be evaluated when inlining it.
 		/// </param>
 		/// <param name="arg1">
-		/// First parameter used to replace the corresponding argument in the expression.
+		/// First parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg2">
-		/// Second parameter used to replace the corresponding argument in the expression.
+		/// Second parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg3">
-		/// Third parameter used to replace the corresponding argument in the expression.
+		/// Third parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg4">
-		/// Fourth parameter used to replace the corresponding argument in the expression.
+		/// Fourth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg5">
-		/// Fifth parameter used to replace the corresponding argument in the expression.
+		/// Fifth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg6">
-		/// Sixth parameter used to replace the corresponding argument in the expression.
+		/// Sixth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg7">
-		/// Seventh parameter used to replace the corresponding argument in the expression.
+		/// Seventh parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg8">
-		/// Eighth parameter used to replace the corresponding argument in the expression.
+		/// Eighth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg9">
-		/// Ninth parameter used to replace the corresponding argument in the expression.
+		/// Ninth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg10">
-		/// Tenth parameter used to replace the corresponding argument in the expression.
+		/// Tenth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg11">
-		/// Eleventh parameter used to replace the corresponding argument in the expression.
+		/// Eleventh parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg12">
-		/// Twelfth parameter used to replace the corresponding argument in the expression.
+		/// Twelfth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg13">
-		/// Thirteenth parameter used to replace the corresponding argument in the expression.
+		/// Thirteenth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg14">
-		/// Fourteenth parameter used to replace the corresponding argument in the expression.
+		/// Fourteenth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg15">
-		/// Fifteenth parameter used to replace the corresponding argument in the expression.
+		/// Fifteenth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <param name="arg16">
-		/// Sixteenth parameter used to replace the corresponding argument in the expression.
+		/// Sixteenth parameter used to replace the corresponding argument in the expression.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before inlining.
 		/// </param>
 		/// <returns>The projected object.</returns>
 		public TResult Inline<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>(Expression<Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, TResult>> expression, T1 arg1, T2 arg2, T3 arg3, T4 arg4, T5 arg5, T6 arg6, T7 arg7, T8 arg8, T9 arg9, T10 arg10, T11 arg11, T12 arg12, T13 arg13, T14 arg14, T15 arg15, T16 arg16) {
@@ -315,6 +357,132 @@ namespace NeatMapper {
 			expression.Compile().Invoke(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14, arg15, arg16); // Not compiled, used as a type safety check
 		}
 #pragma warning restore CS0162
+		#endregion
+
+		#region Merge
+		#region Initializations
+		/// <summary>
+		/// Merges multiple class initializations into a single one.
+		/// </summary>
+		/// <typeparam name="TType">Type of the object to create.</typeparam>
+		/// <param name="initializations">
+		/// <para>
+		/// Initializations to merge, must all be <see cref="MemberInitExpression"/>
+		/// (new TType{ ... } or new TType(...){ ... }) (can also be nested projections
+		/// or inlined expressions, which will be replaced before merging), constructor
+		/// and arguments (if any)  are ignored and replaced with an empty constructor.
+		/// </para>
+		/// <para>
+		/// Only instances exactly of type <typeparamref name="TType"/> are allowed
+		/// (not parents or derived).
+		/// </para>
+		/// </param>
+		/// <returns>
+		/// The merged object with an empty constructor, and with all the members from the provided
+		/// <paramref name="initializations"/>, in case the same member appears multiple times
+		/// later definitions will overwrite it, so the assigned value will be the last value.
+		/// </returns>
+		public TType Merge<TType>(params TType[] initializations) where TType : class {
+			throw new InvalidOperationException($"{nameof(NestedProjector)}.{nameof(Merge)} cannot be used outside of expressions");
+		}
+
+		/// <inheritdoc cref="Merge{TType}(TType[])" path="/summary"/>
+		/// <typeparam name="TBase">
+		/// Type of the provided <paramref name="initializations"/>, for type-safety,
+		/// to allow using base types members and projections.<br/>
+		/// Can also be an interface implemented by <typeparamref name="TType"/>.
+		/// </typeparam>
+		/// <typeparam name="TType">
+		/// Type of the object to create, must derive from <typeparamref name="TBase"/>.
+		/// </typeparam>
+		/// <param name="initializations">
+		/// <para>
+		/// Initializations to merge, must all be <see cref="MemberInitExpression"/>
+		/// (new TType{ ... } or new TType(...){ ... }) (can also be nested projections
+		/// or inlined expressions, which will be replaced before merging), constructor
+		/// and arguments (if any) are ignored and replaced with an empty constructor.
+		/// </para>
+		/// <para>
+		/// Only instances of types from <typeparamref name="TBase"/> to <typeparamref name="TType"/>
+		/// (included) are allowed.
+		/// </para>
+		/// <para>
+		/// If using interface(s) implemented by <typeparamref name="TType"/>,
+		/// you should cast the provided initialization(s) to the interface type
+		/// (even if the returned type is already the interface itself), this allows
+		/// to consider only the properties of the interface on the provided object
+		/// (which might be of a different type, just implementing the interface).
+		/// </para>
+		/// </param>
+		/// <inheritdoc cref="Merge{TType}(TType[])" path="/returns"/>
+		public TType Merge<TType, TBase>(params TBase[] initializations) where TType : TBase where TBase : class {
+			throw new InvalidOperationException($"{nameof(NestedProjector)}.{nameof(Merge)} cannot be used outside of expressions");
+		}
+		#endregion
+
+		#region Constructor + Initializations
+		/// <inheritdoc cref="Merge{TType}(TType[])" path="/summary"/>
+		/// <inheritdoc cref="Merge{TType}(TType[])" path="/typeparam[@name='TType']"/>
+		/// <param name="constructor">
+		/// Constructor to use for the object, must be <see cref="NewExpression"/> (new TType(...)).<br/>
+		/// Can also be a type derived from <typeparamref name="TType"/>.<br/>
+		/// Can also be a nested projection or an inlined expression which will be replaced
+		/// before merging.
+		/// </param>
+		/// <param name="initializations">
+		/// <para>
+		/// Initializations to merge, must all be <see cref="MemberInitExpression"/>
+		/// (new TType{ ... } or new TType(...){ ... }) (can also be nested projections
+		/// or inlined expressions, which will be replaced before merging), constructor
+		/// and arguments (if any) are ignored and replaced with the provided
+		/// <paramref name="constructor"/>.
+		/// </para>
+		/// <para>
+		/// Only instances of types from <typeparamref name="TType"/> to
+		/// <paramref name="constructor"/> actual type (in case it's derived from
+		/// <typeparamref name="TType"/>) (included) are allowed.
+		/// </para>
+		/// </param>
+		/// <returns>
+		/// The merged object with the provided constructor and arguments from
+		/// <paramref name="constructor"/>, and with all the members from the provided
+		/// <paramref name="initializations"/>, in case the same member appears multiple times
+		/// later definitions will overwrite it, so the assigned value will be the last value.
+		/// </returns>
+		public TType ConstructAndMerge<TType>(TType constructor, params TType[] initializations) where TType : class { // DEV: check if needed and if below is not enough (or if causes ambiguity)
+			throw new InvalidOperationException($"{nameof(NestedProjector)}.{nameof(ConstructAndMerge)} cannot be used outside of expressions");
+		}
+
+		/// <inheritdoc cref="Merge{TType}(TType[])" path="/summary"/>
+		/// <inheritdoc cref="Merge{TType, TBase}(TBase[])" path="/typeparam[@name='TBase']"/>
+		/// <inheritdoc cref="Merge{TType, TBase}(TBase[])" path="/typeparam[@name='TType']"/>
+		/// <inheritdoc cref="ConstructAndMerge{TType}(TType, TType[])" path="/param[@name='constructor']"/>
+		/// <param name="initializations">
+		/// <para>
+		/// Initializations to merge, must all be <see cref="MemberInitExpression"/>
+		/// (new TType{ ... } or new TType(...){ ... }) (can also be nested projections
+		/// or inlined expressions, which will be replaced before merging), constructor
+		/// and arguments (if any) are ignored and replaced with the provided
+		/// <paramref name="constructor"/>.
+		/// </para>
+		/// <para>
+		/// Only instances of types from <typeparamref name="TBase"/> to
+		/// <paramref name="constructor"/> actual type (in case it's derived from
+		/// <typeparamref name="TType"/>) (included) are allowed.
+		/// </para>
+		/// <para>
+		/// If using interface(s) implemented by <typeparamref name="TType"/>,
+		/// you should cast the provided initialization(s) to the interface type
+		/// (even if the returned type is already the interface itself), this allows
+		/// to consider only the properties of the interface on the provided object
+		/// (which might be of a different type, just implementing the interface).
+		/// </para>
+		/// </param>
+		/// <inheritdoc cref="ConstructAndMerge{TType}(TType, TType[])" path="/returns"/>
+		public TType ConstructAndMerge<TType, TBase>(TType constructor, params TBase[] initializations) where TType : TBase where TBase : class {
+			throw new InvalidOperationException($"{nameof(NestedProjector)}.{nameof(ConstructAndMerge)} cannot be used outside of expressions");
+		}
+		#endregion
 		#endregion
 	}
 }

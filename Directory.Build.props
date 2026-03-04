@@ -1,8 +1,8 @@
 <!-- https://stackoverflow.com/a/73098203 -->
 <Project>
 	<PropertyGroup>
-		<GlobalCurrentVersion>6.2.0</GlobalCurrentVersion>
-		<GlobalCurrentChangelog>620---2026-02-24</GlobalCurrentChangelog>
+		<GlobalCurrentVersion>6.3.0</GlobalCurrentVersion>
+		<GlobalCurrentChangelog>630---2026-03-04</GlobalCurrentChangelog>
 		<GlobalNextVersion>7.0.0</GlobalNextVersion>
 	</PropertyGroup>
 

@@ -225,7 +225,7 @@ namespace NeatMapper {
 			// Composite mapper
 			services.Add(new ServiceDescriptor(
 				typeof(CompositeMapper),
-				s => new CompositeMapper(s.GetService<IOptionsMonitor<CompositeMapperOptions>>()?.CurrentValue.Mappers ?? []),
+				s => new CompositeMapper(s.GetService<IOptionsMonitor<CompositeMapperOptions>>()?.CurrentValue ?? new CompositeMapperOptions()),
 				mappersLifetime));
 
 			// IMapper, IMapperFactory
@@ -277,7 +277,7 @@ namespace NeatMapper {
 			// Composite mapper
 			services.Add(new ServiceDescriptor(
 				typeof(AsyncCompositeMapper),
-				s => new AsyncCompositeMapper(s.GetService<IOptionsMonitor<AsyncCompositeMapperOptions>>()?.CurrentValue.Mappers ?? []),
+				s => new AsyncCompositeMapper(s.GetService<IOptionsMonitor<AsyncCompositeMapperOptions>>()?.CurrentValue ?? new AsyncCompositeMapperOptions()),
 				asyncMappersLifetime));
 
 			// IAsyncMapper, IAsyncMapperFactory

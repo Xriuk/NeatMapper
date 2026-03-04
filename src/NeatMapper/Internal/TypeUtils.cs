@@ -195,5 +195,14 @@ namespace NeatMapper {
 		public static PropertyInfo GetProperty<TProperty>(Expression<Func<TProperty?>> propertyExpression) {
 			return (PropertyInfo)((MemberExpression)propertyExpression.Body).Member;
 		}
+
+		private static readonly MethodInfo this_GetDefaultGeneric = typeof(TypeUtils).GetMethod(nameof(GetDefaultGeneric), BindingFlags.Static | BindingFlags.NonPublic)
+			?? throw new InvalidOperationException("Cannot find TypeUtils.GetDefaultGeneric<T>()");
+		private static T? GetDefaultGeneric<T>() {
+			return default;
+		}
+		public static object? GetDefault(this Type t) {
+			return this_GetDefaultGeneric.MakeGenericMethod(t).Invoke(null, null);
+		}
 	}
 }

@@ -9,8 +9,7 @@ parent: "Advanced options"
 
 If you only define an `IMergeMap<TSource, TDestination>` for two given types it can also be used when creating a new object instead of defining a separate `INewMap<TSource, TDestination>` for the same types.
 
-{: .important }
-In this case a destination object will be created automatically and provided to the map, so for this to work a parameterless constructor is required for the type.
+You can specify via `CompositeMapperOptions`/`AsyncCompositeMapperOptions` (and `CompositeMapperMappingOptions`/`AsyncCompositeMapperMappingOptions` overrides) the desired behaviour: if you want to create an empty destination object automatically (the default behaviour - a parameterless constructor is required) or provide a default value.
 
 ```csharp
 CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto? destination, MappingContext context){
@@ -26,9 +25,12 @@ CategoryDto? IMergeMap<Category, CategoryDto>.Map(Category? source, CategoryDto?
 // Map to an existing object
 mapper.Map<Category, CategoryDto>(myCategory, myCategoryDto);
 
-// Or create a new object (a destination object will be created automatically
+// Create a new object (a destination object will be created automatically
 // and provided to the map)
 var myProductDto = mapper.Map<Category, CategoryDto>(myCategory);
+
+// Create a new object (a default/null destination object will be provided to the map)
+var myProductDto = mapper.Map<Category, CategoryDto>(myCategory, new MappingOptions{ MergeMapsHandling = MergeMapsHandling.DefaultDestination });
 ```
 
 You can still create both maps for the given types if you need specific behaviour in one case or the other.
