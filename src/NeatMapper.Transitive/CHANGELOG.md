@@ -1,10 +1,14 @@
 # Changelog
 
-## [6.3.0] - 2026-03-04
+## [6.3.0] - 2026-03-05
 
 ### Changed
 
 - Updated NeatMapper dependency version.
+
+### Fixed
+
+- `TransitiveMapper`/`AsyncTransitiveMapper` now correctly ignores itself in nested maps to avoid infinite recursion.
 
 
 ## [6.2.0] - 2026-02-24

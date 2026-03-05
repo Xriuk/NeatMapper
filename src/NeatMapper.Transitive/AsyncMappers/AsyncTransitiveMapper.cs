@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System.Diagnostics.CodeAnalysis;
+using System.Collections.Generic;
 
 namespace NeatMapper.Transitive {
 	/// <summary>
@@ -67,16 +68,7 @@ namespace NeatMapper.Transitive {
 
 		#region IAsyncMapper methods
 		public bool CanMapAsyncNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We cannot map identical types
-			if (sourceType == destinationType)
-				throw new MapNotFoundException((sourceType, destinationType));
-
-			return _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions)) != null;
+			return CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out _);
 		}
 
 		public bool CanMapAsyncMerge(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
@@ -90,19 +82,8 @@ namespace NeatMapper.Transitive {
 			MappingOptions? mappingOptions = null,
 			CancellationToken cancellationToken = default) {
 
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We cannot map identical types
-			if (sourceType == destinationType)
+			if (!CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out var typesPath))
 				throw new MapNotFoundException((sourceType, destinationType));
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			var typesPath = _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, mappingOptions)
-				?? throw new MapNotFoundException((sourceType, destinationType));
 
 			var mapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper
 				?? _mapper;
@@ -167,19 +148,8 @@ namespace NeatMapper.Transitive {
 
 		#region IAsyncMapperFactory methods
 		public IAsyncNewMapFactory MapAsyncNewFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
-			if (sourceType == null)
-				throw new ArgumentNullException(nameof(sourceType));
-			if (destinationType == null)
-				throw new ArgumentNullException(nameof(destinationType));
-
-			// We cannot map identical types
-			if (sourceType == destinationType)
+			if (!CanMapNewInternal(sourceType, destinationType, ref mappingOptions, out var typesPath))
 				throw new MapNotFoundException((sourceType, destinationType));
-
-			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
-
-			var typesPath = _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, mappingOptions)
-				?? throw new MapNotFoundException((sourceType, destinationType));
 
 			var mapper = mappingOptions.GetOptions<AsyncMapperOverrideMappingOptions>()?.Mapper
 				?? _mapper;
@@ -258,6 +228,44 @@ namespace NeatMapper.Transitive {
 		#endregion
 
 
+		private bool CanMapNewInternal(
+			Type sourceType,
+			Type destinationType,
+			[NotNullWhen(true)] ref MappingOptions? mappingOptions,
+			[NotNullWhen(true)] out List<Type>? typesPath) {
+
+			if (sourceType == null)
+				throw new ArgumentNullException(nameof(sourceType));
+			if (destinationType == null)
+				throw new ArgumentNullException(nameof(destinationType));
+
+			// We cannot map identical types,
+			// also if we are in a nested map we ignore ourselves (only for the same map type,
+			// since we could still arrive here from merge map, so we count our instances,
+			// if more than one we know we are recursing)
+			var count = 0;
+			if (sourceType == destinationType ||
+				mappingOptions?.GetOptions<AsyncNestedMappingContext>()?.CheckRecursive(c => {
+					if (c.ParentMapper == this) {
+						count++;
+						if (count > 1)
+							return true;
+					}
+
+					return false;
+				}) == true ||
+				count > 1) {
+
+				typesPath = null;
+				return false;
+			}
+
+			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
+
+			typesPath = _graphCreator.GetOrCreateTypesPath(sourceType, destinationType, mappingOptions);
+			return typesPath != null;
+		}
+
 		private bool CanMapMergeInternal(
 			Type sourceType,
 			Type destinationType,
@@ -272,15 +280,19 @@ namespace NeatMapper.Transitive {
 
 			newMappingOptions = null!;
 
-			// We cannot map identical types
-			if (sourceType == destinationType) {
+			// We cannot map identical types,
+			// also if we are in a nested map we ignore ourselves
+			if (sourceType == destinationType ||
+				mappingOptions?.GetOptions<AsyncNestedMappingContext>()?.CheckRecursive(c => c.ParentMapper == this) == true) {
+
 				mergeMapFrom = null!;
 				return false;
 			}
 
 			mappingOptions = _optionsCache.GetOrCreate(mappingOptions);
 
-			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength ?? _transitiveOptions.MaxChainLength;
+			var length = mappingOptions.GetOptions<TransitiveMappingOptions>()?.MaxChainLength
+				?? _transitiveOptions.MaxChainLength;
 			if (length < 2) {
 				mergeMapFrom = null!;
 				return false;

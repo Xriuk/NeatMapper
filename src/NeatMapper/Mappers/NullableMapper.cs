@@ -322,7 +322,7 @@ namespace NeatMapper {
 			if (destinationType == null)
 				throw new ArgumentNullException(nameof(destinationType));
 
-			if(sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
+			if (sourceType.IsGenericTypeDefinition || destinationType.IsGenericTypeDefinition) {
 				concreteMapper = null!;
 				underlyingTypes = default;
 
