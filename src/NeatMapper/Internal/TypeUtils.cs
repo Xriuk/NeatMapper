@@ -90,6 +90,18 @@ namespace NeatMapper {
 			}
 		}
 
+		[MethodImpl(MethodImplOptions.AggressiveInlining)]
+		public static TType? CastObjectType<TType>(object? obj, string? argument = null) {
+			if (obj is TType t)
+				return t;
+			if(object.Equals(obj, default(TType)))
+				return (TType?)obj;
+
+			var message = (obj != null ? $"Object of type {obj.GetType().FullName ?? obj.GetType().Name}" : "null") + " " +
+				$"is not assignable to type {typeof(TType).FullName ?? typeof(TType).Name}.";
+			throw argument != null ? (Exception)new ArgumentException(message, argument) : new InvalidOperationException(message);
+		}
+
 		// Also supports open generics
 		public static bool IsCollectionReadonly(Type collectionType) {
 			if (collectionType.IsArray || collectionType == typeof(string))

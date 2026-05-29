@@ -28,7 +28,7 @@ namespace NeatMapper {
 			_mapper = new Lazy<IAsyncMapper>(() => {
 				var nestedMappingContext = new AsyncNestedMappingContext(parentMapper);
 				return new AsyncNestedMapper(nestedMapper, o => o.ReplaceOrAdd<AsyncNestedMappingContext>(
-					n => n != null ? new AsyncNestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, o.Cached));
+					n => n != null ? new AsyncNestedMappingContext(parentMapper, n) : nestedMappingContext, o.Cached));
 			}, true);
 
 			MappingOptions = mappingOptions
@@ -42,7 +42,8 @@ namespace NeatMapper {
 		public IServiceProvider ServiceProvider { get; }
 
 		/// <summary>
-		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
+		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/>
+		/// are not automatically forwarded.<br/>
 		/// The only option forwarded automatically is <see cref="AsyncNestedMappingContext"/>.
 		/// </summary>
 		public IAsyncMapper Mapper => _mapper.Value;

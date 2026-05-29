@@ -70,10 +70,10 @@ namespace NeatMapper {
 
 
 		async Task<object?> IAsyncMergeMapFactory.Invoke(object? source, object? destination, CancellationToken cancellationToken) {
-			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
-			TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
-
-			return await Invoke((TSource?)source, (TDestination?)destination, cancellationToken);
+			return await Invoke(
+				TypeUtils.CastObjectType<TSource>(source, nameof(source)),
+				TypeUtils.CastObjectType<TDestination>(destination, nameof(destination)),
+				cancellationToken);
 		}
 
 

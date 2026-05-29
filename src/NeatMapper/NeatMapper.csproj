@@ -83,13 +83,39 @@
 
 	<ItemGroup>
 		<None Include="..\NeatMapper.Analyzers\tools\*.ps1" CopyToOutputDirectory="Always" Pack="true" PackagePath="tools" Visible="false" />
+		<Compile Remove="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.cs" />
+		<Compile Remove="Options\MappingOptions\Contexts\NestedContexts\NestedContext.cs" />
+		<Compile Remove="Options\MappingOptions\Contexts\RecursiveTypesContexts\NestedContext.cs" />
 		<None Include="..\NeatMapper.Analyzers\bin\$(Configuration)\netstandard2.0\NeatMapper.Analyzers.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+		<None Include="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.cs">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>CustomAdditionalMapsOptions.tt</DependentUpon>
+		</None>
+		<None Include="Options\MappingOptions\Contexts\NestedContexts\NestedContext.cs">
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		  <DependentUpon>NestedContext.tt</DependentUpon>
+		</None>
+		<None Include="Options\MappingOptions\Contexts\RecursiveTypesContexts\RecursiveTypesContexts.cs">
+		  <DependentUpon>RecursiveTypesContexts.tt</DependentUpon>
+		  <DesignTime>True</DesignTime>
+		  <AutoGen>True</AutoGen>
+		</None>
 	</ItemGroup>
 
 	<ItemGroup>
 		<None Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.tt">
 			<Generator>TextTemplatingFileGenerator</Generator>
 			<LastGenOutput>CustomAdditionalMapsOptions.cs</LastGenOutput>
+		</None>
+		<None Update="Options\MappingOptions\Contexts\NestedContexts\NestedContext.tt">
+		  <LastGenOutput>NestedContext.cs</LastGenOutput>
+		  <Generator>TextTemplatingFileGenerator</Generator>
+		</None>
+		<None Update="Options\MappingOptions\Contexts\RecursiveTypesContexts\RecursiveTypesContexts.tt">
+		  <LastGenOutput>RecursiveTypesContexts.cs</LastGenOutput>
+		  <Generator>TextTemplatingFileGenerator</Generator>
 		</None>
 	</ItemGroup>
 
@@ -98,14 +124,14 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<Compile Update="Options\Configuration\AdditionalMaps\CustomAdditionalMapsOptions.cs">
-			<DesignTime>True</DesignTime>
-			<AutoGen>True</AutoGen>
-			<DependentUpon>CustomAdditionalMapsOptions.tt</DependentUpon>
-		</Compile>
+		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig" />
 	</ItemGroup>
 
 	<ItemGroup>
-		<GlobalAnalyzerConfigFiles Include="..\..\NeatMapper.globalconfig" />
+	  <Compile Update="Options\MappingOptions\Contexts\RecursiveTypesContexts\RecursiveTypesContexts.cs">
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>RecursiveTypesContexts.tt</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 </Project>

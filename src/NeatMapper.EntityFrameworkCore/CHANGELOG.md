@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.4.0] - Unreleased
+
+### Changed
+
+- The assembly is now marked as CLSCompliant.
+- Updated NeatMapper dependency version.
+
+
 ## [6.3.0] - 2026-03-05
 
 ### Changed

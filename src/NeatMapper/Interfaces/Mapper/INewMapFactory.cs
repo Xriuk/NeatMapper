@@ -57,9 +57,7 @@ namespace NeatMapper {
 		
 
 		object? INewMapFactory.Invoke(object? source) {
-			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
-
-			return Invoke((TSource?)source);
+			return Invoke(TypeUtils.CastObjectType<TSource>(source, nameof(source)));
 		}
 
 

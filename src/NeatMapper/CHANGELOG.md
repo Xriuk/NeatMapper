@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.4.0] - Unreleased
+
+### Changed
+
+- The assembly is now marked as CLSCompliant.
+
+### Added
+
+- `RecursiveTypesMappingContext`/`RecursiveTypesMatchingContext`/`RecursiveTypesProjectionContext`/`AsyncRecursiveTypesMappingContext` which allows to check map types for recursion.
+
+### Fixed
+
+- `CustomProjector`/`NestedProjector` now correctly creates `NestedProjectionContext` for nested projections.
+
+
 ## [6.3.0] - 2026-03-05
 
 ### Changed
@@ -18,10 +33,14 @@
 
 ### Fixed
 
-- `CompositeMapper.GetNewMaps`/`GetMergeMaps` now correctly forwards `MappingOptions` to nested mappers;
+- `CompositeMapper.GetNewMaps`/`GetMergeMaps` now correctly forwards `MappingOptions` to nested mappers.
 
 
 ## [6.2.0] - 2026-02-24
+
+### Changed
+
+- Deprecated `CollectionProjector` and `NullableProjector constructors which do not accept `ProjectorsOptions`.
 
 ### Added
 

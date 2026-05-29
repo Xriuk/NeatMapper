@@ -156,6 +156,7 @@ namespace NeatMapper.Tests.Projection {
 #endif
 				.Project(ProjectionContext context) {
 
+				MappingOptionsUtils.projectionContext = context;
 				MappingOptionsUtils.options = context.MappingOptions.GetOptions<TestOptions>();
 				return source => source == null ?
 					null :
@@ -314,6 +315,9 @@ namespace NeatMapper.Tests.Projection {
 				// Should forward options to nested map
 				MappingOptionsUtils.options = null;
 
+				// Should create NestedProjectionContext
+				MappingOptionsUtils.projectionContext = null;
+
 				Expression<Func<Product, ProductDto>> expr = source => source == null ?
 					null :
 					new ProductDto {
@@ -335,6 +339,10 @@ namespace NeatMapper.Tests.Projection {
 				TestUtils.AssertExpressionsEqual(expr, _projector.Project<Product, ProductDto>(options));
 
 				Assert.AreSame(MappingOptionsUtils.options, options);
+
+				var nestedContext = MappingOptionsUtils.projectionContext?.MappingOptions.GetOptions<NestedProjectionContext>();
+				Assert.IsNotNull(nestedContext);
+				Assert.IsNull(nestedContext.ParentContext);
 			}
 
 			{

@@ -237,16 +237,7 @@ namespace NeatMapper {
 			if (!CanMapNew(sourceType, destinationType, mappingOptions))
 				throw new MapNotFoundException((sourceType, destinationType));
 
-			var factory = MapMergeFactory(sourceType, destinationType, mappingOptions);
-			try {
-				return new DisposableNewMapFactory(sourceType, destinationType,
-					source => factory.Invoke(source, null),
-					factory);
-			}
-			catch {
-				factory.Dispose();
-				throw;
-			}
+			return MapMergeFactory(sourceType, destinationType, mappingOptions).MapNewFactory(false, true);
 		}
 
 		public IMergeMapFactory MapMergeFactory(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {

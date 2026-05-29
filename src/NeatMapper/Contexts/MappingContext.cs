@@ -29,7 +29,7 @@ namespace NeatMapper {
 			_mapper = new Lazy<IMapper>(() => {
 				var nestedMappingContext = new NestedMappingContext(parentMapper);
 				return new NestedMapper(nestedMapper, o => o.ReplaceOrAdd<NestedMappingContext>(
-					n => n != null ? new NestedMappingContext(nestedMappingContext.ParentMapper, n) : nestedMappingContext, o.Cached));
+					n => n != null ? new NestedMappingContext(parentMapper, n) : nestedMappingContext, o.Cached));
 			}, true);
 
 			MappingOptions = mappingOptions
@@ -43,7 +43,8 @@ namespace NeatMapper {
 		public IServiceProvider ServiceProvider { get; }
 
 		/// <summary>
-		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
+		/// Mapper which can be used for nested mappings. <see cref="MappingOptions"/>
+		/// are not automatically forwarded.<br/>
 		/// The only option forwarded automatically is <see cref="NestedMappingContext"/>.
 		/// </summary>
 		public IMapper Mapper => _mapper.Value;

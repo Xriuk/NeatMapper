@@ -23,11 +23,11 @@ namespace NeatMapper {
 
 			return new DelegateMatcher(typeof(TSource), typeof(TDestination),
 				(source, destination, context) => {
-					TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
-					TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
+					var source2 = TypeUtils.CastObjectType<TSource>(source, nameof(source));
+					var destination2 = TypeUtils.CastObjectType<TDestination>(destination, nameof(destination));
 
 					try {
-						return matchDelegate.Invoke((TSource?)source, (TDestination?)destination, context);
+						return matchDelegate.Invoke(source2, destination2, context);
 					}
 					catch (OperationCanceledException) {
 						throw;

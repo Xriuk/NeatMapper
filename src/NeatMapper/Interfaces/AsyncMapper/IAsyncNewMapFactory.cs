@@ -67,9 +67,9 @@ namespace NeatMapper {
 
 
 		async Task<object?> IAsyncNewMapFactory.Invoke(object? source, CancellationToken cancellationToken) {
-			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
-
-			return await Invoke((TSource?)source, cancellationToken);
+			return await Invoke(
+				TypeUtils.CastObjectType<TSource>(source, nameof(source)),
+				cancellationToken);
 		}
 
 

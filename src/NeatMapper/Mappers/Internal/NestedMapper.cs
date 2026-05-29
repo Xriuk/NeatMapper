@@ -3,8 +3,9 @@ using System.Collections.Generic;
 
 namespace NeatMapper {
 	/// <summary>
-	/// <see cref="IMapper"/> which wraps another <see cref="IMapper"/> and overrides <see cref="MappingOptions"/>
-	/// (and caches them).
+	/// <see cref="IMapper"/> which wraps another <see cref="IMapper"/> and overrides
+	/// <see cref="MappingOptions"/> (and caches them).
+	/// Also forwards <see cref="RecursiveTypesMappingContext"/> automatically.
 	/// </summary>
 	internal sealed class NestedMapper : IMapper, IMapperFactory, IMapperMaps {
 		/// <summary>
@@ -26,6 +27,7 @@ namespace NeatMapper {
 		/// </param>
 		public NestedMapper(IMapper mapper, Func<MappingOptions, MappingOptions> optionsFactory) {
 			_mapper = mapper ?? throw new ArgumentNullException(nameof(mapper));
+			// DEV: create cache of mapping types and options to handle recursion, replace _optionsCache
 			_optionsCache = new MappingOptionsFactoryCache<MappingOptions>(
 				optionsFactory ?? throw new ArgumentNullException(nameof(optionsFactory)));
 		}
@@ -33,6 +35,10 @@ namespace NeatMapper {
 
 		#region IMapper methods
 		public bool CanMapNew(Type sourceType, Type destinationType, MappingOptions? mappingOptions = null) {
+			// Check recursion
+			mappingOptions = (mappingOptions ?? MappingOptions.Empty).ReplaceOrAdd<RecursiveTypesMappingContext>(
+				r => new RecursiveTypesMappingContext(sourceType, destinationType, r));
+
 			return _mapper.CanMapNew(sourceType, destinationType, _optionsCache.GetOrCreate(mappingOptions));
 		}
 
@@ -68,5 +74,10 @@ namespace NeatMapper {
 			return _mapper.GetMergeMaps(_optionsCache.GetOrCreate(mappingOptions));
 		}
 		#endregion
+
+
+		private MappingOptions? GetOrCreate(, MappingOptions? mappingOptions) {
+			return 
+		}
 	}
 }

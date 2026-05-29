@@ -23,9 +23,12 @@ namespace NeatMapper {
 		public IServiceProvider ServiceProvider { get; }
 
 		/// <summary>
-		/// Projector to be used for nested projections.
+		/// Projector to be used for nested projections, to inline external expressions
+		/// or to merge projections.<br/>
 		/// NestedProjector.Project invocations will be replaced with the expanded maps from the underlying
 		/// <see cref="IProjector"/> (so it works kinda like an <see cref="IMapper"/> inside expressions).
+		/// <see cref="MappingOptions"/> are not automatically forwarded.<br/>
+		/// The only option forwarded automatically is <see cref="NestedProjectionContext"/>.
 		/// </summary>
 		public NestedProjector Projector { get; }
 

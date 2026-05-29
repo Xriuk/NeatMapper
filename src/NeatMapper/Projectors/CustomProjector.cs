@@ -15,6 +15,14 @@ namespace NeatMapper {
 		/// Replaces a nested map invocation with the map itself, also inlines custom Expressions.
 		/// </summary>
 		private class NestedProjectionExpander : ExpressionVisitor {
+			private readonly IProjector _parentProjector;
+			private readonly NestedProjectionContext _nestedProjectionContext;
+
+			public NestedProjectionExpander(IProjector parentProjector) {
+				_parentProjector = parentProjector;
+				_nestedProjectionContext = new NestedProjectionContext(parentProjector);
+			}
+
 			protected override Expression VisitMethodCall(MethodCallExpression node) {
 				if (node.Method.DeclaringType == typeof(NestedProjector)) {
 					// Expand projector.Project into the corresponding expressions
@@ -46,6 +54,12 @@ namespace NeatMapper {
 						}
 						else
 							mappingOptions = null;
+
+						// Create a nested projection context
+						if(mappingOptions != null) {
+							mappingOptions = mappingOptions.ReplaceOrAdd<NestedProjectionContext>(
+								n => n != null ? new NestedProjectionContext(_parentProjector, n) : _nestedProjectionContext, mappingOptions.Cached);
+						}
 
 						var argumentType = node.Arguments[0].Type;
 
@@ -274,7 +288,7 @@ namespace NeatMapper {
 
 			Expression expr;
 			try {
-				expr = new NestedProjectionExpander().Visit(result);
+				expr = new NestedProjectionExpander(this).Visit(result);
 			}
 			catch(Exception e) {
 				throw new ProjectionException(e, (sourceType, destinationType));

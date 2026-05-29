@@ -64,10 +64,9 @@ namespace NeatMapper {
 
 
 		object? IMergeMapFactory.Invoke(object? source, object? destination) {
-			TypeUtils.CheckObjectType(source, typeof(TSource), nameof(source));
-			TypeUtils.CheckObjectType(destination, typeof(TDestination), nameof(destination));
-
-			return Invoke((TSource?)source, (TDestination?)destination);
+			return Invoke(
+				TypeUtils.CastObjectType<TSource>(source, nameof(source)),
+				TypeUtils.CastObjectType<TDestination>(destination, nameof(destination)));
 		}
 
 

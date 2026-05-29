@@ -16,11 +16,11 @@ namespace NeatMapper {
 		/// <returns>A new instance of <see cref="EqualityComparerMatcher"/> for the given equality comparer.</returns>
 		public static EqualityComparerMatcher Create<TElement>(IEqualityComparer<TElement?> equalityComparer) {
 			return new EqualityComparerMatcher(typeof(TElement), (source, destination) => {
-				TypeUtils.CheckObjectType(source, typeof(TElement), nameof(source));
-				TypeUtils.CheckObjectType(destination, typeof(TElement), nameof(destination));
+				var source2 = TypeUtils.CastObjectType<TElement>(source, nameof(source));
+				var destination2 = TypeUtils.CastObjectType<TElement>(destination, nameof(destination));
 
 				try {
-					return equalityComparer.Equals((TElement?)source, (TElement?)destination);
+					return equalityComparer.Equals(source2, destination2);
 				}
 				catch (OperationCanceledException) {
 					throw;

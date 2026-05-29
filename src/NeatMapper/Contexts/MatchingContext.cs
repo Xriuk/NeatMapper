@@ -19,7 +19,7 @@ namespace NeatMapper {
 			_matcher = new Lazy<IMatcher>(() => {
 				var nestedMatchingContext = new NestedMatchingContext(parentMatcher);
 				return new NestedMatcher(nestedMatcher, o => o.ReplaceOrAdd<NestedMatchingContext>(
-					n => n != null ? new NestedMatchingContext(nestedMatchingContext.ParentMatcher, n) : nestedMatchingContext, o.Cached));
+					n => n != null ? new NestedMatchingContext(parentMatcher, n) : nestedMatchingContext, o.Cached));
 			}, true);
 
 			MappingOptions = mappingOptions
@@ -33,7 +33,8 @@ namespace NeatMapper {
 		public IServiceProvider ServiceProvider { get; }
 
 		/// <summary>
-		/// Matcher which can be used for nested matches. <see cref="MappingOptions"/> are not automatically forwarded.<br/>
+		/// Matcher which can be used for nested matches. <see cref="MappingOptions"/>
+		/// are not automatically forwarded.<br/>
 		/// The only option forwarded automatically is <see cref="NestedMatchingContext"/>.
 		/// </summary>
 		public IMatcher Matcher => _matcher.Value;

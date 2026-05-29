@@ -67,9 +67,7 @@ namespace NeatMapper {
 
 
 		bool IPredicateFactory.Invoke(object? comparer) {
-			TypeUtils.CheckObjectType(comparer, typeof(TComparer), nameof(comparer));
-
-			return Invoke((TComparer?)comparer);
+			return Invoke(TypeUtils.CastObjectType<TComparer>(comparer, nameof(comparer)));
 		}
 
 
